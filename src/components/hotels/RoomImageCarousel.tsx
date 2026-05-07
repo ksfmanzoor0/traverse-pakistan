@@ -11,22 +11,24 @@ interface Props {
 }
 
 export function RoomImageCarousel({ images, fallback, alt, available }: Props) {
-  const imgs = images.length > 0 ? images : [fallback];
+  const imgs = (images.length > 0 ? images : fallback ? [fallback] : []).filter(Boolean);
   const [idx, setIdx] = useState(0);
 
   const prev = () => setIdx((i) => (i - 1 + imgs.length) % imgs.length);
   const next = () => setIdx((i) => (i + 1) % imgs.length);
 
   return (
-    <div className="relative aspect-[3/2]">
-      <Image
-        key={idx}
-        src={imgs[idx]}
-        alt={`${alt} — photo ${idx + 1}`}
-        fill
-        className="object-cover"
-        sizes="300px"
-      />
+    <div className="relative aspect-[3/2] bg-[var(--bg-subtle)]">
+      {imgs[idx] && (
+        <Image
+          key={idx}
+          src={imgs[idx]}
+          alt={`${alt} — photo ${idx + 1}`}
+          fill
+          className="object-cover"
+          sizes="300px"
+        />
+      )}
 
       {/* Availability badge */}
       <span

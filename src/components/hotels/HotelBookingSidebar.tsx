@@ -4,7 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
 import { Icon } from "@/components/ui/Icon";
-import { applyHotelMargin, CHILD_MIN_AGE, CHILD_MAX_AGE, INFANT_MAX_AGE, DEFAULT_ROOM_CAPACITY } from "@/lib/constants";
+import { applyHotelMargin, CHILD_MIN_AGE, CHILD_MAX_AGE, DEFAULT_ROOM_CAPACITY } from "@/lib/constants";
+import { useHotelRoom } from "@/components/hotels/HotelRoomContext";
 import type { Hotel, HotelRoom, HotelSeasonDefinition } from "@/types/hotel";
 
 /* ─── Helpers ───────────────────────────────────────────────────────────────── */
@@ -209,6 +210,11 @@ interface HotelBookingSidebarProps {
 
 const MAX_ROOMS = 10;
 
+/** Extracts just the bed type from the beds string (strips amenity descriptors after ·). */
+function bedType(beds: string): string {
+  return beds.split("·")[0].trim();
+}
+
 /** Returns the resolved capacity for a room, falling back to DEFAULT_ROOM_CAPACITY. */
 function getCapacity(room: HotelRoom) {
   return room.capacity ?? DEFAULT_ROOM_CAPACITY;
@@ -223,9 +229,9 @@ function maxOccupancyPerRoom(room: HotelRoom): number {
   return cap.maxOccupancy ?? (cap.adults + cap.children);
 }
 
-/** Minimum rooms needed to fit the current adult count. */
-function minRoomsForAdults(adults: number, room: HotelRoom): number {
-  return Math.max(1, Math.ceil(adults / getCapacity(room).adults));
+/** Rooms needed for a given headcount at this room's max occupancy. */
+function requiredRooms(adults: number, children: number, room: HotelRoom): number {
+  return Math.max(1, Math.ceil((adults + children) / maxOccupancyPerRoom(room)));
 }
 
 export function HotelBookingSidebar({ hotel }: HotelBookingSidebarProps) {
@@ -240,17 +246,17 @@ export function HotelBookingSidebar({ hotel }: HotelBookingSidebarProps) {
   const [checkOut, setCheckOut] = useState<Date | null>(null);
   const [hovered, setHovered] = useState<Date | null>(null);
 
-  // Room
-  const [selectedRoom, setSelectedRoom] = useState<HotelRoom>(hotel.rooms[0]);
+  // Room — shared with the "Where you'll sleep" section via context
+  const { selectedRoom, setSelectedRoom } = useHotelRoom();
   const [numRooms, setNumRooms] = useState(1);
 
   // Guests
   const [adults, setAdults] = useState(2);
   const [children, setChildren] = useState(0);
-  const [infants, setInfants] = useState(0);
+  const [infantCrib, setInfantCrib] = useState(false);
   const [guestsOpen, setGuestsOpen] = useState(false);
 
-  const cap = getCapacity(selectedRoom);
+  const occupancy = maxOccupancyPerRoom(selectedRoom);
 
   const calRef = useRef<HTMLDivElement>(null);
   const guestsRef = useRef<HTMLDivElement>(null);
@@ -263,7 +269,7 @@ export function HotelBookingSidebar({ hotel }: HotelBookingSidebarProps) {
       const s = JSON.parse(raw) as {
         startDate?: string;
         endDate?: string;
-        travelers?: { adults: number; children: number; infants: number };
+        travelers?: { adults: number; children: number; infants?: number };
       };
       if (s.startDate) {
         const d = new Date(s.startDate);
@@ -275,7 +281,6 @@ export function HotelBookingSidebar({ hotel }: HotelBookingSidebarProps) {
       if (s.travelers) {
         setAdults(Math.max(1, s.travelers.adults));
         setChildren(s.travelers.children);
-        setInfants(s.travelers.infants);
       }
     } catch { /* ignore */ }
   }, []);
@@ -336,7 +341,10 @@ export function HotelBookingSidebar({ hotel }: HotelBookingSidebarProps) {
   // Pricing
   const nights = checkIn && checkOut ? diffDays(checkIn, checkOut) : 0;
   const nightlyTotal = activeRoomPrice * numRooms;
-  const subtotal = nightlyTotal * (nights || 1);
+  const extraPeople = Math.max(0, adults + children - 2 * numRooms);
+  const extraOccupancyRate = selectedRoom.extraOccupancyCharge ?? 0;
+  const extraOccupancyTotal = extraOccupancyRate * extraPeople * (nights || 1);
+  const subtotal = nightlyTotal * (nights || 1) + extraOccupancyTotal;
 
   const ciLabel = checkIn ? fmt(checkIn) : "Add date";
   const coLabel = checkOut ? fmt(checkOut) : "Add date";
@@ -347,7 +355,7 @@ export function HotelBookingSidebar({ hotel }: HotelBookingSidebarProps) {
     (checkIn && checkOut ? `Dates: ${fmt(checkIn)} – ${fmt(checkOut)} (${nights} night${nights !== 1 ? "s" : ""})\n` : "") +
     `Adults: ${adults}` +
     (children > 0 ? `\nChildren (${CHILD_MIN_AGE}–${CHILD_MAX_AGE}): ${children}` : "") +
-    (infants > 0 ? `\nInfants (0–${INFANT_MAX_AGE}): ${infants}` : "") +
+    (infantCrib ? `\nTravelling with an infant` : "") +
     `\nEst. total: ${formatPrice(subtotal)}\n\nPlease confirm availability.`;
 
   return (
@@ -359,9 +367,6 @@ export function HotelBookingSidebar({ hotel }: HotelBookingSidebarProps) {
           <div>
             <span className="text-2xl font-bold text-[var(--text-primary)] tabular-nums">{formatPrice(activeRoomPrice)}</span>
             <span className="text-[14px] text-[var(--text-tertiary)]"> / night</span>
-            {seasonLabel && (
-              <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">{seasonLabel}</p>
-            )}
           </div>
           <div className="flex items-center gap-1.5">
             <Icon name="star" size="sm" weight="fill" color="var(--primary-muted)" />
@@ -378,7 +383,7 @@ export function HotelBookingSidebar({ hotel }: HotelBookingSidebarProps) {
               <button
                 key={room.name}
                 type="button"
-                onClick={() => { setSelectedRoom(room); setNumRooms(minRoomsForAdults(adults, room)); }}
+                onClick={() => { setSelectedRoom(room); setNumRooms(r => Math.max(requiredRooms(adults, children, room), r)); }}
                 className={`w-full text-left px-3 py-2.5 border rounded-[var(--radius-sm)] transition-colors cursor-pointer ${
                   selectedRoom.name === room.name
                     ? "border-[var(--primary)] bg-[var(--primary-light)]"
@@ -388,7 +393,16 @@ export function HotelBookingSidebar({ hotel }: HotelBookingSidebarProps) {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-[13px] font-semibold text-[var(--text-primary)]">{room.name}</p>
-                    <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">{room.beds}</p>
+                    <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
+                      {bedType(room.beds)}
+                      {room.capacity && (
+                        <>
+                          {" · "}
+                          {room.capacity.adults} adult{room.capacity.adults !== 1 ? "s" : ""}
+                          {room.capacity.children > 0 && ` · ${room.capacity.children} child${room.capacity.children !== 1 ? "ren" : ""}`}
+                        </>
+                      )}
+                    </p>
                   </div>
                   <div className="text-right shrink-0 ml-2">
                     <p className="text-[13px] font-bold text-[var(--text-primary)] tabular-nums">{formatPrice(getRoomPrice(room, seasonLabel))}</p>
@@ -485,7 +499,6 @@ export function HotelBookingSidebar({ hotel }: HotelBookingSidebarProps) {
               <p className="text-[13px] font-medium text-[var(--text-primary)]">
                 {adults} adult{adults !== 1 ? "s" : ""}
                 {children > 0 ? ` · ${children} child${children !== 1 ? "ren" : ""}` : ""}
-                {infants > 0 ? ` · ${infants} infant${infants !== 1 ? "s" : ""}` : ""}
                 {" · "}{numRooms} room{numRooms !== 1 ? "s" : ""}
               </p>
             </div>
@@ -504,55 +517,46 @@ export function HotelBookingSidebar({ hotel }: HotelBookingSidebarProps) {
                   label="Adults" sub={`Age ${CHILD_MAX_AGE + 1}+`}
                   value={adults}
                   onDec={() => {
-                    const next = Math.max(1, adults - 1);
-                    setAdults(next);
-                    setNumRooms(r => Math.max(minRoomsForAdults(next, selectedRoom), r > minRoomsForAdults(next, selectedRoom) ? r - 1 : minRoomsForAdults(next, selectedRoom)));
+                    const a = Math.max(1, adults - 1);
+                    setAdults(a);
+                    setNumRooms(Math.max(1, requiredRooms(a, children, selectedRoom)));
                   }}
                   onInc={() => {
-                    const next = adults + 1;
-                    const neededRooms = minRoomsForAdults(next, selectedRoom);
-                    const combinedOk = (next + children) <= maxOccupancyPerRoom(selectedRoom) * neededRooms;
-                    if (!combinedOk) return; // room full — adding adult would exceed combined occupancy
-                    setAdults(next);
-                    setNumRooms(r => Math.max(r, neededRooms));
+                    const a = adults + 1;
+                    setAdults(a);
+                    setNumRooms(r => Math.max(r, requiredRooms(a, children, selectedRoom)));
                   }}
                   disableDec={adults <= 1}
-                  disableInc={
-                    adults >= cap.adults * MAX_ROOMS ||
-                    (adults + 1 + children) > maxOccupancyPerRoom(selectedRoom) * Math.max(numRooms, minRoomsForAdults(adults + 1, selectedRoom))
-                  }
+                  disableInc={adults + children >= occupancy * MAX_ROOMS}
                 />
                 <Counter
                   label="Children" sub={`Ages ${CHILD_MIN_AGE}–${CHILD_MAX_AGE}`}
                   value={children}
-                  onDec={() => setChildren(c => Math.max(0, c - 1))}
-                  onInc={() => setChildren(c => Math.min(cap.children * numRooms, c + 1))}
+                  onDec={() => {
+                    const c = Math.max(0, children - 1);
+                    setChildren(c);
+                    setNumRooms(Math.max(1, requiredRooms(adults, c, selectedRoom)));
+                  }}
+                  onInc={() => {
+                    const c = children + 1;
+                    setChildren(c);
+                    setNumRooms(r => Math.max(r, requiredRooms(adults, c, selectedRoom)));
+                  }}
                   disableDec={children <= 0}
-                  disableInc={
-                    children >= cap.children * numRooms ||
-                    (adults + children + 1) > maxOccupancyPerRoom(selectedRoom) * numRooms
-                  }
+                  disableInc={adults + children >= occupancy * MAX_ROOMS}
                 />
                 <Counter
-                  label="Infants" sub={`Age 0–${INFANT_MAX_AGE} · no extra charge`}
-                  value={infants}
-                  onDec={() => setInfants(i => Math.max(0, i - 1))}
-                  onInc={() => setInfants(i => Math.min(cap.infants * numRooms, i + 1))}
-                  disableDec={infants <= 0}
-                  disableInc={infants >= cap.infants * numRooms}
-                />
-                <Counter
-                  label="Rooms" sub={`${maxOccupancyPerRoom(selectedRoom)} guests · ${cap.infants} infant max per room`}
+                  label="Rooms" sub={`${occupancy} guests max per room`}
                   value={numRooms}
-                  onDec={() => setNumRooms(r => Math.max(minRoomsForAdults(adults, selectedRoom), r - 1))}
+                  onDec={() => setNumRooms(r => Math.max(requiredRooms(adults, children, selectedRoom), r - 1))}
                   onInc={() => setNumRooms(r => Math.min(Math.min(MAX_ROOMS, selectedRoom.available), r + 1))}
-                  disableDec={numRooms <= minRoomsForAdults(adults, selectedRoom)}
+                  disableDec={numRooms <= requiredRooms(adults, children, selectedRoom)}
                   disableInc={numRooms >= Math.min(MAX_ROOMS, selectedRoom.available)}
                 />
               </div>
-              {numRooms > 1 && numRooms === minRoomsForAdults(adults, selectedRoom) && (
+              {numRooms > 1 && numRooms === requiredRooms(adults, children, selectedRoom) && (
                 <p className="text-[11px] text-[var(--primary)] text-center pb-2 font-medium">
-                  {numRooms} rooms added — {maxOccupancyPerRoom(selectedRoom)} guests max per room
+                  {numRooms} rooms added — {occupancy} guests max per room
                 </p>
               )}
               <button
@@ -566,14 +570,35 @@ export function HotelBookingSidebar({ hotel }: HotelBookingSidebarProps) {
           )}
         </div>
 
+        {/* Infant crib */}
+        <label className="flex items-center gap-3 mb-4 cursor-pointer group">
+          <input
+            type="checkbox"
+            checked={infantCrib}
+            onChange={e => setInfantCrib(e.target.checked)}
+            className="w-4 h-4 rounded accent-[var(--primary)] cursor-pointer"
+          />
+          <span className="text-[13px] text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">
+            Travelling with an infant
+          </span>
+        </label>
+
         {/* Price breakdown */}
         <div className="mb-4 space-y-2 pt-4 border-t border-[var(--border-default)]">
           <div className="flex justify-between text-[13px]">
             <span className="text-[var(--text-secondary)]">
               {formatPrice(activeRoomPrice)} × {numRooms} room{numRooms > 1 ? "s" : ""} × {nights || 1} night{(nights || 1) !== 1 ? "s" : ""}
             </span>
-            <span className="text-[var(--text-primary)] font-medium tabular-nums">{formatPrice(subtotal)}</span>
+            <span className="text-[var(--text-primary)] font-medium tabular-nums">{formatPrice(nightlyTotal * (nights || 1))}</span>
           </div>
+          {extraPeople > 0 && extraOccupancyRate > 0 && (
+            <div className="flex justify-between text-[13px]">
+              <span className="text-[var(--text-secondary)]">
+                Extra occupancy ({extraPeople} guest{extraPeople > 1 ? "s" : ""}) × {nights || 1} night{(nights || 1) !== 1 ? "s" : ""}
+              </span>
+              <span className="text-[var(--text-primary)] font-medium tabular-nums">{formatPrice(extraOccupancyTotal)}</span>
+            </div>
+          )}
           {nights > 0 && (
             <div className="flex justify-between text-[15px] font-bold pt-2 border-t border-[var(--border-default)]">
               <span className="text-[var(--text-primary)]">Total</span>
@@ -588,7 +613,7 @@ export function HotelBookingSidebar({ hotel }: HotelBookingSidebarProps) {
         {/* CTA */}
         {checkIn && checkOut ? (
           <Link
-            href={`/hotels/${hotel.slug}/checkout?room=${encodeURIComponent(selectedRoom.name)}&checkin=${checkIn.toISOString().split("T")[0]}&checkout=${checkOut.toISOString().split("T")[0]}&adults=${adults}&children=${children}&infants=${infants}&rooms=${numRooms}&guests=${adults + children + infants}`}
+            href={`/hotels/${hotel.slug}/checkout?room=${encodeURIComponent(selectedRoom.name)}&checkin=${checkIn.toISOString().split("T")[0]}&checkout=${checkOut.toISOString().split("T")[0]}&adults=${adults}&children=${children}&rooms=${numRooms}&guests=${adults + children}${extraPeople > 0 && extraOccupancyRate > 0 ? `&extraPeople=${extraPeople}&extraRate=${extraOccupancyRate}` : ""}${infantCrib ? "&infant=1" : ""}`}
             className="w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-semibold rounded-[var(--radius-sm)] flex items-center justify-center gap-2 hover:bg-[var(--primary-hover)] active:scale-[0.98] transition-all"
           >
             Book Now

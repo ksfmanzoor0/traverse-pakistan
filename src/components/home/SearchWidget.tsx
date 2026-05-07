@@ -880,17 +880,19 @@ export function SearchWidget({
                   <StepperButton onClick={() => setTravelers((p) => ({ ...p, children: p.children + 1 }))}>+</StepperButton>
                 </div>
               </div>
-              <div className="flex items-center justify-between py-5">
-                <div>
-                  <p className="text-[16px] font-semibold text-[var(--text-primary)]">Infants</p>
-                  <p className="text-[13px] text-[var(--text-tertiary)] mt-0.5">Under 2</p>
+              {!isHotels && (
+                <div className="flex items-center justify-between py-5">
+                  <div>
+                    <p className="text-[16px] font-semibold text-[var(--text-primary)]">Infants</p>
+                    <p className="text-[13px] text-[var(--text-tertiary)] mt-0.5">Under 2</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <StepperButton onClick={() => setTravelers((p) => ({ ...p, infants: Math.max(0, p.infants - 1) }))} disabled={travelers.infants <= 0}>−</StepperButton>
+                    <span className="w-8 text-center text-[16px] font-semibold tabular-nums">{travelers.infants}</span>
+                    <StepperButton onClick={() => setTravelers((p) => ({ ...p, infants: p.infants + 1 }))}>+</StepperButton>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <StepperButton onClick={() => setTravelers((p) => ({ ...p, infants: Math.max(0, p.infants - 1) }))} disabled={travelers.infants <= 0}>−</StepperButton>
-                  <span className="w-8 text-center text-[16px] font-semibold tabular-nums">{travelers.infants}</span>
-                  <StepperButton onClick={() => setTravelers((p) => ({ ...p, infants: p.infants + 1 }))}>+</StepperButton>
-                </div>
-              </div>
+              )}
               <div className="pt-4 flex items-center justify-between">
                 <span className="text-[14px] text-[var(--text-tertiary)]">{totalTravelers} traveler{totalTravelers !== 1 ? "s" : ""} total</span>
                 <button type="button" onClick={() => setActiveField(null)}
