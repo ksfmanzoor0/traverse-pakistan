@@ -1,19 +1,26 @@
 "use client";
 
-import { useState } from "react";
 import { formatPrice } from "@/lib/utils";
 import { RoomImageCarousel } from "@/components/hotels/RoomImageCarousel";
 import { HotelMobileBookingBar } from "@/components/hotels/HotelMobileBookingBar";
-import type { Hotel, HotelRoom } from "@/types/hotel";
+import { useHotelRoom } from "@/components/hotels/HotelRoomContext";
+import { Icon } from "@/components/ui/Icon";
+import type { Hotel, RoomCapacity } from "@/types/hotel";
+
+function capacityLabel(c: RoomCapacity): string {
+  const parts: string[] = [];
+  parts.push(c.adults === 1 ? "1 adult" : `${c.adults} adults`);
+  if (c.children > 0) parts.push(c.children === 1 ? "1 child" : `${c.children} children`);
+  return parts.join(" · ");
+}
 
 interface Props {
   hotel: Hotel;
   roomImagesMap: Record<number, string[]>;
-  roomDisplayPrices: Record<string, { season: string; price: number }[] | null>;
 }
 
-export function HotelRoomsBookingClient({ hotel, roomImagesMap, roomDisplayPrices }: Props) {
-  const [selectedRoom, setSelectedRoom] = useState<HotelRoom>(hotel.rooms[0]);
+export function HotelRoomsBookingClient({ hotel, roomImagesMap }: Props) {
+  const { selectedRoom, setSelectedRoom } = useHotelRoom();
 
   return (
     <>
@@ -28,10 +35,11 @@ export function HotelRoomsBookingClient({ hotel, roomImagesMap, roomDisplayPrice
             return (
               <div
                 key={room.name}
-                className={`rounded-[var(--radius-md)] border overflow-hidden transition-all ${
+                onClick={() => setSelectedRoom(room)}
+                className={`rounded-[var(--radius-md)] border overflow-hidden transition-all cursor-pointer ${
                   isSelected
-                    ? "border-[var(--primary)] lg:border-[var(--border-default)]"
-                    : "border-[var(--border-default)]"
+                    ? "border-[var(--primary)] ring-1 ring-[var(--primary)]"
+                    : "border-[var(--border-default)] hover:border-[var(--primary)]"
                 }`}
               >
                 <RoomImageCarousel
@@ -45,42 +53,28 @@ export function HotelRoomsBookingClient({ hotel, roomImagesMap, roomDisplayPrice
                     <div className="min-w-0">
                       <h3 className="text-[15px] font-bold text-[var(--text-primary)]">{room.name}</h3>
                       <p className="text-[13px] text-[var(--text-tertiary)] mt-0.5">{room.beds}</p>
+                      {room.capacity && (
+                        <p className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] mt-1">
+                          <Icon name="users" size="xs" className="shrink-0" />
+                          {capacityLabel(room.capacity)}
+                        </p>
+                      )}
                     </div>
-                    {/* Mobile-only select button */}
-                    <button
-                      type="button"
-                      onClick={() => setSelectedRoom(room)}
-                      className={`lg:hidden shrink-0 px-3 py-1 rounded-[var(--radius-full)] text-[12px] font-semibold border transition-colors cursor-pointer ${
+                    <span
+                      className={`shrink-0 px-3 py-1 rounded-[var(--radius-full)] text-[12px] font-semibold border transition-colors ${
                         isSelected
                           ? "bg-[var(--primary)] text-[var(--text-inverse)] border-[var(--primary)]"
-                          : "border-[var(--border-default)] text-[var(--text-secondary)] hover:border-[var(--primary)]"
+                          : "border-[var(--border-default)] text-[var(--text-secondary)]"
                       }`}
                     >
                       {isSelected ? "Selected" : "Select"}
-                    </button>
+                    </span>
                   </div>
 
-                  {(() => {
-                    const displayPrices = roomDisplayPrices[room.name];
-                    return displayPrices ? (
-                      <div className="mt-2 space-y-0.5">
-                        {displayPrices.map((sp) => (
-                          <div key={sp.season} className="flex items-center justify-between">
-                            <span className="text-[11px] text-[var(--text-tertiary)]">{sp.season}</span>
-                            <span className="text-[13px] font-semibold text-[var(--text-primary)] tabular-nums">
-                              {formatPrice(sp.price)}
-                            </span>
-                          </div>
-                        ))}
-                        <p className="text-[10px] text-[var(--text-tertiary)] pt-0.5">/ night · rates vary by season</p>
-                      </div>
-                    ) : (
-                      <p className="text-[16px] font-bold text-[var(--text-primary)] mt-2 tabular-nums">
-                        {formatPrice(room.price)}{" "}
-                        <span className="text-[13px] font-normal text-[var(--text-tertiary)]">/ night</span>
-                      </p>
-                    );
-                  })()}
+                  <p className="text-[15px] font-bold text-[var(--text-primary)] mt-2 tabular-nums">
+                    {formatPrice(room.price)}{" "}
+                    <span className="text-[13px] font-normal text-[var(--text-tertiary)]">/ night</span>
+                  </p>
                 </div>
               </div>
             );
