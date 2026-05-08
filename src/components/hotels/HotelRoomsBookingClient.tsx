@@ -1,17 +1,16 @@
 "use client";
 
 import { formatPrice } from "@/lib/utils";
+import { Icon } from "@/components/ui/Icon";
+import { DEFAULT_ROOM_CAPACITY } from "@/lib/constants";
 import { RoomImageCarousel } from "@/components/hotels/RoomImageCarousel";
 import { HotelMobileBookingBar } from "@/components/hotels/HotelMobileBookingBar";
 import { useHotelRoom } from "@/components/hotels/HotelRoomContext";
-import { Icon } from "@/components/ui/Icon";
-import type { Hotel, RoomCapacity } from "@/types/hotel";
+import type { Hotel, HotelRoom } from "@/types/hotel";
 
-function capacityLabel(c: RoomCapacity): string {
-  const parts: string[] = [];
-  parts.push(c.adults === 1 ? "1 adult" : `${c.adults} adults`);
-  if (c.children > 0) parts.push(c.children === 1 ? "1 child" : `${c.children} children`);
-  return parts.join(" · ");
+function maxOccupancyPerRoom(room: HotelRoom): number {
+  const cap = room.capacity ?? DEFAULT_ROOM_CAPACITY;
+  return cap.maxOccupancy ?? (cap.adults + cap.children);
 }
 
 interface Props {
@@ -35,8 +34,11 @@ export function HotelRoomsBookingClient({ hotel, roomImagesMap }: Props) {
             return (
               <div
                 key={room.name}
+                role="button"
+                tabIndex={0}
                 onClick={() => setSelectedRoom(room)}
-                className={`rounded-[var(--radius-md)] border overflow-hidden transition-all cursor-pointer ${
+                onKeyDown={(e) => e.key === "Enter" && setSelectedRoom(room)}
+                className={`rounded-[var(--radius-md)] border overflow-hidden transition-all cursor-pointer lg:cursor-default ${
                   isSelected
                     ? "border-[var(--primary)] ring-1 ring-[var(--primary)]"
                     : "border-[var(--border-default)] hover:border-[var(--primary)]"
@@ -54,24 +56,23 @@ export function HotelRoomsBookingClient({ hotel, roomImagesMap }: Props) {
                       <h3 className="text-[15px] font-bold text-[var(--text-primary)]">{room.name}</h3>
                       <p className="text-[13px] text-[var(--text-tertiary)] mt-0.5">{room.beds}</p>
                       {room.capacity && (
-                        <p className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] mt-1">
-                          <Icon name="users" size="xs" className="shrink-0" />
-                          {capacityLabel(room.capacity)}
-                        </p>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Icon name="users" size="xs" color="var(--text-tertiary)" />
+                          <span className="text-[12px] text-[var(--text-tertiary)]">
+                            Max {maxOccupancyPerRoom(room)} guest{maxOccupancyPerRoom(room) !== 1 ? "s" : ""}
+                          </span>
+                        </div>
                       )}
                     </div>
-                    <span
-                      className={`shrink-0 px-3 py-1 rounded-[var(--radius-full)] text-[12px] font-semibold border transition-colors ${
-                        isSelected
-                          ? "bg-[var(--primary)] text-[var(--text-inverse)] border-[var(--primary)]"
-                          : "border-[var(--border-default)] text-[var(--text-secondary)]"
-                      }`}
-                    >
-                      {isSelected ? "Selected" : "Select"}
-                    </span>
+                    {isSelected && (
+                      <span className="lg:hidden shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-[var(--radius-full)] text-[11px] font-bold bg-[var(--primary)] text-[var(--text-inverse)]">
+                        <Icon name="check" size="xs" color="var(--on-dark)" />
+                        Selected
+                      </span>
+                    )}
                   </div>
 
-                  <p className="text-[15px] font-bold text-[var(--text-primary)] mt-2 tabular-nums">
+                  <p className="text-[16px] font-bold text-[var(--text-primary)] mt-2 tabular-nums">
                     {formatPrice(room.price)}{" "}
                     <span className="text-[13px] font-normal text-[var(--text-tertiary)]">/ night</span>
                   </p>

@@ -5,38 +5,12 @@ import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
 import { Icon } from "@/components/ui/Icon";
 import {
-  applyHotelMargin,
   CHILD_MIN_AGE,
   CHILD_MAX_AGE,
   DEFAULT_ROOM_CAPACITY,
 } from "@/lib/constants";
-import type { Hotel, HotelRoom, HotelSeasonDefinition } from "@/types/hotel";
+import type { Hotel, HotelRoom } from "@/types/hotel";
 
-/* ── Helpers (mirrors HotelBookingSidebar) ───────────────────────────────────── */
-
-function getSeasonLabel(date: Date, seasons: HotelSeasonDefinition[]): string | null {
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  const mmdd = `${mm}-${dd}`;
-  for (const season of seasons) {
-    for (const period of season.periods) {
-      if (period.from > period.to) {
-        if (mmdd >= period.from || mmdd <= period.to) return season.label;
-      } else {
-        if (mmdd >= period.from && mmdd <= period.to) return season.label;
-      }
-    }
-  }
-  return null;
-}
-
-function getRoomPrice(room: HotelRoom, seasonLabel: string | null): number {
-  if (room.prices && seasonLabel) {
-    const match = room.prices.find((p) => p.season === seasonLabel);
-    if (match) return applyHotelMargin(match.price);
-  }
-  return room.price;
-}
 
 const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 const MONTHS = [
@@ -189,7 +163,7 @@ export function HotelMobileBookingBar({ hotel, selectedRoom, onRoomChange }: Hot
   const [infantCrib, setInfantCrib] = useState(false);
   const [guestsOpen, setGuestsOpen] = useState(false);
 
-  // Pre-populate from search sessionStorage
+  // Pre-populate from search sessionStorage (matches desktop HotelBookingSidebar behaviour)
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem("tp_search");
@@ -229,8 +203,7 @@ export function HotelMobileBookingBar({ hotel, selectedRoom, onRoomChange }: Hot
   }, [sheetOpen]);
 
   const occupancy = maxOccupancyPerRoom(selectedRoom);
-  const seasonLabel = hotel.seasons && checkIn ? getSeasonLabel(checkIn, hotel.seasons) : null;
-  const activeRoomPrice = getRoomPrice(selectedRoom, seasonLabel);
+  const activeRoomPrice = selectedRoom.price;
   const nights = checkIn && checkOut ? diffDays(checkIn, checkOut) : 0;
   const extraPeople = Math.max(0, adults + children - 2 * numRooms);
   const extraOccupancyRate = selectedRoom.extraOccupancyCharge ?? 0;
@@ -272,7 +245,11 @@ export function HotelMobileBookingBar({ hotel, selectedRoom, onRoomChange }: Hot
             <span className="text-[13px] text-[var(--text-tertiary)]">/ night</span>
           </div>
           <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5 truncate max-w-[180px]">
-            {selectedRoom.name !== hotel.rooms[0].name ? selectedRoom.name : (
+            {checkIn && checkOut ? (
+              `${fmt(checkIn)} – ${fmt(checkOut)} · ${nights} night${nights !== 1 ? "s" : ""}`
+            ) : checkIn ? (
+              `${fmt(checkIn)} – Add checkout`
+            ) : selectedRoom.name !== hotel.rooms[0].name ? selectedRoom.name : (
               <span className="inline-flex items-center gap-1">
                 <Icon name="star" size="xs" weight="fill" color="var(--primary-muted)" />
                 {hotel.rating} · {hotel.reviewCount} reviews
@@ -337,12 +314,12 @@ export function HotelMobileBookingBar({ hotel, selectedRoom, onRoomChange }: Hot
                           <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
                             {bedType(room.beds)}
                             {room.capacity && (
-                              <> · {room.capacity.adults} adult{room.capacity.adults !== 1 ? "s" : ""}{room.capacity.children > 0 ? ` · ${room.capacity.children} child${room.capacity.children !== 1 ? "ren" : ""}` : ""}</>
+                              <> · max {maxOccupancyPerRoom(room)} guest{maxOccupancyPerRoom(room) !== 1 ? "s" : ""}</>
                             )}
                           </p>
                         </div>
                         <div className="text-right shrink-0 ml-2">
-                          <p className="text-[13px] font-bold text-[var(--text-primary)] tabular-nums">{formatPrice(getRoomPrice(room, seasonLabel))}</p>
+                          <p className="text-[13px] font-bold text-[var(--text-primary)] tabular-nums">{formatPrice(room.price)}</p>
                           <p className="text-[10px] text-[var(--text-tertiary)]">/ night</p>
                         </div>
                       </div>
