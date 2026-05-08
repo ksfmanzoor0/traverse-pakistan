@@ -23,6 +23,7 @@ export const hotels: Hotel[] = [
     rating: 4.9,
     reviewCount: 127,
     pricePerNight: 15000,
+    margin: 0.20,
     amenities: ["Free WiFi", "Mountain view", "Breakfast included", "Free parking", "Hot water shower", "Central heating", "Rooftop terrace", "24hr front desk", "TV in room", "Towels & toiletries", "Room service", "Local tour desk", "Hunza cuisine restaurant"],
     description: "Perched at 2,600 metres on the Duikar ridge above Hunza Valley, Eagle's Nest is one of Pakistan's most celebrated hotel viewpoints. Wake before dawn to watch sunrise paint Rakaposhi, Diran, Ultar Sar, and three other 7,000-metre peaks in shades of gold and rose.",
     highlights: [
@@ -68,6 +69,7 @@ export const hotels: Hotel[] = [
     rating: 4.9,
     reviewCount: 85,
     pricePerNight: 28000,
+    margin: 0.20,
     amenities: ["Free WiFi", "Lake view", "Luxury rooms", "Restaurant", "Room service", "Free parking", "Heating", "Terrace", "Laundry"],
     description: "A luxurious lakeside property on the shores of the turquoise Attabad Lake with panoramic mountain and lake views. Modern rooms with floor-to-ceiling windows framing the impossible blue of the lake.",
     highlights: [
@@ -110,6 +112,7 @@ export const hotels: Hotel[] = [
     rating: 4.8,
     reviewCount: 150,
     pricePerNight: 25000,
+    margin: 0.20,
     amenities: ["Free WiFi", "Lake view", "Restaurant", "Garden", "Boating", "Room service", "Parking", "Heating"],
     description: "The legendary 'Heaven on Earth' resort on the shores of Lower Kachura Lake. An iconic Pakistan landmark surrounded by apple orchards and towering mountains.",
     highlights: [
@@ -152,6 +155,7 @@ export const hotels: Hotel[] = [
     rating: 4.9,
     reviewCount: 43,
     pricePerNight: 8000,
+    margin: 0.20,
     amenities: ["Nanga Parbat views", "Meals included", "Campfire", "Guided treks", "Stargazing", "Solar charging"],
     description: "Sleep at the foot of the world's ninth-highest mountain. Basic but magical — wooden cottages and camps with direct Nanga Parbat views and zero light pollution for stargazing.",
     highlights: [
@@ -191,6 +195,7 @@ export const hotels: Hotel[] = [
     rating: 4.8,
     reviewCount: 112,
     pricePerNight: 12000,
+    margin: 0.20,
     amenities: ["Free WiFi", "Restaurant", "Garden", "River views", "Room service", "Parking", "Spa", "Conference room"],
     description: "A luxury retreat in the heart of Swat Valley, surrounded by lush gardens and river views. The perfect base for exploring Malam Jabba, Fizagat Park, and the Buddhist ruins.",
     highlights: [
@@ -231,6 +236,7 @@ export const hotels: Hotel[] = [
     rating: 4.6,
     reviewCount: 68,
     pricePerNight: 12000,
+    margin: 0.20,
     amenities: ["Free WiFi", "Mountain views", "Restaurant", "Room service", "Free parking", "Hot water", "Central heating", "24hr front desk"],
     description: "A well-appointed deluxe hotel in the heart of Skardu city, offering comfortable rooms with mountain views and easy access to Skardu's major attractions including Kharpocho Fort, Satpara Lake, and the Deosai Plains.",
     highlights: [
@@ -273,6 +279,7 @@ export const hotels: Hotel[] = [
     rating: 4.9,
     reviewCount: 41,
     pricePerNight: 18000,
+    margin: 0.20,
     amenities: ["Stargazing deck", "Panoramic plateau views", "All meals included", "Bonfire evenings", "Warm blankets & sleeping gear", "Shared washroom facilities", "Generator power", "Wildlife spotting (Himalayan brown bear)"],
     description: "Perched at 4,114 metres on the Deosai Plains — the second-highest plateau on earth — Glamp Pakistan Deosai is the only place to spend a night inside Deosai National Park. Sleep under a sky so full of stars it feels touchable, wake to Himalayan brown bears grazing outside, and watch the plateau turn gold as the sun rises over an unbroken horizon.",
     highlights: [
@@ -313,6 +320,7 @@ export const hotels: Hotel[] = [
     rating: 4.6,
     reviewCount: 34,
     pricePerNight: 12000,
+    margin: 0.20,
     amenities: ["Sea view", "Restaurant", "Free parking", "WiFi", "Hot water", "Air conditioning", "24hr front desk"],
     description: "A well-known deluxe resort in Gwadar, favourably located close to the seafront. Sadaf Resort offers comfortable, clean rooms with sea views and is the most popular base for exploring Gwadar's landmarks including Koh-e-Batil, Marine Drive and Pishukan.",
     highlights: [
@@ -354,6 +362,7 @@ export const hotels: Hotel[] = [
     rating: 4.8,
     reviewCount: 61,
     pricePerNight: 28000,
+    margin: 0.20,
     amenities: ["Sea view", "Luxury rooms", "Fine dining restaurant", "Room service", "Swimming pool", "Gym", "Free WiFi", "Free parking", "Air conditioning", "24hr front desk", "Concierge", "Laundry"],
     description: "Gwadar's premier five-star property, Pearl Continental Gwadar is the definitive luxury experience on the Makran Coast. Panoramic Arabian Sea views from every room, a world-class restaurant, and impeccable service make it the obvious choice for those who want to experience Balochistan's coastline in comfort.",
     highlights: [
@@ -394,6 +403,7 @@ export const hotels: Hotel[] = [
     rating: 4.7,
     reviewCount: 28,
     pricePerNight: 9000,
+    margin: 0.20,
     amenities: ["Beachfront location", "Bonfire evenings", "Restaurant", "Free parking", "Hot water", "Air conditioning", "Beach access"],
     description: "A charming beachfront resort on Ormara's coast, famous for its bonfire and music evenings under the stars. Haft Talar is the most popular overnight stop between Karachi and Gwadar — right on the beach with direct sunset views over the Arabian Sea.",
     highlights: [
@@ -434,6 +444,7 @@ export const hotels: Hotel[] = [
     rating: 4.8,
     reviewCount: 19,
     pricePerNight: 18000,
+    margin: 0.20,
     amenities: ["Beachfront location", "Luxury chalets", "Fine dining", "Room service", "Bonfire area", "Free WiFi", "Air conditioning", "Private beach access", "24hr front desk"],
     description: "Ormara's finest beachfront property, Gidan Beach Resort offers luxury chalets with direct Arabian Sea views and a fine dining experience featuring the freshest Balochi seafood. The perfect upscale base for exploring the Makran Coast in style.",
     highlights: [
@@ -473,6 +484,7 @@ export const hotels: Hotel[] = [
     rating: 4.7,
     reviewCount: 42,
     pricePerNight: 11000,
+    margin: 0.20,
     amenities: ["Free WiFi", "Restaurant & café", "Air conditioning", "Room service", "24hr front desk", "Free parking", "Rooftop terrace"],
     description: "A modern boutique hotel in Karachi, Lokal offers stylish, well-appointed rooms at great value. The perfect transit base for travellers departing early for the Makran Coastal Highway or arriving late from Gwadar.",
     highlights: [
@@ -513,6 +525,7 @@ export const hotels: Hotel[] = [
     rating: 4.8,
     reviewCount: 55,
     pricePerNight: 22000,
+    margin: 0.20,
     amenities: ["Sea view rooms", "Fine dining", "Room service", "Swimming pool", "Gym", "Free WiFi", "Valet parking", "Air conditioning", "Spa", "24hr concierge", "Laundry"],
     description: "One of Karachi's most refined luxury hotels, Ambiance offers an elegant urban retreat with impeccable service. An ideal Karachi stay before or after a Makran Coast adventure — with fine dining, a pool, and rooms that make the long drive feel very worthwhile.",
     highlights: [
@@ -555,6 +568,7 @@ export const hotels: Hotel[] = [
     rating: 4.5,
     reviewCount: 28,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Free WiFi", "Air conditioning", "Restaurant", "Room service", "Free parking", "24hr front desk"],
     description: "A comfortable hotel in Larkana — the closest quality base for Mohen Jo Daro, the 5,000-year-old Indus Valley Civilisation city just 27 km away. Clean, well-staffed and perfectly positioned for historical tours through Sindh.",
     highlights: [
@@ -594,6 +608,7 @@ export const hotels: Hotel[] = [
     rating: 4.4,
     reviewCount: 35,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Free WiFi", "Air conditioning", "Restaurant", "Room service", "Free parking", "24hr front desk", "Laundry"],
     description: "A well-appointed hotel in Hyderabad, conveniently positioned for exploring Makli Necropolis, Bhit Shah, Keenjhar Lake and the road to Ranikot Fort. A reliable base for multi-day historical tours of Sindh.",
     highlights: [
@@ -633,6 +648,7 @@ export const hotels: Hotel[] = [
     rating: 4.6,
     reviewCount: 48,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Free WiFi", "Air conditioning", "Restaurant", "Room service", "Swimming pool", "Gym", "Valet parking", "Spa", "24hr concierge", "Laundry"],
     description: "Hyderabad's premium address, Indus Hotel offers refined rooms and full amenities in the heart of the city. The ideal luxury base for historical touring of Sindh — comfortable, spacious and well-staffed for multi-day stays.",
     highlights: [
@@ -672,6 +688,7 @@ export const hotels: Hotel[] = [
     rating: 4.4,
     reviewCount: 22,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Free WiFi", "Air conditioning", "Restaurant", "Room service", "Free parking", "24hr front desk"],
     description: "A comfortable business-class hotel in Sukkur, conveniently located near the historic Lansdowne Bridge, Sukkur Barrage and Kot Diji Fort. A reliable stopover between Larkana and Bahawalpur on Pakistan's historical touring circuit.",
     highlights: [
@@ -711,6 +728,7 @@ export const hotels: Hotel[] = [
     rating: 4.7,
     reviewCount: 40,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Free WiFi", "Air conditioning", "Restaurant", "Room service", "Swimming pool", "Gym", "Heritage architecture", "24hr concierge", "Free parking"],
     description: "A grand heritage hotel in Bahawalpur, Faletti's Grand combines historic architecture with modern luxury. The ideal base for exploring Noor Mahal, the golden desert of Derawar Fort and Bahawalpur's royal bazaars.",
     highlights: [
@@ -750,6 +768,7 @@ export const hotels: Hotel[] = [
     rating: 4.6,
     reviewCount: 55,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Free WiFi", "Air conditioning", "Restaurant", "Room service", "Swimming pool", "Gym", "Business center", "Valet parking", "Spa", "24hr concierge"],
     description: "An international-standard hotel in the heart of Multan, Ramada by Wyndham offers premium rooms and full-service facilities. The ideal luxury base for exploring the City of Saints — Rukn-e-Alam, Hussain Agahi Bazaar and the ancient city gates.",
     highlights: [
@@ -789,6 +808,7 @@ export const hotels: Hotel[] = [
     rating: 4.6,
     reviewCount: 62,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Free WiFi", "Air conditioning", "Restaurant", "Room service", "Free parking", "Laundry", "24hr front desk", "Business center"],
     description: "A well-established hotel in Lahore with comfortable rooms and reliable service. Conveniently located for exploring the Walled City, Lahore Fort, Badshahi Mosque and New Food Street — the beating heart of Lahore's historic district.",
     highlights: [
@@ -827,6 +847,7 @@ export const hotels: Hotel[] = [
     rating: 4.2,
     reviewCount: 18,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Free WiFi", "Air conditioning", "Restaurant", "Room service", "Free parking"],
     description: "A comfortable transit hotel in Jhelum, conveniently situated for overnight stays on the Sialkot–Khewra–Islamabad circuit. Walking distance from the Jhelum river crossing used for the Ramkot Fort boat excursion.",
     highlights: [
@@ -865,6 +886,7 @@ export const hotels: Hotel[] = [
     rating: 4.4,
     reviewCount: 30,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Free WiFi", "Air conditioning", "Restaurant", "Room service", "Free parking", "24hr front desk", "Business center"],
     description: "A comfortable business hotel in Islamabad with easy access to the city's attractions and onward transport. A reliable one-night stay between the Khewra Salt Mines circuit and the final day's Taxila and Peshawar excursions.",
     highlights: [
@@ -906,6 +928,7 @@ export const hotels: Hotel[] = [
     rating: 4.7,
     reviewCount: 38,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Mountain view", "Meals included", "Free parking", "Hot water", "Local cuisine", "Bonfire area", "Guide support"],
     description: "Perched above the lush meadows of Arrang Kel at over 2,600m, Shabistan Inn is one of the most scenically positioned guesthouses in the Neelam Valley. Accessible only by chairlift or a 45-minute hike from Kel, it offers front-row views of the surrounding peaks and pine forests.",
     highlights: [
@@ -945,6 +968,7 @@ export const hotels: Hotel[] = [
     rating: 4.8,
     reviewCount: 52,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Mountain view", "Meals included", "Bonfire & BBQ", "Hot water", "Local cuisine", "Chairlift access", "Guide support", "Terrace"],
     description: "Wanderlust is Arrang Kel's most sought-after lodge — a premium mountain retreat sitting in the heart of one of Pakistan's most spectacular alpine meadows. Known for its warm ambience, bonfire BBQ dinners and unobstructed views of the Neelam Valley peaks.",
     highlights: [
@@ -984,6 +1008,7 @@ export const hotels: Hotel[] = [
     rating: 4.6,
     reviewCount: 44,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["River view", "Meals included", "Free parking", "Hot water", "Local cuisine", "Riverside seating", "Guide support"],
     description: "Set directly on the banks of the Neelam River at the scenic Keran crossing, this riverside resort offers the most peaceful base in the lower Neelam Valley. The sound of the river, the pine-clad hillsides and the gentle pace of Keran village make it an ideal overnight stop on any Neelam Valley itinerary.",
     highlights: [
@@ -1023,6 +1048,7 @@ export const hotels: Hotel[] = [
     rating: 4.7,
     reviewCount: 49,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Valley view", "Meals included", "Free parking", "Hot water", "Local cuisine", "Garden", "Sunset viewpoint", "Guide support"],
     description: "Nestled in Upper Neelam just above Keran, Green Village Resort enjoys elevated valley views across the Neelam River and the forested ridgelines beyond. A favourite overnight choice for Traverse Pakistan groups — the sunsets from its terrace are among the finest in the valley.",
     highlights: [
@@ -1062,6 +1088,7 @@ export const hotels: Hotel[] = [
     rating: 4.6,
     reviewCount: 22,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Mountain view", "Meals included", "Hot water", "Local cuisine", "Bonfire area", "Guide support", "Free parking"],
     description: "Shabistan Inn in Taobut sits at the far upper reaches of the Neelam Valley — one of the most remote and pristine corners of Azad Kashmir. It serves as the primary base for travellers exploring the Taobut meadows, Shounter Pass and the surrounding alpine wilderness.",
     highlights: [
@@ -1101,6 +1128,7 @@ export const hotels: Hotel[] = [
     rating: 4.5,
     reviewCount: 18,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Mountain view", "Meals included", "Hot water", "Local cuisine", "Bonfire area", "Guide support"],
     description: "Corner View Guest House earns its name from its uniquely positioned terrace overlooking the confluence of the Neelam Valley ridgelines above Taobut. A budget-friendly option for adventurers exploring Pakistan's most remote Kashmir valley, with warm hospitality and home-cooked meals.",
     highlights: [
@@ -1141,6 +1169,7 @@ export const hotels: Hotel[] = [
     rating: 4.5,
     reviewCount: 25,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Free WiFi", "Air conditioning", "Restaurant", "Room service", "Free parking", "Heritage architecture", "Garden", "24hr front desk"],
     description: "A charming heritage property in Peshawar with lush gardens and traditional Pashtun architectural details. The ideal base for exploring Qissa Khawani Bazaar, the Sethi House Museum and Peshawar's legendary food street.",
     highlights: [
@@ -1180,6 +1209,7 @@ export const hotels: Hotel[] = [
     rating: 4.4,
     reviewCount: 0,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Free WiFi", "Air conditioning", "Restaurant", "Room service", "Free parking", "24hr front desk", "Mountain view"],
     description: "A comfortable city hotel in Gilgit serving as the gateway to the Ghizer district. Well-positioned for departures into Yasin Valley, Ishkoman and Phandar, with reliable facilities and a good in-house restaurant.",
     highlights: [
@@ -1214,6 +1244,7 @@ export const hotels: Hotel[] = [
     rating: 4.8,
     reviewCount: 0,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Free WiFi", "Air conditioning", "Restaurant", "Room service", "Swimming pool", "Spa", "Gym", "Free parking", "Mountain view", "24hr front desk", "Concierge"],
     description: "The finest address in Gilgit city, Serena's property delivers the signature warmth and quality expected of the brand — with mountain views, beautifully appointed rooms and a full-service restaurant. The ideal luxury base for journeys into the Ghizer valley.",
     highlights: [
@@ -1248,6 +1279,7 @@ export const hotels: Hotel[] = [
     rating: 4.6,
     reviewCount: 0,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Mountain view", "Meals included", "Free parking", "Hot water", "Local cuisine", "Garden", "Guide support"],
     description: "Set beside the ancient fort that gives the valley its character, Fort Hotel Yasin is the most atmospheric stay in this remote Ghizer valley. Stone walls, wide verandas and uninterrupted views of the poplar-lined valley floor make it an ideal base for two nights of exploration.",
     highlights: [
@@ -1282,6 +1314,7 @@ export const hotels: Hotel[] = [
     rating: 4.8,
     reviewCount: 0,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Mountain view", "Meals included", "Free parking", "Hot water", "Bonfire area", "Private terrace", "Local cuisine", "Guide support"],
     description: "Rustagaarii Retreat offers the finest accommodation in Yasin Valley — intimate, beautifully designed and positioned to make the most of the valley's extraordinary light and silence. Private terraces, a bonfire area and a kitchen that showcases local Khowar ingredients make it a true retreat.",
     highlights: [
@@ -1316,6 +1349,7 @@ export const hotels: Hotel[] = [
     rating: 4.5,
     reviewCount: 0,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Mountain view", "Meals included", "Free parking", "Hot water", "Garden", "Local cuisine"],
     description: "A welcoming guesthouse in Gupis, conveniently situated near Khalti Lake and the start of the Phandar Valley road. Simple, clean and comfortable — an honest base for exploring this underrated stretch of the Ghizer valley.",
     highlights: [
@@ -1349,6 +1383,7 @@ export const hotels: Hotel[] = [
     rating: 4.7,
     reviewCount: 0,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Mountain view", "Meals included", "Free parking", "Hot water", "Bonfire area", "Terrace", "Local cuisine", "River access"],
     description: "Arcadian Gupis brings a touch of refined comfort to one of Ghizer's most scenic spots. Overlooking the Ghizer River and Khalti Lake, this lodge blends natural materials, modern amenities and thoughtful design to create a genuinely relaxing stay at the gateway to Phandar Valley.",
     highlights: [
@@ -1383,6 +1418,7 @@ export const hotels: Hotel[] = [
     rating: 4.6,
     reviewCount: 0,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Lake view", "Meals included", "Free parking", "Hot water", "Terrace", "Bonfire area", "Local cuisine", "Guide support"],
     description: "Perched on the hillside above Phandar Lake, Hill Top Lodge offers some of the best lake views in Ghizer from its wide terraces and well-appointed rooms. A comfortable deluxe stay with home-cooked meals and the turquoise waters of Phandar just below.",
     highlights: [
@@ -1417,6 +1453,7 @@ export const hotels: Hotel[] = [
     rating: 4.8,
     reviewCount: 0,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Lake view", "Meals included", "Free parking", "Hot water", "Spa", "Terrace", "Bonfire & BBQ", "Local cuisine", "Private balconies", "Concierge"],
     description: "The premier address on Phandar Lake, Apex Hotel & Resorts sets the benchmark for luxury in the Ghizer district. Private lake-facing balconies, a spa facility and impeccably prepared cuisine elevate every moment spent at one of Pakistan's most beautiful lake destinations.",
     highlights: [
@@ -1451,6 +1488,7 @@ export const hotels: Hotel[] = [
     rating: 4.5,
     reviewCount: 0,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Mountain view", "Meals included", "Free parking", "Hot water", "Common lounge", "Local cuisine", "Guide support", "Garden"],
     description: "A spirited boutique property in the remote Ishkoman Valley — equal parts hotel and hostel, with comfortable private rooms and a communal energy that makes for memorable evenings. Ishkoman's trout farms and royal gardens are within easy reach on foot.",
     highlights: [
@@ -1485,6 +1523,7 @@ export const hotels: Hotel[] = [
     rating: 4.8,
     reviewCount: 0,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Mountain view", "Meals included", "Free parking", "Hot water", "Garden", "Terrace", "Bonfire area", "Local cuisine", "Trout farm access", "Private balconies"],
     description: "Bam e Dunya — 'roof of the world' — lives up to its name, set in the valley depths of Ishkoman with mountain walls on every side. The resort offers the finest accommodation in the valley, with terraced gardens, private balconies and access to the adjacent trout farm.",
     highlights: [
@@ -1519,6 +1558,7 @@ export const hotels: Hotel[] = [
     rating: 4.3,
     reviewCount: 0,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Free WiFi", "Air conditioning", "Restaurant", "Room service", "Free parking", "River view", "24hr front desk"],
     description: "A reliable hotel in Gahkuch town, situated along the Ghizer River with views of the valley and the ancient fort above. A convenient overnight stop on longer Ghizer circuits, or a lunch base for travellers passing through between Phandar and Gilgit.",
     highlights: [
@@ -1555,6 +1595,7 @@ export const hotels: Hotel[] = [
     rating: 4.4,
     reviewCount: 0,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Mountain view", "Free parking", "Restaurant", "Hot water", "Garden", "Bonfire area", "Free WiFi"],
     description: "A comfortable mountain lodge in Nathiagali with easy access to the Mushkpuri and Pipeline tracks. Clean, well-maintained rooms with garden views make it a reliable base for two days in the Galiyat hills.",
     highlights: [
@@ -1589,6 +1630,7 @@ export const hotels: Hotel[] = [
     rating: 4.7,
     reviewCount: 0,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Mountain view", "Free parking", "Restaurant", "Hot water", "Bonfire & BBQ", "Terrace", "Free WiFi", "Fireplace lounge"],
     description: "Nathiagali's most atmospheric stay — Gali's End sits at the quiet end of the village with forest views on three sides and a fireplace lounge that comes alive after sunset. A short walk from the Mushkpuri trailhead and Nathiagali Bazar.",
     highlights: [
@@ -1623,6 +1665,7 @@ export const hotels: Hotel[] = [
     rating: 4.6,
     reviewCount: 0,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Mountain view", "Free parking", "Restaurant", "Hot water", "Garden", "Terrace", "Free WiFi", "Bonfire area"],
     description: "One of Nathiagali's most established and beloved hotels, Alpine has been welcoming travellers for decades. A well-regarded in-house restaurant, warm rooms, pine-scented gardens and a front-row seat for sunset over the valley.",
     highlights: [
@@ -1656,6 +1699,7 @@ export const hotels: Hotel[] = [
     rating: 4.5,
     reviewCount: 0,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Free WiFi", "Air conditioning", "Restaurant", "Room service", "Free parking", "Laundry", "24hr front desk", "Business center"],
     description: "A reliable mid-range hotel in Lahore, well-suited for cultural touring. Clean, comfortable rooms with attentive service, good in-house dining, and a location that puts Lahore's historic district within easy reach.",
     highlights: [
@@ -1689,6 +1733,7 @@ export const hotels: Hotel[] = [
     rating: 4.8,
     reviewCount: 0,
     pricePerNight: 0,
+    margin: 0.20,
     amenities: ["Free WiFi", "Air conditioning", "Fine dining restaurant", "Room service", "Concierge", "Free parking", "Laundry", "24hr front desk", "Business center"],
     description: "Lahore's boutique answer to luxury travel — intimate, refined and immaculately run. Ambiance Boutique Hotel combines tasteful interiors with attentive personalised service, making it the premium choice for cultural travellers exploring Mughal Lahore.",
     highlights: [
@@ -1724,6 +1769,7 @@ export const hotels: Hotel[] = [
     rating: 4.8,
     reviewCount: 0,
     pricePerNight: 28000,
+    margin: 0.25,
     taxNote: "No GST — Gilgit-Baltistan is a tax-free zone.",
     amenities: [
       "Free WiFi",

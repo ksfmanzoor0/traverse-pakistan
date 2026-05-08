@@ -29,6 +29,8 @@ export interface Hotel {
   rating: number;
   reviewCount: number;
   pricePerNight: number;
+  margin: number;           // per-hotel markup applied to corporate/base rates → display price
+  taxNote?: string;
   amenities: string[];
   description: string;
   highlights: string[];
