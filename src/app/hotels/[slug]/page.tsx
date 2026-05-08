@@ -13,7 +13,7 @@ import {
   breadcrumbSchema,
   combineSchemas,
 } from "@/lib/seo/schema";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, slugify } from "@/lib/utils";
 import { getHotelBySlug, getAllHotels, getHotelsByDestination } from "@/services/hotel.service";
 import { listR2Images } from "@/lib/r2";
 import Link from "next/link";
@@ -65,10 +65,9 @@ export default async function HotelDetailPage({ params }: Props) {
 
   // Fetch gallery + per-room images from R2 in parallel; fall back to static data if empty
   const base = `hotels/${hotel.slug}`;
-  const roomFolders = hotel.rooms.map((r) => r.folder ?? null);
   const [r2Gallery, ...r2RoomImages] = await Promise.all([
     listR2Images(`${base}/gallery/`),
-    ...roomFolders.map((f) => (f ? listR2Images(`${base}/rooms/${f}/`) : Promise.resolve([]))),
+    ...hotel.rooms.map((r) => listR2Images(`${base}/rooms/${slugify(r.name)}/`)),
   ]);
 
   const galleryUrls = r2Gallery.length > 0 ? r2Gallery : hotel.images;

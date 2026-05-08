@@ -31,7 +31,6 @@ export interface HotelRoom {
   extraOccupancyCharge?: number;    // per extra person per night beyond standard occupancy (2 guests)
   available: number;
   image: string;                    // static fallback image
-  folder?: string;                  // R2 subfolder name under hotels/{slug}/rooms/ for dynamic multi-image support
 }
 
 export interface HotelReview {

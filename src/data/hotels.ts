@@ -1822,7 +1822,6 @@ export const hotels: Hotel[] = [
         extraOccupancyCharge: 3000,
         available: 8,
         image: `${MEDIA}/hotels/ambiance-hunza/rooms/premier.jpg`,
-        folder: "premier-room",
       },
       {
         name: "Executive Room",
@@ -1837,10 +1836,9 @@ export const hotels: Hotel[] = [
         extraOccupancyCharge: 3000,
         available: 6,
         image: `${MEDIA}/hotels/ambiance-hunza/rooms/executive.jpg`,
-        folder: "executive-room",
       },
       {
-        name: "Executive Club",
+        name: "Executive Club Room",
         beds: "1 king bed · Club lounge access · Panoramic view",
         price: 33600,
         prices: [
@@ -1852,7 +1850,6 @@ export const hotels: Hotel[] = [
         extraOccupancyCharge: 3000,
         available: 4,
         image: `${MEDIA}/hotels/ambiance-hunza/rooms/executive-club.jpg`,
-        folder: "executive-club-room",
       },
       {
         name: "Junior Suite",
@@ -1867,7 +1864,6 @@ export const hotels: Hotel[] = [
         extraOccupancyCharge: 3000,
         available: 2,
         image: `${MEDIA}/hotels/ambiance-hunza/rooms/junior-suite.jpg`,
-        folder: "junior-suite",
       },
     ],
     reviews: [],
@@ -1947,7 +1943,6 @@ export const hotels: Hotel[] = [
         capacity: { adults: 3, children: 2, infants: 1, maxOccupancy: 4 },
         available: 6,
         image: `${MEDIA}/hotels/zen-by-the-lake/rooms/lake-view-room/Lake%20View%201.jpeg`,
-        folder: "lake-view-room",
       },
       {
         name: "Panoramic View Room",
@@ -1956,7 +1951,6 @@ export const hotels: Hotel[] = [
         capacity: { adults: 3, children: 2, infants: 1, maxOccupancy: 4 },
         available: 6,
         image: `${MEDIA}/hotels/zen-by-the-lake/rooms/panoramic-view-room/Panoramic%201.jpeg`,
-        folder: "panoramic-view-room",
       },
       {
         name: "Lake View Room with Private Garden",
@@ -1965,7 +1959,6 @@ export const hotels: Hotel[] = [
         capacity: { adults: 3, children: 2, infants: 1, maxOccupancy: 4 },
         available: 4,
         image: `${MEDIA}/hotels/zen-by-the-lake/rooms/lake-view-room-with-private-garden/Private%20Garden%201.jpeg`,
-        folder: "lake-view-room-with-private-garden",
       },
     ],
     reviews: [],
