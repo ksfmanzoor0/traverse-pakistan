@@ -10,9 +10,13 @@ interface MosaicGalleryProps {
   tourName: string;
 }
 
-export function MosaicGallery({ images, tourName }: MosaicGalleryProps) {
+export function MosaicGallery({ images: rawImages, tourName }: MosaicGalleryProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [failedUrls, setFailedUrls] = useState<Set<string>>(new Set());
+
+  const images = rawImages.filter(img => !failedUrls.has(img.url));
+  const onImgError = (url: string) => setFailedUrls(prev => new Set([...prev, url]));
 
   const openLightbox = (index: number) => {
     setActiveIndex(index);
@@ -48,6 +52,7 @@ export function MosaicGallery({ images, tourName }: MosaicGalleryProps) {
                 className="object-cover hover:scale-105 transition-transform duration-500"
                 sizes="(max-width: 640px) 100vw, 50vw"
                 priority
+                onError={() => onImgError(images[0].url)}
               />
             )}
           </button>
@@ -67,6 +72,7 @@ export function MosaicGallery({ images, tourName }: MosaicGalleryProps) {
                   fill
                   className="object-cover hover:scale-105 transition-transform duration-500"
                   sizes="25vw"
+                  onError={() => onImgError(img.url)}
                 />
               </button>
             ))}
@@ -140,6 +146,7 @@ export function MosaicGallery({ images, tourName }: MosaicGalleryProps) {
                 fill
                 className="object-contain"
                 sizes="90vw"
+                onError={() => onImgError(images[activeIndex].url)}
               />
             )}
           </div>

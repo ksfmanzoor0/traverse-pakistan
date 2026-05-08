@@ -5,6 +5,7 @@ import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { PackagesClient } from "@/components/packages/PackagesClient";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { getAllPackages } from "@/services/package.service";
+import { getDestinationOptions } from "@/services/destination.service";
 
 export const metadata: Metadata = buildMetadata({
   title: "Pakistan Holiday Packages — Custom Dates, Deluxe & Luxury Tiers",
@@ -15,7 +16,10 @@ export const metadata: Metadata = buildMetadata({
 });
 
 export default async function PackagesPage() {
-  const packages = await getAllPackages();
+  const [packages, destinations] = await Promise.all([
+    getAllPackages(),
+    getDestinationOptions().catch(() => []),
+  ]);
 
   return (
     <div className="pb-12">
@@ -35,7 +39,7 @@ export default async function PackagesPage() {
       </div>
 
       <Suspense fallback={<div className="py-20 text-center text-[var(--text-tertiary)]">Loading…</div>}>
-        <PackagesClient packages={packages} />
+        <PackagesClient packages={packages} destinations={destinations} />
       </Suspense>
     </div>
   );

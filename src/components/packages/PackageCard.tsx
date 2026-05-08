@@ -11,7 +11,17 @@ interface PackageCardProps {
   className?: string;
 }
 
+function pickImage(slug: string, images: Package["images"]) {
+  if (!images.length) return null;
+  const cover = images.find(img => /\/cover\./i.test(img.url));
+  if (cover) return cover;
+  let h = 0;
+  for (let i = 0; i < slug.length; i++) h = (h * 31 + slug.charCodeAt(i)) & 0xffff;
+  return images[h % images.length];
+}
+
 export function PackageCard({ pkg, variant = "carousel", className }: PackageCardProps) {
+  const heroImage = pickImage(pkg.slug, pkg.images);
   return (
     <Link
       href={`/packages/${pkg.slug}`}
@@ -29,8 +39,8 @@ export function PackageCard({ pkg, variant = "carousel", className }: PackageCar
       {/* Image */}
       <div className="relative aspect-[5/4] overflow-hidden">
         <Image
-          src={pkg.images[0]?.url || "/placeholder.jpg"}
-          alt={pkg.images[0]?.alt || pkg.name}
+          src={heroImage?.url || "/placeholder.jpg"}
+          alt={heroImage?.alt || pkg.name}
           fill
           className="object-cover transition-transform duration-700 ease-[cubic-bezier(0.2,0,0,1)] group-hover:scale-[1.04]"
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 310px"

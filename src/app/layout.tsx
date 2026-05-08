@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { plusJakartaSans } from "@/styles/fonts";
 import { Providers } from "@/components/providers/Providers";
-import { Navbar } from "@/components/layout/Navbar";
+import { NavbarWrapper } from "@/components/layout/NavbarWrapper";
 import { Footer } from "@/components/layout/Footer";
 import { WhatsAppFAB } from "@/components/layout/WhatsAppFAB";
 import { AwardStrip } from "@/components/layout/AwardStrip";
@@ -160,7 +160,7 @@ export default function RootLayout({
         </Suspense>
         <Providers>
           <AwardStrip />
-          <Navbar />
+          <NavbarWrapper />
           <main className="flex-1">{children}</main>
           <Footer />
           <WhatsAppFAB />

@@ -4,7 +4,7 @@ import { destinations } from "@/data/destinations";
 import { regions } from "@/data/regions";
 import { blogPosts } from "@/data/blog-posts";
 import { travelStyles } from "@/data/travel-styles";
-import { packages } from "@/data/packages";
+import { getAllPackages } from "@/services/package.service";
 import { hotels } from "@/data/hotels";
 import { absoluteUrl } from "@/lib/seo/site";
 
@@ -37,7 +37,8 @@ function entry(
   };
 }
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const packages = await getAllPackages();
   const staticPages: MetadataRoute.Sitemap = [
     entry("/", 1.0, "weekly"),
     entry("/grouptours", 0.95, "daily"),

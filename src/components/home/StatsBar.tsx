@@ -15,7 +15,7 @@ interface Stat {
 const stats: Stat[] = [
   { value: 4.9, suffix: "", label: "Average Rating", isDecimal: true, starSuffix: true },
   { value: 1300, suffix: "+", label: "Happy Travelers", isDecimal: false },
-  { value: 22, suffix: "+", label: "Tour Packages", isDecimal: false },
+  { value: 63, suffix: "+", label: "Tour Packages", isDecimal: false },
   { value: 15, suffix: "+", label: "Regions Covered", isDecimal: false },
   { value: 98, suffix: "%", label: "Would Recommend", isDecimal: false },
 ];

@@ -10,8 +10,8 @@ import { MosaicGallery } from "@/components/trip-detail/MosaicGallery";
 import { PackageBookingSidebar } from "@/components/packages/PackageBookingSidebar";
 import { PackageItineraryAccordion } from "@/components/packages/PackageItineraryAccordion";
 import { PackageCard } from "@/components/packages/PackageCard";
-import { formatPrice, getWhatsAppUrl } from "@/lib/utils";
-import { QuoteRequestDialog } from "@/components/quote/QuoteRequestDialog";
+import { formatPrice } from "@/lib/utils";
+import Link from "next/link";
 import type { Package, PackageItinerary, PackageTier } from "@/types/package";
 import type { Hotel } from "@/types/hotel";
 
@@ -27,15 +27,14 @@ export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages
   const [departureCity, setDepartureCity] = useState<"islamabad" | "lahore" | "karachi">(
     pkg.tiers.deluxe.islamabad !== null ? "islamabad" : pkg.tiers.deluxe.lahore !== null ? "lahore" : "karachi"
   );
-  const [mobileQuoteOpen, setMobileQuoteOpen] = useState(false);
 
   return (
-    <div className="py-6 sm:py-8">
+    <div className="pt-0 sm:pt-6 pb-24 sm:pb-8">
       <Container>
         <Breadcrumb items={[{ label: "Packages", href: "/packages" }, { label: pkg.name }]} />
 
         {/* Gallery */}
-        <div className="mt-5">
+        <div className="mt-1 sm:mt-5">
           <MosaicGallery images={pkg.images} tourName={pkg.name} />
         </div>
 
@@ -231,24 +230,13 @@ export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages
             </span>
             <span className="text-[13px] text-[var(--text-tertiary)] ml-1">per person</span>
           </div>
-          <button
-            type="button"
-            onClick={() => setMobileQuoteOpen(true)}
-            className="h-11 px-6 bg-[var(--primary)] text-[var(--text-inverse)] text-[14px] font-semibold rounded-full flex items-center justify-center hover:bg-[var(--primary-hover)] transition-colors cursor-pointer"
+          <Link
+            href={`/packages/${pkg.slug}/checkout`}
+            className="h-11 px-6 bg-[var(--primary)] text-[var(--text-inverse)] text-[14px] font-semibold rounded-full flex items-center justify-center hover:bg-[var(--primary-hover)] transition-colors"
           >
-            Request Quote
-          </button>
+            Book Now
+          </Link>
         </div>
-
-        <QuoteRequestDialog
-          open={mobileQuoteOpen}
-          onClose={() => setMobileQuoteOpen(false)}
-          requestType="package"
-          slug={pkg.slug}
-          displayName={pkg.name}
-          tier={selectedTier === "deluxe" ? "Deluxe" : "Luxury"}
-          whatsappFallbackMessage={`Hi! I'm interested in the "${pkg.name}" ${selectedTier} package.`}
-        />
 
         {/* Related packages */}
         {relatedPackages.length > 0 && (

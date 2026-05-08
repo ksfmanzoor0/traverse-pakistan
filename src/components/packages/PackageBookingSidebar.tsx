@@ -162,8 +162,29 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
   const [rooms, setRooms] = useState(1);
   const [adults, setAdults] = useState(2);
 
-
   const calWrapRef = useRef<HTMLDivElement>(null);
+
+  // Pre-fill from search widget session
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("tp_search");
+      if (!raw) return;
+      const s = JSON.parse(raw) as {
+        startDate?: string;
+        travelers?: { adults: number; children: number; infants: number };
+      };
+      if (s.startDate) {
+        const d = new Date(s.startDate);
+        setCheckIn(d);
+        setCalYear(d.getFullYear());
+        setCalMonth(d.getMonth());
+      }
+      if (s.travelers) {
+        const total = Math.max(1, s.travelers.adults + s.travelers.children);
+        setAdults(Math.min(total, pkg.maxGroupSize));
+      }
+    } catch { /* ignore */ }
+  }, [pkg.maxGroupSize]);
 
   useEffect(() => {
     if (!calOpen) return;

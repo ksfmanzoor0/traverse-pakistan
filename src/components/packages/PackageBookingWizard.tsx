@@ -474,7 +474,7 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
       <aside className="mt-8 lg:mt-0">
         <div className="sticky top-[100px] bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-[var(--radius-md)] overflow-hidden" style={{ boxShadow: "var(--shadow-md)" }}>
           <div className="relative aspect-[16/9]">
-            <Image src={pkg.images[0]?.url ?? ""} alt={pkg.name} fill className="object-cover" sizes="380px" />
+            {pkg.images[0]?.url && <Image src={pkg.images[0].url} alt={pkg.name} fill className="object-cover" sizes="380px" />}
             <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/70 to-transparent">
               <p className="text-[10px] font-bold uppercase tracking-wider text-white/80 capitalize">{state.tier} tier</p>
               <h3 className="text-[16px] font-bold text-white leading-snug mt-0.5">{pkg.name}</h3>

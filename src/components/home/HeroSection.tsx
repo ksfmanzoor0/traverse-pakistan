@@ -1,6 +1,5 @@
 import Image from "next/image";
-import { SearchWidget } from "./SearchWidget";
-import { Icon } from "@/components/ui/Icon";
+import { SearchWidget, type DestinationOption } from "./SearchWidget";
 
 const MEDIA = "https://media.traversepakistan.com";
 
@@ -9,9 +8,9 @@ const heroImages = [15, 1, 9, 12, 14, 10].map((n) => ({
   alt: "Pakistan travel destination",
 }));
 
-export function HeroSection() {
+export function HeroSection({ destinations = [] }: { destinations?: DestinationOption[] }) {
   return (
-    <section className="relative">
+    <section className="relative hidden md:block">
       <div className="absolute inset-0 overflow-hidden">
         {heroImages.map((img, i) => (
           <div
@@ -36,11 +35,11 @@ export function HeroSection() {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-[480px] sm:min-h-[540px] px-5 sm:px-8 pt-6 pb-24">
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-[540px] px-5 sm:px-8 pt-6 pb-24">
         <h1
           className="text-[var(--on-dark)] leading-[1.05] tracking-[-0.03em] font-extrabold text-center max-w-3xl"
           style={{
-            fontSize: "clamp(2rem, 1.5rem + 3vw, 3.5rem)",
+            fontSize: "clamp(1.75rem, 1.5rem + 3vw, 3.5rem)",
             textShadow: "0 2px 16px rgba(0,0,0,0.3)",
           }}
         >
@@ -48,15 +47,15 @@ export function HeroSection() {
         </h1>
 
         <p
-          className="mt-3 text-[16px] sm:text-[17px] text-[var(--on-dark-secondary)] max-w-[780px] mx-auto leading-relaxed text-center"
+          className="mt-3 text-[17px] text-[var(--on-dark-secondary)] max-w-[780px] mx-auto leading-relaxed text-center"
           style={{ textShadow: "0 1px 6px rgba(0,0,0,0.3)" }}
         >
           Bespoke journeys. Iconic landscapes. Unrivaled expertise across a vast realm; where the ancient echoes of Sindh meet the frozen cathedrals of K2.
         </p>
 
-        {/* Search Widget */}
+        {/* Search widget */}
         <div id="hero-search" className="w-full max-w-[920px] mt-4 relative z-20">
-          <SearchWidget />
+          <SearchWidget destinations={destinations} />
         </div>
       </div>
 

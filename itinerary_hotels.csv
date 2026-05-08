@@ -1,0 +1,107 @@
+slug,tier,destination,status
+best-western-hunza,deluxe,hunza,missing
+2-magpies-hunza,luxury,hunza,missing
+sapphire-hunza,deluxe,hunza,missing
+saphire-hunza,deluxe,hunza,typo of sapphire-hunza
+ambiance-hunza,luxury,hunza,missing
+hunza-serena-hotel,luxury,hunza,missing
+famree-attabad,deluxe,attabad,missing
+zen-by-the-lake,deluxe + luxury,attabad,missing
+luxus-hunza-attabad-lake,luxury,attabad,exists
+eagles-nest-hotel,deluxe,hunza,exists
+destination-hotel-gilgit,deluxe,gilgit,exists
+gilgit-serena-hotel,luxury,gilgit,exists
+dumaani-inn-gilgit,deluxe + luxury,gilgit,missing
+destination-gilgit,deluxe,gilgit,mismatch - different slug from destination-hotel-gilgit
+serena-gilgit,luxury,gilgit,mismatch - different slug from gilgit-serena-hotel
+shangrila-resort-skardu,,skardu,exists
+concordia-hotel-skardu,,skardu,exists
+glamp-pakistan-deosai,deluxe + luxury,deosai,exists
+qayyam-skardu,deluxe,skardu,missing
+himmel-resort-skardu,deluxe + luxury,skardu,missing
+hotel-reego-skardu,deluxe + luxury,skardu,missing
+zhule-by-roomy,deluxe,shigar,missing
+khoj-resort-shigar,deluxe + luxury,shigar,missing
+serena-shigar-fort,deluxe + luxury,shigar,missing
+serena-shigar,luxury,shigar,mismatch - likely same as serena-shigar-fort
+rivage-resort-shigar,deluxe + luxury,shigar,missing
+space-hotel-shigar,deluxe + luxury,shigar,missing
+destination-hotel-khaplu,deluxe,khaplu,missing
+destination-khaplu,deluxe,khaplu,mismatch - likely same as destination-hotel-khaplu
+serena-khaplu-palace,luxury,khaplu,missing
+serena-khaplu,luxury,khaplu,mismatch - likely same as serena-khaplu-palace
+serena-hotel-khaplu,deluxe + luxury,khaplu,mismatch - third version of Khaplu Serena
+karakoram-lodge-khaplu,deluxe + luxury,khaplu,missing
+mulberry-lodge-astore,deluxe + luxury,astore,missing
+naltar-palace-hotel,deluxe + luxury,naltar,missing
+nanga-parbat-base-camp-hotel,,fairy-meadows,exists
+broad-view-fairy-meadows,deluxe + luxury,fairy-meadows,missing
+raikot-sarai,deluxe + luxury,fairy-meadows,missing
+shangrila-chillas,deluxe + luxury,chillas,missing
+hindukush-heights-hotel,deluxe + luxury,chitral,missing
+chitral-serena-hotel,luxury,chitral,missing
+ayun-fort-inn,deluxe + luxury,chitral,missing
+pamir-riverside-inn,deluxe,chitral,missing
+best-western-buni,deluxe + luxury,buni,missing
+mastuj-fort,deluxe + luxury,mastuj,missing
+mount-feast-naran,deluxe + luxury,naran,missing
+demanchi-hotel-naran,deluxe + luxury,naran,missing
+grey-walls-naran,luxury,naran,missing
+chinar-resort-sharan,deluxe + luxury,sharan,missing
+pine-park-glade-shogran,deluxe + luxury,shogran,missing
+spruce-wood-resort-shogran,luxury,shogran,missing
+latitude-resort-kumrat,deluxe,kumrat,missing
+khanabadosh-glamp-kumrat,luxury,kumrat,missing
+swat-serena-hotel,luxury,swat,exists
+honeymoon-hotel-kalam,deluxe,kalam,missing
+kalam-view-hotel,luxury,kalam,missing
+walnut-heights-kalam,luxury,kalam,missing
+zen-luxus-kalam,luxury,kalam,missing
+frontier-tower-malam-jabba,deluxe,malam-jabba,missing
+malam-jabba-resort,luxury,malam-jabba,missing
+mountain-view-resort-malam-jabba,luxury,malam-jabba,missing
+pc-malam-jabba,luxury,malam-jabba,missing
+fort-hotel-yasin,deluxe + luxury,yasin,exists
+rustagaarii-retreat-yasin,luxury,yasin,exists
+hill-top-lodge-phandar,deluxe,phandar,exists
+apex-hotel-phandar,luxury,phandar,exists
+dream-hotel-phandar,deluxe + luxury,phandar,missing
+coyote-den-ishkoman,deluxe,ishkoman,exists
+bam-e-dunya-ishkoman,luxury,ishkoman,exists
+lemon-lodges-nathiagali,deluxe,nathiagali,exists
+galis-end-nathiagali,luxury,nathiagali,exists
+shabistan-inn-arrang-kel,deluxe,arang-kel,exists
+wanderlust-arrang-kel,luxury,arang-kel,exists
+keran-riverside-resort,deluxe + luxury,keran,exists
+green-village-resort-upper-neelam,deluxe + luxury,upper-neelam,exists
+shabistan-inn-taobut,deluxe,taobut,exists
+corner-view-guest-house-taobut,deluxe + luxury,taobut,exists
+avenue-hotel-islamabad,deluxe,islamabad,exists
+grand-islamabad-hotel,deluxe,islamabad,missing
+ambiance-boutique-hotel,luxury,islamabad,missing
+108-hotel-islamabad,deluxe + luxury,islamabad,missing
+the-108-hotel-islamabad,luxury,islamabad,mismatch - likely same as 108-hotel-islamabad
+nine-tree-lahore,deluxe,lahore,exists
+ambiance-boutique-lahore,luxury,lahore,exists
+ambiance-lahore,luxury,lahore,exists
+9-tree-hotel-lahore,deluxe,lahore,mismatch - different slug from nine-tree-lahore
+lokal-karachi,deluxe,karachi,exists
+ambiance-karachi,luxury,karachi,exists
+sadaf-resort-gwadar,deluxe,gwadar,exists
+pc-gwadar,luxury,gwadar,exists
+haft-talar-resort-ormara,deluxe,ormara,exists
+gidan-beach-resort-ormara,luxury,ormara,exists
+sambara-inn-larkana,deluxe + luxury,larkana,exists
+grand-blu-hotel-hyderabad,deluxe,hyderabad,mismatch - hotels.ts has grand-blu-hyderabad
+pc-legacy-hyderabad,luxury,hyderabad,missing
+hotel-hayyat-sukkur,deluxe,sukkur,missing
+rt-grace-hotel-sukkur,luxury,sukkur,missing
+the-edition-bahawalpur,deluxe,bahawalpur,missing
+falettas-grand-bahawalpur,luxury,bahawalpur,mismatch - hotels.ts has falettis-grand-bahawalpur
+hotel-one-multan,deluxe,multan,missing
+falettas-grand-multan,luxury,multan,missing
+destination-heritage-greens-peshawar,luxury,peshawar,exists
+shelton-legacy-peshawar,deluxe,peshawar,missing
+hotel-the-jeevans-sialkot,deluxe + luxury,sialkot,missing
+jhelum-inn,deluxe,jhelum,exists
+premier-heights-jhelum,luxury,jhelum,missing

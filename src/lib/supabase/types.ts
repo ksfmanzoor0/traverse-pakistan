@@ -192,6 +192,49 @@ export type DestinationFaqRow = {
   created_at: string;
 };
 
+export type PackageRow = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  badge: string | null;
+  duration: number;
+  route: string | null;
+  destination_slug: string;
+  related_destination_slugs: string[];
+  region_slug: string;
+  rating: number;
+  review_count: number;
+  max_group_size: number | null;
+  languages: string[];
+  free_cancellation: boolean;
+  reserve_now_pay_later: boolean;
+  images: Array<{ url: string; alt: string }>;
+  highlights: string[];
+  inclusions: string[];
+  exclusions: string[];
+  know_before_you_go: string[];
+  pricing: unknown;
+  meta_title: string | null;
+  meta_description: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type PackageItineraryDayRow = {
+  id: string;
+  package_slug: string;
+  day_number: number;
+  title: string;
+  description: string | null;
+  hotel_deluxe: string | null;
+  hotel_luxury: string | null;
+  stops: Array<{ name: string; detail: string }> | null;
+  driving_time: string | null;
+  overnight: string | null;
+  city_only: string[] | null;
+};
+
 export type CreateBookingArgs = {
   p_departure_id: string;
   p_seats: number;
@@ -289,6 +332,18 @@ export type Database = {
         Row: DestinationFaqRow;
         Insert: Omit<DestinationFaqRow, "id" | "created_at"> & Partial<Pick<DestinationFaqRow, "id" | "created_at">>;
         Update: Partial<DestinationFaqRow>;
+        Relationships: [];
+      };
+      packages: {
+        Row: PackageRow;
+        Insert: Omit<PackageRow, "id" | "created_at" | "updated_at"> & Partial<Pick<PackageRow, "id" | "created_at" | "updated_at">>;
+        Update: Partial<PackageRow>;
+        Relationships: [];
+      };
+      package_itinerary_days: {
+        Row: PackageItineraryDayRow;
+        Insert: Omit<PackageItineraryDayRow, "id"> & Partial<Pick<PackageItineraryDayRow, "id">>;
+        Update: Partial<PackageItineraryDayRow>;
         Relationships: [];
       };
       package_bookings: {

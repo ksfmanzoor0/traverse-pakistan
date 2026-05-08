@@ -65,12 +65,31 @@ export default async function DestinationDetailPage({ params }: Props) {
   const dest = await getDestinationBySlug(slug);
   if (!dest) notFound();
 
-  const [tours, faqs, pkgs, hotels] = await Promise.all([
+  const ancestorSlugs = dest.ancestorSlugs ?? [];
+
+  const [tours, faqs, pkgs, hotels, ...ancestorResults] = await Promise.all([
     getToursByDestination(slug),
     getFAQsByDestination(slug),
     getPackagesByDestination(slug),
     getHotelsByDestination(slug),
+    ...ancestorSlugs.flatMap((a) => [
+      getToursByDestination(a),
+      getPackagesByDestination(a),
+      getHotelsByDestination(a),
+    ]),
   ]);
+
+  const allTours = [...tours];
+  const allPkgs = [...pkgs];
+  const allHotels = [...hotels];
+  for (let i = 0; i < ancestorSlugs.length; i++) {
+    const aTours  = ancestorResults[i * 3 + 0] as typeof tours;
+    const aPkgs   = ancestorResults[i * 3 + 1] as typeof pkgs;
+    const aHotels = ancestorResults[i * 3 + 2] as typeof hotels;
+    aTours.forEach((t) => { if (!allTours.some((e) => e.id === t.id)) allTours.push(t); });
+    aPkgs.forEach((p) => { if (!allPkgs.some((e) => e.id === p.id)) allPkgs.push(p); });
+    aHotels.forEach((h) => { if (!allHotels.some((e) => e.id === h.id)) allHotels.push(h); });
+  }
 
   const schema = combineSchemas(
     destinationSchema(dest),
@@ -127,17 +146,17 @@ export default async function DestinationDetailPage({ params }: Props) {
       </section>
 
       {/* Packages */}
-      {pkgs.length > 0 && (
+      {allPkgs.length > 0 && (
         <section className="py-16 sm:py-20 bg-[var(--bg-subtle)]">
           <Container>
             <SectionHeader
               title={`Packages in ${dest.name}`}
-              subtitle={`${pkgs.length} flexible package${pkgs.length !== 1 ? "s" : ""} — your dates, your tier`}
+              subtitle={`${allPkgs.length} flexible package${allPkgs.length !== 1 ? "s" : ""} — your dates, your tier`}
               linkText="View all packages"
               linkHref="/packages"
             />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {pkgs.map((pkg) => (
+              {allPkgs.map((pkg) => (
                 <PackageCard key={pkg.id} pkg={pkg} variant="grid" />
               ))}
             </div>
@@ -146,17 +165,17 @@ export default async function DestinationDetailPage({ params }: Props) {
       )}
 
       {/* Tours */}
-      {tours.length > 0 && (
+      {allTours.length > 0 && (
         <section className="py-16 sm:py-20">
           <Container>
             <SectionHeader
               title={`Group Tours in ${dest.name}`}
-              subtitle={`${tours.length} tour${tours.length !== 1 ? "s" : ""} to choose from`}
+              subtitle={`${allTours.length} tour${allTours.length !== 1 ? "s" : ""} to choose from`}
               linkText="View all group tours"
               linkHref="/grouptours"
             />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {tours.map((tour) => (
+              {allTours.map((tour) => (
                 <TourCard key={tour.id} tour={tour} variant="grid" />
               ))}
             </div>
@@ -165,17 +184,17 @@ export default async function DestinationDetailPage({ params }: Props) {
       )}
 
       {/* Hotels */}
-      {hotels.length > 0 && (
+      {allHotels.length > 0 && (
         <section className="py-16 sm:py-20 bg-[var(--bg-subtle)]">
           <Container>
             <SectionHeader
               title={`Where to Stay in ${dest.name}`}
-              subtitle={`${hotels.length} hotel${hotels.length !== 1 ? "s" : ""} & properties`}
+              subtitle={`${allHotels.length} hotel${allHotels.length !== 1 ? "s" : ""} & properties`}
               linkText="View all hotels"
               linkHref="/hotels"
             />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {hotels.map((hotel) => (
+              {allHotels.map((hotel) => (
                 <Link
                   key={hotel.id}
                   href={`/hotels/${hotel.slug}`}

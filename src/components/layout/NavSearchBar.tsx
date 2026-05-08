@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { SearchWidget } from "@/components/home/SearchWidget";
+import { SearchWidget, type DestinationOption } from "@/components/home/SearchWidget";
 
 const TABS = [
   { id: "packages", label: "Custom Tours" },
@@ -21,20 +21,6 @@ function getDefaultTab(pathname: string): TabId {
   return "packages";
 }
 
-const DEST_NAMES: Record<string, string> = {
-  "hunza": "Hunza Valley",
-  "skardu": "Skardu",
-  "fairy-meadows": "Fairy Meadows",
-  "ghizer": "Ghizar & Phandar",
-  "chitral": "Chitral & Kalash",
-  "kumrat": "Kumrat Valley",
-  "swat": "Swat & Malam Jabba",
-  "neelam-valley": "Neelam Valley",
-  "makran": "Makran Coast",
-  "interior-sindh": "Interior Sindh",
-  "multan": "Multan & Bahawalpur",
-  "kaghan": "Kaghan & Sharan",
-};
 
 const TAB_LABELS: Record<string, string> = {
   packages: "Custom Tours",
@@ -68,7 +54,8 @@ function readSavedSearch(): SavedSearch | null {
 const SPRING = { duration: 0.4, ease: [0.32, 0.72, 0, 1] } as const;
 const EASE_OUT = { duration: 0.4, ease: [0.32, 0.72, 0, 1] } as const;
 
-export function NavSearchBar() {
+export function NavSearchBar({ destinations = [] }: { destinations?: DestinationOption[] }) {
+  const destNamesMap = Object.fromEntries(destinations.map((d) => [d.slug, d.name]));
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>(getDefaultTab(pathname));
@@ -158,7 +145,7 @@ export function NavSearchBar() {
 
           {/* CLOSED: compact pill */}
           {!open && (() => {
-            const destName = pill?.selectedDest ? DEST_NAMES[pill.selectedDest] ?? pill.selectedDest : null;
+            const destName = pill?.selectedDest ? destNamesMap[pill.selectedDest] ?? pill.selectedDest : null;
             const tabLabel = pill?.activeTab ? TAB_LABELS[pill.activeTab] : null;
             const checkIn = fmtPillDate(pill?.startDate);
             const checkOut = fmtPillDate(pill?.endDate);
@@ -257,6 +244,7 @@ export function NavSearchBar() {
                 defaultTab={activeTab}
                 hideTabs
                 defaultActiveField="destination"
+                destinations={destinations}
                 onClose={() => setOpen(false)}
               />
             </motion.div>

@@ -15,8 +15,14 @@ import {
 } from "@/lib/seo/schema";
 import { formatPrice } from "@/lib/utils";
 import { getHotelBySlug, getAllHotels, getHotelsByDestination } from "@/services/hotel.service";
+import { listR2Images } from "@/lib/r2";
 import Link from "next/link";
 import { HotelBookingSidebar } from "@/components/hotels/HotelBookingSidebar";
+import { HotelRoomsBookingClient } from "@/components/hotels/HotelRoomsBookingClient";
+import { HotelRoomProvider } from "@/components/hotels/HotelRoomContext";
+
+// Hotel pages re-validate every hour so R2 image uploads are picked up without a full rebuild
+export const revalidate = 3600;
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -56,7 +62,24 @@ export default async function HotelDetailPage({ params }: Props) {
   if (!hotel) notFound();
 
   const moreHotels = (await getHotelsByDestination(hotel.destinationSlug)).filter((h) => h.slug !== slug);
-  const galleryImages = hotel.images.map((url, i) => ({ url, alt: `${hotel.name} photo ${i + 1}` }));
+
+  // Fetch gallery + per-room images from R2 in parallel; fall back to static data if empty
+  const base = `hotels/${hotel.slug}`;
+  const roomFolders = hotel.rooms.map((r) => r.folder ?? null);
+  const [r2Gallery, ...r2RoomImages] = await Promise.all([
+    listR2Images(`${base}/gallery/`),
+    ...roomFolders.map((f) => (f ? listR2Images(`${base}/rooms/${f}/`) : Promise.resolve([]))),
+  ]);
+
+  const galleryUrls = r2Gallery.length > 0 ? r2Gallery : hotel.images;
+  const galleryImages = galleryUrls.map((url, i) => ({ url, alt: `${hotel.name} photo ${i + 1}` }));
+
+  // Map room index → R2 image list (falls back to [] → component uses room.image)
+  const roomImagesMap: Record<number, string[]> = {};
+  hotel.rooms.forEach((_, i) => {
+    if (r2RoomImages[i]?.length) roomImagesMap[i] = r2RoomImages[i];
+  });
+
 
   const schema = combineSchemas(
     hotelSchema(hotel),
@@ -68,7 +91,7 @@ export default async function HotelDetailPage({ params }: Props) {
   );
 
   return (
-    <div className="py-6 sm:py-8">
+    <div className="pt-0 sm:pt-6 pb-24 sm:pb-8">
       <JsonLd data={schema} id={`hotel-${hotel.slug}-jsonld`} />
       <Container>
         {/* Breadcrumb */}
@@ -80,7 +103,7 @@ export default async function HotelDetailPage({ params }: Props) {
         />
 
         {/* Gallery */}
-        <div className="mt-5">
+        <div className="mt-1 sm:mt-5">
           <MosaicGallery images={galleryImages} tourName={hotel.name} />
         </div>
 
@@ -119,6 +142,7 @@ export default async function HotelDetailPage({ params }: Props) {
         </div>
 
         {/* Two-column layout */}
+        <HotelRoomProvider initialRoom={hotel.rooms[0]}>
         <div className="mt-8 lg:grid lg:grid-cols-[1fr_380px] lg:gap-10">
           {/* Main content */}
           <div>
@@ -156,29 +180,8 @@ export default async function HotelDetailPage({ params }: Props) {
               <p className="text-[15px] text-[var(--text-secondary)] leading-[1.7]">{hotel.description}</p>
             </div>
 
-            {/* Rooms */}
-            <div className="py-8 border-b border-[var(--border-default)]" id="rooms">
-              <h2 className="text-xl font-bold text-[var(--text-primary)] mb-6">Where you&apos;ll sleep</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {hotel.rooms.map((room) => (
-                  <div key={room.name} className="rounded-[var(--radius-md)] border border-[var(--border-default)] overflow-hidden">
-                    <div className="relative aspect-[3/2]">
-                      <Image src={room.image} alt={room.name} fill className="object-cover" sizes="300px" />
-                      <span className={`absolute top-2 right-2 px-2 py-0.5 text-[10px] font-bold uppercase rounded-[var(--radius-full)] ${room.available <= 2 ? "bg-[var(--warning)] text-[var(--on-dark)]" : "bg-[var(--bg-primary)]/80 backdrop-blur-sm text-[var(--text-primary)]"}`}>
-                        {room.available} left
-                      </span>
-                    </div>
-                    <div className="p-4">
-                      <h3 className="text-[15px] font-bold text-[var(--text-primary)]">{room.name}</h3>
-                      <p className="text-[13px] text-[var(--text-tertiary)] mt-0.5">{room.beds}</p>
-                      <p className="text-[16px] font-bold text-[var(--text-primary)] mt-2 tabular-nums">
-                        {formatPrice(room.price)} <span className="text-[13px] font-normal text-[var(--text-tertiary)]">/ night</span>
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Rooms — client component handles mobile tap-to-select + booking bar */}
+            <HotelRoomsBookingClient hotel={hotel} roomImagesMap={roomImagesMap} />
 
             {/* Amenities */}
             <div className="py-8 border-b border-[var(--border-default)]" id="amenities">
@@ -252,6 +255,16 @@ export default async function HotelDetailPage({ params }: Props) {
                   </ul>
                 </div>
               </div>
+
+              {/* Tax note */}
+              {hotel.taxNote && (
+                <div className="mt-8 flex items-start gap-3 px-4 py-3 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-sm)]">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2" className="shrink-0 mt-0.5">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <p className="text-[13px] text-[var(--text-secondary)]">{hotel.taxNote}</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -260,6 +273,7 @@ export default async function HotelDetailPage({ params }: Props) {
             <HotelBookingSidebar hotel={hotel} />
           </aside>
         </div>
+        </HotelRoomProvider>
 
         {/* More hotels */}
         {moreHotels.length > 0 && (
@@ -296,23 +310,6 @@ export default async function HotelDetailPage({ params }: Props) {
           </section>
         )}
 
-        {/* Mobile sticky bar */}
-        <div className="fixed bottom-0 left-0 right-0 lg:hidden z-40 bg-[var(--bg-primary)] border-t border-[var(--border-default)] px-5 py-3 flex items-center justify-between">
-          <div>
-            <span className="text-lg font-bold text-[var(--text-primary)] tabular-nums">{formatPrice(hotel.pricePerNight)}</span>
-            <span className="text-[13px] text-[var(--text-tertiary)]"> / night</span>
-            <p className="text-[12px] text-[var(--text-tertiary)] inline-flex items-center gap-1">
-              <Icon name="star" size="xs" weight="fill" color="var(--primary-muted)" />
-              {hotel.rating} · {hotel.reviewCount} reviews
-            </p>
-          </div>
-          <Link
-            href={`/hotels/${hotel.slug}/checkout`}
-            className="h-11 px-6 bg-[var(--primary)] text-[var(--on-dark)] text-[14px] font-semibold rounded-[var(--radius-full)] flex items-center justify-center hover:bg-[var(--primary-hover)] transition-colors"
-          >
-            Book Now
-          </Link>
-        </div>
       </Container>
     </div>
   );

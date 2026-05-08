@@ -30,6 +30,21 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
   const [departuresLoaded, setDeparturesLoaded] = useState(false);
   const [resumeAvailable, setResumeAvailable] = useState(false);
 
+  // Pre-fill from search widget session
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("tp_search");
+      if (!raw) return;
+      const s = JSON.parse(raw) as {
+        travelers?: { adults: number; children: number; infants: number };
+      };
+      if (s.travelers) {
+        setAdults(Math.max(1, s.travelers.adults));
+        setChildren(s.travelers.children);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setResumeAvailable(hasResumableDraft(tour.slug) !== null);

@@ -5,38 +5,28 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PackageCard } from "@/components/packages/PackageCard";
 import type { Package } from "@/types/package";
+import type { DestinationOption } from "@/components/home/SearchWidget";
 
-const allDestinations = [
-  { name: "Hunza Valley", slug: "hunza" },
-  { name: "Skardu", slug: "skardu" },
-  { name: "Fairy Meadows", slug: "fairy-meadows" },
-  { name: "Ghizar & Phandar", slug: "ghizer" },
-  { name: "Chitral & Kalash", slug: "chitral" },
-  { name: "Kumrat Valley", slug: "kumrat" },
-  { name: "Swat & Malam Jabba", slug: "swat" },
-  { name: "Neelam Valley", slug: "neelam-valley" },
-  { name: "Makran Coast & Gwadar", slug: "makran" },
-  { name: "Interior Sindh", slug: "interior-sindh" },
-  { name: "Multan & Bahawalpur", slug: "multan" },
-  { name: "Kaghan & Sharan", slug: "kaghan" },
-];
-
-export function PackagesClient({ packages }: { packages: Package[] }) {
+export function PackagesClient({ packages, destinations = [] }: { packages: Package[]; destinations?: DestinationOption[] }) {
   const searchParams = useSearchParams();
   const destFilter = searchParams.get("destination") ?? "";
   const dateFilter = searchParams.get("checkin") ?? "";
 
+  // Resolve sub-destination to its parent slug for package filtering
+  const selectedDest = destinations.find((d) => d.slug === destFilter);
+  const filterSlug = selectedDest?.parentSlug ?? destFilter;
+
   const filtered = useMemo(() => (
-    destFilter
+    filterSlug
       ? packages.filter(
           (p) =>
-            p.destinationSlug === destFilter ||
-            p.relatedDestinationSlugs?.includes(destFilter)
+            p.destinationSlug === filterSlug ||
+            p.relatedDestinationSlugs?.includes(filterSlug)
         )
       : packages
-  ), [packages, destFilter]);
+  ), [packages, filterSlug]);
 
-  const destName = allDestinations.find((d) => d.slug === destFilter)?.name;
+  const destName = destinations.find((d) => d.slug === destFilter)?.name;
   const hasFilters = !!(destFilter || dateFilter);
 
   const dateLabel = dateFilter

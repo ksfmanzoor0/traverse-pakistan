@@ -587,7 +587,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 7,
         title: "Hunza → Khaplu via Rakaposhi & Skardu",
         description: "A long but scenic transfer day through Gilgit-Baltistan's most dramatic landscape. Stop at the Rakaposhi View Point where tectonic plates visibly collide, break for lunch in Skardu, and arrive at the royal Khaplu Valley by evening.",
-        hotels: { deluxe: "destination-khaplu", luxury: "serena-khaplu-palace" },
+        hotels: { deluxe: "destination-hotel-khaplu", luxury: "serena-khaplu-palace" },
         stops: [
           { name: "Rakaposhi View Point", detail: "Short stop — tectonic plate collision landscape" },
           { name: "Skardu", detail: "Lunch stop in the valley" },
@@ -600,7 +600,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 8,
         title: "Khaplu Fort, Chaqchan Mosque & Machlu Gardens",
         description: "A full day in the hidden gem of Baltistan. Visit Khaplu Fort, the Chaqchan Mosque — oldest in Baltistan at 700 years — and drive up to the Masherbrum View Point for a close-up of K6 (7,821m). End the afternoon in the vast spring blossom gardens of Machlu and watch sunset at the Haldi Cones.",
-        hotels: { deluxe: "destination-khaplu", luxury: "serena-khaplu-palace" },
+        hotels: { deluxe: "destination-hotel-khaplu", luxury: "serena-khaplu-palace" },
         stops: [
           { name: "Khaplu Fort", detail: "Historic Baltistani fort" },
           { name: "Chaqchan Mosque", detail: "700-year-old mosque — oldest in Baltistan" },
@@ -653,7 +653,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 0,
         title: "Karachi → Islamabad",
         description: "Take an evening flight from Karachi to Islamabad. Transfer to 108 Hotel in the heart of Islamabad for the night. Departure from Islamabad at 06:00 am.",
-        hotels: { deluxe: "108-hotel-islamabad", luxury: "108-hotel-islamabad" },
+        hotels: { deluxe: "the-108-hotel-islamabad", luxury: "the-108-hotel-islamabad" },
         stops: [
           { name: "Karachi", detail: "Evening departure flight" },
           { name: "Islamabad International Airport", detail: "Night arrival" },
@@ -726,7 +726,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 5,
         title: "Islamabad → Karachi",
         description: "After breakfast at 108 Hotel, transfer to Islamabad International Airport for your morning flight to Karachi. Tour ends on arrival.",
-        hotels: { deluxe: "108-hotel-islamabad", luxury: "108-hotel-islamabad" },
+        hotels: { deluxe: "the-108-hotel-islamabad", luxury: "the-108-hotel-islamabad" },
         stops: [
           { name: "108 Hotel Islamabad", detail: "Breakfast & checkout" },
           { name: "Islamabad International Airport", detail: "Morning departure flight" },
@@ -745,7 +745,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 0,
         title: "Karachi → Islamabad",
         description: "Take an evening flight from Karachi to Islamabad. Transfer to 108 Hotel in the heart of Islamabad for the night. Departure from Islamabad at 06:00 am.",
-        hotels: { deluxe: "108-hotel-islamabad", luxury: "108-hotel-islamabad" },
+        hotels: { deluxe: "the-108-hotel-islamabad", luxury: "the-108-hotel-islamabad" },
         stops: [
           { name: "Karachi", detail: "Evening departure flight" },
           { name: "Islamabad International Airport", detail: "Night arrival" },
@@ -817,7 +817,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 5,
         title: "Islamabad → Karachi",
         description: "After breakfast at 108 Hotel, transfer to Islamabad International Airport for your morning flight to Karachi. Tour ends on arrival.",
-        hotels: { deluxe: "108-hotel-islamabad", luxury: "108-hotel-islamabad" },
+        hotels: { deluxe: "the-108-hotel-islamabad", luxury: "the-108-hotel-islamabad" },
         stops: [
           { name: "108 Hotel Islamabad", detail: "Breakfast & checkout" },
           { name: "Islamabad International Airport", detail: "Morning departure flight" },
@@ -836,7 +836,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 0,
         title: "Karachi → Islamabad",
         description: "Take an evening flight from Karachi to Islamabad. Transfer to 108 Hotel in the heart of Islamabad for the night. Departure from Islamabad at 06:00 am.",
-        hotels: { deluxe: "108-hotel-islamabad", luxury: "108-hotel-islamabad" },
+        hotels: { deluxe: "the-108-hotel-islamabad", luxury: "the-108-hotel-islamabad" },
         stops: [
           { name: "Karachi", detail: "Evening departure flight" },
           { name: "Islamabad International Airport", detail: "Night arrival" },
@@ -922,7 +922,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 6,
         title: "Islamabad → Karachi",
         description: "After breakfast at 108 Hotel, transfer to Islamabad International Airport for your morning flight to Karachi. Tour ends on arrival.",
-        hotels: { deluxe: "108-hotel-islamabad", luxury: "108-hotel-islamabad" },
+        hotels: { deluxe: "the-108-hotel-islamabad", luxury: "the-108-hotel-islamabad" },
         stops: [
           { name: "108 Hotel Islamabad", detail: "Breakfast & checkout" },
           { name: "Islamabad International Airport", detail: "Morning departure flight" },
@@ -941,7 +941,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 0,
         title: "Karachi → Islamabad",
         description: "Take an evening flight from Karachi to Islamabad. Transfer to 108 Hotel in the heart of Islamabad for the night. Departure from Islamabad at 06:00 am.",
-        hotels: { deluxe: "108-hotel-islamabad", luxury: "108-hotel-islamabad" },
+        hotels: { deluxe: "the-108-hotel-islamabad", luxury: "the-108-hotel-islamabad" },
         stops: [
           { name: "Karachi", detail: "Evening departure flight" },
           { name: "Islamabad International Airport", detail: "Night arrival" },
@@ -1057,7 +1057,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 8,
         title: "Islamabad → Karachi",
         description: "After breakfast at 108 Hotel, transfer to Islamabad International Airport for your morning flight to Karachi. Tour ends on arrival.",
-        hotels: { deluxe: "108-hotel-islamabad", luxury: "108-hotel-islamabad" },
+        hotels: { deluxe: "the-108-hotel-islamabad", luxury: "the-108-hotel-islamabad" },
         stops: [
           { name: "108 Hotel Islamabad", detail: "Breakfast & checkout" },
           { name: "Islamabad International Airport", detail: "Morning departure flight" },
@@ -1076,7 +1076,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 0,
         title: "Karachi → Islamabad",
         description: "Take an evening flight from Karachi to Islamabad. Transfer to 108 Hotel in the heart of Islamabad for the night. Departure from Islamabad at 06:00 am.",
-        hotels: { deluxe: "108-hotel-islamabad", luxury: "108-hotel-islamabad" },
+        hotels: { deluxe: "the-108-hotel-islamabad", luxury: "the-108-hotel-islamabad" },
         stops: [
           { name: "Karachi", detail: "Evening departure flight" },
           { name: "Islamabad International Airport", detail: "Night arrival" },
@@ -1187,7 +1187,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 8,
         title: "Islamabad → Karachi",
         description: "After breakfast at 108 Hotel, transfer to Islamabad International Airport for your morning flight to Karachi. Tour ends on arrival.",
-        hotels: { deluxe: "108-hotel-islamabad", luxury: "108-hotel-islamabad" },
+        hotels: { deluxe: "the-108-hotel-islamabad", luxury: "the-108-hotel-islamabad" },
         stops: [
           { name: "108 Hotel Islamabad", detail: "Breakfast & checkout" },
           { name: "Islamabad International Airport", detail: "Morning departure flight" },
@@ -1206,7 +1206,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 0,
         title: "Karachi → Islamabad",
         description: "Take an evening flight from Karachi to Islamabad. Transfer to 108 Hotel in the heart of Islamabad for the night. Departure from Islamabad at 06:00 am.",
-        hotels: { deluxe: "108-hotel-islamabad", luxury: "108-hotel-islamabad" },
+        hotels: { deluxe: "the-108-hotel-islamabad", luxury: "the-108-hotel-islamabad" },
         stops: [
           { name: "Karachi", detail: "Evening departure flight" },
           { name: "Islamabad International Airport", detail: "Night arrival" },
@@ -1347,7 +1347,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 10,
         title: "Islamabad → Karachi",
         description: "After breakfast at 108 Hotel, transfer to Islamabad International Airport for your morning flight to Karachi. Tour ends on arrival.",
-        hotels: { deluxe: "108-hotel-islamabad", luxury: "108-hotel-islamabad" },
+        hotels: { deluxe: "the-108-hotel-islamabad", luxury: "the-108-hotel-islamabad" },
         stops: [
           { name: "108 Hotel Islamabad", detail: "Breakfast & checkout" },
           { name: "Islamabad International Airport", detail: "Morning departure flight" },
@@ -2170,7 +2170,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 1,
         title: "Departure → KKH → Gilgit",
         description: "ISB passengers set off at dawn; Lahore passengers depart at midnight via the Karakoram Highway. Both converge at Shangrila Chillas for lunch before pushing through the Junction of Three Mountain Ranges into Gilgit by evening.",
-        hotels: { deluxe: "destination-gilgit", luxury: "serena-gilgit" },
+        hotels: { deluxe: "destination-hotel-gilgit", luxury: "gilgit-serena-hotel" },
         stops: [
           { name: "Islamabad", detail: "Departure 06:00 am", cityOnly: "islamabad" },
           { name: "Dassu", detail: "Breakfast stop ~11:00 am", cityOnly: "islamabad" },
@@ -2204,7 +2204,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 3,
         title: "Attabad Lake → Hussaini Bridge → Khunjerab Pass → Passu Cones",
         description: "A day of extremes. Boat across the electric-blue Attabad Lake, walk the swaying Hussaini Suspension Bridge, then drive to Khunjerab Pass at 4,693m on the China border. Tea and apricot cake at Glacier Breeze on the way back, then sunset at Passu Cones.",
-        hotels: { deluxe: "saphire-hunza", luxury: "zen-by-the-lake" },
+        hotels: { deluxe: "sapphire-hunza", luxury: "zen-by-the-lake" },
         stops: [
           { name: "Attabad Lake", detail: "Boating 10:30 am" },
           { name: "Hussaini Suspension Bridge", detail: "Walk across 11:30 am" },
@@ -2220,7 +2220,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 4,
         title: "Baltit Fort → Kha Basi → Minapin → Gilgit",
         description: "Morning at Baltit Fort — seat of the Mir of Hunza for 700 years — then local lunch at Kha Basi. Stop at Minapin for views of Rakaposhi's south face and Osho Thang meadows before driving back to Gilgit for the night.",
-        hotels: { deluxe: "destination-gilgit", luxury: "serena-gilgit" },
+        hotels: { deluxe: "destination-hotel-gilgit", luxury: "gilgit-serena-hotel" },
         stops: [
           { name: "Baltit Fort", detail: "Visit morning" },
           { name: "Kha Basi", detail: "Lunch" },
@@ -2286,7 +2286,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 3,
         title: "Attabad Lake → Passu Glacier → Borith Lake → Baskochi Meadows",
         description: "A day of water, ice, and altitude. Boat across Attabad Lake, hike to Passu Glacier, visit the still waters of Borith Lake, then climb Baskochi Meadows for an aerial view of Attabad Lake at sunset.",
-        hotels: { deluxe: "saphire-hunza", luxury: "zen-by-the-lake" },
+        hotels: { deluxe: "sapphire-hunza", luxury: "zen-by-the-lake" },
         stops: [
           { name: "Attabad Lake", detail: "Boating 10:30 am" },
           { name: "Passu Glacier", detail: "Hike 11:30 am" },
@@ -2302,7 +2302,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 4,
         title: "Khunjerab Pass → Yak Grill → Hussaini Bridge → Passu Cones",
         description: "Drive to the roof of the world. Khunjerab Pass at 4,693m sits on the China border. Back down, lunch at the legendary Yak Grill, walk Hussaini Suspension Bridge, try the zipline, then watch the sun set over Passu Cones.",
-        hotels: { deluxe: "saphire-hunza", luxury: "zen-by-the-lake" },
+        hotels: { deluxe: "sapphire-hunza", luxury: "zen-by-the-lake" },
         stops: [
           { name: "Khunjerab Pass", detail: "Visit 12:30 pm (4,693m)" },
           { name: "Yak Grill Passu", detail: "Lunch 03:30 pm" },
@@ -2316,7 +2316,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 5,
         title: "Rakaposhi Viewpoint → Upper Kachura Lake → Katpanah Desert",
         description: "Head south towards Skardu, stopping at Rakaposhi Viewpoint. Arrive at Upper Kachura Lake for boating on one of Skardu's most scenic spots, then settle at Katpanah Desert glamp for stargazing over the sand dunes.",
-        hotels: { deluxe: "zhule-by-roomy", luxury: "serena-shigar" },
+        hotels: { deluxe: "zhule-by-roomy", luxury: "serena-shigar-fort" },
         stops: [
           { name: "Rakaposhi Viewpoint", detail: "Short stop 10:00 am" },
           { name: "Upper Kachura Lake", detail: "Visit & boating 03:30 pm" },
@@ -2396,7 +2396,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 4,
         title: "Attabad Lake → Hussaini Bridge → Yak Grill → Passu Glacier → Passu Cones",
         description: "The Passu circuit. Boat across Attabad Lake, walk Hussaini Suspension Bridge above the Hunza River, lunch at Yak Grill, stop at Rainbow Bridge, hike to Passu Glacier, then watch the last light hit Passu Cones.",
-        hotels: { deluxe: "saphire-hunza", luxury: "zen-by-the-lake" },
+        hotels: { deluxe: "sapphire-hunza", luxury: "zen-by-the-lake" },
         stops: [
           { name: "Hunza", detail: "Breakfast 09:00 am" },
           { name: "Attabad Lake", detail: "Boating 10:30 am" },
@@ -2413,7 +2413,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 5,
         title: "Naltar Valley — Satrangi, Blue & Shinghu Lakes",
         description: "Take the jeep from Nomal into Naltar Valley — three high-altitude glacial lakes at the foot of the Naltar ski resort. Satrangi Lake changes colour with the sky; Blue Lake sits shimmering above the treeline; Shinghu Lake and its meadows are perfect for lunch.",
-        hotels: { deluxe: "destination-gilgit", luxury: "serena-gilgit" },
+        hotels: { deluxe: "destination-hotel-gilgit", luxury: "gilgit-serena-hotel" },
         stops: [
           { name: "Hunza", detail: "Breakfast 08:00 am" },
           { name: "Nomal", detail: "Jeep pickup for Naltar" },
@@ -2468,7 +2468,7 @@ export const packageItineraries: PackageItinerary[] = [
         cityOnly: "lahore",
         title: "Lahore → KKH → Gilgit",
         description: "Midnight departure from Lahore, following the Karakoram Highway north. Breakfast at Besham, lunch at Shangrila Chillas, then through the Junction of Three Mountain Ranges into Gilgit by late evening.",
-        hotels: { deluxe: "destination-gilgit", luxury: "serena-gilgit" },
+        hotels: { deluxe: "destination-hotel-gilgit", luxury: "gilgit-serena-hotel" },
         stops: [
           { name: "Lahore", detail: "Departure 12:00 am midnight" },
           { name: "Kalar Kahar", detail: "Short stop" },
@@ -2519,7 +2519,7 @@ export const packageItineraries: PackageItinerary[] = [
         cityOnly: "islamabad",
         title: "Attabad Lake → Hussaini Bridge → Khunjerab Pass → Passu Cones",
         description: "The big KKH day. Boat across Attabad Lake, walk Hussaini Bridge, drive to Khunjerab Pass at 4,693m, tea at Glacier Breeze, and sunset at Passu Cones.",
-        hotels: { deluxe: "saphire-hunza", luxury: "zen-by-the-lake" },
+        hotels: { deluxe: "sapphire-hunza", luxury: "zen-by-the-lake" },
         stops: [
           { name: "Hunza", detail: "Breakfast 08:00 am" },
           { name: "Attabad Lake", detail: "Boating 10:30 am" },
@@ -2568,7 +2568,7 @@ export const packageItineraries: PackageItinerary[] = [
         cityOnly: "lahore",
         title: "Attabad Lake → Hussaini Bridge → Khunjerab Pass → Passu Cones",
         description: "The big KKH day. Boat across Attabad Lake, walk Hussaini Bridge, drive to Khunjerab Pass at 4,693m, tea at Glacier Breeze, and sunset at Passu Cones.",
-        hotels: { deluxe: "saphire-hunza", luxury: "zen-by-the-lake" },
+        hotels: { deluxe: "sapphire-hunza", luxury: "zen-by-the-lake" },
         stops: [
           { name: "Hunza", detail: "Breakfast 08:00 am" },
           { name: "Attabad Lake", detail: "Boating 10:30 am" },
@@ -2586,7 +2586,7 @@ export const packageItineraries: PackageItinerary[] = [
         cityOnly: "islamabad",
         title: "Naltar Valley — Satrangi, Blue & Shinghu Lakes",
         description: "Jeep from Nomal into Naltar Valley. Three high-altitude glacial lakes in one afternoon — Satrangi, Blue, and Shinghu — with meadows perfect for a picnic lunch.",
-        hotels: { deluxe: "destination-gilgit", luxury: "serena-gilgit" },
+        hotels: { deluxe: "destination-hotel-gilgit", luxury: "gilgit-serena-hotel" },
         stops: [
           { name: "Hunza", detail: "Breakfast 08:00 am" },
           { name: "Nomal", detail: "Jeep pickup for Naltar" },
@@ -2603,7 +2603,7 @@ export const packageItineraries: PackageItinerary[] = [
         cityOnly: "lahore",
         title: "Naltar Valley — Satrangi, Blue & Shinghu Lakes",
         description: "Jeep from Nomal into Naltar Valley. Three high-altitude glacial lakes in one afternoon — Satrangi, Blue, and Shinghu — with meadows perfect for a picnic lunch.",
-        hotels: { deluxe: "destination-gilgit", luxury: "serena-gilgit" },
+        hotels: { deluxe: "destination-hotel-gilgit", luxury: "gilgit-serena-hotel" },
         stops: [
           { name: "Hunza", detail: "Breakfast 08:00 am" },
           { name: "Nomal", detail: "Jeep pickup for Naltar" },
@@ -2689,7 +2689,7 @@ export const packageItineraries: PackageItinerary[] = [
         cityOnly: "islamabad",
         title: "Islamabad → Babusar Top → Gilgit",
         description: "Midnight departure via the Kaghan Valley. Breakfast at Baesar, then Lulusar Lake and Babusar Top at 4,173m before descending to the Junction of Three Mountain Ranges and Gilgit by evening.",
-        hotels: { deluxe: "destination-gilgit", luxury: "serena-gilgit" },
+        hotels: { deluxe: "destination-hotel-gilgit", luxury: "gilgit-serena-hotel" },
         stops: [
           { name: "Islamabad", detail: "Departure 12:00 am midnight" },
           { name: "Baesar", detail: "Breakfast 09:00 am" },
@@ -2707,7 +2707,7 @@ export const packageItineraries: PackageItinerary[] = [
         cityOnly: "lahore",
         title: "Lahore → KKH → Gilgit",
         description: "Midnight departure from Lahore via the Karakoram Highway. Breakfast at Besham, lunch at Shangrila Chillas, then through the Junction of Three Mountain Ranges into Gilgit by evening.",
-        hotels: { deluxe: "destination-gilgit", luxury: "serena-gilgit" },
+        hotels: { deluxe: "destination-hotel-gilgit", luxury: "gilgit-serena-hotel" },
         stops: [
           { name: "Lahore", detail: "Departure 12:00 am midnight" },
           { name: "Besham", detail: "Breakfast 07:00 am" },
@@ -2752,7 +2752,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 4,
         title: "Attabad Lake → Hussaini Bridge → Yak Grill → Passu Cones",
         description: "Boat across the electric-blue Attabad Lake, walk Hussaini Suspension Bridge above the Hunza River, lunch at Yak Grill, then tea at Glacier Breeze and sunset at Passu Cones.",
-        hotels: { deluxe: "saphire-hunza", luxury: "zen-by-the-lake" },
+        hotels: { deluxe: "sapphire-hunza", luxury: "zen-by-the-lake" },
         stops: [
           { name: "Hunza", detail: "Breakfast 08:00 am" },
           { name: "Attabad Lake", detail: "Boating 10:30 am" },
@@ -2798,7 +2798,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 7,
         title: "Naltar Lakes → Gilgit",
         description: "A morning across all three Naltar lakes — Satrangi, Blue, and Shinghu — before the jeep back to Nomal and the drive to Gilgit for the final night.",
-        hotels: { deluxe: "destination-gilgit", luxury: "serena-gilgit" },
+        hotels: { deluxe: "destination-hotel-gilgit", luxury: "gilgit-serena-hotel" },
         stops: [
           { name: "Naltar", detail: "Breakfast 08:30 am" },
           { name: "Satrangi Lake", detail: "Visit 10:30 am" },
@@ -2867,7 +2867,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 3,
         title: "Attabad Lake → Hussaini Bridge → Yak Grill → Passu Cones",
         description: "The Passu circuit. Boat across Attabad Lake, walk Hussaini Suspension Bridge, lunch at Yak Grill, then sunset at Passu Cones.",
-        hotels: { deluxe: "saphire-hunza", luxury: "zen-by-the-lake" },
+        hotels: { deluxe: "sapphire-hunza", luxury: "zen-by-the-lake" },
         stops: [
           { name: "Hunza", detail: "Breakfast 09:00 am" },
           { name: "Attabad Lake", detail: "Boating 11:30 am" },
@@ -2882,7 +2882,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 4,
         title: "Attabad → Rakaposhi Viewpoint → Skardu → Khaplu",
         description: "Cross back towards Skardu, stopping at Rakaposhi Viewpoint and lunch at Astak. Continue to Khaplu via the scenic Shyok River corridor, arriving at Serena Khaplu for dinner.",
-        hotels: { deluxe: "zhule-by-roomy", luxury: "serena-khaplu" },
+        hotels: { deluxe: "zhule-by-roomy", luxury: "serena-khaplu-palace" },
         stops: [
           { name: "Attabad", detail: "Breakfast 09:00 am" },
           { name: "Rakaposhi Viewpoint", detail: "Short stop 11:30 am" },
@@ -2897,7 +2897,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 5,
         title: "Khaplu Fort → Chaqchan Mosque → Saling → Kashal Gardens",
         description: "Explore the Hushe Valley. Khaplu Fort dominates the confluence of the Shyok and Saltoro rivers; the 14th-century Chaqchan Mosque is the oldest in Pakistan's north. Optional visit to Saling village, then evening at Kashal Agri Gardens.",
-        hotels: { deluxe: "zhule-by-roomy", luxury: "serena-shigar" },
+        hotels: { deluxe: "zhule-by-roomy", luxury: "serena-shigar-fort" },
         stops: [
           { name: "Khaplu Fort", detail: "Visit 10:00 am" },
           { name: "Chaqchan Mosque", detail: "Visit 12:30 pm" },
@@ -2911,7 +2911,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 6,
         title: "Deosai Plains — Sadpara Lake → Deosai Top → Sheosar Lake",
         description: "The second-highest plateau on earth at 4,114m. Visit Sadpara Lake before climbing to Deosai, stopping at Deosai Top, then lunch at Bara Pani before the final stretch to Sheosar Lake.",
-        hotels: { deluxe: "zhule-by-roomy", luxury: "serena-shigar" },
+        hotels: { deluxe: "zhule-by-roomy", luxury: "serena-shigar-fort" },
         stops: [
           { name: "Shigar", detail: "Departure 08:00 am" },
           { name: "Sadpara Lake", detail: "Visit 09:00 am" },
@@ -2927,7 +2927,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 7,
         title: "Shigar Fort → Manthoka Waterfall → Shigar Desert",
         description: "A final full day in the Shigar Valley. Visit the restored Shigar Fort (now Serena), then drive to Manthoka Waterfall — one of Pakistan's most powerful falls. Afternoon at Shigar Desert with optional motor-gliding, quad bike, and jeep safari.",
-        hotels: { deluxe: "zhule-by-roomy", luxury: "serena-shigar" },
+        hotels: { deluxe: "zhule-by-roomy", luxury: "serena-shigar-fort" },
         stops: [
           { name: "Shigar Fort", detail: "Visit 10:00 am" },
           { name: "Manthoka Waterfall", detail: "Visit & lunch 02:00 pm" },
@@ -2958,7 +2958,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 1,
         title: "Fly to Skardu → Shangrila → Upper Kachura → Khaplu",
         description: "Noon flight delivers you into Skardu. Visit Shangrila's famous Heart Lake, then Upper Kachura for boating and the Shigar Desert before the drive to Serena Khaplu for the first night.",
-        hotels: { deluxe: "zhule-by-roomy", luxury: "serena-khaplu" },
+        hotels: { deluxe: "zhule-by-roomy", luxury: "serena-khaplu-palace" },
         stops: [
           { name: "Skardu Airport", detail: "Arrival 01:00 pm" },
           { name: "Shangrila Resort", detail: "Lunch & Heart Lake 02:00 pm" },
@@ -2973,7 +2973,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 2,
         title: "Khaplu Fort → Chaqchan Mosque → Masherbrum Viewpoint → Saling",
         description: "Explore the Hushe Valley. Khaplu Fort, the 14th-century Chaqchan Mosque, Masherbrum Viewpoint (K1 on the horizon), and the village of Saling.",
-        hotels: { deluxe: "zhule-by-roomy", luxury: "serena-khaplu" },
+        hotels: { deluxe: "zhule-by-roomy", luxury: "serena-khaplu-palace" },
         stops: [
           { name: "Khaplu Fort", detail: "Visit 10:00 am" },
           { name: "Khaplu Fort Restaurant", detail: "Lunch 02:00 pm" },
@@ -2988,7 +2988,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 3,
         title: "Khaplu → Khamosh Waterfall → Manthoka Waterfall → Shigar",
         description: "Scenic drive from Khaplu to Shigar passing Khamosh Waterfall and the thundering Manthoka Waterfall — one of Pakistan's most powerful falls.",
-        hotels: { deluxe: "zhule-by-roomy", luxury: "serena-shigar" },
+        hotels: { deluxe: "zhule-by-roomy", luxury: "serena-shigar-fort" },
         stops: [
           { name: "Khaplu", detail: "Departure 08:00 am" },
           { name: "Khamosh Waterfall", detail: "Visit 12:30 pm" },
@@ -3002,7 +3002,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 4,
         title: "Deosai Plains — Sadpara Lake → Deosai Top → Sheosar Lake",
         description: "The second-highest plateau on earth at 4,114m. Sadpara Lake at the base, then Deosai Top, lunch at Bara Pani, and the vast Sheosar Lake — home to Himalayan brown bears.",
-        hotels: { deluxe: "zhule-by-roomy", luxury: "serena-shigar" },
+        hotels: { deluxe: "zhule-by-roomy", luxury: "serena-shigar-fort" },
         stops: [
           { name: "Shigar", detail: "Departure 09:00 am" },
           { name: "Sadpara Lake", detail: "Visit 10:00 am" },
@@ -3017,7 +3017,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 5,
         title: "Shigar → Rakaposhi Viewpoint → Hunza",
         description: "Cross from Skardu side to Hunza, stopping at Rakaposhi Viewpoint where the mighty 7,788m peak dominates the skyline. Arrive at Luxus Attabad for the first night on the Hunza side.",
-        hotels: { deluxe: "saphire-hunza", luxury: "zen-by-the-lake" },
+        hotels: { deluxe: "sapphire-hunza", luxury: "zen-by-the-lake" },
         stops: [
           { name: "Shigar", detail: "Departure 09:00 am" },
           { name: "Rakaposhi Viewpoint", detail: "Lunch 03:00 pm" },
@@ -3075,7 +3075,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 9,
         title: "Hunza → Rakaposhi Viewpoint → Skardu / Shigar",
         description: "Drive from Hunza back south to the Skardu area, stopping at Rakaposhi Viewpoint along the way. Settle at Katpanah Desert glamp or Serena Shigar for the final night before the return flight.",
-        hotels: { deluxe: "zhule-by-roomy", luxury: "serena-shigar" },
+        hotels: { deluxe: "zhule-by-roomy", luxury: "serena-shigar-fort" },
         stops: [
           { name: "Hunza", detail: "Breakfast & departure morning" },
           { name: "Rakaposhi Viewpoint", detail: "Short stop" },
@@ -3456,7 +3456,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 1,
         title: "Karachi → Makli Necropolis → Shahjahan Mosque → Keenjhar Lake → Hyderabad",
         description: "Drive east from Karachi to Thatta district. Spend the morning at Makli Necropolis — a UNESCO World Heritage Site and one of the world's largest Islamic graveyards, where the royal tombs of Samma, Arghun and Tarkhan dynasties cover 10 sq km of ochre hillside. Continue to the Shahjahan Mosque, the Mughal masterpiece of 93 domes commissioned by Emperor Shah Jahan. Lunch by the shore of Keenjhar Lake, Pakistan's second-largest freshwater lake, with an optional boat ride before driving on to Hyderabad for check-in.",
-        hotels: { deluxe: "grand-blu-hotel-hyderabad", luxury: "pc-legacy-hyderabad" },
+        hotels: { deluxe: "grand-blu-hyderabad", luxury: "pc-legacy-hyderabad" },
         stops: [
           { name: "Karachi", detail: "Departure 08:00 am" },
           { name: "Makli Necropolis", detail: "Visit 10:00 am" },
@@ -3543,7 +3543,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 2,
         title: "Karachi → Makli Necropolis → Shahjahan Mosque → Keenjhar Lake → Hyderabad",
         description: "Drive east on the Indus Highway to Thatta district. Spend the morning at the UNESCO-listed Makli Necropolis — the world's largest Islamic graveyard at 10 sq km — then visit the Shahjahan Mosque, one of the finest examples of Mughal tile-work in Sindh. Lunch by Keenjhar Lake with an optional boat ride before driving to Hyderabad.",
-        hotels: { deluxe: "grand-blu-hotel-hyderabad", luxury: "pc-legacy-hyderabad" },
+        hotels: { deluxe: "grand-blu-hyderabad", luxury: "pc-legacy-hyderabad" },
         stops: [
           { name: "Hotel, Karachi", detail: "Breakfast 07:30 am" },
           { name: "Makli Necropolis", detail: "Visit 10:00 am" },
@@ -3591,7 +3591,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 5,
         title: "Sukkur → Bahawalpur",
         description: "Long drive north-west through the Cholistan desert fringe from Sukkur into Punjab's Bahawalpur. En route, the landscape shifts from the flat Sindh plains to the golden dunes of the Cholistan. Arrive in Bahawalpur — the royal city of the former princely state — in the evening. Check in to the hotel and explore the local bazaar.",
-        hotels: { deluxe: "the-edition-bahawalpur", luxury: "falettas-grand-bahawalpur" },
+        hotels: { deluxe: "the-edition-bahawalpur", luxury: "falettis-grand-bahawalpur" },
         stops: [
           { name: "Hotel, Sukkur", detail: "Breakfast 07:30 am" },
           { name: "Roadside stop", detail: "Lunch en route 01:00 pm" },
@@ -3604,7 +3604,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 6,
         title: "Bahawalpur → Derawar Fort → Cholistan Desert",
         description: "Drive 45 minutes into the Cholistan Desert to Derawar Fort — a colossal 18th-century Abbasi fort whose 30-metre bastions rise dramatically from the flat sand. Walk the perimeter of the fort and visit the adjacent Abbasi Mosque and royal tombs. Return to Bahawalpur via the desert jeep track, stopping at a Cholistan nomadic camp. Afternoon visit to Noor Mahal, the neoclassical palace of the Nawabs of Bahawalpur, and the Central Library.",
-        hotels: { deluxe: "the-edition-bahawalpur", luxury: "falettas-grand-bahawalpur" },
+        hotels: { deluxe: "the-edition-bahawalpur", luxury: "falettis-grand-bahawalpur" },
         stops: [
           { name: "Hotel, Bahawalpur", detail: "Breakfast 07:30 am" },
           { name: "Derawar Fort", detail: "Visit 09:00 am" },
@@ -3638,7 +3638,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 8,
         title: "Multan → Harappa → Lahore",
         description: "Morning in Multan's old city — visit Multan Fort and the Walled City gates. Drive north to Harappa, the lesser-visited twin of Mohen Jo Daro in the Indus Valley Civilisation. Walk the excavation mounds and the Harappa Museum before pushing on to Lahore. Arrive in time for dinner at the legendary Cooco's Den restaurant above the old city.",
-        hotels: { deluxe: "9-tree-hotel-lahore", luxury: "ambiance-lahore" },
+        hotels: { deluxe: "nine-tree-lahore", luxury: "ambiance-boutique-lahore" },
         stops: [
           { name: "Hotel, Multan", detail: "Breakfast 08:00 am" },
           { name: "Multan Fort & Walled City gates", detail: "Visit 09:00 am" },
@@ -3655,7 +3655,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 9,
         title: "Lahore — Walled City, Lahore Fort & Badshahi Mosque",
         description: "A full day in Lahore's Mughal heart. Begin at Lahore Fort — the great Mughal citadel with Sheesh Mahal (Mirror Palace), Naulakha Pavilion and the Jahangir Quadrangle. Cross the road to Badshahi Mosque, one of the world's largest. Walk through the Delhi Gate into the old Walled City, visiting Wazir Khan Mosque with its exquisite kashi tile-work, the Food Street at Gawalmandi for lunch, and the Fakir Khana Museum — Pakistan's finest private art collection.",
-        hotels: { deluxe: "9-tree-hotel-lahore", luxury: "ambiance-lahore" },
+        hotels: { deluxe: "nine-tree-lahore", luxury: "ambiance-boutique-lahore" },
         stops: [
           { name: "Hotel, Lahore", detail: "Breakfast 08:30 am" },
           { name: "Lahore Fort", detail: "Visit 09:30 am" },
@@ -3716,7 +3716,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 2,
         title: "Karachi → Makli Necropolis → Shahjahan Mosque → Keenjhar Lake → Hyderabad",
         description: "Drive east to Thatta district. Morning at Makli Necropolis — the UNESCO-listed Islamic graveyard covering 10 sq km — and the Shahjahan Mosque, the Mughal masterpiece of 93 glazed-tile domes. Lunch by Keenjhar Lake with an optional boat ride before driving to Hyderabad for check-in.",
-        hotels: { deluxe: "grand-blu-hotel-hyderabad", luxury: "pc-legacy-hyderabad" },
+        hotels: { deluxe: "grand-blu-hyderabad", luxury: "pc-legacy-hyderabad" },
         stops: [
           { name: "Hotel, Karachi", detail: "Breakfast 07:30 am" },
           { name: "Makli Necropolis", detail: "Visit 10:00 am" },
@@ -3763,7 +3763,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 5,
         title: "Karachi → Lahore (Flight) → Lahore Walled City",
         description: "Morning flight from Karachi to Lahore. After hotel check-in, spend the afternoon in the Walled City — Lahore Fort, Badshahi Mosque and Wazir Khan Mosque. Evening dinner at the New Food Street by Roshnai Gate.",
-        hotels: { deluxe: "9-tree-hotel-lahore", luxury: "ambiance-lahore" },
+        hotels: { deluxe: "nine-tree-lahore", luxury: "ambiance-boutique-lahore" },
         stops: [
           { name: "Hotel, Karachi", detail: "Breakfast & checkout 07:00 am" },
           { name: "Karachi Airport", detail: "Departure (morning flight)" },
@@ -3780,7 +3780,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 6,
         title: "Nankana Sahib → Kasur → Lahore",
         description: "Day trip from Lahore. Begin at Nankana Sahib — the birthplace of Guru Nanak Dev Ji, founder of Sikhism, with its seven historic gurdwaras. Continue to Kasur to pay respects at the shrine of Bulleh Shah, the great Punjabi Sufi poet. Return to Lahore for dinner and the Fakir Khana Museum.",
-        hotels: { deluxe: "9-tree-hotel-lahore", luxury: "ambiance-lahore" },
+        hotels: { deluxe: "nine-tree-lahore", luxury: "ambiance-boutique-lahore" },
         stops: [
           { name: "Hotel, Lahore", detail: "Breakfast 08:00 am" },
           { name: "Nankana Sahib Gurdwaras", detail: "Visit 09:30 am" },
@@ -4471,7 +4471,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 0,
         title: "Lahore / Karachi → Islamabad",
         description: "Lahore travellers depart in the evening and reach Islamabad by midnight to join the convoy. Karachi travellers take an evening flight to Islamabad and overnight at a city hotel before the early-morning departure.",
-        hotels: { deluxe: "avenue-hotel-islamabad", luxury: "108-hotel-islamabad" },
+        hotels: { deluxe: "avenue-hotel-islamabad", luxury: "the-108-hotel-islamabad" },
         stops: [
           { name: "Lahore", detail: "Departure 07:30 pm", cityOnly: "lahore" },
           { name: "Islamabad", detail: "Arrival ~11:30 pm — join convoy at 12:30 am", cityOnly: "lahore" },
@@ -4603,7 +4603,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 8,
         title: "Islamabad → Karachi (Morning Flight)",
         description: "Transfer to Islamabad International Airport for the morning flight back to Karachi. End of trip.",
-        hotels: { deluxe: "avenue-hotel-islamabad", luxury: "108-hotel-islamabad" },
+        hotels: { deluxe: "avenue-hotel-islamabad", luxury: "the-108-hotel-islamabad" },
         stops: [
           { name: "Islamabad International Airport", detail: "Morning departure to Karachi" },
           { name: "Karachi", detail: "Arrival & end of trip" },
@@ -4622,7 +4622,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 0,
         title: "Lahore / Karachi → Islamabad",
         description: "Lahore travellers depart in the evening and reach Islamabad by midnight to join the convoy. Karachi travellers take an evening flight to Islamabad and overnight at a city hotel before the early-morning departure.",
-        hotels: { deluxe: "avenue-hotel-islamabad", luxury: "108-hotel-islamabad" },
+        hotels: { deluxe: "avenue-hotel-islamabad", luxury: "the-108-hotel-islamabad" },
         stops: [
           { name: "Lahore", detail: "Departure 07:30 pm", cityOnly: "lahore" },
           { name: "Islamabad", detail: "Arrival ~11:30 pm — join convoy at 12:30 am", cityOnly: "lahore" },
@@ -4736,7 +4736,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 7,
         title: "Islamabad → Karachi (Morning Flight)",
         description: "Transfer to Islamabad International Airport for the morning flight back to Karachi. End of trip.",
-        hotels: { deluxe: "avenue-hotel-islamabad", luxury: "108-hotel-islamabad" },
+        hotels: { deluxe: "avenue-hotel-islamabad", luxury: "the-108-hotel-islamabad" },
         stops: [
           { name: "Islamabad International Airport", detail: "Morning departure to Karachi" },
           { name: "Karachi", detail: "Arrival & end of trip" },
@@ -5045,7 +5045,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 1,
         title: "Islamabad / Lahore → Skardu (Flight) → Khaplu",
         description: "Fly in to Skardu Airport and drive straight to Upper Kachura Lake for a short lakeside stroll. Enjoy lunch at the legendary Shangrila Resort, then head east through the Shyok valley to Khaplu. Check in to Serena Khaplu in time to watch the sunset over the Karakoram.",
-        hotels: { deluxe: "destination-hotel-khaplu", luxury: "serena-hotel-khaplu" },
+        hotels: { deluxe: "destination-hotel-khaplu", luxury: "serena-khaplu-palace" },
         stops: [
           { name: "Islamabad International Airport", detail: "09:00 am departure → 10:00 am arrival Skardu", cityOnly: "islamabad" },
           { name: "Allama Iqbal International Airport, Lahore", detail: "Morning flight to Skardu", cityOnly: "lahore" },
@@ -5111,7 +5111,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 1,
         title: "Lahore / Islamabad → Skardu (Flight) → Khaplu",
         description: "An hour in the air and you're in the Karakoram. Land at Skardu and drive east, pausing at the blossom-draped Chunda Valley on the way. Lunch at the iconic Shangrila Resort on Lower Kachura Lake before continuing to Khaplu for check-in.",
-        hotels: { deluxe: "destination-hotel-khaplu", luxury: "serena-hotel-khaplu" },
+        hotels: { deluxe: "destination-hotel-khaplu", luxury: "serena-khaplu-palace" },
         stops: [
           { name: "Allama Iqbal International Airport, Lahore", detail: "10:00 am departure → 11:30 am arrival Skardu", cityOnly: "lahore" },
           { name: "Islamabad International Airport", detail: "Morning flight to Skardu", cityOnly: "islamabad" },
@@ -5447,7 +5447,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 1,
         title: "Islamabad / Lahore → Skardu (Flight) → Khaplu",
         description: "Fly into the Karakoram and land at Skardu before noon. Drive along the Upper Kachura Lake shore and stop for lunch at Shangrila Resort, then the convoy pushes east along the Shyok River to Khaplu. Arrive at Destination Hotel Khaplu by evening.",
-        hotels: { deluxe: "destination-hotel-khaplu", luxury: "serena-hotel-khaplu" },
+        hotels: { deluxe: "destination-hotel-khaplu", luxury: "serena-khaplu-palace" },
         stops: [
           { name: "Islamabad International Airport", detail: "10:00 am departure → 11:00 am arrival Skardu", cityOnly: "islamabad" },
           { name: "Allama Iqbal International Airport, Lahore", detail: "Morning flight to Skardu", cityOnly: "lahore" },
@@ -5464,7 +5464,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 2,
         title: "Khaplu Fort, Chaqchan Mosque, Masherbrum View & Saling River",
         description: "A full day discovering Khaplu's treasures. Start at Khaplu Fort, then the ancient Chaqchan Mosque (c. 1400s). Short stop at Masherbrum View Point for a dramatic up-close view of the 8,000m peak, then down to Machlu Village blossom gardens or Saling Riverside for the sunset.",
-        hotels: { deluxe: "destination-hotel-khaplu", luxury: "serena-hotel-khaplu" },
+        hotels: { deluxe: "destination-hotel-khaplu", luxury: "serena-khaplu-palace" },
         stops: [
           { name: "Khaplu Fort", detail: "Visit 10:00 am" },
           { name: "Chaqchan Mosque", detail: "Visit 12:00 pm" },
@@ -5546,7 +5546,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 2,
         title: "Shigar Fort, Manthoka Waterfall & Drive to Khaplu",
         description: "Begin the day at Shigar Fort, then head to Manthoka Waterfall for lunch and photographs. The afternoon drive takes you deep into the Shyok valley arriving at Serena Khaplu for check-in.",
-        hotels: { deluxe: "destination-hotel-khaplu", luxury: "serena-hotel-khaplu" },
+        hotels: { deluxe: "destination-hotel-khaplu", luxury: "serena-khaplu-palace" },
         stops: [
           { name: "Shigar Fort", detail: "Visit 11:00 am" },
           { name: "Manthoka Waterfall", detail: "Visit & lunch 02:00 pm" },
@@ -5559,7 +5559,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 3,
         title: "Khaplu Fort, Chaqchan Mosque, Masherbrum View & Saling River",
         description: "A full day in Khaplu's heritage corridor: Khaplu Fort, Chaqchan Mosque (c. 1400s), Masherbrum View Point with its close-up of the 8,000m peak, and an evening stroll at Saling beside the Shyok River.",
-        hotels: { deluxe: "destination-hotel-khaplu", luxury: "serena-hotel-khaplu" },
+        hotels: { deluxe: "destination-hotel-khaplu", luxury: "serena-khaplu-palace" },
         stops: [
           { name: "Khaplu Fort", detail: "Visit 10:00 am" },
           { name: "Chaqchan Mosque", detail: "Visit 01:00 pm" },
@@ -5840,7 +5840,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 4,
         title: "Khamosh Waterfall, Manthoka Waterfall → Khaplu",
         description: "Drive south from Skardu to the dramatic Khamosh Waterfall, then to Manthoka Waterfall for a lunch stop. Continue east along the Shyok river valley to Khaplu for check-in at Khaplu Serena Inn.",
-        hotels: { deluxe: "serena-hotel-khaplu", luxury: "serena-hotel-khaplu" },
+        hotels: { deluxe: "serena-khaplu-palace", luxury: "serena-khaplu-palace" },
         stops: [
           { name: "Khamosh Waterfall", detail: "Visit & lunch 02:00 pm" },
           { name: "Manthoka Waterfall", detail: "Visit 05:00 pm" },
@@ -5979,7 +5979,7 @@ export const packageItineraries: PackageItinerary[] = [
         dayNumber: 5,
         title: "Deosai → Khamosh Waterfall → Manthoka Waterfall → Khaplu",
         description: "Leave the plateau and descend towards Skardu, then head south to the dramatic Khamosh Waterfall before continuing to Manthoka Waterfall. The evening drive along the Shyok valley brings you into Khaplu for a late arrival at Serena Khaplu.",
-        hotels: { deluxe: "destination-hotel-khaplu", luxury: "serena-hotel-khaplu" },
+        hotels: { deluxe: "destination-hotel-khaplu", luxury: "serena-khaplu-palace" },
         stops: [
           { name: "Glamp Bara Pani", detail: "Breakfast 08:00 am, depart 09:00 am" },
           { name: "Khamosh Waterfall", detail: "Visit 02:00 pm" },

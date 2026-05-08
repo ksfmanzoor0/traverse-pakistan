@@ -76,7 +76,7 @@ export default async function TripDetailPage({ params }: Props) {
   );
 
   return (
-    <div className="py-6 sm:py-8">
+    <div className="pt-0 sm:pt-6 pb-24 sm:pb-8">
       <JsonLd data={schema} id={`tour-${tour.slug}-jsonld`} />
       <Container>
         {/* Breadcrumb */}
@@ -88,7 +88,7 @@ export default async function TripDetailPage({ params }: Props) {
         />
 
         {/* Gallery */}
-        <div className="mt-5">
+        <div className="mt-1 sm:mt-5">
           <MosaicGallery images={tour.images} tourName={tour.name} />
         </div>
 

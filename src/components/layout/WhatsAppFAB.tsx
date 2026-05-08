@@ -1,12 +1,24 @@
+"use client";
+
+import { usePathname } from "next/navigation";
 import { getWhatsAppUrl } from "@/lib/utils";
 
+const LISTING_PREFIXES = ["/packages/", "/hotels/", "/grouptours/"];
+
 export function WhatsAppFAB() {
+  const pathname = usePathname();
+  // Only displace on immediate detail pages (/hotels/slug), not sub-pages (/hotels/slug/checkout)
+  const isDetail = LISTING_PREFIXES.some(p => {
+    if (!pathname.startsWith(p)) return false;
+    return !pathname.slice(p.length).includes("/");
+  });
+
   return (
     <a
       href={getWhatsAppUrl()}
       target="_blank"
       rel="noopener noreferrer"
-      className="fixed bottom-6 right-6 z-40 w-14 h-14 bg-[var(--whatsapp)] text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 hover:shadow-xl transition-all duration-200 group"
+      className={`fixed right-6 z-40 w-14 h-14 bg-[var(--whatsapp)] text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 hover:shadow-xl transition-all duration-200 group ${isDetail ? "bottom-24 lg:bottom-6" : "bottom-6"}`}
       aria-label="Chat on WhatsApp"
     >
       <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">

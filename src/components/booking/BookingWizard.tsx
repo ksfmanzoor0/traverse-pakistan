@@ -941,7 +941,7 @@ function SummaryCard({
       style={{ boxShadow: "var(--shadow-md)" }}
     >
       <div className="relative aspect-[16/9]">
-        <Image src={tour.images[0]?.url ?? ""} alt={tour.name} fill className="object-cover" sizes="380px" />
+        {tour.images[0]?.url && <Image src={tour.images[0].url} alt={tour.name} fill className="object-cover" sizes="380px" />}
         <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/70 to-transparent">
           <p className="text-[10px] font-bold uppercase tracking-wider text-white/80">
             {tour.category.replace(/-/g, " ")}

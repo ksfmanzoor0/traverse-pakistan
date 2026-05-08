@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
 import { HeroSection } from "@/components/home/HeroSection";
+import { MobileHomeContent } from "@/components/home/MobileHomeContent";
+import { getDestinationOptions } from "@/services/destination.service";
 import { StatsBar } from "@/components/home/StatsBar";
 import { PopularToursCarousel } from "@/components/home/PopularToursCarousel";
 import { TravelStylesGrid } from "@/components/home/TravelStylesGrid";
@@ -33,11 +35,18 @@ export const metadata: Metadata = buildMetadata({
   ],
 });
 
-export default function Home() {
+export default async function Home() {
+  const destinations = await getDestinationOptions().catch(() => []);
+
   return (
     <>
-      <HeroSection />
-      <StatsBar />
+      {/* Desktop hero — hidden on mobile */}
+      <HeroSection destinations={destinations} />
+
+      {/* Mobile home — search pill + tabs + featured cards */}
+      <MobileHomeContent destinations={destinations} />
+
+      <div className="hidden md:block"><StatsBar /></div>
       <FeaturedPackagesCarousel />
       <PopularToursCarousel />
       <FeaturedHotels />
