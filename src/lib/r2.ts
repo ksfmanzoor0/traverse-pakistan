@@ -20,7 +20,7 @@ export async function listR2Images(prefix: string): Promise<string[]> {
       new ListObjectsV2Command({ Bucket: BUCKET, Prefix: prefix })
     );
     return (res.Contents ?? [])
-      .map((obj) => `${MEDIA_BASE}/${obj.Key}`)
+      .map((obj) => `${MEDIA_BASE}/${encodeURI(obj.Key)}`)
       .filter((url) => IMAGE_EXT.test(url));
   } catch {
     return [];
