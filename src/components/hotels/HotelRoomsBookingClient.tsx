@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { formatPrice } from "@/lib/utils";
 import { Icon } from "@/components/ui/Icon";
 import { DEFAULT_ROOM_CAPACITY } from "@/lib/constants";
 import { RoomImageCarousel } from "@/components/hotels/RoomImageCarousel";
 import { HotelMobileBookingBar } from "@/components/hotels/HotelMobileBookingBar";
+import { useHotelRoom } from "@/components/hotels/HotelRoomContext";
 import type { Hotel, HotelRoom } from "@/types/hotel";
 
 function maxOccupancyPerRoom(room: HotelRoom): number {
@@ -19,7 +19,7 @@ interface Props {
 }
 
 export function HotelRoomsBookingClient({ hotel, roomImagesMap }: Props) {
-  const [selectedRoom, setSelectedRoom] = useState<HotelRoom>(hotel.rooms[0]);
+  const { selectedRoom, setSelectedRoom } = useHotelRoom();
 
   return (
     <>
@@ -40,7 +40,7 @@ export function HotelRoomsBookingClient({ hotel, roomImagesMap }: Props) {
                 onKeyDown={(e) => e.key === "Enter" && setSelectedRoom(room)}
                 className={`rounded-[var(--radius-md)] border overflow-hidden transition-all cursor-pointer lg:cursor-default ${
                   isSelected
-                    ? "border-[var(--primary)]"
+                    ? "border-[var(--primary)] ring-1 ring-[var(--primary)]"
                     : "border-[var(--border-default)] hover:border-[var(--primary)]"
                 }`}
               >

@@ -19,6 +19,7 @@ import { listR2Images } from "@/lib/r2";
 import Link from "next/link";
 import { HotelBookingSidebar } from "@/components/hotels/HotelBookingSidebar";
 import { HotelRoomsBookingClient } from "@/components/hotels/HotelRoomsBookingClient";
+import { HotelRoomProvider } from "@/components/hotels/HotelRoomContext";
 
 // Hotel pages re-validate every hour so R2 image uploads are picked up without a full rebuild
 export const revalidate = 3600;
@@ -141,6 +142,7 @@ export default async function HotelDetailPage({ params }: Props) {
         </div>
 
         {/* Two-column layout */}
+        <HotelRoomProvider initialRoom={hotel.rooms[0]}>
         <div className="mt-8 lg:grid lg:grid-cols-[1fr_380px] lg:gap-10">
           {/* Main content */}
           <div>
@@ -271,6 +273,7 @@ export default async function HotelDetailPage({ params }: Props) {
             <HotelBookingSidebar hotel={hotel} />
           </aside>
         </div>
+        </HotelRoomProvider>
 
         {/* More hotels */}
         {moreHotels.length > 0 && (

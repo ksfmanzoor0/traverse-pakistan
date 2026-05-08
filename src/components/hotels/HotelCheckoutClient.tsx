@@ -26,19 +26,22 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
   const guests   = Number(searchParams.get("guests") ?? 2);
   const rooms    = Number(searchParams.get("rooms") ?? 1);
   const roomName = searchParams.get("room") ?? hotel.rooms[0]?.name ?? "";
-  const adults   = Number(searchParams.get("adults") ?? guests);
-  const children = Number(searchParams.get("children") ?? 0);
+  const adults      = Number(searchParams.get("adults") ?? guests);
+  const children    = Number(searchParams.get("children") ?? 0);
+  const extraPeople = Number(searchParams.get("extraPeople") ?? 0);
+  const extraRate   = Number(searchParams.get("extraRate") ?? 0);
+  const infant      = searchParams.get("infant") === "1";
 
   const selectedRoom = hotel.rooms.find((r) => r.name === roomName) ?? hotel.rooms[0];
   const nights = checkin && checkout ? diffDays(checkin, checkout) : 1;
-  const subtotal = selectedRoom.price * rooms * nights;
+  const subtotal = selectedRoom.price * rooms * nights + extraRate * extraPeople * nights;
 
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
     email: "",
     phone: "",
-    specialRequests: "",
+    specialRequests: infant ? "Travelling with an infant — crib may be required" : "",
     arrivalTime: "",
   });
 
