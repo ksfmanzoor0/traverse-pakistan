@@ -55,6 +55,7 @@ export interface Hotel {
   rating: number;
   reviewCount: number;
   pricePerNight: number;        // entry price (lowest room, lowest season) for listing cards
+  margin: number;               // per-hotel markup applied to corporate/base rates → display price
   seasons?: HotelSeasonDefinition[];
   taxNote?: string;             // e.g. "No GST — Gilgit-Baltistan tax-free zone"
   amenities: string[];
