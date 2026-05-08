@@ -452,6 +452,21 @@ export function MobileSearchOverlay({ open, onClose, destinations, defaultTab = 
     setFlexMonth(null);
   }, [activeTab]);
 
+  // Mirror desktop onFlexSelect: set real startDate/endDate as soon as both duration + month are chosen
+  useEffect(() => {
+    if (!isHotels || staysMode !== "flexible") { return; }
+    if (flexMonth === null) { setStartDate(null); setEndDate(null); return; }
+    const today = new Date();
+    const yr = flexMonth < today.getMonth() ? today.getFullYear() + 1 : today.getFullYear();
+    const start = new Date(yr, flexMonth, 1);
+    let end: Date;
+    if (flexDuration === "weekend") { end = new Date(yr, flexMonth, 3); }
+    else if (flexDuration === "week") { end = new Date(yr, flexMonth, 8); }
+    else { end = new Date(yr, flexMonth + 1, 0); }
+    setStartDate(start);
+    setEndDate(end);
+  }, [isHotels, staysMode, flexDuration, flexMonth]);
+
   const isDestSearchPrefilled = !!selectedDest && destSearch === (destinations.find(d => d.slug === selectedDest)?.name ?? "");
   const PINNED = ["hunza", "skardu", "chitral", "naran", "kumrat", "lahore"];
   const parentDests = destinations

@@ -14,7 +14,6 @@ import {
   combineSchemas,
 } from "@/lib/seo/schema";
 import { formatPrice } from "@/lib/utils";
-import { applyHotelMargin } from "@/lib/constants";
 import { getHotelBySlug, getAllHotels, getHotelsByDestination } from "@/services/hotel.service";
 import { listR2Images } from "@/lib/r2";
 import Link from "next/link";
@@ -81,13 +80,6 @@ export default async function HotelDetailPage({ params }: Props) {
     if (r2RoomImages[i]?.length) roomImagesMap[i] = r2RoomImages[i];
   });
 
-  // Pre-compute display prices server-side so applyHotelMargin never ships to the client bundle
-  const roomDisplayPrices: Record<string, { season: string; price: number }[] | null> = {};
-  hotel.rooms.forEach((room) => {
-    roomDisplayPrices[room.name] = room.prices
-      ? room.prices.map((sp) => ({ season: sp.season, price: applyHotelMargin(sp.price) }))
-      : null;
-  });
 
   const schema = combineSchemas(
     hotelSchema(hotel),
