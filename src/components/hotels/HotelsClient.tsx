@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -22,6 +22,11 @@ const allDestinations = [
 
 export function HotelsClient({ hotels }: { hotels: Hotel[] }) {
   const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual";
+    window.scrollTo(0, 0);
+  }, []);
 
   const activeFilters = useMemo(() => ({
     destination: searchParams.get("destination") ?? "",

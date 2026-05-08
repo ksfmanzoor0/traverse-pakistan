@@ -2,17 +2,23 @@
 
 import { useState } from "react";
 import { formatPrice } from "@/lib/utils";
+import { Icon } from "@/components/ui/Icon";
+import { DEFAULT_ROOM_CAPACITY } from "@/lib/constants";
 import { RoomImageCarousel } from "@/components/hotels/RoomImageCarousel";
 import { HotelMobileBookingBar } from "@/components/hotels/HotelMobileBookingBar";
 import type { Hotel, HotelRoom } from "@/types/hotel";
 
+function maxOccupancyPerRoom(room: HotelRoom): number {
+  const cap = room.capacity ?? DEFAULT_ROOM_CAPACITY;
+  return cap.maxOccupancy ?? (cap.adults + cap.children);
+}
+
 interface Props {
   hotel: Hotel;
   roomImagesMap: Record<number, string[]>;
-  roomDisplayPrices: Record<string, { season: string; price: number }[] | null>;
 }
 
-export function HotelRoomsBookingClient({ hotel, roomImagesMap, roomDisplayPrices }: Props) {
+export function HotelRoomsBookingClient({ hotel, roomImagesMap }: Props) {
   const [selectedRoom, setSelectedRoom] = useState<HotelRoom>(hotel.rooms[0]);
 
   return (
@@ -28,10 +34,14 @@ export function HotelRoomsBookingClient({ hotel, roomImagesMap, roomDisplayPrice
             return (
               <div
                 key={room.name}
-                className={`rounded-[var(--radius-md)] border overflow-hidden transition-all ${
+                role="button"
+                tabIndex={0}
+                onClick={() => setSelectedRoom(room)}
+                onKeyDown={(e) => e.key === "Enter" && setSelectedRoom(room)}
+                className={`rounded-[var(--radius-md)] border overflow-hidden transition-all cursor-pointer lg:cursor-default ${
                   isSelected
-                    ? "border-[var(--primary)] lg:border-[var(--border-default)]"
-                    : "border-[var(--border-default)]"
+                    ? "border-[var(--primary)]"
+                    : "border-[var(--border-default)] hover:border-[var(--primary)]"
                 }`}
               >
                 <RoomImageCarousel
@@ -45,42 +55,27 @@ export function HotelRoomsBookingClient({ hotel, roomImagesMap, roomDisplayPrice
                     <div className="min-w-0">
                       <h3 className="text-[15px] font-bold text-[var(--text-primary)]">{room.name}</h3>
                       <p className="text-[13px] text-[var(--text-tertiary)] mt-0.5">{room.beds}</p>
+                      {room.capacity && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <Icon name="users" size="xs" color="var(--text-tertiary)" />
+                          <span className="text-[12px] text-[var(--text-tertiary)]">
+                            Max {maxOccupancyPerRoom(room)} guest{maxOccupancyPerRoom(room) !== 1 ? "s" : ""}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    {/* Mobile-only select button */}
-                    <button
-                      type="button"
-                      onClick={() => setSelectedRoom(room)}
-                      className={`lg:hidden shrink-0 px-3 py-1 rounded-[var(--radius-full)] text-[12px] font-semibold border transition-colors cursor-pointer ${
-                        isSelected
-                          ? "bg-[var(--primary)] text-[var(--text-inverse)] border-[var(--primary)]"
-                          : "border-[var(--border-default)] text-[var(--text-secondary)] hover:border-[var(--primary)]"
-                      }`}
-                    >
-                      {isSelected ? "Selected" : "Select"}
-                    </button>
+                    {isSelected && (
+                      <span className="lg:hidden shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-[var(--radius-full)] text-[11px] font-bold bg-[var(--primary)] text-[var(--text-inverse)]">
+                        <Icon name="check" size="xs" color="var(--on-dark)" />
+                        Selected
+                      </span>
+                    )}
                   </div>
 
-                  {(() => {
-                    const displayPrices = roomDisplayPrices[room.name];
-                    return displayPrices ? (
-                      <div className="mt-2 space-y-0.5">
-                        {displayPrices.map((sp) => (
-                          <div key={sp.season} className="flex items-center justify-between">
-                            <span className="text-[11px] text-[var(--text-tertiary)]">{sp.season}</span>
-                            <span className="text-[13px] font-semibold text-[var(--text-primary)] tabular-nums">
-                              {formatPrice(sp.price)}
-                            </span>
-                          </div>
-                        ))}
-                        <p className="text-[10px] text-[var(--text-tertiary)] pt-0.5">/ night · rates vary by season</p>
-                      </div>
-                    ) : (
-                      <p className="text-[16px] font-bold text-[var(--text-primary)] mt-2 tabular-nums">
-                        {formatPrice(room.price)}{" "}
-                        <span className="text-[13px] font-normal text-[var(--text-tertiary)]">/ night</span>
-                      </p>
-                    );
-                  })()}
+                  <p className="text-[16px] font-bold text-[var(--text-primary)] mt-2 tabular-nums">
+                    {formatPrice(room.price)}{" "}
+                    <span className="text-[13px] font-normal text-[var(--text-tertiary)]">/ night</span>
+                  </p>
                 </div>
               </div>
             );

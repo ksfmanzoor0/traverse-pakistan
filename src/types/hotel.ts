@@ -27,7 +27,8 @@ export interface HotelRoom {
   beds: string;
   price: number;              // lowest display price — used on listing cards & legacy hotels
   prices?: SeasonalPrice[];   // seasonal base prices; applyHotelMargin applied at display time
-  capacity?: RoomCapacity;    // per-room occupancy limits; falls back to sidebar defaults if absent
+  capacity?: RoomCapacity;          // per-room occupancy limits; falls back to sidebar defaults if absent
+  extraOccupancyCharge?: number;    // per extra person per night beyond standard occupancy (2 guests)
   available: number;
   image: string;              // static fallback image
   folder?: string;            // R2 subfolder name under hotels/{slug}/rooms/ for dynamic multi-image support
