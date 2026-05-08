@@ -1947,6 +1947,7 @@ export const hotels: Hotel[] = [
         capacity: { adults: 3, children: 2, infants: 1, maxOccupancy: 4 },
         available: 6,
         image: `${MEDIA}/hotels/zen-by-the-lake/rooms/Lake%20View%20Room/Lake%20View%201.jpeg`,
+        folder: "Lake View Room",
       },
       {
         name: "Panoramic View Room",
@@ -1955,6 +1956,7 @@ export const hotels: Hotel[] = [
         capacity: { adults: 3, children: 2, infants: 1, maxOccupancy: 4 },
         available: 6,
         image: `${MEDIA}/hotels/zen-by-the-lake/rooms/Panoramic%20View%20Room/Panoramic%201.jpeg`,
+        folder: "Panoramic View Room",
       },
       {
         name: "Lake View Room with Private Garden",
@@ -1963,6 +1965,7 @@ export const hotels: Hotel[] = [
         capacity: { adults: 3, children: 2, infants: 1, maxOccupancy: 4 },
         available: 4,
         image: `${MEDIA}/hotels/zen-by-the-lake/rooms/Lake%20View%20Room%20with%20Private%20Garden/Private%20Garden%201.jpeg`,
+        folder: "Lake View Room with Private Garden",
       },
     ],
     reviews: [],
