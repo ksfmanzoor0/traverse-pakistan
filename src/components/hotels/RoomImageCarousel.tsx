@@ -5,7 +5,7 @@ import { useState } from "react";
 
 interface Props {
   images: string[];
-  fallback: string;
+  fallback?: string;
   alt: string;
   available: number;
 }

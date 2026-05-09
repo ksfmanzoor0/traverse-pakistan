@@ -1,21 +1,198 @@
 import { cache } from "react";
-import { hotels } from "@/data/hotels";
-import type { Hotel } from "@/types/hotel";
+import { unstable_cache } from "next/cache";
+import { getSupabaseAnon } from "@/lib/supabase/server";
+import { hotels as staticHotels } from "@/data/hotels";
+import type { Hotel, HotelRoom, HotelSeasonDefinition, HotelReview, SeasonalPrice } from "@/types/hotel";
 
-export const getAllHotels = cache(async (): Promise<Hotel[]> => {
-  return hotels;
-});
+// ── Raw Supabase row shapes ───────────────────────────────────────────────────
 
-export const getHotelsByDestination = cache(
-  async (destinationSlug: string): Promise<Hotel[]> => {
-    return hotels.filter((h) => h.destinationSlug === destinationSlug);
-  }
+type RawRoomPrice = {
+  price: number;
+  hotel_seasons: { label: string } | null;
+};
+
+type RawRoom = {
+  id: string;
+  name: string;
+  beds: string;
+  price: number;
+  available: number;
+  extra_occupancy_charge: number | null;
+  capacity_adults: number;
+  capacity_children: number;
+  capacity_infants: number;
+  max_occupancy: number | null;
+  sort_order: number;
+  hotel_room_prices: RawRoomPrice[];
+};
+
+type RawSeason = {
+  label: string;
+  sort_order: number;
+  hotel_season_periods: { from_date: string; to_date: string }[];
+};
+
+type RawReview = {
+  reviewer_name: string;
+  initial: string;
+  date: string;
+  rating: number;
+  body: string;
+};
+
+type RawHotel = {
+  id: string;
+  slug: string;
+  name: string;
+  destination_slug: string;
+  location: string;
+  tier: string;
+  property_type: string;
+  image: string;
+  rating: number;
+  review_count: number;
+  price_per_night: number;
+  margin: number;
+  check_in: string;
+  check_out: string;
+  tax_note: string | null;
+  description: string;
+  amenities: string[];
+  highlights: string[];
+  policies: { rules: string[]; safety: string[]; cancellation: string[] };
+  hotel_rooms: RawRoom[];
+  hotel_seasons: RawSeason[];
+  hotel_reviews: RawReview[];
+};
+
+const HOTEL_SELECT = `
+  id, slug, name, destination_slug, location, tier, property_type, image,
+  rating, review_count, price_per_night, margin, check_in, check_out,
+  tax_note, description, amenities, highlights, policies,
+  hotel_rooms (
+    id, name, beds, price, available, extra_occupancy_charge,
+    capacity_adults, capacity_children, capacity_infants, max_occupancy, sort_order,
+    hotel_room_prices ( price, hotel_seasons ( label ) )
+  ),
+  hotel_seasons ( label, sort_order, hotel_season_periods ( from_date, to_date ) ),
+  hotel_reviews ( reviewer_name, initial, date, rating, body )
+`;
+
+// ── Mapper ────────────────────────────────────────────────────────────────────
+
+function toHotel(raw: RawHotel): Hotel {
+  const rooms: HotelRoom[] = [...raw.hotel_rooms]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((r) => {
+      const prices: SeasonalPrice[] = r.hotel_room_prices
+        .filter((p) => p.hotel_seasons != null)
+        .map((p) => ({ season: p.hotel_seasons!.label, price: p.price }));
+
+      return {
+        name: r.name,
+        beds: r.beds,
+        price: r.price,
+        available: r.available,
+        ...(r.extra_occupancy_charge != null && { extraOccupancyCharge: r.extra_occupancy_charge }),
+        ...(prices.length > 0 && { prices }),
+        capacity: {
+          adults: r.capacity_adults,
+          children: r.capacity_children,
+          infants: r.capacity_infants,
+          ...(r.max_occupancy != null && { maxOccupancy: r.max_occupancy }),
+        },
+      };
+    });
+
+  const seasons: HotelSeasonDefinition[] = [...raw.hotel_seasons]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((s) => ({
+      label: s.label,
+      periods: s.hotel_season_periods.map((p) => ({ from: p.from_date, to: p.to_date })),
+    }));
+
+  const reviews: HotelReview[] = raw.hotel_reviews.map((r) => ({
+    name: r.reviewer_name,
+    initial: r.initial,
+    date: r.date,
+    rating: Number(r.rating),
+    text: r.body,
+  }));
+
+  return {
+    id: raw.id,
+    slug: raw.slug,
+    name: raw.name,
+    destinationSlug: raw.destination_slug,
+    location: raw.location,
+    tier: raw.tier as Hotel["tier"],
+    propertyType: raw.property_type,
+    image: raw.image,
+    images: [raw.image],
+    rating: Number(raw.rating),
+    reviewCount: raw.review_count,
+    pricePerNight: raw.price_per_night,
+    margin: Number(raw.margin),
+    checkIn: raw.check_in,
+    checkOut: raw.check_out,
+    ...(raw.tax_note && { taxNote: raw.tax_note }),
+    description: raw.description,
+    amenities: raw.amenities,
+    highlights: raw.highlights,
+    policies: raw.policies,
+    rooms,
+    ...(seasons.length > 0 && { seasons }),
+    reviews,
+  };
+}
+
+// ── Slugs migrated to Supabase — static data used for everything else ─────────
+
+const SUPABASE_HOTEL_SLUGS = new Set(["ambiance-hunza", "zen-by-the-lake"]);
+
+// ── Cached fetchers ───────────────────────────────────────────────────────────
+
+const _fetchSupabaseHotels = unstable_cache(
+  async (): Promise<Hotel[]> => {
+    const supabase = getSupabaseAnon();
+    const { data, error } = await supabase
+      .from("hotels")
+      .select(HOTEL_SELECT)
+      .order("name");
+    if (error) throw new Error(`getAllHotels (supabase): ${error.message}`);
+    return (data as unknown as RawHotel[]).map(toHotel);
+  },
+  ["supabase-hotels"],
+  { tags: ["hotels"], revalidate: 86400 }
 );
 
+export const getAllHotels = cache(async (): Promise<Hotel[]> => {
+  const dbHotels = await _fetchSupabaseHotels();
+  const staticOnly = staticHotels.filter((h) => !SUPABASE_HOTEL_SLUGS.has(h.slug));
+  return [...dbHotels, ...staticOnly];
+});
+
 export const getHotelBySlug = cache(async (slug: string): Promise<Hotel | null> => {
-  return hotels.find((h) => h.slug === slug) ?? null;
+  if (SUPABASE_HOTEL_SLUGS.has(slug)) {
+    const supabase = getSupabaseAnon();
+    const { data, error } = await supabase
+      .from("hotels")
+      .select(HOTEL_SELECT)
+      .eq("slug", slug)
+      .single();
+    if (error?.code === "PGRST116") return null;
+    if (error) throw new Error(`getHotelBySlug (supabase): ${error.message}`);
+    return toHotel(data as unknown as RawHotel);
+  }
+  return staticHotels.find((h) => h.slug === slug) ?? null;
+});
+
+export const getHotelsByDestination = cache(async (destinationSlug: string): Promise<Hotel[]> => {
+  const all = await getAllHotels();
+  return all.filter((h) => h.destinationSlug === destinationSlug);
 });
 
 export const getFeaturedHotels = cache(async (limit: number = 6): Promise<Hotel[]> => {
-  return hotels.slice(0, limit);
+  const all = await getAllHotels();
+  return all.slice(0, limit);
 });

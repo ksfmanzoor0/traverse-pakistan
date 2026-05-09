@@ -30,8 +30,7 @@ export interface HotelRoom {
   capacity?: RoomCapacity;          // per-room occupancy limits; falls back to sidebar defaults if absent
   extraOccupancyCharge?: number;    // per extra person per night beyond standard occupancy (2 guests)
   available: number;
-  image: string;                    // static fallback image
-  folder?: string;                  // R2 subfolder name under hotels/{slug}/rooms/ for dynamic multi-image support
+  image?: string;                   // static fallback image; omitted for DB-sourced hotels (R2 is source of truth)
 }
 
 export interface HotelReview {
