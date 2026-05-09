@@ -148,7 +148,7 @@ function toHotel(raw: RawHotel): Hotel {
 
 // ── Slugs migrated to Supabase — static data used for everything else ─────────
 
-const SUPABASE_HOTEL_SLUGS = new Set(["ambiance-hunza", "zen-by-the-lake"]);
+const SUPABASE_HOTEL_SLUGS = new Set(["ambiance-hunza", "zen-by-the-lake", "sapphire-hunza"]);
 
 // ── Cached fetchers ───────────────────────────────────────────────────────────
 
