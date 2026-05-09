@@ -63,20 +63,30 @@ export default async function HotelDetailPage({ params }: Props) {
 
   const moreHotels = (await getHotelsByDestination(hotel.destinationSlug)).filter((h) => h.slug !== slug);
 
-  // Fetch gallery + per-room images from R2 in parallel; fall back to static data if empty
+  // Fetch gallery + all room images in 2 R2 calls; match rooms case-insensitively by slug
   const base = `hotels/${hotel.slug}`;
-  const [r2Gallery, ...r2RoomImages] = await Promise.all([
+  const [r2Gallery, allRoomObjects] = await Promise.all([
     listR2Images(`${base}/gallery/`),
-    ...hotel.rooms.map((r) => listR2Images(`${base}/rooms/${slugify(r.name)}/`)),
+    listR2Images(`${base}/rooms/`),
   ]);
 
   const galleryUrls = r2Gallery.length > 0 ? r2Gallery : hotel.images;
   const galleryImages = galleryUrls.map((url, i) => ({ url, alt: `${hotel.name} photo ${i + 1}` }));
 
-  // Map room index → R2 image list (falls back to [] → component uses room.image)
+  // Group room images by subfolder name (segment after "rooms/")
+  const roomsByFolder: Record<string, string[]> = {};
+  for (const url of allRoomObjects) {
+    const match = url.match(/\/rooms\/([^/]+)\//);
+    if (!match) continue;
+    const folder = decodeURIComponent(match[1]);
+    (roomsByFolder[folder.toLowerCase()] ??= []).push(url);
+  }
+
+  // Map room index → matched R2 images (case-insensitive slug match)
   const roomImagesMap: Record<number, string[]> = {};
-  hotel.rooms.forEach((_, i) => {
-    if (r2RoomImages[i]?.length) roomImagesMap[i] = r2RoomImages[i];
+  hotel.rooms.forEach((room, i) => {
+    const imgs = roomsByFolder[slugify(room.name)];
+    if (imgs?.length) roomImagesMap[i] = imgs;
   });
 
 
