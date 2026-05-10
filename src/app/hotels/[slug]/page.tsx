@@ -151,7 +151,7 @@ export default async function HotelDetailPage({ params }: Props) {
         </div>
 
         {/* Two-column layout */}
-        <HotelRoomProvider initialRoom={hotel.rooms[0]}>
+        <HotelRoomProvider>
         <div className="mt-8 lg:grid lg:grid-cols-[1fr_380px] lg:gap-10">
           {/* Main content */}
           <div>
