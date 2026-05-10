@@ -36,7 +36,12 @@ export async function FeaturedHotels() {
                   className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
                   sizes="310px"
                 />
-                <div className="absolute top-3 left-3">
+                <div className="absolute top-3 left-3 flex gap-1.5">
+                  {hotel.guestFavourite === true && (
+                    <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] bg-[var(--bg-primary)] text-[var(--text-primary)] rounded-[var(--radius-full)]">
+                      GUEST FAV
+                    </span>
+                  )}
                   <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] bg-[var(--primary)] text-[var(--on-dark)] rounded-[var(--radius-full)]">
                     {hotel.tier === "luxury" ? "LUXURY" : hotel.tier === "premium" ? "PREMIUM" : hotel.tier === "standard" ? "CAMP" : "GUEST FAV"}
                   </span>

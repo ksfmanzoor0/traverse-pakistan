@@ -53,6 +53,7 @@ type RawHotel = {
   review_count: number;
   price_per_night: number;
   margin: number;
+  guest_favourite: boolean;
   check_in: string;
   check_out: string;
   tax_note: string | null;
@@ -67,7 +68,7 @@ type RawHotel = {
 
 const HOTEL_SELECT = `
   id, slug, name, destination_slug, location, tier, property_type, image,
-  rating, review_count, price_per_night, margin, check_in, check_out,
+  rating, review_count, price_per_night, margin, guest_favourite, check_in, check_out,
   tax_note, description, amenities, highlights, policies,
   hotel_rooms (
     id, name, beds, price, available, extra_occupancy_charge,
@@ -133,6 +134,7 @@ function toHotel(raw: RawHotel): Hotel {
     reviewCount: raw.review_count,
     pricePerNight: raw.price_per_night,
     margin: Number(raw.margin),
+    guestFavourite: raw.guest_favourite,
     checkIn: raw.check_in,
     checkOut: raw.check_out,
     ...(raw.tax_note && { taxNote: raw.tax_note }),
@@ -148,7 +150,7 @@ function toHotel(raw: RawHotel): Hotel {
 
 // ── Slugs migrated to Supabase — static data used for everything else ─────────
 
-const SUPABASE_HOTEL_SLUGS = new Set(["ambiance-hunza", "zen-by-the-lake", "sapphire-hunza", "best-western-premier-hunza"]);
+const SUPABASE_HOTEL_SLUGS = new Set(["ambiance-hunza", "zen-by-the-lake", "sapphire-hunza", "best-western-premier-hunza", "himmel-skardu"]);
 
 // ── Cached fetchers ───────────────────────────────────────────────────────────
 
@@ -169,7 +171,7 @@ const _fetchSupabaseHotels = unstable_cache(
 export const getAllHotels = cache(async (): Promise<Hotel[]> => {
   const dbHotels = await _fetchSupabaseHotels();
   const staticOnly = staticHotels.filter((h) => !SUPABASE_HOTEL_SLUGS.has(h.slug));
-  return [...dbHotels, ...staticOnly];
+  return [...dbHotels, ...staticOnly.map((h) => ({ ...h, guestFavourite: false }))];
 });
 
 export const getHotelBySlug = cache(async (slug: string): Promise<Hotel | null> => {
@@ -192,7 +194,9 @@ export const getHotelsByDestination = cache(async (destinationSlug: string): Pro
   return all.filter((h) => h.destinationSlug === destinationSlug);
 });
 
+const EXCLUDED_FROM_FEATURED = new Set(["sapphire-hunza"]);
+
 export const getFeaturedHotels = cache(async (limit: number = 6): Promise<Hotel[]> => {
   const all = await getAllHotels();
-  return all.slice(0, limit);
+  return all.filter((h) => !EXCLUDED_FROM_FEATURED.has(h.slug)).slice(0, limit);
 });
