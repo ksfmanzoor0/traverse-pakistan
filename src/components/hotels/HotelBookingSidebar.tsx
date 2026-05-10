@@ -277,7 +277,7 @@ export function HotelBookingSidebar({ hotel }: { hotel: Hotel }) {
                       {sel.room.name} <span className="font-normal text-[var(--text-tertiary)]">×{sel.qty}</span>
                     </p>
                     <p className="text-[11px] text-[var(--text-tertiary)]">
-                      {sel.adults}A{sel.children > 0 ? ` ${sel.children}C` : ""}{sel.infant ? " · infant" : ""}
+                      {sel.adults} adult{sel.adults !== 1 ? "s" : ""}{sel.children > 0 ? ` · ${sel.children} child${sel.children !== 1 ? "ren" : ""}` : ""}
                     </p>
                   </div>
                   <p className="text-[12px] font-bold text-[var(--text-primary)] tabular-nums shrink-0">
