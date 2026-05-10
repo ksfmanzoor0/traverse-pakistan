@@ -461,12 +461,10 @@ export type Database = {
       create_hotel_booking: {
         Args: {
           p_hotel_slug: string;
-          p_room_name: string;
           p_checkin_date: string | null;
           p_checkout_date: string | null;
           p_adults: number;
           p_children: number;
-          p_rooms: number;
           p_nights: number;
           p_total_amount: number;
           p_contact_name: string;
@@ -474,6 +472,7 @@ export type Database = {
           p_contact_phone: string;
           p_arrival_time: string | null;
           p_notes: string | null;
+          p_line_items: { roomName: string; qty: number; adults: number; children: number; pricePerNight: number }[];
         };
         Returns: { booking_id: string; booking_ref: string; total_amount: number }[];
       };

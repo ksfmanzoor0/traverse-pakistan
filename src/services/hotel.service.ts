@@ -109,7 +109,10 @@ function toHotel(raw: RawHotel): Hotel {
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((s) => ({
       label: s.label,
-      periods: s.hotel_season_periods.map((p) => ({ from: p.from_date, to: p.to_date })),
+      periods: s.hotel_season_periods.map((p) => ({
+        from: p.from_date.length === 10 ? p.from_date.slice(5) : p.from_date,
+        to:   p.to_date.length   === 10 ? p.to_date.slice(5)   : p.to_date,
+      })),
     }));
 
   const reviews: HotelReview[] = raw.hotel_reviews.map((r) => ({
