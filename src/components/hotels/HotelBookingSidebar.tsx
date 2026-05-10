@@ -120,7 +120,7 @@ function CalendarGrid({ checkIn, checkOut, hovered, selecting, onHover, onSelect
 
 export function HotelBookingSidebar({ hotel }: { hotel: Hotel }) {
   const today = new Date();
-  const { selections, hasSelections, totalRooms, totalAdults, totalChildren, hasInfant, checkIn, checkOut, setCheckIn, setCheckOut } = useHotelRoom();
+  const { selections, hasSelections, totalRooms, totalAdults, totalChildren, hasInfant, setQty, checkIn, checkOut, setCheckIn, setCheckOut } = useHotelRoom();
 
   // Calendar
   const [calOpen, setCalOpen] = useState(false);
@@ -263,11 +263,40 @@ export function HotelBookingSidebar({ hotel }: { hotel: Hotel }) {
           )}
         </div>
 
-        {/* Selection summary */}
+        {/* Selection summary — removable room cards */}
         {hasSelections && (
-          <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)] mt-2 mb-2">
-            {totalRooms} room{totalRooms !== 1 ? "s" : ""} · {totalAdults} adult{totalAdults !== 1 ? "s" : ""}{totalChildren > 0 ? ` · ${totalChildren} child${totalChildren !== 1 ? "ren" : ""}` : ""}
-          </p>
+          <div className="mt-2 mb-3">
+            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)] mb-2">
+              {totalRooms} room{totalRooms !== 1 ? "s" : ""} · {totalAdults} adult{totalAdults !== 1 ? "s" : ""}{totalChildren > 0 ? ` · ${totalChildren} child${totalChildren !== 1 ? "ren" : ""}` : ""}
+            </p>
+            <div className="space-y-1.5">
+              {lineItems.map(({ sel, pricePerNight }) => (
+                <div key={sel.room.name} className="flex items-center justify-between gap-2 px-3 py-2 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-subtle)]">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[12px] font-semibold text-[var(--text-primary)] leading-snug">
+                      {sel.room.name} <span className="font-normal text-[var(--text-tertiary)]">×{sel.qty}</span>
+                    </p>
+                    <p className="text-[11px] text-[var(--text-tertiary)]">
+                      {sel.adults}A{sel.children > 0 ? ` ${sel.children}C` : ""}{sel.infant ? " · infant" : ""}
+                    </p>
+                  </div>
+                  <p className="text-[12px] font-bold text-[var(--text-primary)] tabular-nums shrink-0">
+                    {formatPrice(pricePerNight * sel.qty)}<span className="text-[10px] font-normal text-[var(--text-tertiary)]">/night</span>
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setQty(sel.room, 0)}
+                    aria-label={`Remove ${sel.room.name}`}
+                    className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-[var(--bg-elevated)] text-[var(--text-tertiary)] hover:text-[var(--error)] transition-colors cursor-pointer shrink-0"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+                      <line x1="2" y1="2" x2="8" y2="8"/><line x1="8" y1="2" x2="2" y2="8"/>
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Price breakdown */}
