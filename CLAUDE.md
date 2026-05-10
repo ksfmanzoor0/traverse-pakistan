@@ -160,8 +160,9 @@ npm run lint   # ESLint
 | hotel-27 | green-village-resort-upper-neelam | **keran** | deluxe |
 | hotel-28 | shabistan-inn-taobut | **taobut** | deluxe |
 | hotel-29 | corner-view-guest-house-taobut | **taobut** | standard |
+| hotel-30 | himmel-skardu | **shigar** | luxury |
 
-**Next hotel ID: hotel-30**
+**Next hotel ID: hotel-31**
 
 ### Gwadar/Makran hotel destinations
 `gwadar`, `ormara`, and `karachi` are valid destination slugs confirmed by the user. `makran` is the **region** — do not use it as a hotel `destinationSlug`.
@@ -181,3 +182,5 @@ npm run lint   # ESLint
 - **Pricing on pkg-41–43** — single supplements are estimates (~15% of deluxe KHI). Confirm if adjustment needed.
 - **Pricing on pkg-52–56** — all tiers currently 0 placeholder. Fill before launch.
 - **Hotel IDs 14–23 gap** — hotel-24 through hotel-29 are Kashmir hotels; IDs 14–23 may be assigned to Sindh/other hotels added in a prior session not reflected here.
+- **Himmel Skardu off-season rates** — Sep 15 onwards rates not yet received; add a third season when available.
+- **Himmel Skardu cover image** — `media.traversepakistan.com/hotels/himmel-skardu/cover.jpg` must be uploaded before launch.
