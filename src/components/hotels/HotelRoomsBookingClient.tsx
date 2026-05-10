@@ -224,12 +224,7 @@ export function HotelRoomsBookingClient({ hotel, roomImagesMap }: Props) {
         </div>
       </div>
 
-      {/* Mobile bar — full multi-room refactor on responsive branch */}
-      <HotelMobileBookingBar
-        hotel={hotel}
-        selectedRoom={hotel.rooms[0]}
-        onRoomChange={() => {}}
-      />
+      <HotelMobileBookingBar hotel={hotel} />
     </>
   );
 }
