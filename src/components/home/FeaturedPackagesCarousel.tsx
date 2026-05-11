@@ -20,7 +20,7 @@ export async function FeaturedPackagesCarousel() {
       <Container wide className="relative">
         <SectionHeader
           title="Design Your Dream Journey"
-          subtitle="Your dates. Your tier. Tailor Made tours with hand-picked hotels that elevates the journey as you Traverse beyond the maps"
+          subtitle="Tailor Made tours — Your dates, Your tier!"
           linkText="View all packages"
           linkHref="/packages"
           light
