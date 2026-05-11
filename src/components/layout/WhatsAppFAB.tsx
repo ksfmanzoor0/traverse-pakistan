@@ -6,7 +6,7 @@ import { getWhatsAppUrl } from "@/lib/utils";
 const LISTING_PREFIXES = ["/packages/", "/hotels/", "/grouptours/"];
 
 export function WhatsAppFAB() {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   // Only displace on immediate detail pages (/hotels/slug), not sub-pages (/hotels/slug/checkout)
   const isDetail = LISTING_PREFIXES.some(p => {
     if (!pathname.startsWith(p)) return false;

@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from "react";
  * Auto-completes after a safety timeout so it never sticks.
  */
 export function RouteProgress() {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const search = useSearchParams();
   const [visible, setVisible] = useState(false);
   const [progress, setProgress] = useState(0);
