@@ -1,20 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { alfaConfig } from "@/lib/alfa/config";
 import { generateAlfaHash } from "@/lib/alfa/hash";
+import { getSupabaseServer } from "@/lib/supabase/server";
 
 interface Body {
   bookingRef: string;
-  amount: number;
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body: Body = await req.json();
-    const { bookingRef, amount } = body;
+    const { bookingRef } = body;
 
-    if (!bookingRef || !amount) {
-      return NextResponse.json({ error: "Missing bookingRef or amount" }, { status: 400 });
+    if (!bookingRef) {
+      return NextResponse.json({ error: "Missing bookingRef" }, { status: 400 });
     }
+
+    const supabase = await getSupabaseServer();
+    const { data, error } = await supabase
+      .from("package_bookings")
+      .select("total_amount")
+      .eq("booking_ref", bookingRef)
+      .maybeSingle();
+
+    if (error || !data) {
+      return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+    }
+
+    const amount: number = data.total_amount as number;
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://traversepakistan.com";
     const returnUrl = `${siteUrl}/payments/package/return`;
