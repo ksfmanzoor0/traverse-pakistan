@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { getSupabaseAnon } from "@/lib/supabase/server";
+import { listR2Images, buildImagesFromR2 } from "@/lib/r2";
 import type { PackageRow, PackageItineraryDayRow } from "@/lib/supabase/types";
 import type { Package } from "@/types/package";
 import type { PackageItinerary, PackageItineraryDay } from "@/types/package";
@@ -89,15 +90,18 @@ export const getAllPackages = cache(_fetchAllPackages);
 
 export const getPackageBySlug = cache(async (slug: string): Promise<Package | null> => {
   const supabase = getSupabaseAnon();
-  const { data, error } = await supabase
-    .from("packages")
-    .select("*")
-    .eq("slug", slug)
-    .single();
+  const [{ data, error }, r2Urls] = await Promise.all([
+    supabase.from("packages").select("*").eq("slug", slug).single(),
+    listR2Images(`packages/${slug}/`),
+  ]);
 
   if (error?.code === "PGRST116") return null;
   if (error) throw new Error(`getPackageBySlug: ${error.message}`);
-  return toPackage(data as unknown as PackageRow);
+  const pkg = toPackage(data as unknown as PackageRow);
+  if (r2Urls.length) {
+    pkg.images = shuffleGallery(slug, buildImagesFromR2(r2Urls, pkg.name));
+  }
+  return pkg;
 });
 
 export const getPackageItinerary = cache(async (slug: string): Promise<PackageItinerary | null> => {
