@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
-import { HeroSection } from "@/components/home/HeroSection";
+
+import { HeroSectionWrapper } from "@/components/home/HeroSectionWrapper";
 import { getDestinationOptions } from "@/services/destination.service";
 import { StatsBar } from "@/components/home/StatsBar";
 import { PopularToursCarousel } from "@/components/home/PopularToursCarousel";
@@ -39,8 +40,8 @@ export default async function Home() {
 
   return (
     <>
-      {/* Desktop hero — hidden on mobile */}
-      <HeroSection destinations={destinations} />
+      {/* Desktop hero — hidden on mobile, client-only to prevent SearchWidget mounting on iOS */}
+      <HeroSectionWrapper destinations={destinations} />
 
       <div className="hidden md:block"><StatsBar /></div>
       <FeaturedPackagesCarousel />
