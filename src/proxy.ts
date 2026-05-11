@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 const ALLOWED_ORIGINS = [
   "https://traversepakistan.com",
   "https://www.traversepakistan.com",
+  "https://traverse-pakistan.vercel.app",
   "http://localhost:3000",
 ];
 
