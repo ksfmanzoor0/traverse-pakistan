@@ -485,7 +485,7 @@ export function SearchWidget({
   const [destSearch, setDestSearch] = useState("");
   const widgetRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
 
   // Restore previous search state from sessionStorage on mount (navigate/home mode always starts fresh)
   useEffect(() => {

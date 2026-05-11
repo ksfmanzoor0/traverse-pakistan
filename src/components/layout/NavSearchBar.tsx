@@ -56,7 +56,7 @@ const EASE_OUT = { duration: 0.4, ease: [0.32, 0.72, 0, 1] } as const;
 
 export function NavSearchBar({ destinations = [] }: { destinations?: DestinationOption[] }) {
   const destNamesMap = Object.fromEntries(destinations.map((d) => [d.slug, d.name]));
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>(getDefaultTab(pathname));
   const [mounted, setMounted] = useState(false);
