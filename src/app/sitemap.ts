@@ -1,11 +1,11 @@
 import type { MetadataRoute } from "next";
-import { destinations } from "@/data/destinations";
-import { regions } from "@/data/regions";
 import { blogPosts } from "@/data/blog-posts";
 import { travelStyles } from "@/data/travel-styles";
 import { getAllPackages } from "@/services/package.service";
 import { getAllTours } from "@/services/tour.service";
 import { getAllHotels } from "@/services/hotel.service";
+import { getAllDestinations } from "@/services/destination.service";
+import { getAllRegions } from "@/services/region.service";
 import { absoluteUrl } from "@/lib/seo/site";
 
 export const dynamic = "force-static";
@@ -38,10 +38,12 @@ function entry(
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [packages, tours, hotels] = await Promise.all([
+  const [packages, tours, hotels, destinations, regions] = await Promise.all([
     getAllPackages(),
     getAllTours(),
     getAllHotels(),
+    getAllDestinations(),
+    getAllRegions(),
   ]);
   const staticPages: MetadataRoute.Sitemap = [
     entry("/", 1.0, "weekly"),
