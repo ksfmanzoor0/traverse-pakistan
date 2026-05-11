@@ -34,11 +34,18 @@ function fmtShort(d: Date): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+const MOBILE_TABS = [
+  { label: "Custom Tours", href: "/packages", icon: "compass" as IconName, sectionId: "section-packages" },
+  { label: "Hotels",       href: "/hotels",   icon: "house"   as IconName, sectionId: "section-hotels"   },
+  { label: "Group Tours",  href: "/grouptours", icon: "users" as IconName, sectionId: "section-tours"    },
+];
+
 export function Navbar({ destinations = [] }: { destinations?: DestinationOption[] }) {
   const router = useRouter();
   const { theme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [compact, setCompact] = useState(false);
   const [pillDest, setPillDest] = useState("Anywhere in Pakistan");
   const [pillDetails, setPillDetails] = useState<string | null>(null);
   const pathname = usePathname();
@@ -97,7 +104,22 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
     setMobileSearchOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    const onScroll = () => setCompact(window.scrollY > 10);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const closeAll = () => { setMobileOpen(false); setMobileSearchOpen(false); };
+
+  function handleMobileTabClick(tab: typeof MOBILE_TABS[number]) {
+    if (isHome) {
+      const el = document.getElementById(tab.sectionId);
+      if (el) el.scrollIntoView({ behavior: "smooth" });
+    } else {
+      handleTabNav(tab.href);
+    }
+  }
 
   function handleTabNav(href: string) {
     closeAll();
@@ -229,11 +251,11 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
         </div>
       )}
 
-      {/* Mobile search pill + tabs — listing pages only */}
-      {isListing && (
+      {/* Mobile search pill + tabs — home + listing pages */}
+      {(isHome || isListing) && (
         <div className="md:hidden bg-[var(--bg-primary)]">
           {/* Search pill */}
-          <div className="px-4 pt-8 pb-3">
+          <div className="px-4 pt-4 pb-3">
             <button
               type="button"
               onClick={() => { setMobileSearchOpen(true); setMobileOpen(false); }}
@@ -253,27 +275,27 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
             </button>
           </div>
 
-          {/* Category tabs */}
+          {/* Category tabs — icons collapse on scroll */}
           <div className="flex border-b border-[var(--border-default)] px-4">
-            {(
-              [
-                { label: "Custom Tours", href: "/packages", icon: "compass" },
-                { label: "Hotels", href: "/hotels", icon: "house" },
-                { label: "Group Tours", href: "/grouptours", icon: "users" },
-              ] as { label: string; href: string; icon: IconName }[]
-            ).map(tab => (
+            {MOBILE_TABS.map(tab => (
               <button
                 key={tab.href}
                 type="button"
-                onClick={() => handleTabNav(tab.href)}
+                onClick={() => handleMobileTabClick(tab)}
                 className={cn(
-                  "flex-1 flex flex-col items-center gap-1 pt-3 pb-2 border-b-2 -mb-px transition-colors cursor-pointer",
+                  "flex-1 flex items-center justify-center border-b-2 -mb-px transition-all duration-200 cursor-pointer",
+                  compact ? "flex-row gap-1.5 py-2.5" : "flex-col gap-1 pt-3 pb-2",
                   pathname.startsWith(tab.href)
                     ? "text-[var(--text-primary)] border-[var(--text-primary)]"
                     : "text-[var(--text-secondary)] border-transparent hover:text-[var(--text-primary)]"
                 )}
               >
-                <Icon name={tab.icon} size={22} />
+                <span className={cn(
+                  "transition-all duration-200 overflow-hidden",
+                  compact ? "w-0 opacity-0" : "w-auto opacity-100"
+                )}>
+                  <Icon name={tab.icon} size={22} />
+                </span>
                 <span className="text-[12px] font-semibold">{tab.label}</span>
               </button>
             ))}
@@ -286,7 +308,7 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
         open={mobileSearchOpen}
         onClose={() => setMobileSearchOpen(false)}
         destinations={destinations}
-        defaultTab={isListing ? pathToTab(pathname) : "packages"}
+        defaultTab={(isListing || isHome) ? pathToTab(pathname) : "packages"}
       />
     </>
   );

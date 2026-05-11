@@ -15,7 +15,6 @@ import {
 } from "@/lib/seo/schema";
 import { SITE, IS_GITHUB_PAGES } from "@/lib/seo/site";
 import { SUPABASE_URL, isSupabaseConfigured } from "@/lib/supabase/env";
-import { MobileStickySearch } from "@/components/layout/MobileStickySearch";
 import { getDestinationOptions } from "@/services/destination.service";
 import "./globals.css";
 
@@ -165,9 +164,6 @@ export default async function RootLayout({
         <Providers>
           <AwardStrip />
           <NavbarWrapper />
-          <Suspense fallback={null}>
-            <MobileStickySearch destinations={destinations} />
-          </Suspense>
           <main className="flex-1">{children}</main>
           <Footer />
           <WhatsAppFAB />
