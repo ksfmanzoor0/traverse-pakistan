@@ -1,28 +1,43 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/ui/Icon";
 import { MobileSearchOverlay } from "@/components/search/MobileSearchOverlay";
 import { type DestinationOption } from "@/components/home/SearchWidget";
 import { type IconName } from "@/components/ui/icon-map";
 
-const TABS: { id: "packages" | "hotels" | "grouptours"; label: string; icon: IconName; sectionId: string }[] = [
-  { id: "packages", label: "Custom Tours", icon: "compass", sectionId: "section-packages" },
-  { id: "hotels", label: "Hotels", icon: "house", sectionId: "section-hotels" },
-  { id: "grouptours", label: "Group Tours", icon: "users", sectionId: "section-tours" },
+// Hide on detail pages: /hotels/[slug], /packages/[slug], /grouptours/[slug]
+const DETAIL_RE = /^\/(hotels|packages|grouptours)\/.+/;
+
+const TABS: { id: "packages" | "hotels" | "grouptours"; label: string; icon: IconName; sectionId: string; href: string }[] = [
+  { id: "packages", label: "Custom Tours", icon: "compass", sectionId: "section-packages", href: "/packages" },
+  { id: "hotels",   label: "Hotels",       icon: "house",   sectionId: "section-hotels",   href: "/hotels"   },
+  { id: "grouptours", label: "Group Tours", icon: "users",  sectionId: "section-tours",    href: "/grouptours" },
 ];
 
 type TabId = (typeof TABS)[number]["id"];
 
-interface Props {
-  destinations: DestinationOption[];
+function activeTabFromPath(pathname: string | null): TabId {
+  if (!pathname) return "packages";
+  if (pathname.startsWith("/hotels")) return "hotels";
+  if (pathname.startsWith("/grouptours")) return "grouptours";
+  return "packages";
 }
 
-export function MobileHomeContent({ destinations }: Props) {
+export function MobileStickySearch({ destinations }: { destinations: DestinationOption[] }) {
+  const pathname = usePathname();
+  const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabId>("packages");
   const [compact, setCompact] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabId>(() => activeTabFromPath(pathname));
+
+  const isHome = pathname === "/";
+
+  useEffect(() => {
+    setActiveTab(activeTabFromPath(pathname));
+  }, [pathname]);
 
   useEffect(() => {
     const onScroll = () => setCompact(window.scrollY > 10);
@@ -30,10 +45,16 @@ export function MobileHomeContent({ destinations }: Props) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  if (DETAIL_RE.test(pathname ?? "")) return null;
+
   function handleTabClick(tab: typeof TABS[number]) {
     setActiveTab(tab.id);
-    const el = document.getElementById(tab.sectionId);
-    if (el) el.scrollIntoView({ behavior: "smooth" });
+    if (isHome) {
+      const el = document.getElementById(tab.sectionId);
+      if (el) el.scrollIntoView({ behavior: "smooth" });
+    } else {
+      router.push(tab.href);
+    }
   }
 
   return (
@@ -53,7 +74,7 @@ export function MobileHomeContent({ destinations }: Props) {
         </button>
       </div>
 
-      {/* Category tabs — icons hidden when compact */}
+      {/* Tabs — icons collapse on scroll */}
       <div className="flex px-4">
         {TABS.map(tab => (
           <button

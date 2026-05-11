@@ -30,7 +30,7 @@ export function PackageCard({ pkg, variant = "carousel", className }: PackageCar
         "transition-all duration-[350ms] ease-[cubic-bezier(0.2,0,0,1)]",
         "hover:-translate-y-1 hover:shadow-[rgba(0,0,0,0.08)_0_4px_12px,rgba(0,0,0,0.04)_0_0_0_1px]",
         variant === "carousel"
-          ? "min-w-[290px] w-[290px] sm:min-w-[310px] sm:w-[310px]"
+          ? "min-w-[261px] w-[261px] sm:min-w-[310px] sm:w-[310px]"
           : "w-full",
         className
       )}
@@ -98,12 +98,12 @@ export function PackageCard({ pkg, variant = "carousel", className }: PackageCar
           {pkg.name}
         </h3>
 
-        <p className="text-[13px] text-[var(--text-tertiary)] mt-1.5 flex items-center gap-1.5">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+        <div className="text-[13px] text-[var(--text-tertiary)] mt-1.5 flex items-start gap-1.5">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 mt-[1px]">
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
           </svg>
-          {pkg.route}
-        </p>
+          <span className="line-clamp-2">{pkg.route}</span>
+        </div>
 
         <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2.5">
           {pkg.freeCancellation && (

@@ -9,9 +9,11 @@ export async function PopularToursCarousel() {
   const tours = allTours.slice(0, 10);
 
   return (
-    <section className="relative bg-[var(--bg-primary)] py-20 sm:py-24 overflow-hidden">
-      {/* Subtle pattern overlay for depth */}
-      <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "40px 40px" }} />
+    <section id="section-tours" className="relative bg-[var(--bg-primary)] pt-6 pb-20 sm:py-24" style={{ scrollMarginTop: "200px" }}>
+      {/* Dot pattern — own overflow-hidden so the section can scroll horizontally on iOS */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "40px 40px" }} />
+      </div>
 
       <Container wide className="relative">
         <SectionHeader
