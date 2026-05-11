@@ -230,6 +230,58 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
 
           </div>
         </div>
+
+        {/* Mobile search pill + tabs — home + listing pages (inside sticky header) */}
+        {(isHome || isListing) && (
+          <div className="md:hidden bg-[var(--bg-primary)]">
+            {/* Search pill */}
+            <div className="px-4 pt-4 pb-3">
+              <button
+                type="button"
+                onClick={() => { setMobileSearchOpen(true); setMobileOpen(false); }}
+                className="w-full flex items-center h-14 px-5 bg-[var(--bg-primary)] rounded-[var(--radius-full)] cursor-pointer border border-[var(--border-default)]"
+                style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.12)" }}
+              >
+                <div className="w-[18px] shrink-0" />
+                <div className="flex-1 text-center min-w-0">
+                  <p className="text-[15px] font-semibold text-[var(--text-primary)] truncate leading-tight">{pillDest}</p>
+                  {pillDetails && (
+                    <p className="text-[13px] text-[var(--text-tertiary)] truncate leading-tight mt-0.5">{pillDetails}</p>
+                  )}
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                  <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Category tabs — icons collapse on scroll */}
+            <div className="flex border-b border-[var(--border-default)] px-4">
+              {MOBILE_TABS.map(tab => (
+                <button
+                  key={tab.href}
+                  type="button"
+                  onClick={() => handleMobileTabClick(tab)}
+                  className={cn(
+                    "flex-1 flex items-center justify-center border-b-2 -mb-px transition-all duration-200 cursor-pointer",
+                    compact ? "flex-row gap-1.5 py-2.5" : "flex-col gap-1 pt-3 pb-2",
+                    pathname.startsWith(tab.href)
+                      ? "text-[var(--text-primary)] border-[var(--text-primary)]"
+                      : "text-[var(--text-secondary)] border-transparent hover:text-[var(--text-primary)]"
+                  )}
+                >
+                  <span className={cn(
+                    "transition-all duration-200 overflow-hidden",
+                    compact ? "w-0 opacity-0" : "w-auto opacity-100"
+                  )}>
+                    <Icon name={tab.icon} size={22} />
+                  </span>
+                  <span className="text-[12px] font-semibold">{tab.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Mobile detail back row */}
@@ -248,58 +300,6 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
             {detailCategory}{pillDest !== "Anywhere in Pakistan" ? ` · ${pillDest}` : ""}
           </p>
           <div className="shrink-0 w-[22px]" />
-        </div>
-      )}
-
-      {/* Mobile search pill + tabs — home + listing pages */}
-      {(isHome || isListing) && (
-        <div className="md:hidden bg-[var(--bg-primary)]">
-          {/* Search pill */}
-          <div className="px-4 pt-4 pb-3">
-            <button
-              type="button"
-              onClick={() => { setMobileSearchOpen(true); setMobileOpen(false); }}
-              className="w-full flex items-center h-14 px-5 bg-[var(--bg-primary)] rounded-[var(--radius-full)] cursor-pointer border border-[var(--border-default)]"
-              style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.12)" }}
-            >
-              <div className="w-[18px] shrink-0" />
-              <div className="flex-1 text-center min-w-0">
-                <p className="text-[15px] font-semibold text-[var(--text-primary)] truncate leading-tight">{pillDest}</p>
-                {pillDetails && (
-                  <p className="text-[13px] text-[var(--text-tertiary)] truncate leading-tight mt-0.5">{pillDetails}</p>
-                )}
-              </div>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Category tabs — icons collapse on scroll */}
-          <div className="flex border-b border-[var(--border-default)] px-4">
-            {MOBILE_TABS.map(tab => (
-              <button
-                key={tab.href}
-                type="button"
-                onClick={() => handleMobileTabClick(tab)}
-                className={cn(
-                  "flex-1 flex items-center justify-center border-b-2 -mb-px transition-all duration-200 cursor-pointer",
-                  compact ? "flex-row gap-1.5 py-2.5" : "flex-col gap-1 pt-3 pb-2",
-                  pathname.startsWith(tab.href)
-                    ? "text-[var(--text-primary)] border-[var(--text-primary)]"
-                    : "text-[var(--text-secondary)] border-transparent hover:text-[var(--text-primary)]"
-                )}
-              >
-                <span className={cn(
-                  "transition-all duration-200 overflow-hidden",
-                  compact ? "w-0 opacity-0" : "w-auto opacity-100"
-                )}>
-                  <Icon name={tab.icon} size={22} />
-                </span>
-                <span className="text-[12px] font-semibold">{tab.label}</span>
-              </button>
-            ))}
-          </div>
         </div>
       )}
 
