@@ -8,17 +8,19 @@ export async function FeaturedPackagesCarousel() {
   const packages = await getFeaturedPackages();
 
   return (
-    <section className="relative bg-[var(--bg-dark)] py-20 sm:py-24 overflow-hidden">
-      {/* Dot pattern */}
-      <div
-        className="absolute inset-0 opacity-[0.03]"
-        style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "40px 40px" }}
-      />
+    <section id="section-packages" className="relative bg-[var(--bg-dark)] pt-6 pb-20 sm:py-24" style={{ scrollMarginTop: "200px" }}>
+      {/* Dot pattern — own overflow-hidden so the section can scroll horizontally on iOS */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "40px 40px" }}
+        />
+      </div>
 
       <Container wide className="relative">
         <SectionHeader
           title="Design Your Dream Journey"
-          subtitle="Your dates. Your tier. Tailor Made tours with hand-picked hotels that elevates the journey as you Traverse beyond the maps"
+          subtitle="Tailor Made tours — Your dates, Your tier!"
           linkText="View all packages"
           linkHref="/packages"
           light

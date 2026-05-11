@@ -15,6 +15,7 @@ import {
 } from "@/lib/seo/schema";
 import { SITE, IS_GITHUB_PAGES } from "@/lib/seo/site";
 import { SUPABASE_URL, isSupabaseConfigured } from "@/lib/supabase/env";
+import { getDestinationOptions } from "@/services/destination.service";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -119,15 +120,17 @@ export const viewport: Viewport = {
   ],
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
   colorScheme: "light dark",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const rootSchema = combineSchemas(organizationSchema(), websiteSchema());
+  const destinations = await getDestinationOptions().catch(() => []);
 
   return (
     <html

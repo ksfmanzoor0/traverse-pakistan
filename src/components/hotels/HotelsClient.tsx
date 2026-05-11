@@ -86,7 +86,7 @@ export function HotelsClient({ hotels }: { hotels: Hotel[] }) {
                 className="group rounded-[var(--radius-md)] overflow-hidden bg-[var(--bg-primary)] transition-all duration-300 hover:-translate-y-1"
                 style={{ boxShadow: "var(--shadow-sm)" }}
               >
-                <div className="relative aspect-[5/6] overflow-hidden">
+                <div className="relative aspect-[4/3] overflow-hidden">
                   <Image
                     src={hotel.image} alt={hotel.name} fill
                     className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
