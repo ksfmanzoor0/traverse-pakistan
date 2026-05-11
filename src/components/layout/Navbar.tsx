@@ -34,11 +34,18 @@ function fmtShort(d: Date): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+const MOBILE_TABS = [
+  { label: "Custom Tours", href: "/packages", icon: "compass" as IconName, sectionId: "section-packages" },
+  { label: "Hotels",       href: "/hotels",   icon: "house"   as IconName, sectionId: "section-hotels"   },
+  { label: "Group Tours",  href: "/grouptours", icon: "users" as IconName, sectionId: "section-tours"    },
+];
+
 export function Navbar({ destinations = [] }: { destinations?: DestinationOption[] }) {
   const router = useRouter();
   const { theme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [compact, setCompact] = useState(false);
   const [pillDest, setPillDest] = useState("Anywhere in Pakistan");
   const [pillDetails, setPillDetails] = useState<string | null>(null);
   const pathname = usePathname();
@@ -97,7 +104,22 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
     setMobileSearchOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    const onScroll = () => setCompact(window.scrollY > 10);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const closeAll = () => { setMobileOpen(false); setMobileSearchOpen(false); };
+
+  function handleMobileTabClick(tab: typeof MOBILE_TABS[number]) {
+    if (isHome) {
+      const el = document.getElementById(tab.sectionId);
+      if (el) el.scrollIntoView({ behavior: "smooth" });
+    } else {
+      handleTabNav(tab.href);
+    }
+  }
 
   function handleTabNav(href: string) {
     closeAll();
@@ -132,28 +154,25 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
         style={{ boxShadow: "0 1px 0 var(--border-default)" }}
       >
         <nav className="mx-auto max-w-[1400px] flex items-center md:grid md:grid-cols-[1fr_auto_1fr] md:items-start min-h-[64px] sm:min-h-[76px] px-4 sm:px-8 lg:px-16">
-          {/* Logo */}
+          {/* Logo — CSS-driven so there's no flash on dark-mode reload */}
           <div className="shrink-0 h-[64px] sm:h-[76px] flex items-center">
             <Link href="/" onClick={closeAll}>
-              {theme === "dark" ? (
-                <Image
-                  src="/logo-white.png"
-                  alt="Traverse Pakistan"
-                  width={1609}
-                  height={706}
-                  className="h-8 w-auto sm:h-11"
-                  priority
-                />
-              ) : (
-                <Image
-                  src="/logo-day.png"
-                  alt="Traverse Pakistan"
-                  width={1596}
-                  height={700}
-                  className="h-8 w-auto sm:h-11"
-                  priority
-                />
-              )}
+              <Image
+                src="/logo-white.png"
+                alt="Traverse Pakistan"
+                width={1609}
+                height={706}
+                className="h-8 w-auto sm:h-11 hidden [[data-theme=dark]_&]:block"
+                priority
+              />
+              <Image
+                src="/logo-day.png"
+                alt="Traverse Pakistan"
+                width={1596}
+                height={700}
+                className="h-8 w-auto sm:h-11 [[data-theme=dark]_&]:hidden"
+                priority
+              />
             </Link>
           </div>
 
@@ -211,6 +230,58 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
 
           </div>
         </div>
+
+        {/* Mobile search pill + tabs — home + listing pages (inside sticky header) */}
+        {(isHome || isListing) && (
+          <div className="md:hidden bg-[var(--bg-primary)]">
+            {/* Search pill */}
+            <div className="px-4 pt-4 pb-3">
+              <button
+                type="button"
+                onClick={() => { setMobileSearchOpen(true); setMobileOpen(false); }}
+                className="w-full flex items-center h-14 px-5 bg-[var(--bg-primary)] rounded-[var(--radius-full)] cursor-pointer border border-[var(--border-default)]"
+                style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.12)" }}
+              >
+                <div className="w-[18px] shrink-0" />
+                <div className="flex-1 text-center min-w-0">
+                  <p className="text-[15px] font-semibold text-[var(--text-primary)] truncate leading-tight">{pillDest}</p>
+                  {pillDetails && (
+                    <p className="text-[13px] text-[var(--text-tertiary)] truncate leading-tight mt-0.5">{pillDetails}</p>
+                  )}
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                  <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Category tabs — icons collapse on scroll */}
+            <div className="flex border-b border-[var(--border-default)] px-4">
+              {MOBILE_TABS.map(tab => (
+                <button
+                  key={tab.href}
+                  type="button"
+                  onClick={() => handleMobileTabClick(tab)}
+                  className={cn(
+                    "flex-1 flex items-center justify-center border-b-2 -mb-px transition-all duration-200 cursor-pointer",
+                    compact ? "flex-row gap-1.5 py-2.5" : "flex-col gap-1 pt-3 pb-2",
+                    pathname.startsWith(tab.href)
+                      ? "text-[var(--text-primary)] border-[var(--text-primary)]"
+                      : "text-[var(--text-secondary)] border-transparent hover:text-[var(--text-primary)]"
+                  )}
+                >
+                  <span className={cn(
+                    "transition-all duration-200 overflow-hidden",
+                    compact ? "w-0 opacity-0" : "w-auto opacity-100"
+                  )}>
+                    <Icon name={tab.icon} size={22} />
+                  </span>
+                  <span className="text-[12px] font-semibold">{tab.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Mobile detail back row */}
@@ -232,64 +303,12 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
         </div>
       )}
 
-      {/* Mobile search pill + tabs — listing pages only */}
-      {isListing && (
-        <div className="md:hidden bg-[var(--bg-primary)]">
-          {/* Search pill */}
-          <div className="px-4 pt-8 pb-3">
-            <button
-              type="button"
-              onClick={() => { setMobileSearchOpen(true); setMobileOpen(false); }}
-              className="w-full flex items-center h-14 px-5 bg-[var(--bg-primary)] rounded-[var(--radius-full)] cursor-pointer border border-[var(--border-default)]"
-              style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.12)" }}
-            >
-              <div className="w-[18px] shrink-0" />
-              <div className="flex-1 text-center min-w-0">
-                <p className="text-[15px] font-semibold text-[var(--text-primary)] truncate leading-tight">{pillDest}</p>
-                {pillDetails && (
-                  <p className="text-[13px] text-[var(--text-tertiary)] truncate leading-tight mt-0.5">{pillDetails}</p>
-                )}
-              </div>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Category tabs */}
-          <div className="flex border-b border-[var(--border-default)] px-4">
-            {(
-              [
-                { label: "Custom Tours", href: "/packages", icon: "compass" },
-                { label: "Hotels", href: "/hotels", icon: "house" },
-                { label: "Group Tours", href: "/grouptours", icon: "users" },
-              ] as { label: string; href: string; icon: IconName }[]
-            ).map(tab => (
-              <button
-                key={tab.href}
-                type="button"
-                onClick={() => handleTabNav(tab.href)}
-                className={cn(
-                  "flex-1 flex flex-col items-center gap-1 pt-3 pb-2 border-b-2 -mb-px transition-colors cursor-pointer",
-                  pathname.startsWith(tab.href)
-                    ? "text-[var(--text-primary)] border-[var(--text-primary)]"
-                    : "text-[var(--text-secondary)] border-transparent hover:text-[var(--text-primary)]"
-                )}
-              >
-                <Icon name={tab.icon} size={22} />
-                <span className="text-[12px] font-semibold">{tab.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Mobile full-screen search overlay */}
       <MobileSearchOverlay
         open={mobileSearchOpen}
         onClose={() => setMobileSearchOpen(false)}
         destinations={destinations}
-        defaultTab={isListing ? pathToTab(pathname) : "packages"}
+        defaultTab={(isListing || isHome) ? pathToTab(pathname) : "packages"}
       />
     </>
   );

@@ -11,7 +11,7 @@ export async function FeaturedHotels() {
   const hotels = await getFeaturedHotels(5);
 
   return (
-    <section className="bg-[var(--bg-dark)] py-20 sm:py-24">
+    <section id="section-hotels" className="bg-[var(--bg-dark)] pt-6 pb-20 sm:py-24" style={{ scrollMarginTop: "200px" }}>
       <Container wide>
         <SectionHeader
           title="Popular Stays"
@@ -25,7 +25,7 @@ export async function FeaturedHotels() {
             <Link
               key={hotel.id}
               href={`/hotels/${hotel.slug}`}
-              className="group min-w-[300px] w-[300px] sm:min-w-[340px] sm:w-[340px] rounded-[var(--radius-md)] overflow-hidden bg-[var(--bg-dark)] transition-all duration-300 hover:-translate-y-1"
+              className="group min-w-[270px] w-[270px] sm:min-w-[340px] sm:w-[340px] rounded-[var(--radius-md)] overflow-hidden bg-[var(--bg-dark)] transition-all duration-300 hover:-translate-y-1"
               style={{ boxShadow: "var(--shadow-sm)" }}
             >
               <div className="relative aspect-[4/3] overflow-hidden">

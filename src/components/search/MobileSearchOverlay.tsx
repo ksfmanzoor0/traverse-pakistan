@@ -609,7 +609,7 @@ export function MobileSearchOverlay({ open, onClose, destinations, defaultTab = 
                     value={destSearch}
                     onChange={e => { setDestSearch(e.target.value); if (selectedDest) setSelectedDest(null); }}
                     placeholder="Search destinations"
-                    className="flex-1 bg-transparent text-[15px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)]"
+                    className="flex-1 bg-transparent text-[16px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)]"
                     style={{ outline: "none" }}
                     autoFocus
                   />

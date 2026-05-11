@@ -82,29 +82,7 @@ export function GroupToursClient({ tours }: { tours: Tour[] }) {
         </div>
       )}
 
-      {/* Category filters + sort */}
-      <div className="max-w-[1400px] mx-auto px-5 sm:px-8 lg:px-16 py-8">
-        <div className="flex items-center justify-between gap-4 mb-8 flex-wrap">
-          <div className="flex gap-2 flex-wrap">
-            {filterOptions.map((opt) => (
-              <FilterTag
-                key={opt.value}
-                label={opt.label}
-                active={activeFilter === opt.value}
-                onClick={() => setActiveFilter(opt.value)}
-              />
-            ))}
-          </div>
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-            className="h-10 px-4 text-[13px] border border-[var(--border-default)] rounded-full bg-[var(--bg-primary)] text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 cursor-pointer"
-          >
-            {sortOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        </div>
+      <div className="max-w-[1400px] mx-auto px-5 sm:px-8 lg:px-16 py-4 sm:py-8">
 
         <p className="text-[14px] text-[var(--text-tertiary)] mb-6">
           {filtered.length} tour{filtered.length !== 1 ? "s" : ""} found

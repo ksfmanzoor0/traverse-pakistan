@@ -48,7 +48,7 @@ export function TourCard({ tour, variant = "carousel", className }: TourCardProp
         "group flex flex-col rounded-[var(--radius-md)] overflow-hidden bg-[var(--bg-primary)]",
         "transition-all duration-[350ms] ease-[cubic-bezier(0.2,0,0,1)] hover:-translate-y-1",
         variant === "carousel"
-          ? "min-w-[290px] w-[290px] sm:min-w-[320px] sm:w-[320px]"
+          ? "min-w-[261px] w-[261px] sm:min-w-[320px] sm:w-[320px]"
           : "w-full",
         className
       )}

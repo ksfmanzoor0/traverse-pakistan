@@ -19,15 +19,15 @@ export default async function HotelsPage() {
 
   return (
     <div className="pb-12">
-      <div className="py-8 sm:py-10 border-b border-[var(--border-default)]">
+      <div className="py-4 sm:py-10 border-b border-[var(--border-default)]">
         <Container>
           <Breadcrumb items={[{ label: "Hotels" }]} />
-          <div className="mt-4">
-            <h1 className="text-[32px] sm:text-[42px] font-bold text-[var(--text-primary)] tracking-tight">
+          <div className="mt-2 sm:mt-4">
+            <h1 className="text-[26px] sm:text-[42px] font-bold text-[var(--text-primary)] tracking-[-0.025em] leading-[1.15]">
               Popular Stays
             </h1>
-            <p className="text-lg text-[var(--text-secondary)] mt-2 max-w-2xl">
-              Handpicked hotels, guesthouses & camps across Pakistan
+            <p className="mt-1.5 text-[15px] sm:text-lg text-[var(--text-secondary)]">
+              Handpicked hotels across Pakistan
             </p>
           </div>
         </Container>

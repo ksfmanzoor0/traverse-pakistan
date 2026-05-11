@@ -23,16 +23,15 @@ export default async function PackagesPage() {
 
   return (
     <div className="pb-12">
-      <div className="py-8 sm:py-10 border-b border-[var(--border-default)]">
+      <div className="py-4 sm:py-10 border-b border-[var(--border-default)]">
         <Container>
           <Breadcrumb items={[{ label: "Packages" }]} />
-          <div className="mt-4">
-            <span className="text-[13px] font-bold uppercase tracking-wider text-[var(--primary)]">Flexible Packages</span>
-            <h1 className="text-[32px] sm:text-[42px] font-bold text-[var(--text-primary)] tracking-tight mt-1">
+          <div className="mt-2 sm:mt-4">
+            <h1 className="text-[26px] sm:text-[42px] font-bold text-[var(--text-primary)] tracking-[-0.025em] leading-[1.15]">
               Design Your Dream Journey
             </h1>
-            <p className="mt-2 text-lg text-[var(--text-secondary)] max-w-2xl">
-              Your dates. Your tier. Hand-picked hotels that elevate as you go.
+            <p className="mt-1.5 text-[15px] sm:text-lg text-[var(--text-secondary)]">
+              Tailor Made tours — Your dates, Your tier!
             </p>
           </div>
         </Container>
