@@ -10,7 +10,7 @@ const ALLOWED_ORIGINS = [
 // unlisted origins. Server-to-server calls (no origin header) are allowed
 // through. Requests from any unlisted domain (e.g. attacker.com) get 403.
 // Also injects x-request-id into every /api/* request for tracing.
-export function proxy(request: NextRequest) {
+export default function middleware(request: NextRequest) {
   const origin = request.headers.get("origin");
 
   if (origin && !ALLOWED_ORIGINS.includes(origin)) {

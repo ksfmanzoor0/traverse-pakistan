@@ -5,36 +5,37 @@ import { getSupabaseServer } from "@/lib/supabase/server";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.formData().catch(() => null);
-    const ipnUrl = body?.get("url") as string | null;
+    const orderId = body?.get("orderId") as string | null;
 
-    if (!ipnUrl) {
-      return NextResponse.json({ error: "Missing url param" }, { status: 400 });
+    if (!orderId) {
+      return NextResponse.json({ error: "Missing orderId param" }, { status: 400 });
     }
 
+    const ipnUrl = `${alfaConfig.ipnBaseUrl}/${alfaConfig.merchantId}/${alfaConfig.storeId}/${encodeURIComponent(orderId)}`;
     const statusRes = await fetch(ipnUrl);
     const status = await statusRes.json();
 
-    const orderId: string = status.TransactionReferenceNumber ?? "";
+    const bookingRef: string = status.TransactionReferenceNumber ?? "";
     const isPaid: boolean = status.TransactionStatus === "Paid";
 
-    if (orderId) {
+    if (bookingRef) {
       const supabase = await getSupabaseServer();
-      if (orderId.startsWith("PKG-")) {
+      if (bookingRef.startsWith("PKG-")) {
         await supabase
           .from("package_bookings")
           .update({
             payment_status: isPaid ? "paid" : "failed",
             updated_at: new Date().toISOString(),
           })
-          .eq("booking_ref", orderId);
-      } else if (orderId.startsWith("HTL-")) {
+          .eq("booking_ref", bookingRef);
+      } else if (bookingRef.startsWith("HTL-")) {
         await supabase
           .from("hotel_bookings")
           .update({
             payment_status: isPaid ? "paid" : "failed",
             updated_at: new Date().toISOString(),
           })
-          .eq("booking_ref", orderId);
+          .eq("booking_ref", bookingRef);
       } else {
         await supabase
           .from("bookings")
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
             status: isPaid ? "confirmed" : "cancelled",
             updated_at: new Date().toISOString(),
           })
-          .eq("booking_ref", orderId);
+          .eq("booking_ref", bookingRef);
       }
     }
 

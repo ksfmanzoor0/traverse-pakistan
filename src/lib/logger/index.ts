@@ -4,15 +4,17 @@ import type { AuditAction } from "./types";
 export const logger = pino({
   level: process.env.LOG_LEVEL || "info",
   customLevels: { audit: 35 },
-  transport: {
-    target: "pino-pretty",
-    options: {
-      colorize: true,
-      levelFirst: true,
-      singleLine: false,
-      timestampKey: "timestamp",
+  ...(process.env.NODE_ENV === "development" && {
+    transport: {
+      target: "pino-pretty",
+      options: {
+        colorize: true,
+        levelFirst: true,
+        singleLine: false,
+        timestampKey: "timestamp",
+      },
     },
-  },
+  }),
 });
 
 export function logAudit(

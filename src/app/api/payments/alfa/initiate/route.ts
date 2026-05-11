@@ -1,20 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { alfaConfig } from "@/lib/alfa/config";
 import { generateAlfaHash } from "@/lib/alfa/hash";
 import { createBooking } from "@/services/booking.service.server";
-import type { CreateBookingInput } from "@/types/booking";
 
-interface InitiatePaymentBody {
-  booking: CreateBookingInput;
-  amount: number;
-}
+const ParticipantSchema = z.object({
+  fullName: z.string().min(2).max(100),
+  cnicOrPassport: z.string().max(30).optional(),
+  dateOfBirth: z.string().optional(),
+  dietary: z.string().max(200).optional(),
+  emergencyContact: z.string().max(100).optional(),
+});
+
+const BookingInputSchema = z.object({
+  departureId: z.string().uuid(),
+  seats: z.number().int().min(1).max(20),
+  singleRooms: z.number().int().min(0).max(20),
+  contact: z.object({
+    name: z.string().min(2).max(100),
+    email: z.string().email(),
+    phone: z.string().min(7).max(20),
+  }),
+  participants: z.array(ParticipantSchema).min(1).max(20),
+  notes: z.string().max(500).optional(),
+});
 
 export async function POST(req: NextRequest) {
   try {
-    const body: InitiatePaymentBody = await req.json();
-    const { booking, amount } = body;
+    const raw = await req.json();
+    const parsed = BookingInputSchema.safeParse(raw.booking);
 
-    const summary = await createBooking(booking);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid booking data", issues: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+
+    const summary = await createBooking(parsed.data);
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://traversepakistan.com";
     const returnUrl = `${siteUrl}/payments/alfa/return`;
@@ -76,7 +99,7 @@ export async function POST(req: NextRequest) {
       MerchantPassword: alfaConfig.merchantPassword,
       TransactionTypeId: "3",
       TransactionReferenceNumber: summary.bookingRef,
-      TransactionAmount: String(amount),
+      TransactionAmount: String(summary.totalAmount),
     };
 
     const ssoHash = generateAlfaHash(ssoHashParams, alfaConfig.key1, alfaConfig.key2);
