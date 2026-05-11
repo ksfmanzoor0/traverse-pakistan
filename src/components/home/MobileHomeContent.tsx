@@ -38,11 +38,8 @@ export function MobileHomeContent({ destinations }: Props) {
 
   return (
     <div className="md:hidden sticky top-16 z-40 bg-[var(--bg-primary)] border-b border-[var(--border-default)]">
-      {/* Search pill — hidden when compact */}
-      <div className={cn(
-        "px-4 overflow-hidden transition-all duration-300",
-        compact ? "max-h-0 py-0" : "max-h-24 pt-4 pb-3"
-      )}>
+      {/* Search pill — always visible */}
+      <div className="px-4 pt-4 pb-3">
         <button
           type="button"
           onClick={() => setSearchOpen(true)}
