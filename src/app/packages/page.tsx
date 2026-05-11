@@ -23,14 +23,14 @@ export default async function PackagesPage() {
 
   return (
     <div className="pb-12">
-      <div className="py-8 sm:py-10 border-b border-[var(--border-default)]">
+      <div className="py-4 sm:py-10 border-b border-[var(--border-default)]">
         <Container>
           <Breadcrumb items={[{ label: "Packages" }]} />
-          <div className="mt-4">
+          <div className="mt-2 sm:mt-4">
             <h1 className="text-[32px] sm:text-[42px] font-bold text-[var(--text-primary)] tracking-tight">
               Design Your Dream Journey
             </h1>
-            <p className="mt-2 text-lg text-[var(--text-secondary)] max-w-2xl">
+            <p className="mt-1 sm:mt-2 text-lg text-[var(--text-secondary)]">
               Tailor Made tours — Your dates, Your tier!
             </p>
           </div>

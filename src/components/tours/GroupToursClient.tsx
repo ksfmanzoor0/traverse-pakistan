@@ -82,19 +82,9 @@ export function GroupToursClient({ tours }: { tours: Tour[] }) {
         </div>
       )}
 
-      {/* Category filters + sort */}
-      <div className="max-w-[1400px] mx-auto px-5 sm:px-8 lg:px-16 py-8">
-        <div className="flex items-center justify-between gap-4 mb-8 flex-wrap">
-          <div className="flex gap-2 flex-wrap">
-            {filterOptions.map((opt) => (
-              <FilterTag
-                key={opt.value}
-                label={opt.label}
-                active={activeFilter === opt.value}
-                onClick={() => setActiveFilter(opt.value)}
-              />
-            ))}
-          </div>
+      {/* Sort */}
+      <div className="max-w-[1400px] mx-auto px-5 sm:px-8 lg:px-16 py-4 sm:py-8">
+        <div className="flex items-center justify-end gap-4 mb-6 sm:mb-8">
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}

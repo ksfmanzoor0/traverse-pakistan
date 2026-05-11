@@ -19,15 +19,15 @@ export default async function GroupToursPage() {
 
   return (
     <div className="pb-12">
-      <div className="py-8 sm:py-10 border-b border-[var(--border-default)]">
+      <div className="py-4 sm:py-10 border-b border-[var(--border-default)]">
         <Container>
           <Breadcrumb items={[{ label: "Group Tours" }]} />
-          <div className="mt-4">
+          <div className="mt-2 sm:mt-4">
             <h1 className="text-[32px] sm:text-[42px] font-bold text-[var(--text-primary)] tracking-tight">
               Explore All Group Tours
             </h1>
-            <p className="text-lg text-[var(--text-secondary)] mt-2 max-w-2xl">
-              From weekend getaways to epic 15-day treks — find your perfect Pakistani adventure
+            <p className="text-lg text-[var(--text-secondary)] mt-1 sm:mt-2">
+              Fixed-departure trips across Pakistan — expert guides, dual-city departures
             </p>
           </div>
         </Container>
