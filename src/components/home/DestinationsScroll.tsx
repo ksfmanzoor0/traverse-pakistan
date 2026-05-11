@@ -4,9 +4,10 @@ import { Container } from "@/components/ui/Container";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Carousel } from "@/components/ui/Carousel";
 import { formatPrice } from "@/lib/utils";
-import { destinations } from "@/data/destinations";
+import { getAllDestinations } from "@/services/destination.service";
 
-export function DestinationsScroll() {
+export async function DestinationsScroll() {
+  const destinations = await getAllDestinations();
   return (
     <section className="bg-[var(--bg-primary)] py-20 sm:py-24">
       <Container wide>

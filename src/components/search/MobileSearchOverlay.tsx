@@ -727,16 +727,16 @@ export function MobileSearchOverlay({ open, onClose, destinations, defaultTab = 
                     <button type="button"
                       onClick={() => setTravelers(p => ({ ...p, [key]: Math.max(min, (p as Record<string, number>)[key] - 1) }))}
                       disabled={(travelers as Record<string, number>)[key] <= min}
-                      className="w-8 h-8 rounded-full border border-[var(--border-default)] flex items-center justify-center text-[var(--text-primary)] disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed hover:border-[var(--text-primary)] transition-colors text-lg leading-none">
-                      −
+                      className="w-7 h-7 rounded-full border border-[var(--border-default)] flex items-center justify-center text-[var(--text-primary)] disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed hover:border-[var(--text-primary)] transition-colors">
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><line x1="2" y1="5" x2="8" y2="5"/></svg>
                     </button>
                     <span className="w-5 text-center text-[16px] font-semibold tabular-nums">
                       {(travelers as Record<string, number>)[key]}
                     </span>
                     <button type="button"
                       onClick={() => setTravelers(p => ({ ...p, [key]: (p as Record<string, number>)[key] + 1 }))}
-                      className="w-8 h-8 rounded-full border border-[var(--border-default)] flex items-center justify-center text-[var(--text-primary)] cursor-pointer hover:border-[var(--text-primary)] transition-colors text-lg leading-none">
-                      +
+                      className="w-7 h-7 rounded-full border border-[var(--border-default)] flex items-center justify-center text-[var(--text-primary)] cursor-pointer hover:border-[var(--text-primary)] transition-colors">
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><line x1="2" y1="5" x2="8" y2="5"/><line x1="5" y1="2" x2="5" y2="8"/></svg>
                     </button>
                   </div>
                 </div>

@@ -17,7 +17,8 @@ const filterOptions = [
 ];
 
 const sortOptions = [
-  { label: "Recommended", value: "recommended" },
+  { label: "Date: Soonest", value: "date-asc" },
+  { label: "Date: Latest", value: "date-desc" },
   { label: "Price: Low to High", value: "price-asc" },
   { label: "Price: High to Low", value: "price-desc" },
   { label: "Duration: Short", value: "duration-asc" },
@@ -39,7 +40,7 @@ const allDestinations = [
 export function GroupToursClient({ tours }: { tours: Tour[] }) {
   const searchParams = useSearchParams();
   const [activeFilter, setActiveFilter] = useState("all");
-  const [sort, setSort] = useState("recommended");
+  const [sort, setSort] = useState("date-asc");
   const destFilter = searchParams.get("destination") ?? "";
   const dateFilter = searchParams.get("checkin") ?? "";
 
@@ -48,6 +49,10 @@ export function GroupToursClient({ tours }: { tours: Tour[] }) {
     .filter((t) => !destFilter || t.destinationSlug === destFilter)
     .sort((a, b) => {
       switch (sort) {
+        case "date-asc":
+          return (a.departureDate || "9999") < (b.departureDate || "9999") ? -1 : 1;
+        case "date-desc":
+          return (a.departureDate || "") > (b.departureDate || "") ? -1 : 1;
         case "price-asc": return a.price - b.price;
         case "price-desc": return b.price - a.price;
         case "duration-asc": return a.duration - b.duration;

@@ -35,11 +35,14 @@ export function AccordionItem({
         </span>
         <span
           className={cn(
-            "shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-[var(--bg-subtle)] text-[var(--text-secondary)] text-lg transition-transform duration-300",
+            "shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-[var(--bg-subtle)] text-[var(--text-secondary)] transition-transform duration-300",
             isOpen && "rotate-45"
           )}
         >
-          +
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+            <line x1="6" y1="1" x2="6" y2="11"/>
+            <line x1="1" y1="6" x2="11" y2="6"/>
+          </svg>
         </span>
       </button>
       <div

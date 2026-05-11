@@ -191,14 +191,21 @@ export async function createPackageBooking(
   };
 }
 
-export interface CreateHotelBookingInput {
-  hotelSlug: string;
+export interface HotelBookingLineItem {
   roomName: string;
-  checkinDate: string | null;
-  checkoutDate: string | null;
+  qty: number;
   adults: number;
   children: number;
-  rooms: number;
+  pricePerNight: number;
+}
+
+export interface CreateHotelBookingInput {
+  hotelSlug: string;
+  lineItems: HotelBookingLineItem[];
+  checkinDate: string | null;
+  checkoutDate: string | null;
+  adults: number;      // booking total — sum of per-room adults
+  children: number;   // booking total — sum of per-room children
   nights: number;
   totalAmount: number;
   contact: { name: string; email: string; phone: string };
@@ -220,14 +227,13 @@ export async function createHotelBooking(
   }
   const supabase = getSupabaseBrowser();
 
+  // TODO(backend-testing): update RPC to accept line_items[] and insert hotel_booking_rooms rows
   const { data, error } = await supabase.rpc("create_hotel_booking", {
     p_hotel_slug: input.hotelSlug,
-    p_room_name: input.roomName,
     p_checkin_date: input.checkinDate ?? null,
     p_checkout_date: input.checkoutDate ?? null,
     p_adults: input.adults,
     p_children: input.children,
-    p_rooms: input.rooms,
     p_nights: input.nights,
     p_total_amount: input.totalAmount,
     p_contact_name: input.contact.name,
@@ -235,6 +241,7 @@ export async function createHotelBooking(
     p_contact_phone: input.contact.phone,
     p_arrival_time: input.arrivalTime ?? null,
     p_notes: input.notes ?? null,
+    p_line_items: input.lineItems,
   });
 
   if (error) throw new Error(error.message);

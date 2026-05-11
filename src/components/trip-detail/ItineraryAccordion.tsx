@@ -8,6 +8,10 @@ interface ItineraryAccordionProps {
   days: ItineraryDay[];
 }
 
+function formatDescription(text: string): string[] {
+  return text.split('\n').map((l) => l.trim()).filter(Boolean);
+}
+
 export function ItineraryAccordion({ days }: ItineraryAccordionProps) {
   return (
     <div className="border border-[var(--border-default)] rounded-xl overflow-hidden">
@@ -28,12 +32,12 @@ export function ItineraryAccordion({ days }: ItineraryAccordionProps) {
           className="px-5"
         >
           <div className="pl-11">
-            {/* Image */}
-            {day.image && (
+            {/* Image — only rendered when uploaded */}
+            {day.image?.url && (
               <div className="relative h-[200px] rounded-lg overflow-hidden mb-4">
                 <Image
                   src={day.image.url}
-                  alt={day.image.alt}
+                  alt={day.image.alt || day.title}
                   fill
                   className="object-cover"
                   sizes="(max-width: 768px) 100vw, 500px"
@@ -42,9 +46,11 @@ export function ItineraryAccordion({ days }: ItineraryAccordionProps) {
             )}
 
             {/* Description */}
-            <p className="text-[14px] text-[var(--text-secondary)] leading-relaxed mb-4">
-              {day.description}
-            </p>
+            <div className="text-[14px] text-[var(--text-secondary)] leading-relaxed mb-4 space-y-1">
+              {formatDescription(day.description).map((line, i) => (
+                <p key={i}>{line}</p>
+              ))}
+            </div>
 
             {/* Stops timeline */}
             {day.stops.length > 0 && (
