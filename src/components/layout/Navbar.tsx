@@ -132,28 +132,25 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
         style={{ boxShadow: "0 1px 0 var(--border-default)" }}
       >
         <nav className="mx-auto max-w-[1400px] flex items-center md:grid md:grid-cols-[1fr_auto_1fr] md:items-start min-h-[64px] sm:min-h-[76px] px-4 sm:px-8 lg:px-16">
-          {/* Logo */}
+          {/* Logo — CSS-driven so there's no flash on dark-mode reload */}
           <div className="shrink-0 h-[64px] sm:h-[76px] flex items-center">
             <Link href="/" onClick={closeAll}>
-              {theme === "dark" ? (
-                <Image
-                  src="/logo-white.png"
-                  alt="Traverse Pakistan"
-                  width={1609}
-                  height={706}
-                  className="h-8 w-auto sm:h-11"
-                  priority
-                />
-              ) : (
-                <Image
-                  src="/logo-day.png"
-                  alt="Traverse Pakistan"
-                  width={1596}
-                  height={700}
-                  className="h-8 w-auto sm:h-11"
-                  priority
-                />
-              )}
+              <Image
+                src="/logo-white.png"
+                alt="Traverse Pakistan"
+                width={1609}
+                height={706}
+                className="h-8 w-auto sm:h-11 hidden [[data-theme=dark]_&]:block"
+                priority
+              />
+              <Image
+                src="/logo-day.png"
+                alt="Traverse Pakistan"
+                width={1596}
+                height={700}
+                className="h-8 w-auto sm:h-11 [[data-theme=dark]_&]:hidden"
+                priority
+              />
             </Link>
           </div>
 
