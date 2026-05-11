@@ -27,10 +27,10 @@ export default async function PackagesPage() {
         <Container>
           <Breadcrumb items={[{ label: "Packages" }]} />
           <div className="mt-2 sm:mt-4">
-            <h1 className="text-[22px] sm:text-[34px] font-bold text-[var(--text-primary)] tracking-[-0.025em] leading-[1.15]">
+            <h1 className="text-[26px] sm:text-[42px] font-bold text-[var(--text-primary)] tracking-[-0.025em] leading-[1.15]">
               Design Your Dream Journey
             </h1>
-            <p className="mt-1.5 text-[14px] sm:text-[16px] text-[var(--text-secondary)]">
+            <p className="mt-1.5 text-[15px] sm:text-lg text-[var(--text-secondary)]">
               Tailor Made tours — Your dates, Your tier!
             </p>
           </div>

@@ -37,18 +37,20 @@ export function SectionHeader({
         {eyebrow && <EyebrowLabel light={light} className="mb-2">{eyebrow}</EyebrowLabel>}
         <h2
           className={cn(
-            "text-[22px] sm:text-[34px] font-bold tracking-[-0.025em] leading-[1.15]",
+            "text-[26px] font-bold tracking-[-0.025em] leading-[1.15]",
             light ? "text-[var(--on-dark)]" : "text-[var(--text-primary)]"
           )}
+          style={{ fontSize: "clamp(1.625rem, 1.4rem + 1.2vw, 2.375rem)" }}
         >
           {title}
         </h2>
         {subtitle && (
           <p
             className={cn(
-              "mt-1.5 text-[14px] sm:text-[16px] leading-relaxed",
+              "mt-1.5 leading-relaxed",
               light ? "text-[var(--on-dark-secondary)]" : "text-[var(--text-secondary)]"
             )}
+            style={{ fontSize: "clamp(0.9375rem, 0.875rem + 0.3vw, 1.125rem)" }}
           >
             {subtitle}
           </p>
