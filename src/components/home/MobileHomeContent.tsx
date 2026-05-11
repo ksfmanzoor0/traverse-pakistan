@@ -1,16 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/ui/Icon";
 import { MobileSearchOverlay } from "@/components/search/MobileSearchOverlay";
 import { type DestinationOption } from "@/components/home/SearchWidget";
 import { type IconName } from "@/components/ui/icon-map";
 
-const TABS: { id: "packages" | "hotels" | "grouptours"; label: string; icon: IconName }[] = [
-  { id: "packages", label: "Custom Tours", icon: "compass" },
-  { id: "hotels", label: "Hotels", icon: "house" },
-  { id: "grouptours", label: "Group Tours", icon: "users" },
+const TABS: { id: "packages" | "hotels" | "grouptours"; label: string; icon: IconName; sectionId: string }[] = [
+  { id: "packages", label: "Custom Tours", icon: "compass", sectionId: "section-packages" },
+  { id: "hotels", label: "Hotels", icon: "house", sectionId: "section-hotels" },
+  { id: "grouptours", label: "Group Tours", icon: "users", sectionId: "section-tours" },
 ];
 
 type TabId = (typeof TABS)[number]["id"];
@@ -22,11 +22,27 @@ interface Props {
 export function MobileHomeContent({ destinations }: Props) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("packages");
+  const [compact, setCompact] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setCompact(window.scrollY > 10);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  function handleTabClick(tab: typeof TABS[number]) {
+    setActiveTab(tab.id);
+    const el = document.getElementById(tab.sectionId);
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+  }
 
   return (
-    <div className="md:hidden">
-      {/* Search pill */}
-      <div className="px-4 pt-4 pb-3">
+    <div className="md:hidden sticky top-16 z-40 bg-[var(--bg-primary)] border-b border-[var(--border-default)]">
+      {/* Search pill — hidden when compact */}
+      <div className={cn(
+        "px-4 overflow-hidden transition-all duration-300",
+        compact ? "max-h-0 py-0" : "max-h-24 pt-4 pb-3"
+      )}>
         <button
           type="button"
           onClick={() => setSearchOpen(true)}
@@ -40,21 +56,27 @@ export function MobileHomeContent({ destinations }: Props) {
         </button>
       </div>
 
-      {/* Category tabs */}
-      <div className="flex border-b border-[var(--border-default)] px-4">
+      {/* Category tabs — icons hidden when compact */}
+      <div className="flex px-4">
         {TABS.map(tab => (
           <button
             key={tab.id}
             type="button"
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => handleTabClick(tab)}
             className={cn(
-              "flex-1 flex flex-col items-center gap-1 pt-3 pb-2 border-b-2 -mb-px transition-colors cursor-pointer",
+              "flex-1 flex items-center justify-center border-b-2 -mb-px transition-all duration-200 cursor-pointer",
+              compact ? "flex-row gap-1.5 py-2.5" : "flex-col gap-1 pt-3 pb-2",
               activeTab === tab.id
                 ? "text-[var(--text-primary)] border-[var(--text-primary)]"
                 : "text-[var(--text-secondary)] border-transparent hover:text-[var(--text-primary)]"
             )}
           >
-            <Icon name={tab.icon} size={22} />
+            <span className={cn(
+              "transition-all duration-200 overflow-hidden",
+              compact ? "w-0 opacity-0" : "w-auto opacity-100"
+            )}>
+              <Icon name={tab.icon} size={22} />
+            </span>
             <span className="text-[12px] font-semibold">{tab.label}</span>
           </button>
         ))}

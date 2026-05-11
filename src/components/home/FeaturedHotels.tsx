@@ -11,7 +11,7 @@ export async function FeaturedHotels() {
   const hotels = await getFeaturedHotels(5);
 
   return (
-    <section className="bg-[var(--bg-dark)] py-20 sm:py-24">
+    <section id="section-hotels" className="bg-[var(--bg-dark)] py-20 sm:py-24" style={{ scrollMarginTop: "120px" }}>
       <Container wide>
         <SectionHeader
           title="Popular Stays"
