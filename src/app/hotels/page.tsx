@@ -27,7 +27,7 @@ export default async function HotelsPage() {
               Popular Stays
             </h1>
             <p className="text-lg text-[var(--text-secondary)] mt-1 sm:mt-2">
-              Handpicked hotels, guesthouses &amp; camps across Pakistan
+              Handpicked hotels across Pakistan
             </p>
           </div>
         </Container>

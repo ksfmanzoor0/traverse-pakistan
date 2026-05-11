@@ -27,7 +27,7 @@ export default async function GroupToursPage() {
               Explore All Group Tours
             </h1>
             <p className="text-lg text-[var(--text-secondary)] mt-1 sm:mt-2">
-              Fixed-departure trips across Pakistan — expert guides, dual-city departures
+              Curated Journeys — Expert Guides
             </p>
           </div>
         </Container>
