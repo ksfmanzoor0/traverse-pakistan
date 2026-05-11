@@ -255,6 +255,15 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
               </button>
             </div>
 
+            {/* Packages tagline — mobile home only */}
+            {isHome && (
+              <div className="px-4 py-2 border-b border-[var(--border-default)]">
+                <p className="text-[12px] text-[var(--text-tertiary)] text-center">
+                  Tailor Made tours — Your dates, Your tier!
+                </p>
+              </div>
+            )}
+
             {/* Category tabs — icons collapse on scroll */}
             <div className="flex border-b border-[var(--border-default)] px-4">
               {MOBILE_TABS.map(tab => (
