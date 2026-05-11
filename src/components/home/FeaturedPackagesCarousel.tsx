@@ -8,7 +8,7 @@ export async function FeaturedPackagesCarousel() {
   const packages = await getFeaturedPackages();
 
   return (
-    <section id="section-packages" className="relative bg-[var(--bg-dark)] py-20 sm:py-24" style={{ scrollMarginTop: "120px" }}>
+    <section id="section-packages" className="relative bg-[var(--bg-dark)] pt-6 pb-20 sm:py-24" style={{ scrollMarginTop: "200px" }}>
       {/* Dot pattern — own overflow-hidden so the section can scroll horizontally on iOS */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div
