@@ -48,7 +48,7 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
   const [compact, setCompact] = useState(false);
   const [pillDest, setPillDest] = useState("Anywhere in Pakistan");
   const [pillDetails, setPillDetails] = useState<string | null>(null);
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const isHome = pathname === "/";
   const isListing = LISTING_PATHS.some(p => pathname === p);
   // Only the immediate slug level — excludes /packages/slug/checkout, /hotels/slug/checkout/success, etc.
