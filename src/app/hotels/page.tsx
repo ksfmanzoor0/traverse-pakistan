@@ -23,10 +23,10 @@ export default async function HotelsPage() {
         <Container>
           <Breadcrumb items={[{ label: "Hotels" }]} />
           <div className="mt-2 sm:mt-4">
-            <h1 className="text-[32px] sm:text-[42px] font-bold text-[var(--text-primary)] tracking-tight">
+            <h1 className="text-[22px] sm:text-[34px] font-bold text-[var(--text-primary)] tracking-[-0.025em] leading-[1.15]">
               Popular Stays
             </h1>
-            <p className="text-lg text-[var(--text-secondary)] mt-1 sm:mt-2">
+            <p className="mt-1.5 text-[14px] sm:text-[16px] text-[var(--text-secondary)]">
               Handpicked hotels across Pakistan
             </p>
           </div>
