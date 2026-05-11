@@ -30,7 +30,7 @@ export function PackageCard({ pkg, variant = "carousel", className }: PackageCar
         "transition-all duration-[350ms] ease-[cubic-bezier(0.2,0,0,1)]",
         "hover:-translate-y-1 hover:shadow-[rgba(0,0,0,0.08)_0_4px_12px,rgba(0,0,0,0.04)_0_0_0_1px]",
         variant === "carousel"
-          ? "min-w-[290px] w-[290px] sm:min-w-[310px] sm:w-[310px]"
+          ? "min-w-[261px] w-[261px] sm:min-w-[310px] sm:w-[310px]"
           : "w-full",
         className
       )}
