@@ -23,10 +23,10 @@ export default async function GroupToursPage() {
         <Container>
           <Breadcrumb items={[{ label: "Group Tours" }]} />
           <div className="mt-2 sm:mt-4">
-            <h1 className="text-[32px] sm:text-[42px] font-bold text-[var(--text-primary)] tracking-tight">
+            <h1 className="font-bold text-[var(--text-primary)] tracking-[-0.025em] leading-[1.15]" style={{ fontSize: "var(--text-4xl)" }}>
               Explore All Group Tours
             </h1>
-            <p className="text-lg text-[var(--text-secondary)] mt-1 sm:mt-2">
+            <p className="text-[var(--text-secondary)] mt-1 sm:mt-2" style={{ fontSize: "var(--text-lg)" }}>
               Curated Journeys — Expert Guides
             </p>
           </div>
