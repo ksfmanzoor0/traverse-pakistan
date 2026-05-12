@@ -41,7 +41,7 @@ export default async function Home() {
 
   return (
     <>
-      {/* All heavy client components truly unmounted on mobile */}
+      {/* Desktop — full experience with carousels */}
       <DesktopOnly>
         <HeroSectionWrapper destinations={destinations} />
         <StatsBar />
@@ -49,12 +49,14 @@ export default async function Home() {
         <PopularToursCarousel />
         <FeaturedHotels />
         <VideoStories />
-        <DestinationsScroll />
-        <TravelStylesGrid />
-        <BlogGrid />
-        <WhyUsSection />
-        <ReviewsCarousel />
       </DesktopOnly>
+
+      {/* Shared — lightweight server sections shown on all devices */}
+      <DestinationsScroll />
+      <TravelStylesGrid />
+      <BlogGrid />
+      <WhyUsSection />
+      <ReviewsCarousel />
     </>
   );
 }
