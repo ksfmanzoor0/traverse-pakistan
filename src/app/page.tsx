@@ -42,12 +42,10 @@ export default async function Home() {
 
   return (
     <>
-      {/* Desktop only — hero, stats, video, blog */}
+      {/* Desktop only — hero + stats */}
       <DesktopOnly>
         <HeroSectionWrapper destinations={destinations} />
         <StatsBar />
-        <VideoStories />
-        <BlogGrid />
       </DesktopOnly>
 
       {/* All devices — lazy-mounted to prevent iOS OOM on scroll */}
@@ -66,6 +64,13 @@ export default async function Home() {
       <LazyMount>
         <TravelStylesGrid />
       </LazyMount>
+
+      {/* Desktop only — video + blog (after carousels, matching original order) */}
+      <DesktopOnly>
+        <VideoStories />
+        <BlogGrid />
+      </DesktopOnly>
+
       <WhyUsSection />
       <ReviewsCarousel />
     </>
