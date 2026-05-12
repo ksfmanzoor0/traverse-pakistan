@@ -6,8 +6,24 @@ import { Carousel } from "@/components/ui/Carousel";
 import { formatPrice } from "@/lib/utils";
 import { getAllDestinations } from "@/services/destination.service";
 
+const FEATURED_ORDER = [
+  "hunza", "skardu", "chitral", "fairy-meadows",
+  "kaghan", "swat", "neelam-valley", "makran",
+];
+
 export async function DestinationsScroll() {
-  const destinations = await getAllDestinations();
+  const all = await getAllDestinations();
+  const destinations = all
+    .filter((d) => !d.parentSlug && d.heroImage)
+    .sort((a, b) => {
+      const ai = FEATURED_ORDER.indexOf(a.slug);
+      const bi = FEATURED_ORDER.indexOf(b.slug);
+      if (ai !== -1 && bi !== -1) return ai - bi;
+      if (ai !== -1) return -1;
+      if (bi !== -1) return 1;
+      return (b.startingPrice ?? 0) - (a.startingPrice ?? 0);
+    })
+    .slice(0, 8);
   return (
     <section className="bg-[var(--bg-primary)] py-20 sm:py-24">
       <Container wide>
