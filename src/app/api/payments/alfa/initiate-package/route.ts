@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { alfaConfig } from "@/lib/alfa/config";
 import { generateAlfaHash } from "@/lib/alfa/hash";
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 interface Body {
   bookingRef: string;
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing bookingRef" }, { status: 400 });
     }
 
-    const supabase = await getSupabaseServer();
+    const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("package_bookings")
       .select("total_amount")
