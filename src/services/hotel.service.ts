@@ -1,7 +1,6 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { getSupabaseAnon } from "@/lib/supabase/server";
-import { hotels as staticHotels } from "@/data/hotels";
 import type { Hotel, HotelRoom, HotelSeasonDefinition, HotelReview, SeasonalPrice } from "@/types/hotel";
 
 // ── Raw Supabase row shapes ───────────────────────────────────────────────────
@@ -82,10 +81,10 @@ const HOTEL_SELECT = `
 // ── Mapper ────────────────────────────────────────────────────────────────────
 
 function toHotel(raw: RawHotel): Hotel {
-  const rooms: HotelRoom[] = [...raw.hotel_rooms]
+  const rooms: HotelRoom[] = [...(raw.hotel_rooms ?? [])]
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((r) => {
-      const prices: SeasonalPrice[] = r.hotel_room_prices
+      const prices: SeasonalPrice[] = (r.hotel_room_prices ?? [])
         .filter((p) => p.hotel_seasons != null)
         .map((p) => ({ season: p.hotel_seasons!.label, price: p.price }));
 
@@ -105,17 +104,17 @@ function toHotel(raw: RawHotel): Hotel {
       };
     });
 
-  const seasons: HotelSeasonDefinition[] = [...raw.hotel_seasons]
+  const seasons: HotelSeasonDefinition[] = [...(raw.hotel_seasons ?? [])]
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((s) => ({
       label: s.label,
-      periods: s.hotel_season_periods.map((p) => ({
+      periods: (s.hotel_season_periods ?? []).map((p) => ({
         from: p.from_date.length === 10 ? p.from_date.slice(5) : p.from_date,
         to:   p.to_date.length   === 10 ? p.to_date.slice(5)   : p.to_date,
       })),
     }));
 
-  const reviews: HotelReview[] = raw.hotel_reviews.map((r) => ({
+  const reviews: HotelReview[] = (raw.hotel_reviews ?? []).map((r) => ({
     name: r.reviewer_name,
     initial: r.initial,
     date: r.date,
@@ -151,45 +150,34 @@ function toHotel(raw: RawHotel): Hotel {
   };
 }
 
-// ── Slugs migrated to Supabase — static data used for everything else ─────────
-
-const SUPABASE_HOTEL_SLUGS = new Set(["ambiance-hunza", "zen-by-the-lake", "sapphire-hunza", "best-western-premier-hunza", "himmel-skardu"]);
-
 // ── Cached fetchers ───────────────────────────────────────────────────────────
 
-const _fetchSupabaseHotels = unstable_cache(
+const _fetchAllHotels = unstable_cache(
   async (): Promise<Hotel[]> => {
     const supabase = getSupabaseAnon();
     const { data, error } = await supabase
       .from("hotels")
       .select(HOTEL_SELECT)
       .order("name");
-    if (error) throw new Error(`getAllHotels (supabase): ${error.message}`);
+    if (error) throw new Error(`getAllHotels: ${error.message}`);
     return (data as unknown as RawHotel[]).map(toHotel);
   },
-  ["supabase-hotels"],
+  ["all-hotels"],
   { tags: ["hotels"], revalidate: 86400 }
 );
 
-export const getAllHotels = cache(async (): Promise<Hotel[]> => {
-  const dbHotels = await _fetchSupabaseHotels();
-  const staticOnly = staticHotels.filter((h) => !SUPABASE_HOTEL_SLUGS.has(h.slug));
-  return [...dbHotels, ...staticOnly.map((h) => ({ ...h, guestFavourite: false }))];
-});
+export const getAllHotels = cache(_fetchAllHotels);
 
 export const getHotelBySlug = cache(async (slug: string): Promise<Hotel | null> => {
-  if (SUPABASE_HOTEL_SLUGS.has(slug)) {
-    const supabase = getSupabaseAnon();
-    const { data, error } = await supabase
-      .from("hotels")
-      .select(HOTEL_SELECT)
-      .eq("slug", slug)
-      .single();
-    if (error?.code === "PGRST116") return null;
-    if (error) throw new Error(`getHotelBySlug (supabase): ${error.message}`);
-    return toHotel(data as unknown as RawHotel);
-  }
-  return staticHotels.find((h) => h.slug === slug) ?? null;
+  const supabase = getSupabaseAnon();
+  const { data, error } = await supabase
+    .from("hotels")
+    .select(HOTEL_SELECT)
+    .eq("slug", slug)
+    .single();
+  if (error?.code === "PGRST116") return null;
+  if (error) throw new Error(`getHotelBySlug: ${error.message}`);
+  return toHotel(data as unknown as RawHotel);
 });
 
 export const getHotelsByDestination = cache(async (destinationSlug: string): Promise<Hotel[]> => {
@@ -197,9 +185,7 @@ export const getHotelsByDestination = cache(async (destinationSlug: string): Pro
   return all.filter((h) => h.destinationSlug === destinationSlug);
 });
 
-const EXCLUDED_FROM_FEATURED = new Set(["sapphire-hunza"]);
-
 export const getFeaturedHotels = cache(async (limit: number = 6): Promise<Hotel[]> => {
   const all = await getAllHotels();
-  return all.filter((h) => !EXCLUDED_FROM_FEATURED.has(h.slug)).slice(0, limit);
+  return all.filter((h) => h.guestFavourite).slice(0, limit);
 });

@@ -1232,41 +1232,6 @@ export const hotels: Hotel[] = [
   },
 
   {
-    id: "hotel-31",
-    slug: "gilgit-serena-hotel",
-    name: "Gilgit Serena Hotel",
-    destinationSlug: "ghizer",
-    location: "Gilgit, Gilgit-Baltistan",
-    tier: "luxury",
-    propertyType: "Luxury Hotel",
-    image: `${MEDIA}/destinations/ghizer/cover.jpg`,
-    images: [`${MEDIA}/destinations/ghizer/cover.jpg`],
-    rating: 4.8,
-    reviewCount: 0,
-    pricePerNight: 0,
-    margin: 0.20,
-    amenities: ["Free WiFi", "Air conditioning", "Restaurant", "Room service", "Swimming pool", "Spa", "Gym", "Free parking", "Mountain view", "24hr front desk", "Concierge"],
-    description: "The finest address in Gilgit city, Serena's property delivers the signature warmth and quality expected of the brand — with mountain views, beautifully appointed rooms and a full-service restaurant. The ideal luxury base for journeys into the Ghizer valley.",
-    highlights: [
-      "Serena brand quality — the gold standard of Pakistani hospitality",
-      "Stunning mountain views from garden terraces and room balconies",
-      "Full-service restaurant with Pakistani and continental menus",
-    ],
-    rooms: [
-      { name: "Deluxe Room", beds: "1 king bed · Garden view", price: 0, available: 15, image: `${MEDIA}/destinations/ghizer/cover.jpg` },
-      { name: "Suite", beds: "1 king bed + lounge · Mountain view", price: 0, available: 5, image: `${MEDIA}/destinations/ghizer/cover.jpg` },
-    ],
-    reviews: [],
-    checkIn: "2:00 PM",
-    checkOut: "by 12:00 PM",
-    policies: {
-      rules: ["Check-in: 2:00 PM", "Check-out: 12:00 PM", "No smoking in rooms", "CNIC required at check-in"],
-      safety: ["24/7 security", "CCTV on premises", "Emergency contacts available"],
-      cancellation: ["Free cancellation 48hrs before check-in", "50% refund within 48hrs", "No refund for no-shows"],
-    },
-  },
-
-  {
     id: "hotel-32",
     slug: "fort-hotel-yasin",
     name: "Fort Hotel Yasin",
