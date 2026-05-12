@@ -160,3 +160,15 @@ export const getPackagesByDestination = cache(
     return (data as unknown as PackageRow[]).map(toPackage);
   }
 );
+
+export const getPackagesByStyle = cache(
+  async (styleSlug: string): Promise<Package[]> => {
+    const supabase = getSupabaseAnon();
+    const { data, error } = await supabase
+      .from("packages")
+      .select("*")
+      .contains("travel_style_slugs", [styleSlug]);
+    if (error) throw new Error(`getPackagesByStyle: ${error.message}`);
+    return (data as unknown as PackageRow[]).map(toPackage);
+  }
+);
