@@ -153,7 +153,7 @@ function toHotel(raw: RawHotel): Hotel {
 
 // ── Slugs migrated to Supabase — static data used for everything else ─────────
 
-const SUPABASE_HOTEL_SLUGS = new Set(["ambiance-hunza", "zen-by-the-lake", "sapphire-hunza", "best-western-premier-hunza", "himmel-skardu"]);
+const SUPABASE_HOTEL_SLUGS = new Set(["ambiance-hunza", "zen-by-the-lake", "sapphire-hunza", "best-western-premier-hunza", "himmel-skardu", "gilgit-serena-hotel", "hunza-serena-hotel", "sost-serena-hotel", "serena-altit-fort", "serena-shigar-fort", "serena-khaplu-palace"]);
 
 // ── Cached fetchers ───────────────────────────────────────────────────────────
 
