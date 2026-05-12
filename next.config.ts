@@ -12,7 +12,7 @@ const isGitHubPages = process.env.GITHUB_PAGES === "true";
 const repoBasePath = process.env.GITHUB_PAGES_BASE_PATH ?? "/traverse-pakistan";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["@aws-sdk/client-s3", "@aws-sdk/s3-request-presigner"],
+
   ...(isGitHubPages && {
     output: "export",
     basePath: repoBasePath,
