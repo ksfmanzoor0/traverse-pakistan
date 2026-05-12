@@ -3,11 +3,13 @@ import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/Container";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { TourGrid } from "@/components/tours/TourGrid";
+import { PackageCard } from "@/components/packages/PackageCard";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { breadcrumbSchema } from "@/lib/seo/schema";
 import { travelStyles } from "@/data/travel-styles";
 import { getToursByStyle } from "@/services/tour.service";
+import { getPackagesByStyle } from "@/services/package.service";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -40,7 +42,10 @@ export default async function TravelStyleDetailPage({ params }: Props) {
   const style = travelStyles.find((s) => s.slug === slug);
   if (!style) notFound();
 
-  const tours = await getToursByStyle(slug);
+  const [packages, tours] = await Promise.all([
+    getPackagesByStyle(slug),
+    getToursByStyle(slug),
+  ]);
 
   const schema = breadcrumbSchema([
     { name: "Home", url: "/" },
@@ -66,7 +71,33 @@ export default async function TravelStyleDetailPage({ params }: Props) {
             {style.description}
           </p>
         </div>
-        <TourGrid tours={tours} />
+        {packages.length > 0 && (
+          <div className="mb-14">
+            <div className="mb-6">
+              <h2 className="text-[22px] font-bold text-[var(--text-primary)]">
+                Packages <span className="text-[var(--text-tertiary)] font-normal text-[18px]">({packages.length})</span>
+              </h2>
+              <p className="text-[15px] text-[var(--text-tertiary)] mt-1">{style.packageSubtitle}</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {packages.map((pkg) => (
+                <PackageCard key={pkg.id} pkg={pkg} variant="grid" />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {tours.length > 0 && (
+          <div>
+            <div className="mb-6">
+              <h2 className="text-[22px] font-bold text-[var(--text-primary)]">
+                Group Tours <span className="text-[var(--text-tertiary)] font-normal text-[18px]">({tours.length})</span>
+              </h2>
+              <p className="text-[15px] text-[var(--text-tertiary)] mt-1">{style.tourSubtitle}</p>
+            </div>
+            <TourGrid tours={tours} />
+          </div>
+        )}
       </Container>
     </div>
   );

@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { getSupabaseAnon } from "@/lib/supabase/server";
 import { listR2Images, buildImagesFromR2 } from "@/lib/r2";
 import type { TourRow, TourItineraryDayRow } from "@/lib/supabase/types";
@@ -84,14 +85,20 @@ async function buildPriceMap(supabase: ReturnType<typeof getSupabaseAnon>, slugs
   return map;
 }
 
-export const getAllTours = cache(async (): Promise<Tour[]> => {
-  const supabase = getSupabaseAnon();
-  const { data, error } = await supabase.from("tours").select("*").order("departure_date", { nullsFirst: false });
-  if (error) throw new Error(`getAllTours: ${error.message}`);
-  const rows = data as TourRow[];
-  const priceMap = await buildPriceMap(supabase, rows.map((r) => r.slug));
-  return rows.map((r) => toTour(r, priceMap));
-});
+const _fetchAllTours = unstable_cache(
+  async (): Promise<Tour[]> => {
+    const supabase = getSupabaseAnon();
+    const { data, error } = await supabase.from("tours").select("*").order("departure_date", { nullsFirst: false });
+    if (error) throw new Error(`getAllTours: ${error.message}`);
+    const rows = data as TourRow[];
+    const priceMap = await buildPriceMap(supabase, rows.map((r) => r.slug));
+    return rows.map((r) => toTour(r, priceMap));
+  },
+  ["all-tours"],
+  { tags: ["tours"], revalidate: 3600 }
+);
+
+export const getAllTours = cache(_fetchAllTours);
 
 export const getTourBySlug = cache(async (slug: string): Promise<Tour | null> => {
   const supabase = getSupabaseAnon();
