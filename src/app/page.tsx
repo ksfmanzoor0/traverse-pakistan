@@ -13,6 +13,7 @@ import { BlogGrid } from "@/components/home/BlogGrid";
 import { WhyUsSection } from "@/components/home/WhyUsSection";
 import { ReviewsCarousel } from "@/components/home/ReviewsCarousel";
 import { DesktopOnly } from "@/components/ui/DesktopOnly";
+import { LazyMount } from "@/components/ui/LazyMount";
 import { buildMetadata } from "@/lib/seo/metadata";
 
 // VideoStories is deep below the fold and ships a client modal — defer its JS chunk
@@ -51,10 +52,16 @@ export default async function Home() {
         <BlogGrid />
       </DesktopOnly>
 
-      {/* All devices — carousels + text sections */}
-      <FeaturedPackagesCarousel />
-      <PopularToursCarousel />
-      <FeaturedHotels />
+      {/* All devices — carousels mount lazily on mobile to avoid iOS OOM */}
+      <LazyMount>
+        <FeaturedPackagesCarousel />
+      </LazyMount>
+      <LazyMount>
+        <PopularToursCarousel />
+      </LazyMount>
+      <LazyMount>
+        <FeaturedHotels />
+      </LazyMount>
       <WhyUsSection />
       <ReviewsCarousel />
     </>
