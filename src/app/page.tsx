@@ -44,13 +44,13 @@ export default async function Home() {
       <HeroSectionWrapper destinations={destinations} />
 
       <div className="hidden md:block"><StatsBar /></div>
-      <FeaturedPackagesCarousel />
-      <PopularToursCarousel />
-      <FeaturedHotels />
+      <div className="hidden md:block"><FeaturedPackagesCarousel /></div>
+      <div className="hidden md:block"><PopularToursCarousel /></div>
+      <div className="hidden md:block"><FeaturedHotels /></div>
       <DestinationsScroll />
       <TravelStylesGrid />
       <BlogGrid />
-      <VideoStories />
+      <div className="hidden md:block"><VideoStories /></div>
       <WhyUsSection />
       <ReviewsCarousel />
     </>
