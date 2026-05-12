@@ -12,6 +12,7 @@ import { FeaturedHotels } from "@/components/home/FeaturedHotels";
 import { BlogGrid } from "@/components/home/BlogGrid";
 import { WhyUsSection } from "@/components/home/WhyUsSection";
 import { ReviewsCarousel } from "@/components/home/ReviewsCarousel";
+import { DesktopOnly } from "@/components/ui/DesktopOnly";
 import { buildMetadata } from "@/lib/seo/metadata";
 
 // VideoStories is deep below the fold and ships a client modal — defer its JS chunk
@@ -40,19 +41,20 @@ export default async function Home() {
 
   return (
     <>
-      {/* Desktop hero — hidden on mobile, client-only to prevent SearchWidget mounting on iOS */}
-      <HeroSectionWrapper destinations={destinations} />
-
-      <div className="hidden md:block"><StatsBar /></div>
-      <div className="hidden md:block"><FeaturedPackagesCarousel /></div>
-      <div className="hidden md:block"><PopularToursCarousel /></div>
-      <div className="hidden md:block"><FeaturedHotels /></div>
-      <DestinationsScroll />
-      <TravelStylesGrid />
-      <BlogGrid />
-      <div className="hidden md:block"><VideoStories /></div>
-      <WhyUsSection />
-      <ReviewsCarousel />
+      {/* All heavy client components truly unmounted on mobile */}
+      <DesktopOnly>
+        <HeroSectionWrapper destinations={destinations} />
+        <StatsBar />
+        <FeaturedPackagesCarousel />
+        <PopularToursCarousel />
+        <FeaturedHotels />
+        <VideoStories />
+        <DestinationsScroll />
+        <TravelStylesGrid />
+        <BlogGrid />
+        <WhyUsSection />
+        <ReviewsCarousel />
+      </DesktopOnly>
     </>
   );
 }
