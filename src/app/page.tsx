@@ -41,20 +41,20 @@ export default async function Home() {
 
   return (
     <>
-      {/* Desktop only — all image-heavy sections */}
+      {/* Desktop only — hero, stats, video, destinations, styles, blog */}
       <DesktopOnly>
         <HeroSectionWrapper destinations={destinations} />
         <StatsBar />
-        <FeaturedPackagesCarousel />
-        <PopularToursCarousel />
-        <FeaturedHotels />
         <VideoStories />
         <DestinationsScroll />
         <TravelStylesGrid />
         <BlogGrid />
       </DesktopOnly>
 
-      {/* Mobile + desktop — text only, no images */}
+      {/* All devices — carousels + text sections */}
+      <FeaturedPackagesCarousel />
+      <PopularToursCarousel />
+      <FeaturedHotels />
       <WhyUsSection />
       <ReviewsCarousel />
     </>
