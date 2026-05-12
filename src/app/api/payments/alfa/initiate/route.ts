@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
       MerchantPassword: alfaConfig.merchantPassword,
       TransactionTypeId: "3",
       TransactionReferenceNumber: summary.bookingRef,
-      TransactionAmount: String(summary.totalAmount),
+      TransactionAmount: Number(summary.totalAmount).toFixed(2),
     };
 
     const ssoHash = generateAlfaHash(ssoHashParams, alfaConfig.key1, alfaConfig.key2);
