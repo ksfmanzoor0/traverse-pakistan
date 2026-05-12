@@ -49,7 +49,7 @@ export default async function Home() {
           document.body.insertAdjacentHTML('afterbegin', '<div style="position:fixed;top:0;left:0;right:0;background:red;color:white;padding:10px;z-index:9999;font-size:12px;word-break:break-all">Unhandled: ' + e.reason + '</div>');
         });
       `}} />
-      {/* Desktop — full experience with carousels */}
+      {/* Desktop only — all image-heavy sections */}
       <DesktopOnly>
         <HeroSectionWrapper destinations={destinations} />
         <StatsBar />
@@ -57,12 +57,12 @@ export default async function Home() {
         <PopularToursCarousel />
         <FeaturedHotels />
         <VideoStories />
+        <DestinationsScroll />
+        <TravelStylesGrid />
+        <BlogGrid />
       </DesktopOnly>
 
-      {/* Shared — lightweight server sections shown on all devices */}
-      <DestinationsScroll />
-      <TravelStylesGrid />
-      <BlogGrid />
+      {/* Mobile + desktop — text only, no images */}
       <WhyUsSection />
       <ReviewsCarousel />
     </>
