@@ -41,14 +41,6 @@ export default async function Home() {
 
   return (
     <>
-      <script dangerouslySetInnerHTML={{ __html: `
-        window.onerror = function(msg, src, line, col, err) {
-          document.body.insertAdjacentHTML('afterbegin', '<div style="position:fixed;top:0;left:0;right:0;background:red;color:white;padding:10px;z-index:9999;font-size:12px;word-break:break-all">' + msg + ' | ' + src + ':' + line + ' | ' + (err ? err.stack : '') + '</div>');
-        };
-        window.addEventListener('unhandledrejection', function(e) {
-          document.body.insertAdjacentHTML('afterbegin', '<div style="position:fixed;top:0;left:0;right:0;background:red;color:white;padding:10px;z-index:9999;font-size:12px;word-break:break-all">Unhandled: ' + e.reason + '</div>');
-        });
-      `}} />
       {/* Desktop only — all image-heavy sections */}
       <DesktopOnly>
         <HeroSectionWrapper destinations={destinations} />
