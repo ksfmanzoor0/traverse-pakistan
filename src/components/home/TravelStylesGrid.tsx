@@ -43,7 +43,7 @@ export function TravelStylesGrid() {
                   {style.name}
                 </h3>
                 <p className="text-[12px] text-[var(--on-dark-secondary)] mt-1 font-medium">
-                  {style.tourCount} tours available
+                  Tours & packages available
                 </p>
               </div>
 

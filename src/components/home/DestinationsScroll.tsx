@@ -8,7 +8,7 @@ import { getAllDestinations } from "@/services/destination.service";
 
 const FEATURED_ORDER = [
   "hunza", "skardu", "chitral", "fairy-meadows",
-  "naran", "swat", "neelam-valley", "makran",
+  "kaghan", "swat", "neelam-valley", "makran",
 ];
 
 export async function DestinationsScroll() {
