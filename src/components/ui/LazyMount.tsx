@@ -5,12 +5,13 @@ import { useEffect, useRef, useState } from "react";
 interface LazyMountProps {
   children: React.ReactNode;
   rootMargin?: string;
+  // Placeholder height keeps sections below the fold so they don't all fire
+  // their IntersectionObserver simultaneously when scroll position is restored
+  // on back-navigation (which would cause iOS WebKit OOM).
+  minHeight?: string;
 }
 
-// Only mounts children when the placeholder enters the viewport.
-// Prevents off-screen image-heavy sections from loading simultaneously,
-// which causes iOS WebKit OOM kills on memory-constrained devices.
-export function LazyMount({ children, rootMargin = "200px" }: LazyMountProps) {
+export function LazyMount({ children, rootMargin = "200px", minHeight = "420px" }: LazyMountProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -31,5 +32,5 @@ export function LazyMount({ children, rootMargin = "200px" }: LazyMountProps) {
   }, [rootMargin]);
 
   if (mounted) return <>{children}</>;
-  return <div ref={ref} />;
+  return <div ref={ref} style={{ minHeight }} />;
 }

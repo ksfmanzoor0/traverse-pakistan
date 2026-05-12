@@ -39,8 +39,8 @@ export function MobileReserveBar({ tour, reviews }: MobileReserveBarProps) {
 
   return (
     <>
-      <div className="fixed bottom-0 left-0 right-0 lg:hidden z-40 bg-[var(--bg-primary)] border-t border-[var(--border-default)] px-4 py-3 pb-[env(safe-area-inset-bottom,12px)]"
-           style={{ boxShadow: "var(--shadow-lg)" }}>
+      <div className="fixed bottom-0 left-0 right-0 lg:hidden z-40 bg-[var(--bg-primary)] border-t border-[var(--border-default)] px-4 py-3"
+           style={{ boxShadow: "var(--shadow-lg)", paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}>
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-1.5">
