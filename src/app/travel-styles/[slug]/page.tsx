@@ -73,9 +73,12 @@ export default async function TravelStyleDetailPage({ params }: Props) {
         </div>
         {packages.length > 0 && (
           <div className="mb-14">
-            <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-6">
-              Packages <span className="text-[var(--text-tertiary)] font-normal text-[18px]">({packages.length})</span>
-            </h2>
+            <div className="mb-6">
+              <h2 className="text-[22px] font-bold text-[var(--text-primary)]">
+                Packages <span className="text-[var(--text-tertiary)] font-normal text-[18px]">({packages.length})</span>
+              </h2>
+              <p className="text-[15px] text-[var(--text-tertiary)] mt-1">{style.packageSubtitle}</p>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {packages.map((pkg) => (
                 <PackageCard key={pkg.id} pkg={pkg} variant="grid" />
@@ -86,9 +89,12 @@ export default async function TravelStyleDetailPage({ params }: Props) {
 
         {tours.length > 0 && (
           <div>
-            <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-6">
-              Group Tours <span className="text-[var(--text-tertiary)] font-normal text-[18px]">({tours.length})</span>
-            </h2>
+            <div className="mb-6">
+              <h2 className="text-[22px] font-bold text-[var(--text-primary)]">
+                Group Tours <span className="text-[var(--text-tertiary)] font-normal text-[18px]">({tours.length})</span>
+              </h2>
+              <p className="text-[15px] text-[var(--text-tertiary)] mt-1">{style.tourSubtitle}</p>
+            </div>
             <TourGrid tours={tours} />
           </div>
         )}

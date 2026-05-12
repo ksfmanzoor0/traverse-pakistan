@@ -5,4 +5,6 @@ export interface TravelStyle {
   image: string;
   description: string;
   tourCount: number;
+  packageSubtitle: string;
+  tourSubtitle: string;
 }

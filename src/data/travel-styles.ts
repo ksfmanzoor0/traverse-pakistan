@@ -8,6 +8,8 @@ export const travelStyles: TravelStyle[] = [
     image: "https://traversepakistan.com/wp-content/uploads/2022/09/IMG_8572-1.jpg",
     description: "From K2 Base Camp to Fairy Meadows, Pakistan has some of the world's most spectacular treks. Challenge yourself with high-altitude adventures or enjoy scenic day hikes.",
     tourCount: 6,
+    packageSubtitle: "Custom-date trekking packages — your pace, your tier, your departure",
+    tourSubtitle: "Fixed-departure group treks led by certified mountain guides",
   },
   {
     id: "style-2",
@@ -16,6 +18,8 @@ export const travelStyles: TravelStyle[] = [
     image: "https://traversepakistan.com/wp-content/uploads/2022/09/drone1-10.jpg",
     description: "Safe, comfortable, and unforgettable family-friendly tours. Kid-friendly itineraries with comfortable transport and hotels the whole family will love.",
     tourCount: 8,
+    packageSubtitle: "Custom family itineraries — your dates, your group, your pace",
+    tourSubtitle: "Group departures with family-friendly routes and hand-picked comfortable stays",
   },
   {
     id: "style-3",
@@ -24,6 +28,8 @@ export const travelStyles: TravelStyle[] = [
     image: "https://traversepakistan.com/wp-content/uploads/2023/01/DSC_3896low.jpg",
     description: "Romantic getaways to Pakistan's most beautiful destinations. Private tours, luxury stays, and unforgettable moments for couples.",
     tourCount: 4,
+    packageSubtitle: "Private romantic escapes — tailored dates, luxury stays, and just the two of you",
+    tourSubtitle: "Couples-friendly group tours to Pakistan's most scenic and romantic destinations",
   },
   {
     id: "style-4",
@@ -32,6 +38,8 @@ export const travelStyles: TravelStyle[] = [
     image: "https://traversepakistan.com/wp-content/uploads/2025/05/pasDJI_0006.jpg",
     description: "Safe and social group tours perfect for solo travelers. Meet like-minded adventurers and explore Pakistan with confidence.",
     tourCount: 7,
+    packageSubtitle: "Solo-friendly custom packages — travel on your own terms with expert support",
+    tourSubtitle: "Fixed-departure group tours — the ideal way to explore solo and meet fellow adventurers",
   },
   {
     id: "style-5",
@@ -40,6 +48,8 @@ export const travelStyles: TravelStyle[] = [
     image: "https://traversepakistan.com/wp-content/uploads/2022/11/choimus-Festival-e1668936494927.jpg",
     description: "Discover ancient civilizations, Sufi traditions, Kalash culture, and centuries-old forts. Pakistan's cultural heritage spans 5,000 years.",
     tourCount: 5,
+    packageSubtitle: "Custom cultural tours — explore history and heritage at your own pace",
+    tourSubtitle: "Expert-guided group tours through Pakistan's most iconic historic sites and living cultures",
   },
   {
     id: "style-6",
@@ -48,5 +58,7 @@ export const travelStyles: TravelStyle[] = [
     image: "https://traversepakistan.com/wp-content/uploads/2022/10/DJI_0114.jpg",
     description: "Explore Pakistan's stunning Makran Coast, Kund Malir beach, and Gwadar. Pristine beaches, dramatic cliffs, and marine wildlife.",
     tourCount: 2,
+    packageSubtitle: "Custom coastal escapes — Gwadar, Ormara and the Makran Coast on your schedule",
+    tourSubtitle: "Group departures along Pakistan's stunning Makran coastline",
   },
 ];
