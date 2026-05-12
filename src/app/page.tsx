@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import dynamic from "next/dynamic";
 
 import { HeroSectionWrapper } from "@/components/home/HeroSectionWrapper";
@@ -15,12 +14,7 @@ import { WhyUsSection } from "@/components/home/WhyUsSection";
 import { ReviewsCarousel } from "@/components/home/ReviewsCarousel";
 import { DesktopOnly } from "@/components/ui/DesktopOnly";
 import { LazyMount } from "@/components/ui/LazyMount";
-import { HomeScrollReset } from "@/components/home/HomeScrollReset";
 import { buildMetadata } from "@/lib/seo/metadata";
-
-const SectionFallback = () => (
-  <div className="h-64 bg-[var(--bg-primary)] animate-pulse rounded-xl mx-4 my-2" />
-);
 
 // VideoStories is deep below the fold and ships a client modal — defer its JS chunk
 // so it doesn't compete with above-the-fold hydration. SSR stays on (SEO + no layout shift).
@@ -48,48 +42,29 @@ export default async function Home() {
 
   return (
     <>
-      <HomeScrollReset />
-      {/* Desktop only — hero + stats */}
+      {/* Desktop only — hero, stats, video, blog */}
       <DesktopOnly>
         <HeroSectionWrapper destinations={destinations} />
         <StatsBar />
+        <VideoStories />
+        <BlogGrid />
       </DesktopOnly>
 
       {/* All devices — lazy-mounted to prevent iOS OOM on scroll */}
       <LazyMount>
-        <Suspense fallback={<SectionFallback />}>
-          <FeaturedPackagesCarousel />
-        </Suspense>
+        <FeaturedPackagesCarousel />
       </LazyMount>
       <LazyMount>
-        <Suspense fallback={<SectionFallback />}>
-          <PopularToursCarousel />
-        </Suspense>
+        <PopularToursCarousel />
       </LazyMount>
       <LazyMount>
-        <Suspense fallback={<SectionFallback />}>
-          <FeaturedHotels />
-        </Suspense>
+        <FeaturedHotels />
       </LazyMount>
       <LazyMount>
-        <Suspense fallback={<SectionFallback />}>
-          <VideoStories />
-        </Suspense>
+        <DestinationsScroll />
       </LazyMount>
       <LazyMount>
-        <Suspense fallback={<SectionFallback />}>
-          <DestinationsScroll />
-        </Suspense>
-      </LazyMount>
-      <LazyMount>
-        <Suspense fallback={<SectionFallback />}>
-          <TravelStylesGrid />
-        </Suspense>
-      </LazyMount>
-      <LazyMount>
-        <Suspense fallback={<SectionFallback />}>
-          <BlogGrid />
-        </Suspense>
+        <TravelStylesGrid />
       </LazyMount>
       <WhyUsSection />
       <ReviewsCarousel />

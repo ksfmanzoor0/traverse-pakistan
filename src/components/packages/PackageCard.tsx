@@ -43,7 +43,7 @@ export function PackageCard({ pkg, variant = "carousel", className }: PackageCar
           alt={heroImage?.alt || pkg.name}
           fill
           className="object-cover transition-transform duration-700 ease-[cubic-bezier(0.2,0,0,1)] group-hover:scale-[1.04]"
-          sizes="(max-width: 640px) 261px, (max-width: 1024px) 50vw, 310px"
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 310px"
         />
         <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/30 to-transparent" />
 

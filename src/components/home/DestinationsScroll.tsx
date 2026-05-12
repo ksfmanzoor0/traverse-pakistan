@@ -30,7 +30,7 @@ export async function DestinationsScroll() {
                 alt={dest.name}
                 fill
                 className="object-cover transition-transform duration-700 ease-[cubic-bezier(0.2,0,0,1)] group-hover:scale-[1.06]"
-                sizes="(max-width: 640px) 300px, 340px"
+                sizes="340px"
               />
 
               {/* Strong gradient — 3 layers for max readability */}

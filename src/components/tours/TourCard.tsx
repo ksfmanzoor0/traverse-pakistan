@@ -61,7 +61,7 @@ export function TourCard({ tour, variant = "carousel", className }: TourCardProp
           alt={tour.images[0]?.alt || tour.name}
           fill
           className="object-cover transition-transform duration-700 ease-[cubic-bezier(0.2,0,0,1)] group-hover:scale-[1.04]"
-          sizes="(max-width: 640px) 261px, (max-width: 1024px) 50vw, 320px"
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 320px"
         />
 
         {/* Badge — top left (frees top-right for wishlist + FOMO) */}
