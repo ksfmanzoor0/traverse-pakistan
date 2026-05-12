@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!hsData.AuthToken) {
+      console.error("[alfa/initiate-package] HS failed:", JSON.stringify(hsData));
       return NextResponse.json(
         { error: hsData.ErrorMessage ?? "Handshake failed — no AuthToken" },
         { status: 502 }
