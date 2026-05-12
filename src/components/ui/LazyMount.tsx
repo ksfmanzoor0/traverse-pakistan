@@ -10,7 +10,9 @@ interface LazyMountProps {
 // Only mounts children when the placeholder enters the viewport.
 // Prevents off-screen image-heavy sections from loading simultaneously,
 // which causes iOS WebKit OOM kills on memory-constrained devices.
-export function LazyMount({ children, rootMargin = "200px" }: LazyMountProps) {
+// rootMargin intentionally 0px — 200px caused simultaneous mounts on back-navigation
+// when scroll position was restored, triggering the same OOM flood as initial load.
+export function LazyMount({ children, rootMargin = "0px" }: LazyMountProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
 
