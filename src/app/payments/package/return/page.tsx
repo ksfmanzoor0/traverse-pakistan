@@ -16,6 +16,8 @@ interface PaymentStatus {
 function ReturnInner() {
   const searchParams = useSearchParams();
   const orderId = searchParams?.get("O") ?? "";
+  const rc = searchParams?.get("RC") ?? "";
+  const ts = searchParams?.get("TS") ?? "";
 
   const [status, setStatus] = useState<PaymentStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +29,7 @@ function ReturnInner() {
       setLoading(false);
       return;
     }
-    fetch(`/api/payments/alfa/ipn?O=${encodeURIComponent(orderId)}`)
+    fetch(`/api/payments/alfa/ipn?O=${encodeURIComponent(orderId)}&RC=${encodeURIComponent(rc)}&TS=${encodeURIComponent(ts)}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.error) throw new Error(data.error);
