@@ -143,7 +143,7 @@ export const getToursByCategory = cache(async (category: TourCategory): Promise<
 
 export const getToursByStyle = cache(async (styleSlug: string): Promise<Tour[]> => {
   const supabase = getSupabaseAnon();
-  const { data, error } = await supabase.from("tours").select("*").contains("travel_style_slugs", [styleSlug]);
+  const { data, error } = await supabase.from("tours").select("*").contains("travel_style_slugs", [styleSlug]).order("created_at", { ascending: false });
   if (error) throw new Error(`getToursByStyle: ${error.message}`);
   const rows = data as TourRow[];
   const priceMap = await buildPriceMap(supabase, rows.map((r) => r.slug));

@@ -12,6 +12,7 @@ const isGitHubPages = process.env.GITHUB_PAGES === "true";
 const repoBasePath = process.env.GITHUB_PAGES_BASE_PATH ?? "/traverse-pakistan";
 
 const nextConfig: NextConfig = {
+
   ...(isGitHubPages && {
     output: "export",
     basePath: repoBasePath,

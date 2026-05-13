@@ -5,7 +5,10 @@ const ALLOWED_ORIGINS = [
   "https://www.traversepakistan.com",
   "https://traverse-pakistan.vercel.app",
   "http://localhost:3000",
+  "http://localhost:3001",
 ];
+
+const VERCEL_PREVIEW_RE = /^https:\/\/traverse-pakistan-[a-z0-9]+-ksfmanzoor0s-projects\.vercel\.app$/;
 
 // CSRF protection: blocks cross-origin browser requests to /api/* from
 // unlisted origins. Server-to-server calls (no origin header) are allowed
@@ -14,7 +17,7 @@ const ALLOWED_ORIGINS = [
 export default function middleware(request: NextRequest) {
   const origin = request.headers.get("origin");
 
-  if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+  if (origin && !ALLOWED_ORIGINS.includes(origin) && !VERCEL_PREVIEW_RE.test(origin)) {
     return new NextResponse(null, { status: 403 });
   }
 

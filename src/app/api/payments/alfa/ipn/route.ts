@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { alfaConfig } from "@/lib/alfa/config";
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     const isPaid: boolean = status.TransactionStatus === "Paid";
 
     if (bookingRef) {
-      const supabase = await getSupabaseServer();
+      const supabase = getSupabaseAdmin();
       if (bookingRef.startsWith("PKG-")) {
         await supabase
           .from("package_bookings")
@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
     const bookingRef: string = status.TransactionReferenceNumber ?? orderId;
 
     if (bookingRef) {
-      const supabase = await getSupabaseServer();
+      const supabase = getSupabaseAdmin();
       if (bookingRef.startsWith("PKG-")) {
         await supabase
           .from("package_bookings")
