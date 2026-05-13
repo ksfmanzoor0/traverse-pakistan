@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     const status = await statusRes.json();
 
     const bookingRef: string = status.TransactionReferenceNumber ?? "";
-    const isPaid: boolean = status.TransactionStatus === "Paid";
+    const isPaid: boolean = status.TransactionStatus === "SUCCESS";
 
     if (bookingRef) {
       const supabase = getSupabaseAdmin();
@@ -57,17 +57,23 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const orderId = searchParams.get("O");
+  const rc = searchParams.get("RC");
+  const ts = searchParams.get("TS");
 
   if (!orderId) {
     return NextResponse.json({ error: "Missing order id" }, { status: 400 });
   }
 
   try {
+    // RC=00 in return URL means Alfa confirmed payment success
+    const urlConfirmedPaid = rc === "00" && (ts === "P" || ts === "S");
+
     const ipnUrl = `${alfaConfig.ipnBaseUrl}/${alfaConfig.merchantId}/${alfaConfig.storeId}/${orderId}`;
     const statusRes = await fetch(ipnUrl);
     const status = await statusRes.json();
 
-    const isPaid: boolean = status.TransactionStatus === "Paid";
+    const isPaid: boolean = urlConfirmedPaid ||
+      ["SUCCESS", "Paid", "P", "S"].includes(status.TransactionStatus ?? "");
     const bookingRef: string = status.TransactionReferenceNumber ?? orderId;
 
     if (bookingRef) {
