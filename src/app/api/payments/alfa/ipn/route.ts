@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     const status = await statusRes.json();
 
     const bookingRef: string = status.TransactionReferenceNumber ?? "";
-    const isPaid: boolean = status.TransactionStatus === "Paid";
+    const isPaid: boolean = status.TransactionStatus === "SUCCESS";
 
     if (bookingRef) {
       const supabase = getSupabaseAdmin();
@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
     const statusRes = await fetch(ipnUrl);
     const status = await statusRes.json();
 
-    const isPaid: boolean = status.TransactionStatus === "Paid";
+    const isPaid: boolean = status.TransactionStatus === "SUCCESS";
     const bookingRef: string = status.TransactionReferenceNumber ?? orderId;
 
     if (bookingRef) {
