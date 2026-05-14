@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
-async function markBooking(bookingRef: string, isPaid: boolean) {
+export async function markBooking(bookingRef: string, isPaid: boolean) {
   const supabase = getSupabaseAdmin();
   if (bookingRef.startsWith("PKG-")) {
     await supabase
@@ -21,29 +21,31 @@ async function markBooking(bookingRef: string, isPaid: boolean) {
   }
 }
 
-// Alfa calls this server-to-server after payment settles
+// Per Alfa docs: APG POSTs to the listener URL with a single "url" parameter
+// containing the full IPN status API URL. We GET that URL to retrieve the status.
 export async function POST(req: NextRequest) {
   try {
     const body = await req.formData().catch(() => null);
     if (!body) {
-      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+      return new NextResponse("Bad request", { status: 400 });
     }
 
-    // Log all incoming params so we can inspect the IPN format
-    const params: Record<string, string> = {};
-    body.forEach((value, key) => { params[key] = String(value); });
-    console.log("[alfa/ipn POST] incoming params:", JSON.stringify(params));
+    const ipnUrl = body.get("url") as string | null;
+    console.log("[alfa/ipn POST] received url param:", ipnUrl);
 
-    const bookingRef = (
-      params["TransactionReferenceNumber"] ??
-      params["orderId"] ??
-      params["OrderId"] ??
-      ""
-    );
-    const txStatus = params["TransactionStatus"] ?? "";
-    const isPaid = ["SUCCESS", "Paid", "P", "S"].includes(txStatus);
+    if (!ipnUrl) {
+      return new NextResponse("Missing url param", { status: 400 });
+    }
 
-    console.log("[alfa/ipn POST] bookingRef:", bookingRef, "txStatus:", txStatus, "isPaid:", isPaid);
+    const statusRes = await fetch(ipnUrl);
+    const status = await statusRes.json();
+
+    console.log("[alfa/ipn POST] status response:", JSON.stringify(status));
+
+    const bookingRef: string = status.TransactionReferenceNumber ?? "";
+    const isPaid: boolean = status.TransactionStatus === "Paid";
+
+    console.log("[alfa/ipn POST] bookingRef:", bookingRef, "isPaid:", isPaid);
 
     if (bookingRef) await markBooking(bookingRef, isPaid);
 
