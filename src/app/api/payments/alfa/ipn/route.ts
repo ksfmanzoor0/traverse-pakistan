@@ -112,6 +112,7 @@ export async function GET(req: NextRequest) {
       bookingRef,
       transactionId: status.TransactionId ?? null,
       amount: status.TransactionAmount ?? null,
+      _alfaTS: status.TransactionStatus ?? null,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Internal error";
