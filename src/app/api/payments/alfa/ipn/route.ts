@@ -72,6 +72,8 @@ export async function GET(req: NextRequest) {
     const statusRes = await fetch(ipnUrl);
     const status = await statusRes.json();
 
+    console.log("[alfa/ipn] orderId:", orderId, "rc:", rc, "ts:", ts, "urlConfirmedPaid:", urlConfirmedPaid, "AlfaStatus:", JSON.stringify(status));
+
     const isPaid: boolean = urlConfirmedPaid ||
       ["SUCCESS", "Paid", "P", "S"].includes(status.TransactionStatus ?? "");
     const bookingRef: string = status.TransactionReferenceNumber ?? orderId;

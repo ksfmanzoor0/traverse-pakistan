@@ -42,13 +42,13 @@ export async function POST(req: NextRequest) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://traversepakistan.com";
     const returnUrl = `${siteUrl}/payments/alfa/return`;
 
-    // Param order must match PHP reference exactly — hash is order-dependent
     const hsParams: Record<string, string> = {
-      HS_ChannelId: alfaConfig.channelId,
+      HS_RequestHash: "",
       HS_IsRedirectionRequest: "0",
+      HS_ChannelId: alfaConfig.channelId,
+      HS_ReturnURL: returnUrl,
       HS_MerchantId: alfaConfig.merchantId,
       HS_StoreId: alfaConfig.storeId,
-      HS_ReturnURL: returnUrl,
       HS_MerchantHash: alfaConfig.merchantHash,
       HS_MerchantUsername: alfaConfig.merchantUsername,
       HS_MerchantPassword: alfaConfig.merchantPassword,
