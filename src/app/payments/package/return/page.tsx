@@ -11,7 +11,7 @@ interface PaymentStatus {
   bookingRef: string;
   transactionId: string | null;
   amount: string | null;
-  _alfaTS?: string | null;
+
 }
 
 function ReturnInner() {
@@ -87,10 +87,6 @@ function ReturnInner() {
               Booking <span className="font-mono font-semibold">{status.bookingRef}</span> was not paid. If you believe this is an error, please contact us.
             </p>
           </div>
-          {/* DEBUG — remove before production */}
-          <pre className="text-left text-[11px] bg-[var(--bg-subtle)] rounded-[var(--radius-sm)] p-3 overflow-x-auto text-[var(--text-secondary)]">
-            {JSON.stringify({ urlRC: rc, urlTS: ts, urlO: orderId, ipnPaid: status.paid, ipnRef: status.bookingRef, txStatus: status._alfaTS }, null, 2)}
-          </pre>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               href="/packages"
