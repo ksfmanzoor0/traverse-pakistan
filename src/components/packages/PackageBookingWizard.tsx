@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { formatPrice } from "@/lib/utils";
 import { createPackageBooking } from "@/services/booking.service";
@@ -144,13 +144,17 @@ interface WizardState {
 }
 
 export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: Review[] }) {
+  const searchParams = useSearchParams();
+  const initAdults = Math.max(1, Number(searchParams?.get("adults") ?? 2));
+  const initRooms = Math.max(1, Number(searchParams?.get("rooms") ?? Math.ceil(initAdults / 3)));
+
   const [state, setState] = useState<WizardState>({
     step: 1,
     tier: "deluxe",
     city: pkg.tiers.deluxe.islamabad !== null ? "islamabad" : pkg.tiers.deluxe.lahore !== null ? "lahore" : "karachi",
     startDate: null,
-    adults: 2,
-    rooms: 1,
+    adults: initAdults,
+    rooms: initRooms,
     firstName: "",
     lastName: "",
     phone: "",
