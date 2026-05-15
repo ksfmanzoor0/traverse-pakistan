@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     const proto = req.headers.get("x-forwarded-proto") ?? "https";
     const host = req.headers.get("host") ?? "traversepakistan.com";
     const siteUrl = `${proto}://${host}`;
-    const returnUrl = `${siteUrl}/payments/alfa/return`;
+    const returnUrl = `${siteUrl}/payments/return`;
 
     const hsParams: Record<string, string> = {
       HS_RequestHash: "",
