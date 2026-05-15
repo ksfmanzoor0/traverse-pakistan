@@ -7,7 +7,9 @@ async function checkAlfaIPN(ref: string): Promise<"paid" | "failed" | "pending">
   try {
     const ipnUrl = `${alfaConfig.ipnBaseUrl}/${alfaConfig.merchantId}/${alfaConfig.storeId}/${ref}`;
     const res = await fetch(ipnUrl);
-    const data = await res.json();
+    const raw = await res.json();
+    // Alfa returns a double-encoded JSON string — parse again if needed
+    const data = typeof raw === "string" ? JSON.parse(raw) : raw;
     if (data.TransactionStatus === "Paid") return "paid";
     if (data.ResponseCode === "00") return "paid";
     return "pending";

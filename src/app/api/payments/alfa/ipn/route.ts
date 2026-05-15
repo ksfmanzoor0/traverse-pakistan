@@ -38,7 +38,8 @@ export async function POST(req: NextRequest) {
     }
 
     const statusRes = await fetch(ipnUrl);
-    const status = await statusRes.json();
+    const raw = await statusRes.json();
+    const status = typeof raw === "string" ? JSON.parse(raw) : raw;
 
     console.log("[alfa/ipn POST] status response:", JSON.stringify(status));
 
