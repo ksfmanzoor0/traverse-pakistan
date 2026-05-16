@@ -8,6 +8,12 @@ import { getWhatsAppUrl } from "@/lib/utils";
 
 type PollState = "loading" | "paid" | "failed" | "processing" | "error";
 
+function bookingMeta(ref: string): { label: string; browseHref: string; browseLabel: string } {
+  if (ref.startsWith("PKG-")) return { label: "package", browseHref: "/packages", browseLabel: "Browse more packages" };
+  if (ref.startsWith("HTL-")) return { label: "hotel", browseHref: "/hotels", browseLabel: "Browse more hotels" };
+  return { label: "tour", browseHref: "/grouptours", browseLabel: "Browse more tours" };
+}
+
 function ReturnInner() {
   const searchParams = useSearchParams();
   const orderId = searchParams?.get("O") ?? "";
@@ -17,6 +23,8 @@ function ReturnInner() {
   const [amount, setAmount] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const { label, browseHref, browseLabel } = bookingMeta(bookingRef || orderId);
 
   useEffect(() => {
     if (!orderId) {
@@ -87,7 +95,7 @@ function ReturnInner() {
             </p>
           </div>
           <a
-            href={getWhatsAppUrl(`Hi, I just made a payment (order: ${orderId}) but couldn't verify it. Can you help confirm my booking?`)}
+            href={getWhatsAppUrl(`Hi, I just made a payment (order: ${orderId}) but couldn't verify it. Can you help confirm my ${label} booking?`)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex h-11 px-6 items-center rounded-[var(--radius-sm)] bg-[var(--primary)] text-[var(--text-inverse)] text-[14px] font-semibold hover:bg-[var(--primary-hover)] transition-colors"
@@ -109,12 +117,12 @@ function ReturnInner() {
           <div>
             <p className="text-[20px] font-bold text-[var(--text-primary)]">Payment is being processed</p>
             <p className="text-[14px] text-[var(--text-secondary)] mt-2">
-              Your payment is being confirmed. You&apos;ll receive a booking confirmation email shortly. If you don&apos;t hear from us within an hour, please contact us.
+              Your payment is being confirmed. You&apos;ll receive a booking confirmation shortly. If you don&apos;t hear from us within an hour, please contact us.
             </p>
           </div>
           <p className="text-[13px] font-mono text-[var(--text-tertiary)]">{bookingRef}</p>
           <a
-            href={getWhatsAppUrl(`Hi, I made a payment for booking ${bookingRef} and it's being processed. Can you confirm my booking?`)}
+            href={getWhatsAppUrl(`Hi, I made a payment for ${label} booking ${bookingRef} and it's being processed. Can you confirm my booking?`)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex h-11 px-6 items-center rounded-[var(--radius-sm)] bg-[var(--primary)] text-[var(--text-inverse)] text-[14px] font-semibold hover:bg-[var(--primary-hover)] transition-colors"
@@ -141,13 +149,13 @@ function ReturnInner() {
           </div>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
-              href="/grouptours"
+              href={browseHref}
               className="inline-flex h-11 px-6 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border-default)] text-[14px] font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] transition-colors"
             >
-              Browse tours
+              {browseLabel}
             </Link>
             <a
-              href={getWhatsAppUrl(`Hi, I tried to pay for booking ${bookingRef} but the payment didn't go through. Can you help?`)}
+              href={getWhatsAppUrl(`Hi, I tried to pay for ${label} booking ${bookingRef} but the payment didn't go through. Can you help?`)}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex h-11 px-6 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--primary)] text-[var(--text-inverse)] text-[14px] font-semibold hover:bg-[var(--primary-hover)] transition-colors"
@@ -169,7 +177,7 @@ function ReturnInner() {
         <div>
           <p className="text-[22px] font-bold text-[var(--text-primary)]">Payment confirmed</p>
           <p className="text-[14px] text-[var(--text-secondary)] mt-2">
-            Your booking is confirmed. We&apos;ll send trip details to your email shortly.
+            Your {label} booking is confirmed. We&apos;ll send details to your email shortly.
           </p>
         </div>
         <div className="p-4 bg-[var(--bg-subtle)] rounded-[var(--radius-md)] text-left space-y-2.5">
@@ -185,17 +193,17 @@ function ReturnInner() {
           )}
         </div>
         <Link
-          href="/grouptours"
+          href={browseHref}
           className="inline-flex h-11 px-6 items-center rounded-[var(--radius-sm)] bg-[var(--primary)] text-[var(--text-inverse)] text-[14px] font-semibold hover:bg-[var(--primary-hover)] transition-colors"
         >
-          Browse more tours
+          {browseLabel}
         </Link>
       </div>
     </div>
   );
 }
 
-export default function AlfaReturnPage() {
+export default function PaymentReturnPage() {
   return (
     <Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center"><p className="text-[var(--text-secondary)] text-[15px]">Loading…</p></div>}>
       <ReturnInner />

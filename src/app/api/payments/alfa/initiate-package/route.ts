@@ -29,15 +29,18 @@ export async function POST(req: NextRequest) {
 
     const amount: number = data.total_amount as number;
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://traversepakistan.com";
-    const returnUrl = `${siteUrl}/payments/package/return`;
+    const proto = req.headers.get("x-forwarded-proto") ?? "https";
+    const host = req.headers.get("host") ?? "traversepakistan.com";
+    const siteUrl = `${proto}://${host}`;
+    const returnUrl = `${siteUrl}/payments/return`;
 
     const hsParams: Record<string, string> = {
-      HS_ChannelId: alfaConfig.channelId,
+      HS_RequestHash: "",
       HS_IsRedirectionRequest: "0",
+      HS_ChannelId: alfaConfig.channelId,
+      HS_ReturnURL: returnUrl,
       HS_MerchantId: alfaConfig.merchantId,
       HS_StoreId: alfaConfig.storeId,
-      HS_ReturnURL: returnUrl,
       HS_MerchantHash: alfaConfig.merchantHash,
       HS_MerchantUsername: alfaConfig.merchantUsername,
       HS_MerchantPassword: alfaConfig.merchantPassword,
