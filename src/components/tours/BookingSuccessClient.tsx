@@ -9,6 +9,7 @@ import { SITE_CONFIG } from "@/lib/constants";
 import { buildIcsDataUri, googleCalendarLink } from "@/components/booking/calendar";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getBookingByRef } from "@/services/booking.service";
+import { TourPayButton } from "@/components/tours/TourPayButton";
 import type { Booking } from "@/types/booking";
 import type { Tour } from "@/types/tour";
 
@@ -117,6 +118,12 @@ function SuccessInner({ tour }: { tour: Tour }) {
               )}
             </button>
           </div>
+        </div>
+      )}
+
+      {ref && booking?.totalAmount && (
+        <div className="mt-6 max-w-[480px] mx-auto">
+          <TourPayButton bookingRef={ref} amount={booking.totalAmount} />
         </div>
       )}
 
