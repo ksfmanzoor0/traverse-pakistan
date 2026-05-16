@@ -5,7 +5,7 @@ import { Container } from "@/components/ui/Container";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { getAllPackages, getPackageBySlug } from "@/services/package.service";
 import { getWhatsAppUrl } from "@/lib/utils";
-import { PackagePayButton } from "@/components/packages/PackagePayButton";
+import { formatPrice } from "@/lib/utils";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -63,11 +63,12 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
         {/* Pay now section */}
         {ref && amount && (
           <div className="mt-8 max-w-[480px] mx-auto">
-            <PackagePayButton
-              bookingRef={ref}
-              amount={amount}
-              paymentStatus="pending"
-            />
+            <Link
+              href={`/payments/checkout?ref=${ref}`}
+              className="flex items-center justify-center w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-bold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors"
+            >
+              Pay {formatPrice(amount)}
+            </Link>
           </div>
         )}
 
