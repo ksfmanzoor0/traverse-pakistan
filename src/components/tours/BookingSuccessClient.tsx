@@ -120,6 +120,17 @@ function SuccessInner({ tour }: { tour: Tour }) {
         </div>
       )}
 
+      {ref && booking?.totalAmount && (
+        <div className="mt-6 max-w-[480px] mx-auto">
+          <Link
+            href={`/payments/checkout?ref=${ref}`}
+            className="flex items-center justify-center w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-bold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors"
+          >
+            Pay {formatPrice(booking.totalAmount)}
+          </Link>
+        </div>
+      )}
+
       <div className="mt-8 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-6 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] overflow-hidden"
            style={{ boxShadow: "var(--shadow-sm)" }}>
         <div className="p-6 order-2 sm:order-1">
