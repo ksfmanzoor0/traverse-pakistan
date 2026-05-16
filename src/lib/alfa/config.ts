@@ -19,4 +19,5 @@ export const alfaConfig = {
   key1: process.env.ALFA_KEY1 ?? "",
   key2: process.env.ALFA_KEY2 ?? "",
   channelId: "1001",
+  secretKey: process.env.ALFA_SECRET_KEY ?? "",
 };
