@@ -39,8 +39,10 @@ export async function POST(req: NextRequest) {
 
     const summary = await createBooking(parsed.data);
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://traversepakistan.com";
-    const returnUrl = `${siteUrl}/payments/alfa/return`;
+    const proto = req.headers.get("x-forwarded-proto") ?? "https";
+    const host = req.headers.get("host") ?? "traversepakistan.com";
+    const siteUrl = `${proto}://${host}`;
+    const returnUrl = `${siteUrl}/payments/return`;
 
     const hsParams: Record<string, string> = {
       HS_RequestHash: "",

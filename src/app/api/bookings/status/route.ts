@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { alfaConfig } from "@/lib/alfa/config";
-import { markBooking } from "@/app/api/payments/alfa/ipn/route";
+import { markBooking } from "@/lib/payments/markBooking";
 
 async function checkAlfaIPN(ref: string): Promise<"paid" | "failed" | "pending"> {
   try {
     const ipnUrl = `${alfaConfig.ipnBaseUrl}/${alfaConfig.merchantId}/${alfaConfig.storeId}/${ref}`;
     const res = await fetch(ipnUrl);
-    const data = await res.json();
+    const raw = await res.json();
+    const data = typeof raw === "string" ? JSON.parse(raw) : raw;
     if (data.TransactionStatus === "Paid") return "paid";
     if (data.ResponseCode === "00") return "paid";
     return "pending";
@@ -39,7 +40,6 @@ export async function GET(req: NextRequest) {
 
     let status = data.payment_status ?? "pending";
 
-    // If DB still pending, ask Alfa directly (works in sandbox without listener whitelisting)
     if (status === "pending") {
       const alfaStatus = await checkAlfaIPN(ref);
       if (alfaStatus === "paid") {
@@ -75,7 +75,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ bookingRef: data.booking_ref, status, amount: data.total_amount });
   }
 
-  // Group tour bookings (bookings table uses status: confirmed/cancelled/pending)
   const { data, error } = await supabase
     .from("bookings")
     .select("booking_ref, status, total_amount")

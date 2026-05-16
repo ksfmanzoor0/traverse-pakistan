@@ -1,36 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { markBooking } from "@/lib/payments/markBooking";
 
-export async function markBooking(bookingRef: string, isPaid: boolean) {
-  const supabase = getSupabaseAdmin();
-  if (bookingRef.startsWith("PKG-")) {
-    await supabase
-      .from("package_bookings")
-      .update({ payment_status: isPaid ? "paid" : "failed", updated_at: new Date().toISOString() })
-      .eq("booking_ref", bookingRef);
-  } else if (bookingRef.startsWith("HTL-")) {
-    await supabase
-      .from("hotel_bookings")
-      .update({ payment_status: isPaid ? "paid" : "failed", updated_at: new Date().toISOString() })
-      .eq("booking_ref", bookingRef);
-  } else {
-    await supabase
-      .from("bookings")
-      .update({ status: isPaid ? "confirmed" : "cancelled", updated_at: new Date().toISOString() })
-      .eq("booking_ref", bookingRef);
-  }
-}
-
-// Per Alfa docs: APG POSTs to the listener URL with a single "url" parameter
-// containing the full IPN status API URL. We GET that URL to retrieve the status.
+// Per Alfa docs: APG POSTs to the listener URL with "url" as a query parameter:
+// e.g. /api/payments/alfa/ipn?url=https://sandbox.bankalfalah.com/HS/api/IPN/OrderStatus/...
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.formData().catch(() => null);
-    if (!body) {
-      return new NextResponse("Bad request", { status: 400 });
-    }
+    const { searchParams } = new URL(req.url);
+    const ipnUrl = searchParams.get("url");
 
-    const ipnUrl = body.get("url") as string | null;
     console.log("[alfa/ipn POST] received url param:", ipnUrl);
 
     if (!ipnUrl) {
@@ -38,7 +15,8 @@ export async function POST(req: NextRequest) {
     }
 
     const statusRes = await fetch(ipnUrl);
-    const status = await statusRes.json();
+    const raw = await statusRes.json();
+    const status = typeof raw === "string" ? JSON.parse(raw) : raw;
 
     console.log("[alfa/ipn POST] status response:", JSON.stringify(status));
 
@@ -49,7 +27,6 @@ export async function POST(req: NextRequest) {
 
     if (bookingRef) await markBooking(bookingRef, isPaid);
 
-    // Alfa expects HTTP 200 to acknowledge receipt
     return new NextResponse("OK", { status: 200 });
   } catch (err) {
     console.error("[alfa/ipn POST] error:", err);

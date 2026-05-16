@@ -4,6 +4,7 @@ const ALLOWED_ORIGINS = [
   "https://traversepakistan.com",
   "https://www.traversepakistan.com",
   "https://traverse-pakistan.vercel.app",
+  "https://sandbox.traversepakistan.com",
   "http://localhost:3000",
   "http://localhost:3001",
 ];
