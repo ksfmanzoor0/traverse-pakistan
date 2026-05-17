@@ -231,7 +231,7 @@ export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages
             <span className="text-[13px] text-[var(--text-tertiary)] ml-1">per person</span>
           </div>
           <Link
-            href={`/packages/${pkg.slug}/checkout`}
+            href={`/packages/${pkg.slug}/checkout?adults=2&rooms=1&tier=${selectedTier}&city=${departureCity}`}
             className="h-11 px-6 bg-[var(--primary)] text-[var(--text-inverse)] text-[14px] font-semibold rounded-full flex items-center justify-center hover:bg-[var(--primary-hover)] transition-colors"
           >
             Book Now

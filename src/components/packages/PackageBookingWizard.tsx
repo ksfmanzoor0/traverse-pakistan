@@ -266,14 +266,14 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
                 {(["deluxe", "luxury"] as PackageTier[]).map(tier => (
                   <button
                     key={tier} type="button" onClick={() => patch({ tier })}
-                    className={`h-14 rounded-[var(--radius-sm)] border-2 transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+                    className={`h-14 rounded-[var(--radius-sm)] border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
                       state.tier === tier
-                        ? "border-[var(--primary)] bg-[var(--primary-light)]"
+                        ? "bg-[var(--primary)] text-[var(--text-inverse)] border-[var(--primary)]"
                         : "border-[var(--border-default)] bg-[var(--bg-primary)] hover:border-[var(--primary)]"
                     }`}
                   >
-                    <span className="text-[14px] font-bold text-[var(--text-primary)] capitalize">{tier}</span>
-                    <span className="text-[12px] text-[var(--text-secondary)]">{formatPrice(pkg.tiers[tier].islamabad ?? pkg.tiers[tier].lahore ?? 0)} / person</span>
+                    <span className="text-[14px] font-bold capitalize">{tier}</span>
+                    <span className="text-[12px] opacity-80">{formatPrice(pkg.tiers[tier].islamabad ?? pkg.tiers[tier].lahore ?? 0)} / person</span>
                   </button>
                 ))}
               </div>
@@ -289,9 +289,9 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
                     .map(city => (
                       <button
                         key={city} type="button" onClick={() => patch({ city })}
-                        className={`h-12 rounded-[var(--radius-sm)] border-2 transition-all cursor-pointer capitalize text-[14px] font-semibold ${
+                        className={`h-12 rounded-[var(--radius-sm)] border transition-all cursor-pointer capitalize text-[14px] font-semibold ${
                           state.city === city
-                            ? "border-[var(--primary)] bg-[var(--primary-light)] text-[var(--primary-deep)]"
+                            ? "bg-[var(--primary)] text-[var(--text-inverse)] border-[var(--primary)]"
                             : "border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] hover:border-[var(--primary)]"
                         }`}
                       >
