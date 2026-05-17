@@ -22,7 +22,7 @@ interface BookingSidebarProps {
 }
 
 export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
-  const [adults, setAdults] = useState(2);
+  const [adults, setAdults] = useState(1);
   const [children, setChildren] = useState(0);
   const [singleRooms, setSingleRooms] = useState(0);
   const [departure, setDeparture] = useState<"islamabad" | "lahore" | "karachi">("islamabad");

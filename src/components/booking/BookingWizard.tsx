@@ -86,7 +86,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
   const router = useRouter();
 
   const initDeparture = (searchParams?.get("departure") ?? "islamabad") as DepartureCity;
-  const initAdults = Math.max(1, Number(searchParams?.get("adults") ?? 2));
+  const initAdults = Math.max(1, Number(searchParams?.get("adults") ?? 1));
   const initChildren = Math.max(0, Number(searchParams?.get("children") ?? 0));
   const initSingleRooms = Math.max(0, Number(searchParams?.get("singleRooms") ?? 0));
   const initStep = searchParams?.get("adults") ? 3 : 1;

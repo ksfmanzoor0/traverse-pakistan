@@ -145,7 +145,7 @@ interface WizardState {
 
 export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: Review[] }) {
   const searchParams = useSearchParams();
-  const initAdults = Math.max(1, Number(searchParams?.get("adults") ?? 2));
+  const initAdults = Math.max(1, Number(searchParams?.get("adults") ?? 1));
   const initRooms = Math.max(1, Number(searchParams?.get("rooms") ?? Math.ceil(initAdults / 3)));
   const initStep = searchParams?.get("adults") ? 3 : 1;
 
