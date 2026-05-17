@@ -443,14 +443,9 @@ export function MobileSearchOverlay({ open, onClose, destinations, defaultTab = 
     return () => { document.body.style.overflow = ""; };
   }, [open]);
 
-  // Reset dates when tab changes
+  // Reset UI section on tab change — dates, destination and travelers persist
   useEffect(() => {
     setActiveSection("where");
-    setStartDate(null);
-    setEndDate(null);
-    setStaysMode("dates");
-    setFlexDuration("week");
-    setFlexMonth(null);
   }, [activeTab]);
 
   // Mirror desktop onFlexSelect: set real startDate/endDate as soon as both duration + month are chosen
