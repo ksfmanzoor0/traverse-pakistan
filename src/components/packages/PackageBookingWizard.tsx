@@ -147,12 +147,15 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
   const searchParams = useSearchParams();
   const initAdults = Math.max(1, Number(searchParams?.get("adults") ?? 2));
   const initRooms = Math.max(1, Number(searchParams?.get("rooms") ?? Math.ceil(initAdults / 3)));
+  const initTier = (searchParams?.get("tier") as "deluxe" | "luxury" | null) ?? "deluxe";
+  const defaultCity = pkg.tiers.deluxe.islamabad !== null ? "islamabad" : pkg.tiers.deluxe.lahore !== null ? "lahore" : "karachi";
+  const initCity = (searchParams?.get("city") as "islamabad" | "lahore" | "karachi" | null) ?? defaultCity;
   const initStep = searchParams?.get("adults") ? 3 : 1;
 
   const [state, setState] = useState<WizardState>({
     step: initStep as 1 | 2 | 3 | 4,
-    tier: "deluxe",
-    city: pkg.tiers.deluxe.islamabad !== null ? "islamabad" : pkg.tiers.deluxe.lahore !== null ? "lahore" : "karachi",
+    tier: initTier,
+    city: initCity,
     startDate: null,
     adults: initAdults,
     rooms: initRooms,
