@@ -479,24 +479,18 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
           {draft.step === 4 && (
             <button
               type="button"
-              onClick={isSupabaseConfigured && liveDeparture && hasCapacity ? handleCardPayment : handleSubmit}
+              onClick={handleSubmit}
               disabled={submitting}
               className="flex-1 h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-bold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-wait flex items-center justify-center gap-2"
             >
-              {submitting
-                ? "Processing…"
-                : isSupabaseConfigured && liveDeparture && hasCapacity
-                  ? <>Pay with Card · <span className="tabular-nums">{formatPrice(pricing.dueNow)}</span></>
-                  : "Confirm via WhatsApp"}
+              {submitting ? "Processing…" : "Confirm Booking"}
             </button>
           )}
         </div>
 
         {draft.step === 4 && (
           <p className="text-center text-[11px] text-[var(--text-tertiary)] -mt-4">
-            {isSupabaseConfigured && liveDeparture && hasCapacity
-              ? "You'll be redirected to a secure Bank Alfalah payment page."
-              : "You won't be charged yet — our team will confirm availability first."}
+            You won&apos;t be charged yet — pay securely on the next page.
           </p>
         )}
 
