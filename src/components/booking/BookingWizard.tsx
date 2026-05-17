@@ -200,7 +200,9 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
     if (step === 3) {
       if (!draft.contact.firstName.trim()) return "Lead traveller first name required";
       if (!validPhone(draft.contact.phone)) return "Enter a valid phone number";
-      if (draft.contact.email && !validEmail(draft.contact.email)) return "Enter a valid email";
+      if (!draft.contact.email || !validEmail(draft.contact.email)) return "Enter a valid email address";
+      const missingName = draft.travelers.findIndex((t) => t.fullName.trim().length < 2);
+      if (missingName !== -1) return `Traveller ${missingName + 1}: full name required (at least 2 characters)`;
       return null;
     }
     return null;
