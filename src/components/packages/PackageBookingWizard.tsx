@@ -147,9 +147,10 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
   const searchParams = useSearchParams();
   const initAdults = Math.max(1, Number(searchParams?.get("adults") ?? 2));
   const initRooms = Math.max(1, Number(searchParams?.get("rooms") ?? Math.ceil(initAdults / 3)));
+  const initStep = searchParams?.get("adults") ? 3 : 1;
 
   const [state, setState] = useState<WizardState>({
-    step: 1,
+    step: initStep as 1 | 2 | 3 | 4,
     tier: "deluxe",
     city: pkg.tiers.deluxe.islamabad !== null ? "islamabad" : pkg.tiers.deluxe.lahore !== null ? "lahore" : "karachi",
     startDate: null,
@@ -161,7 +162,7 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
     email: "",
     specialRequests: "",
   });
-  const [maxReached, setMaxReached] = useState(1);
+  const [maxReached, setMaxReached] = useState(initStep);
   const [error, setError] = useState<string | null>(null);
   const [attemptedNext, setAttemptedNext] = useState(false);
   const [submitting, setSubmitting] = useState(false);

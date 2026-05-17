@@ -89,8 +89,10 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
   const initAdults = Math.max(1, Number(searchParams?.get("adults") ?? 2));
   const initChildren = Math.max(0, Number(searchParams?.get("children") ?? 0));
   const initSingleRooms = Math.max(0, Number(searchParams?.get("singleRooms") ?? 0));
+  const initStep = searchParams?.get("adults") ? 3 : 1;
 
   const { draft, setDraft, clearDraft } = useCheckoutDraft(tour.slug, {
+    step: initStep,
     departureCity: initDeparture,
     adults: initAdults,
     childCount: initChildren,
@@ -99,7 +101,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
 
   const [cityDepartures, setCityDepartures] = useState<{ islamabad: Departure | null; lahore: Departure | null; karachi: Departure | null }>({ islamabad: null, lahore: null, karachi: null });
   const [departuresLoaded, setDeparturesLoaded] = useState(false);
-  const [maxReachedStep, setMaxReachedStep] = useState<number>(draft.step);
+  const [maxReachedStep, setMaxReachedStep] = useState<number>(initStep);
   const [submitting, setSubmitting] = useState(false);
   const [submittedRef, setSubmittedRef] = useState<string | null>(null);
   const [whatsappSubmitted, setWhatsappSubmitted] = useState(false);
