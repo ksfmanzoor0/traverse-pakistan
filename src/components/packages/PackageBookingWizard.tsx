@@ -147,12 +147,15 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
   const searchParams = useSearchParams();
   const initAdults = Math.max(1, Number(searchParams?.get("adults") ?? 2));
   const initRooms = Math.max(1, Number(searchParams?.get("rooms") ?? Math.ceil(initAdults / 3)));
+  const initTier = (searchParams?.get("tier") as "deluxe" | "luxury" | null) ?? "deluxe";
+  const defaultCity = pkg.tiers.deluxe.islamabad !== null ? "islamabad" : pkg.tiers.deluxe.lahore !== null ? "lahore" : "karachi";
+  const initCity = (searchParams?.get("city") as "islamabad" | "lahore" | "karachi" | null) ?? defaultCity;
   const initStep = searchParams?.get("adults") ? 3 : 1;
 
   const [state, setState] = useState<WizardState>({
     step: initStep as 1 | 2 | 3 | 4,
-    tier: "deluxe",
-    city: pkg.tiers.deluxe.islamabad !== null ? "islamabad" : pkg.tiers.deluxe.lahore !== null ? "lahore" : "karachi",
+    tier: initTier,
+    city: initCity,
     startDate: null,
     adults: initAdults,
     rooms: initRooms,
@@ -263,14 +266,14 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
                 {(["deluxe", "luxury"] as PackageTier[]).map(tier => (
                   <button
                     key={tier} type="button" onClick={() => patch({ tier })}
-                    className={`h-14 rounded-[var(--radius-sm)] border-2 transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+                    className={`h-14 rounded-[var(--radius-sm)] border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
                       state.tier === tier
-                        ? "border-[var(--primary)] bg-[var(--primary-light)]"
+                        ? "bg-[var(--primary)] text-[var(--text-inverse)] border-[var(--primary)]"
                         : "border-[var(--border-default)] bg-[var(--bg-primary)] hover:border-[var(--primary)]"
                     }`}
                   >
-                    <span className="text-[14px] font-bold text-[var(--text-primary)] capitalize">{tier}</span>
-                    <span className="text-[12px] text-[var(--text-secondary)]">{formatPrice(pkg.tiers[tier].islamabad ?? pkg.tiers[tier].lahore ?? 0)} / person</span>
+                    <span className="text-[14px] font-bold capitalize">{tier}</span>
+                    <span className="text-[12px] opacity-80">{formatPrice(pkg.tiers[tier].islamabad ?? pkg.tiers[tier].lahore ?? 0)} / person</span>
                   </button>
                 ))}
               </div>
@@ -286,9 +289,9 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
                     .map(city => (
                       <button
                         key={city} type="button" onClick={() => patch({ city })}
-                        className={`h-12 rounded-[var(--radius-sm)] border-2 transition-all cursor-pointer capitalize text-[14px] font-semibold ${
+                        className={`h-12 rounded-[var(--radius-sm)] border transition-all cursor-pointer capitalize text-[14px] font-semibold ${
                           state.city === city
-                            ? "border-[var(--primary)] bg-[var(--primary-light)] text-[var(--primary-deep)]"
+                            ? "bg-[var(--primary)] text-[var(--text-inverse)] border-[var(--primary)]"
                             : "border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] hover:border-[var(--primary)]"
                         }`}
                       >
