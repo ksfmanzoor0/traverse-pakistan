@@ -17,7 +17,7 @@ import { TrustStrip } from "./TrustStrip";
 import { ReviewQuoteCard } from "./ReviewQuoteCard";
 import { PriceBreakdown } from "./PriceBreakdown";
 import { FAQInline } from "./FAQInline";
-import { ExitIntentDialog } from "./ExitIntentDialog";
+
 import { calculatePricing, type PaymentPlan } from "./pricing";
 import { deriveUrgency } from "./urgency";
 import type { TravelerProfile } from "./types";
@@ -292,7 +292,10 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Payment initiation failed");
+      if (!res.ok) {
+        const detail = data.issues ? data.issues.map((i: { message: string }) => i.message).join(", ") : null;
+        throw new Error(detail ? `${data.error}: ${detail}` : (data.error ?? "Payment initiation failed"));
+      }
       clearDraft();
       const form = document.createElement("form");
       form.method = "POST";
@@ -533,7 +536,6 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
         </aside>
       )}
 
-      <ExitIntentDialog tourName={tour.name} storageKey={tour.slug} />
     </div>
   );
 }
