@@ -245,7 +245,7 @@ function SuccessInner({ tour }: { tour: Tour }) {
 
       {ref && dueNow !== null && (
         <div className="mt-8">
-          <TourPayButton bookingRef={ref} amount={dueNow} />
+          <TourPayButton bookingRef={ref} amount={dueNow} plan={plan === "installments" ? "installments" : "full"} />
           <p className="mt-2 text-center text-[11px] text-[var(--text-tertiary)]">
             Secure card payment via Alfa Bank · No extra charges
           </p>

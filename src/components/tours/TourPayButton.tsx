@@ -6,9 +6,10 @@ import { formatPrice } from "@/lib/utils";
 interface TourPayButtonProps {
   bookingRef: string;
   amount: number;
+  plan?: "full" | "installments";
 }
 
-export function TourPayButton({ bookingRef, amount }: TourPayButtonProps) {
+export function TourPayButton({ bookingRef, amount, plan = "full" }: TourPayButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,7 +20,7 @@ export function TourPayButton({ bookingRef, amount }: TourPayButtonProps) {
       const res = await fetch("/api/payments/alfa/initiate-tour", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingRef, amount }),
+        body: JSON.stringify({ bookingRef, plan }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Payment initiation failed");
