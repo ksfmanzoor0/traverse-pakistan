@@ -12,7 +12,7 @@ const badgeConfig: Record<
 > = {
   "on-sale": {
     label: "ON SALE",
-    className: "bg-[var(--warning)] text-white",
+    className: "bg-[var(--warning)] text-[var(--text-inverse)]",
   },
   "epic-trek": {
     label: "EPIC TREK",
@@ -20,11 +20,11 @@ const badgeConfig: Record<
   },
   bestseller: {
     label: "BESTSELLER",
-    className: "bg-[var(--text-primary)] text-white",
+    className: "bg-[var(--accent-warm)] text-[var(--text-inverse)]",
   },
   new: {
     label: "NEW",
-    className: "bg-[var(--info)] text-white",
+    className: "bg-[var(--info)] text-[var(--text-inverse)]",
   },
 };
 
