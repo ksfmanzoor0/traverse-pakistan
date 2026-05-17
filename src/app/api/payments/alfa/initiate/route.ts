@@ -5,7 +5,7 @@ import { generateAlfaHash } from "@/lib/alfa/hash";
 import { createBooking } from "@/services/booking.service.server";
 
 const ParticipantSchema = z.object({
-  fullName: z.string().min(2).max(100),
+  fullName: z.string().max(100).optional(),
   cnicOrPassport: z.string().max(30).optional(),
   dateOfBirth: z.string().optional(),
   dietary: z.string().max(200).optional(),
@@ -18,7 +18,7 @@ const BookingInputSchema = z.object({
   singleRooms: z.number().int().min(0).max(20),
   contact: z.object({
     name: z.string().min(2).max(100),
-    email: z.string().email(),
+    email: z.string().email().optional().or(z.literal("")),
     phone: z.string().min(7).max(20),
   }),
   participants: z.array(ParticipantSchema).min(1).max(20),
@@ -37,7 +37,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const summary = await createBooking(parsed.data);
+    const summary = await createBooking({
+      ...parsed.data,
+      contact: { ...parsed.data.contact, email: parsed.data.contact.email ?? "" },
+    });
 
     const proto = req.headers.get("x-forwarded-proto") ?? "https";
     const host = req.headers.get("host") ?? "traversepakistan.com";

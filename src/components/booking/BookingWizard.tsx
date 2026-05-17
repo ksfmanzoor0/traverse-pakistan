@@ -196,7 +196,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
     if (step === 3) {
       if (!draft.contact.firstName.trim()) return "Lead traveller first name required";
       if (!validPhone(draft.contact.phone)) return "Enter a valid phone number";
-      if (draft.contact.email && !validEmail(draft.contact.email)) return "Enter a valid email";
+      if (draft.contact.email && !validEmail(draft.contact.email)) return "Enter a valid email address";
       return null;
     }
     return null;
@@ -287,7 +287,10 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Payment initiation failed");
+      if (!res.ok) {
+        const detail = data.issues ? data.issues.map((i: { message: string }) => i.message).join(", ") : null;
+        throw new Error(detail ? `${data.error}: ${detail}` : (data.error ?? "Payment initiation failed"));
+      }
       clearDraft();
       const form = document.createElement("form");
       form.method = "POST";
