@@ -347,7 +347,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
         });
         setSubmittedRef(result.bookingRef);
         clearDraft();
-        router.push(`/grouptours/${tour.slug}/checkout/success?ref=${result.bookingRef}&plan=${draft.paymentPlan}`);
+        router.push(`/grouptours/${tour.slug}/checkout/success?ref=${result.bookingRef}&plan=${draft.paymentPlan}&amount=${pricing.dueNow}`);
         return;
       } catch (e) {
         setError(e instanceof Error ? e.message : "We couldn't reserve that seat. Please try again or chat on WhatsApp.");

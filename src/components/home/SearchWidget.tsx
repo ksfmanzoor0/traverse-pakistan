@@ -481,7 +481,7 @@ export function SearchWidget({
   }, [defaultTab]);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
-  const [travelers, setTravelers] = useState({ adults: 2, children: 0, infants: 0 });
+  const [travelers, setTravelers] = useState({ adults: 1, children: 0, infants: 0 });
   const [destSearch, setDestSearch] = useState("");
   const widgetRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
