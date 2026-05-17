@@ -484,7 +484,7 @@ export function SearchWidget({
   const [travelers, setTravelers] = useState({ adults: 2, children: 0, infants: 0 });
   const [destSearch, setDestSearch] = useState("");
   const widgetRef = useRef<HTMLDivElement>(null);
-  const travelersInitialized = useRef(false);
+  const hasInteracted = useRef(false);
   const router = useRouter();
   const pathname = usePathname() ?? "";
 
@@ -513,28 +513,25 @@ export function SearchWidget({
     } catch { /* ignore */ }
   }, []);
 
-  // Persist tab/destination/date to sessionStorage on change.
+  // Persist search state to sessionStorage whenever it changes
   useEffect(() => {
     try {
-      const prev = JSON.parse(sessionStorage.getItem("tp_search") ?? "{}");
       sessionStorage.setItem("tp_search", JSON.stringify({
-        ...prev,
         activeTab,
         selectedDest,
         startDate: startDate?.toISOString() ?? null,
         endDate: endDate?.toISOString() ?? null,
+        travelers,
       }));
     } catch { /* ignore */ }
-  }, [activeTab, selectedDest, startDate, endDate]);
+  }, [activeTab, selectedDest, startDate, endDate, travelers]);
 
-  // Persist travelers only after the user explicitly changes the count — skips initial mount.
+  // Mark widget as opened the first time the user clicks any field
   useEffect(() => {
-    if (!travelersInitialized.current) { travelersInitialized.current = true; return; }
-    try {
-      const prev = JSON.parse(sessionStorage.getItem("tp_search") ?? "{}");
-      sessionStorage.setItem("tp_search", JSON.stringify({ ...prev, travelers }));
-    } catch { /* ignore */ }
-  }, [travelers]);
+    if (activeField !== null) {
+      try { sessionStorage.setItem("tp_search_opened", "1"); } catch { /* ignore */ }
+    }
+  }, [activeField]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

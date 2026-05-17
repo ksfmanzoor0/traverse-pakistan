@@ -38,7 +38,8 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
       const s = JSON.parse(raw) as {
         travelers?: { adults: number; children: number; infants: number };
       };
-      if (s.travelers) {
+      const widgetOpened = sessionStorage.getItem("tp_search_opened");
+      if (s.travelers && widgetOpened) {
         setAdults(Math.max(1, s.travelers.adults));
         setChildren(s.travelers.children);
       }
