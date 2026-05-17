@@ -484,7 +484,6 @@ export function SearchWidget({
   const [travelers, setTravelers] = useState({ adults: 2, children: 0, infants: 0 });
   const [destSearch, setDestSearch] = useState("");
   const widgetRef = useRef<HTMLDivElement>(null);
-  const hasInteracted = useRef(false);
   const router = useRouter();
   const pathname = usePathname() ?? "";
 
