@@ -17,7 +17,6 @@ import { TrustStrip } from "./TrustStrip";
 import { ReviewQuoteCard } from "./ReviewQuoteCard";
 import { PriceBreakdown } from "./PriceBreakdown";
 import { FAQInline } from "./FAQInline";
-
 import { calculatePricing, type PaymentPlan } from "./pricing";
 import { deriveUrgency } from "./urgency";
 import type { TravelerProfile } from "./types";
@@ -86,11 +85,13 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
   const router = useRouter();
 
   const initDeparture = (searchParams?.get("departure") ?? "islamabad") as DepartureCity;
-  const initAdults = Math.max(1, Number(searchParams?.get("adults") ?? 2));
+  const initAdults = Math.max(1, Number(searchParams?.get("adults") ?? 1));
   const initChildren = Math.max(0, Number(searchParams?.get("children") ?? 0));
   const initSingleRooms = Math.max(0, Number(searchParams?.get("singleRooms") ?? 0));
+  const initStep = searchParams?.get("adults") ? 3 : 1;
 
   const { draft, setDraft, clearDraft } = useCheckoutDraft(tour.slug, {
+    step: initStep,
     departureCity: initDeparture,
     adults: initAdults,
     childCount: initChildren,
@@ -99,7 +100,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
 
   const [cityDepartures, setCityDepartures] = useState<{ islamabad: Departure | null; lahore: Departure | null; karachi: Departure | null }>({ islamabad: null, lahore: null, karachi: null });
   const [departuresLoaded, setDeparturesLoaded] = useState(false);
-  const [maxReachedStep, setMaxReachedStep] = useState<number>(draft.step);
+  const [maxReachedStep, setMaxReachedStep] = useState<number>(initStep);
   const [submitting, setSubmitting] = useState(false);
   const [submittedRef, setSubmittedRef] = useState<string | null>(null);
   const [whatsappSubmitted, setWhatsappSubmitted] = useState(false);
@@ -169,15 +170,10 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
   }
 
   useEffect(() => {
-    if (draft.contact.firstName || draft.contact.lastName) {
-      const leadIdx = draft.travelers.findIndex((t) => t.isLead);
-      if (leadIdx >= 0) {
-        const combined = `${draft.contact.firstName} ${draft.contact.lastName}`.trim();
-        if (combined && draft.travelers[leadIdx].fullName === "") {
-          patchTraveler(leadIdx, { fullName: combined });
-        }
-      }
-    }
+    const leadIdx = draft.travelers.findIndex((t) => t.isLead);
+    if (leadIdx < 0) return;
+    const combined = `${draft.contact.firstName} ${draft.contact.lastName}`.trim();
+    if (combined) patchTraveler(leadIdx, { fullName: combined });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.contact.firstName, draft.contact.lastName]);
 
@@ -211,7 +207,6 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
       const err = validateStep(draft.step);
       if (err) {
         setAttemptedNext(true);
-        setError(err);
         return;
       }
     }
@@ -348,7 +343,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
         });
         setSubmittedRef(result.bookingRef);
         clearDraft();
-        router.push(`/grouptours/${tour.slug}/checkout/success?ref=${result.bookingRef}&plan=${draft.paymentPlan}`);
+        router.push(`/grouptours/${tour.slug}/checkout/success?ref=${result.bookingRef}&plan=${draft.paymentPlan}&amount=${pricing.dueNow}`);
         return;
       } catch (e) {
         setError(e instanceof Error ? e.message : "We couldn't reserve that seat. Please try again or chat on WhatsApp.");
@@ -482,24 +477,18 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
           {draft.step === 4 && (
             <button
               type="button"
-              onClick={isSupabaseConfigured && liveDeparture && hasCapacity ? handleCardPayment : handleSubmit}
+              onClick={handleSubmit}
               disabled={submitting}
               className="flex-1 h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-bold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-wait flex items-center justify-center gap-2"
             >
-              {submitting
-                ? "Processing…"
-                : isSupabaseConfigured && liveDeparture && hasCapacity
-                  ? <>Pay with Card · <span className="tabular-nums">{formatPrice(pricing.dueNow)}</span></>
-                  : "Confirm via WhatsApp"}
+              {submitting ? "Processing…" : "Confirm Booking"}
             </button>
           )}
         </div>
 
         {draft.step === 4 && (
           <p className="text-center text-[11px] text-[var(--text-tertiary)] -mt-4">
-            {isSupabaseConfigured && liveDeparture && hasCapacity
-              ? "You'll be redirected to a secure Bank Alfalah payment page."
-              : "You won't be charged yet — our team will confirm availability first."}
+            You won&apos;t be charged yet — pay securely on the next page.
           </p>
         )}
 

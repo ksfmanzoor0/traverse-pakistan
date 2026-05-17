@@ -1,33 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { alfaConfig } from "@/lib/alfa/config";
 import { generateAlfaHash } from "@/lib/alfa/hash";
-import { getSupabaseAdmin } from "@/lib/supabase/server";
 
-interface Body {
-  bookingRef: string;
-}
+const Schema = z.object({
+  bookingRef: z.string().min(1),
+  amount: z.number().positive(),
+});
 
 export async function POST(req: NextRequest) {
   try {
-    const body: Body = await req.json();
-    const { bookingRef } = body;
+    const raw = await req.json();
+    const parsed = Schema.safeParse(raw);
 
-    if (!bookingRef) {
-      return NextResponse.json({ error: "Missing bookingRef" }, { status: 400 });
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
-    const supabase = getSupabaseAdmin();
-    const { data, error } = await supabase
-      .from("bookings")
-      .select("total_amount")
-      .eq("booking_ref", bookingRef)
-      .maybeSingle();
-
-    if (error || !data) {
-      return NextResponse.json({ error: "Booking not found" }, { status: 404 });
-    }
-
-    const amount: number = data.total_amount as number;
+    const { bookingRef, amount } = parsed.data;
 
     const proto = req.headers.get("x-forwarded-proto") ?? "https";
     const host = req.headers.get("host") ?? "traversepakistan.com";
@@ -48,8 +38,8 @@ export async function POST(req: NextRequest) {
     };
 
     const requestHash = generateAlfaHash(hsParams, alfaConfig.key1, alfaConfig.key2);
-    const hsFormBody = new URLSearchParams({ ...hsParams, HS_RequestHash: requestHash });
 
+    const hsFormBody = new URLSearchParams({ ...hsParams, HS_RequestHash: requestHash });
     const hsResponse = await fetch(alfaConfig.hsUrl, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -61,15 +51,16 @@ export async function POST(req: NextRequest) {
     try {
       hsData = JSON.parse(hsText);
     } catch {
+      console.error("[alfa/initiate-tour] HS non-JSON response:", hsText.slice(0, 500));
       return NextResponse.json(
-        { error: `Handshake error (HTTP ${hsResponse.status}): ${hsText.slice(0, 200)}` },
+        { error: `Handshake returned unexpected response (HTTP ${hsResponse.status}): ${hsText.slice(0, 200)}` },
         { status: 502 }
       );
     }
 
     if (!hsData.AuthToken) {
       return NextResponse.json(
-        { error: hsData.ErrorMessage ?? "Handshake failed — no AuthToken" },
+        { error: hsData.ErrorMessage ?? "Handshake failed — no AuthToken returned" },
         { status: 502 }
       );
     }
@@ -96,7 +87,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ssoUrl: alfaConfig.ssoUrl,
       ssoParams: { ...ssoHashParams, RequestHash: ssoHash },
-      bookingRef,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Internal error";

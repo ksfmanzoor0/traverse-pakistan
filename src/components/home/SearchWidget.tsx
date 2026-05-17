@@ -525,6 +525,13 @@ export function SearchWidget({
     } catch { /* ignore */ }
   }, [activeTab, selectedDest, startDate, endDate, travelers]);
 
+  // Mark widget as opened the first time the user clicks any field
+  useEffect(() => {
+    if (activeField !== null) {
+      try { sessionStorage.setItem("tp_search_opened", "1"); } catch { /* ignore */ }
+    }
+  }, [activeField]);
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (widgetRef.current && !widgetRef.current.contains(e.target as Node)) {

@@ -17,6 +17,8 @@ function SuccessInner({ tour }: { tour: Tour }) {
   const params = useSearchParams();
   const ref = params.get("ref");
   const plan = params.get("plan");
+  const urlAmount = params.get("amount");
+  const dueNow = urlAmount ? Number(urlAmount) : null;
   const [booking, setBooking] = useState<Booking | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -121,12 +123,6 @@ function SuccessInner({ tour }: { tour: Tour }) {
         </div>
       )}
 
-      {ref && booking?.totalAmount && (
-        <div className="mt-6 max-w-[480px] mx-auto">
-          <TourPayButton bookingRef={ref} amount={booking.totalAmount} />
-        </div>
-      )}
-
       <div className="mt-8 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-6 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] overflow-hidden"
            style={{ boxShadow: "var(--shadow-sm)" }}>
         <div className="p-6 order-2 sm:order-1">
@@ -157,10 +153,20 @@ function SuccessInner({ tour }: { tour: Tour }) {
                 <dd className="text-right text-[var(--text-primary)] font-bold tabular-nums">
                   {formatPrice(booking.totalAmount)}
                 </dd>
-                {plan === "installments" && (
+                {dueNow !== null && plan === "installments" && (
                   <>
-                    <dt className="text-[var(--text-tertiary)]">Payment plan</dt>
-                    <dd className="text-right text-[var(--primary)] font-semibold">20% deposit</dd>
+                    <dt className="text-[var(--text-tertiary)]">Due now (20% deposit)</dt>
+                    <dd className="text-right text-[var(--primary)] font-bold tabular-nums">
+                      {formatPrice(dueNow)}
+                    </dd>
+                  </>
+                )}
+                {dueNow !== null && plan !== "installments" && (
+                  <>
+                    <dt className="text-[var(--text-tertiary)]">Due now</dt>
+                    <dd className="text-right text-[var(--primary)] font-bold tabular-nums">
+                      {formatPrice(dueNow)}
+                    </dd>
                   </>
                 )}
               </>
@@ -238,7 +244,16 @@ function SuccessInner({ tour }: { tour: Tour }) {
         </ol>
       </div>
 
-      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {ref && dueNow !== null && (
+        <div className="mt-8">
+          <TourPayButton bookingRef={ref} amount={dueNow} />
+          <p className="mt-2 text-center text-[11px] text-[var(--text-tertiary)]">
+            Secure card payment via Alfa Bank · No extra charges
+          </p>
+        </div>
+      )}
+
+      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
         <a
           href={getWhatsAppUrl(`Hi! I just booked ${tour.name}${ref ? ` (ref ${ref})` : ""}. I have a quick question.`)}
           target="_blank"
