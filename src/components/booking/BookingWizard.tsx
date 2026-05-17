@@ -17,7 +17,6 @@ import { TrustStrip } from "./TrustStrip";
 import { ReviewQuoteCard } from "./ReviewQuoteCard";
 import { PriceBreakdown } from "./PriceBreakdown";
 import { FAQInline } from "./FAQInline";
-import { ExitIntentDialog } from "./ExitIntentDialog";
 import { calculatePricing, type PaymentPlan } from "./pricing";
 import { deriveUrgency } from "./urgency";
 import type { TravelerProfile } from "./types";
@@ -523,7 +522,6 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
         </aside>
       )}
 
-      <ExitIntentDialog tourName={tour.name} storageKey={tour.slug} />
     </div>
   );
 }
