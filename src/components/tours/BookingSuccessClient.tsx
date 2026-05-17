@@ -11,7 +11,6 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getBookingByRef } from "@/services/booking.service";
 import type { Booking } from "@/types/booking";
 import type { Tour } from "@/types/tour";
-import { TourPayButton } from "@/components/tours/TourPayButton";
 
 function SuccessInner({ tour }: { tour: Tour }) {
   const params = useSearchParams();
