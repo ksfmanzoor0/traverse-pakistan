@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { alfaConfig } from "@/lib/alfa/config";
 import { generateAlfaHash } from "@/lib/alfa/hash";
+import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 const Schema = z.object({
   bookingRef: z.string().min(1),
-  amount: z.number().positive(),
+  plan: z.enum(["full", "installments"]).default("full"),
 });
+
+const INSTALLMENT_DEPOSIT_PCT = 0.2;
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,7 +20,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
-    const { bookingRef, amount } = parsed.data;
+    const { bookingRef, plan } = parsed.data;
+
+    // Look up amount server-side — never trust client-supplied amount
+    const supabase = getSupabaseAdmin();
+    const { data: booking, error: dbError } = await supabase
+      .from("bookings")
+      .select("total_amount")
+      .eq("booking_ref", bookingRef)
+      .single();
+
+    if (dbError || !booking) {
+      return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+    }
+
+    const totalAmount = Number(booking.total_amount);
+    const amount = plan === "installments"
+      ? Math.round(totalAmount * INSTALLMENT_DEPOSIT_PCT)
+      : totalAmount;
 
     const proto = req.headers.get("x-forwarded-proto") ?? "https";
     const host = req.headers.get("host") ?? "traversepakistan.com";
