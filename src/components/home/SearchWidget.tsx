@@ -484,6 +484,7 @@ export function SearchWidget({
   const [travelers, setTravelers] = useState({ adults: 2, children: 0, infants: 0 });
   const [destSearch, setDestSearch] = useState("");
   const widgetRef = useRef<HTMLDivElement>(null);
+  const travelersInitialized = useRef(false);
   const router = useRouter();
   const pathname = usePathname() ?? "";
 
@@ -512,8 +513,7 @@ export function SearchWidget({
     } catch { /* ignore */ }
   }, []);
 
-  // Persist search state to sessionStorage on tab/destination/date changes.
-  // travelers is intentionally excluded — only written on explicit Search click.
+  // Persist tab/destination/date to sessionStorage on change.
   useEffect(() => {
     try {
       const prev = JSON.parse(sessionStorage.getItem("tp_search") ?? "{}");
@@ -526,6 +526,15 @@ export function SearchWidget({
       }));
     } catch { /* ignore */ }
   }, [activeTab, selectedDest, startDate, endDate]);
+
+  // Persist travelers only after the user explicitly changes the count — skips initial mount.
+  useEffect(() => {
+    if (!travelersInitialized.current) { travelersInitialized.current = true; return; }
+    try {
+      const prev = JSON.parse(sessionStorage.getItem("tp_search") ?? "{}");
+      sessionStorage.setItem("tp_search", JSON.stringify({ ...prev, travelers }));
+    } catch { /* ignore */ }
+  }, [travelers]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -610,11 +619,6 @@ export function SearchWidget({
   }
 
   const handleSearch = () => {
-    try {
-      const prev = JSON.parse(sessionStorage.getItem("tp_search") ?? "{}");
-      sessionStorage.setItem("tp_search", JSON.stringify({ ...prev, travelers }));
-    } catch { /* ignore */ }
-
     const params = new URLSearchParams();
     if (selectedDest) {
       const dest = destinations.find((d) => d.slug === selectedDest);
