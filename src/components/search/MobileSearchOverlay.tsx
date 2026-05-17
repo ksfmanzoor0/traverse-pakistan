@@ -403,7 +403,7 @@ export function MobileSearchOverlay({ open, onClose, destinations, defaultTab = 
   const [selectedDest, setSelectedDest] = useState<string | null>(null);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
-  const [travelers, setTravelers] = useState({ adults: 1, children: 0, infants: 0 });
+  const [travelers, setTravelers] = useState({ adults: 2, children: 0, infants: 0 });
   // Stays flexible mode state (lifted from MobileStaysCalendar)
   const [staysMode, setStaysMode] = useState<"dates" | "flexible">("dates");
   const [flexDuration, setFlexDuration] = useState<"weekend" | "week" | "month">("week");
@@ -416,6 +416,7 @@ export function MobileSearchOverlay({ open, onClose, destinations, defaultTab = 
   useEffect(() => {
     if (!open) return;
     setActiveTab(defaultTab);
+    try { sessionStorage.setItem("tp_search_opened", "1"); } catch { /* ignore */ }
     try {
       const raw = sessionStorage.getItem("tp_search");
       if (!raw) return;
@@ -534,7 +535,7 @@ export function MobileSearchOverlay({ open, onClose, destinations, defaultTab = 
   function handleClear() {
     setSelectedDest(null); setDestSearch("");
     setStartDate(null); setEndDate(null);
-    setTravelers({ adults: 1, children: 0, infants: 0 });
+    setTravelers({ adults: 2, children: 0, infants: 0 });
     setActiveSection("where");
   }
 
