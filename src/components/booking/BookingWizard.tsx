@@ -170,15 +170,10 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
   }
 
   useEffect(() => {
-    if (draft.contact.firstName || draft.contact.lastName) {
-      const leadIdx = draft.travelers.findIndex((t) => t.isLead);
-      if (leadIdx >= 0) {
-        const combined = `${draft.contact.firstName} ${draft.contact.lastName}`.trim();
-        if (combined && draft.travelers[leadIdx].fullName === "") {
-          patchTraveler(leadIdx, { fullName: combined });
-        }
-      }
-    }
+    const leadIdx = draft.travelers.findIndex((t) => t.isLead);
+    if (leadIdx < 0) return;
+    const combined = `${draft.contact.firstName} ${draft.contact.lastName}`.trim();
+    if (combined) patchTraveler(leadIdx, { fullName: combined });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.contact.firstName, draft.contact.lastName]);
 
@@ -212,7 +207,6 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
       const err = validateStep(draft.step);
       if (err) {
         setAttemptedNext(true);
-        setError(err);
         return;
       }
     }
