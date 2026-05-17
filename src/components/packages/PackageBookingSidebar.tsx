@@ -160,7 +160,7 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
 
   // Rooms & travelers
   const [rooms, setRooms] = useState(1);
-  const [adults, setAdults] = useState(1);
+  const [adults, setAdults] = useState(2);
 
   const calWrapRef = useRef<HTMLDivElement>(null);
 
