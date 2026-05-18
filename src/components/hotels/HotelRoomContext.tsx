@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useReducer, useState, useMemo } from "react";
+import { createContext, useContext, useReducer, useState, useMemo, useEffect } from "react";
 import type { HotelRoom } from "@/types/hotel";
 
 export interface RoomSelection {
@@ -17,7 +17,8 @@ type Action =
   | { type: "SET_QTY"; room: HotelRoom; qty: number }
   | { type: "SET_ADULTS"; roomName: string; adults: number }
   | { type: "SET_CHILDREN"; roomName: string; children: number }
-  | { type: "SET_INFANT"; roomName: string; infant: boolean };
+  | { type: "SET_INFANT"; roomName: string; infant: boolean }
+  | { type: "RESTORE"; selections: SelectionsMap };
 
 function reducer(state: SelectionsMap, action: Action): SelectionsMap {
   const next = new Map(state);
@@ -55,6 +56,8 @@ function reducer(state: SelectionsMap, action: Action): SelectionsMap {
       next.set(action.roomName, { ...sel, infant: action.infant });
       return next;
     }
+    case "RESTORE":
+      return action.selections;
   }
 }
 
@@ -77,10 +80,67 @@ interface HotelRoomCtx {
 
 const HotelRoomContext = createContext<HotelRoomCtx | null>(null);
 
-export function HotelRoomProvider({ children }: { children: React.ReactNode }) {
+function storageKey(slug: string) { return `tp_hotel_${slug}`; }
+
+interface ProviderProps {
+  children: React.ReactNode;
+  slug: string;
+  rooms: HotelRoom[];
+}
+
+export function HotelRoomProvider({ children, slug, rooms }: ProviderProps) {
   const [selections, dispatch] = useReducer(reducer, new Map<string, RoomSelection>());
-  const [checkIn, setCheckIn] = useState<Date | null>(null);
-  const [checkOut, setCheckOut] = useState<Date | null>(null);
+  const [checkIn, setCheckInState] = useState<Date | null>(null);
+  const [checkOut, setCheckOutState] = useState<Date | null>(null);
+  const [restored, setRestored] = useState(false);
+
+  // Restore from sessionStorage on mount
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(storageKey(slug));
+      if (raw) {
+        const saved = JSON.parse(raw) as {
+          checkIn?: string;
+          checkOut?: string;
+          selections?: { roomName: string; qty: number; adults: number; children: number; infant: boolean }[];
+        };
+        if (saved.checkIn) setCheckInState(new Date(saved.checkIn));
+        if (saved.checkOut) setCheckOutState(new Date(saved.checkOut));
+        if (saved.selections?.length) {
+          const map = new Map<string, RoomSelection>();
+          for (const s of saved.selections) {
+            const room = rooms.find((r) => r.name === s.roomName);
+            if (room) map.set(s.roomName, { room, qty: s.qty, adults: s.adults, children: s.children, infant: s.infant });
+          }
+          if (map.size > 0) dispatch({ type: "RESTORE", selections: map });
+        }
+      }
+    } catch { /* ignore */ }
+    setRestored(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist to sessionStorage whenever state changes (after restore)
+  useEffect(() => {
+    if (!restored) return;
+    try {
+      const payload = {
+        checkIn: checkIn?.toISOString() ?? null,
+        checkOut: checkOut?.toISOString() ?? null,
+        selections: [...selections.values()].map((s) => ({
+          roomName: s.room.name,
+          qty: s.qty,
+          adults: s.adults,
+          children: s.children,
+          infant: s.infant,
+        })),
+      };
+      sessionStorage.setItem(storageKey(slug), JSON.stringify(payload));
+    } catch { /* ignore */ }
+  }, [slug, selections, checkIn, checkOut, restored]);
+
+  const setCheckIn = (d: Date | null) => setCheckInState(d);
+  const setCheckOut = (d: Date | null) => setCheckOutState(d);
 
   const totalRooms    = useMemo(() => [...selections.values()].reduce((s, v) => s + v.qty, 0), [selections]);
   const totalAdults   = useMemo(() => [...selections.values()].reduce((s, v) => s + v.adults, 0), [selections]);
