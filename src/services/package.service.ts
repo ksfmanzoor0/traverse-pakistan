@@ -40,7 +40,7 @@ function toPackage(row: PackageRow): Package {
     languages: row.languages ?? [],
     freeCancellation: row.free_cancellation,
     reserveNowPayLater: row.reserve_now_pay_later,
-    images: shuffleGallery(row.slug, ((row.images as unknown as string[] | null) ?? []).map((url) => ({ url, alt: row.name }))),
+    images: shuffleGallery(row.slug, (row.images as unknown as Package["images"] | null) ?? []),
     highlights: row.highlights ?? [],
     inclusions: row.inclusions ?? [],
     exclusions: row.exclusions ?? [],
