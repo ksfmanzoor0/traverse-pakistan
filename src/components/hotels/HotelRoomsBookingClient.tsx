@@ -80,8 +80,11 @@ function RoomCard({ room, roomIndex, roomImagesMap, seasons }: RoomCardProps) {
   const maxGuests = maxOcc * qty;
   const isOpen = expanded || qty > 0;
 
-  // Auto-expand when a room is first added
-  useEffect(() => { if (qty > 0) setExpanded(true); }, [qty]);
+  // Sync expanded with qty — expand on add, collapse when removed from any path
+  useEffect(() => {
+    if (qty > 0) setExpanded(true);
+    else setExpanded(false);
+  }, [qty]);
 
   const r2imgs = roomImagesMap[roomIndex] ?? [];
 
