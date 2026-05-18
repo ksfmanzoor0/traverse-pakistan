@@ -102,7 +102,7 @@ function RoomCard({ room, roomIndex, roomImagesMap, seasons }: RoomCardProps) {
     <div
       ref={cardRef}
       className={`rounded-[var(--radius-md)] border transition-all duration-[var(--duration-normal)] flex flex-col ${
-        qty > 0
+        isOpen
           ? "border-[var(--primary)] ring-2 ring-[var(--primary)]"
           : "border-[var(--border-default)]"
       }`}
