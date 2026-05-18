@@ -65,14 +65,14 @@ export default async function Home() {
         <TravelStylesGrid />
       </LazyMount>
 
-      {/* Desktop only — video + blog (after carousels, matching original order) */}
-      <DesktopOnly>
-        <VideoStories />
-        <BlogGrid />
-      </DesktopOnly>
-
       <WhyUsSection />
       <GoogleReviews />
+
+      {/* Desktop only — blog + video */}
+      <DesktopOnly>
+        <BlogGrid />
+        <VideoStories />
+      </DesktopOnly>
     </>
   );
 }
