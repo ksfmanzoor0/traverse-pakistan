@@ -104,8 +104,6 @@ function RoomCard({ room, roomIndex, roomImagesMap, seasons }: RoomCardProps) {
       className={`rounded-[var(--radius-md)] border transition-all duration-[var(--duration-normal)] flex flex-col ${
         qty > 0
           ? "border-[var(--primary)] ring-2 ring-[var(--primary)]"
-          : expanded
-          ? "border-[var(--primary)]"
           : "border-[var(--border-default)]"
       }`}
     >
