@@ -81,7 +81,7 @@ function RoomCard({ room, roomIndex, roomImagesMap, seasons }: RoomCardProps) {
   const maxGuests = maxOcc * qty;
   const isOpen = expanded || qty > 0;
 
-  // Auto-expand and scroll to card on mobile when first selected
+  // Sync expanded with qty — expand/scroll on add, collapse when removed from any path
   useEffect(() => {
     if (qty > 0) {
       setExpanded(true);
@@ -90,6 +90,8 @@ function RoomCard({ room, roomIndex, roomImagesMap, seasons }: RoomCardProps) {
           cardRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
         }, 50);
       }
+    } else {
+      setExpanded(false);
     }
   }, [qty]);
 
@@ -111,7 +113,7 @@ function RoomCard({ room, roomIndex, roomImagesMap, seasons }: RoomCardProps) {
         className={`overflow-hidden rounded-t-[var(--radius-md)] ${!isOpen ? "cursor-pointer" : ""}`}
         onClick={() => { if (!isOpen) setExpanded(true); }}
       >
-        <div className="aspect-[2/1] sm:aspect-[3/2]">
+        <div className="aspect-[5/2] sm:aspect-[3/2]">
           <RoomImageCarousel
             images={r2imgs}
             fallback={room.image}
