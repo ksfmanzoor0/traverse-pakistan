@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { formatPrice } from "@/lib/utils";
 import { Icon } from "@/components/ui/Icon";
 import { DEFAULT_ROOM_CAPACITY, applyHotelMargin } from "@/lib/constants";
@@ -60,11 +60,13 @@ interface RoomCardProps {
   roomIndex: number;
   roomImagesMap: Record<number, string[]>;
   seasons: HotelSeasonDefinition[];
+  activeIndex: number | null;
+  onActivate: (index: number | null) => void;
 }
 
-function RoomCard({ room, roomIndex, roomImagesMap, seasons }: RoomCardProps) {
+function RoomCard({ room, roomIndex, roomImagesMap, seasons, activeIndex, onActivate }: RoomCardProps) {
   const { selections, setQty, setAdults, setChildren, setInfant, checkIn } = useHotelRoom();
-  const [expanded, setExpanded] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const seasonLabel = checkIn && seasons.length > 0 ? getSeasonLabel(checkIn, seasons) : null;
   const displayPrice = getSeasonalPrice(room, seasonLabel);
@@ -78,64 +80,62 @@ function RoomCard({ room, roomIndex, roomImagesMap, seasons }: RoomCardProps) {
   const maxQty = Math.min(10, room.available);
   const totalGuests = adults + children;
   const maxGuests = maxOcc * qty;
-  const isOpen = expanded || qty > 0;
+  const isOpen = qty > 0 || activeIndex === roomIndex;
 
-  // Auto-expand when a room is first added
-  useEffect(() => { if (qty > 0) setExpanded(true); }, [qty]);
+  // Scroll to card on mobile when room is added; deactivate when qty drops to 0
+  useEffect(() => {
+    if (qty > 0) {
+      if (window.innerWidth < 640) {
+        setTimeout(() => cardRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
+      }
+    } else {
+      onActivate(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qty]);
 
   const r2imgs = roomImagesMap[roomIndex] ?? [];
 
+  const bedsLine = [room.beds, room.capacity ? `Max ${maxOcc} guest${maxOcc !== 1 ? "s" : ""}` : null]
+    .filter(Boolean).join(" · ");
+
   return (
     <div
-      className={`rounded-[var(--radius-md)] border transition-all duration-[var(--duration-normal)] flex flex-col ${
-        qty > 0
-          ? "border-[var(--primary)] ring-1 ring-[var(--primary)]"
-          : expanded
-          ? "border-[var(--primary)]"
-          : "border-[var(--border-default)]"
-      }`}
+      ref={cardRef}
+      className="rounded-[var(--radius-md)] border border-[var(--border-default)] transition-all duration-[var(--duration-normal)] flex flex-col"
+      style={(qty > 0 || activeIndex === roomIndex) ? { boxShadow: "0 0 0 2px var(--primary)" } : undefined}
     >
       <div
         className={`overflow-hidden rounded-t-[var(--radius-md)] ${!isOpen ? "cursor-pointer" : ""}`}
-        onClick={() => { if (!isOpen) setExpanded(true); }}
+        onClick={() => { if (!isOpen) onActivate(roomIndex); }}
       >
-        <RoomImageCarousel
-          images={r2imgs}
-          fallback={room.image}
-          alt={room.name}
-          available={room.available}
-        />
+        <div className="aspect-[5/2] sm:aspect-[3/2]">
+          <RoomImageCarousel
+            images={r2imgs}
+            fallback={room.image}
+            alt={room.name}
+            available={room.available}
+          />
+        </div>
       </div>
 
       {/* Info area — clickable to expand when not yet open */}
       <div
-        className={`p-4 flex-1 flex flex-col ${!isOpen ? "cursor-pointer" : ""}`}
-        onClick={() => { if (!isOpen) setExpanded(true); }}
+        className={`p-3 sm:p-4 flex-1 flex flex-col ${!isOpen ? "cursor-pointer" : ""}`}
+        onClick={() => { if (!isOpen) onActivate(roomIndex); }}
       >
-        <h3 className="text-[15px] font-bold text-[var(--text-primary)]">{room.name}</h3>
-        <p className="text-[17px] font-bold text-[var(--text-primary)] mt-1 tabular-nums">
+        <h3 className="text-[13px] sm:text-[15px] font-bold text-[var(--text-primary)]">{room.name}</h3>
+        <p className="text-[15px] sm:text-[17px] font-bold text-[var(--text-primary)] mt-1 tabular-nums">
           {formatPrice(displayPrice)}
-          <span className="text-[12px] font-normal text-[var(--text-tertiary)]"> /night</span>
+          <span className="text-[11px] sm:text-[12px] font-normal text-[var(--text-tertiary)]"> /night</span>
         </p>
-        <div className="mt-2 space-y-0.5">
-          {room.beds.split(" · ").map((detail, i) => (
-            <p key={i} className="text-[13px] text-[var(--text-tertiary)]">{detail}</p>
-          ))}
-        </div>
-        {room.capacity && (
-          <div className="flex items-center gap-1 mt-2">
-            <Icon name="users" size="xs" color="var(--text-tertiary)" />
-            <span className="text-[12px] text-[var(--text-tertiary)]">
-              Max {maxOcc} guest{maxOcc !== 1 ? "s" : ""}
-            </span>
-          </div>
-        )}
+        <p className="text-[11px] sm:text-[13px] text-[var(--text-tertiary)] mt-1.5 truncate">{bedsLine}</p>
 
         {/* Add room — mt-auto pins it to bottom of flex info area */}
         {!isOpen && (
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); setQty(room, 1); }}
+            onClick={(e) => { e.stopPropagation(); setQty(room, 1); onActivate(roomIndex); }}
             className="mt-auto pt-3 border-t border-[var(--border-default)] w-full flex items-center justify-between cursor-pointer group"
           >
             <span className="text-[12px] font-semibold text-[var(--primary)] group-hover:underline">Add room</span>
@@ -157,7 +157,7 @@ function RoomCard({ room, roomIndex, roomImagesMap, seasons }: RoomCardProps) {
             <div className="flex items-center justify-between pt-3 border-t border-[var(--border-default)]">
               <span className="text-[12px] font-semibold text-[var(--text-secondary)] uppercase tracking-[0.07em]">Rooms</span>
               <div className="flex items-center gap-3">
-                <QtyBtn onClick={() => { setQty(room, qty - 1); if (qty - 1 === 0) setExpanded(false); }} disabled={qty <= 0} label="decrease" />
+                <QtyBtn onClick={() => setQty(room, qty - 1)} disabled={qty <= 0} label="decrease" />
                 <span className="w-4 text-center text-[14px] font-bold tabular-nums text-[var(--text-primary)]">{qty}</span>
                 <QtyBtn onClick={() => setQty(room, qty + 1)} disabled={qty >= maxQty} label="increase" />
               </div>
@@ -213,13 +213,15 @@ interface Props {
 }
 
 export function HotelRoomsBookingClient({ hotel, roomImagesMap }: Props) {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+
   return (
     <>
       <div className="py-8 border-b border-[var(--border-default)]" id="rooms">
         <h2 className="text-xl font-bold text-[var(--text-primary)] mb-6">Where you&apos;ll sleep</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {hotel.rooms.map((room, i) => (
-            <RoomCard key={room.name} room={room} roomIndex={i} roomImagesMap={roomImagesMap} seasons={hotel.seasons ?? []} />
+            <RoomCard key={room.name} room={room} roomIndex={i} roomImagesMap={roomImagesMap} seasons={hotel.seasons ?? []} activeIndex={activeIndex} onActivate={setActiveIndex} />
           ))}
         </div>
       </div>
