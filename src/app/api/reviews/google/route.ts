@@ -23,7 +23,7 @@ export async function GET() {
   try {
     const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,rating,user_ratings_total,reviews&reviews_sort=most_relevant&key=${apiKey}`;
 
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetch(url, { next: { revalidate: 86400 } });
 
     if (!res.ok) throw new Error(`Places API error: ${res.status}`);
 
