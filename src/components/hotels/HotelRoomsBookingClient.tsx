@@ -100,12 +100,14 @@ function RoomCard({ room, roomIndex, roomImagesMap, seasons, activeIndex, onActi
         className={`overflow-hidden rounded-t-[var(--radius-md)] ${!isOpen ? "cursor-pointer" : ""}`}
         onClick={() => { if (!isOpen) onActivate(roomIndex); }}
       >
-        <RoomImageCarousel
-          images={r2imgs}
-          fallback={room.image}
-          alt={room.name}
-          available={room.available}
-        />
+        <div className="aspect-[3/2]">
+          <RoomImageCarousel
+            images={r2imgs}
+            fallback={room.image}
+            alt={room.name}
+            available={room.available}
+          />
+        </div>
       </div>
 
       {/* Info area — clickable to expand when not yet open */}

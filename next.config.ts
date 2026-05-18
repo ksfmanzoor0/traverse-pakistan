@@ -28,16 +28,6 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "traversepakistan.com",
-        pathname: "/wp-content/uploads/**",
-      },
-      {
-        protocol: "https",
-        hostname: "www.traversepakistan.com",
-        pathname: "/wp-content/uploads/**",
-      },
-      {
-        protocol: "https",
         hostname: "img.youtube.com",
         pathname: "/vi/**",
       },
