@@ -72,10 +72,12 @@ export async function listR2Images(prefix: string): Promise<string[]> {
 
     const headers = await awsSigV4Headers("GET", url, accessKey, secretKey);
     const res = await fetch(url.toString(), { headers });
-    if (!res.ok) return [];
+    console.log(`[r2] ${prefix} → ${res.status}`);
+    if (!res.ok) { console.error(`[r2] ${prefix} body:`, await res.text()); return []; }
 
     const text = await res.text();
     const keys = [...text.matchAll(/<Key>([^<]+)<\/Key>/g)].map((m) => m[1]);
+    console.log(`[r2] ${prefix} → ${keys.length} keys`);
     return keys.map((key) => `${MEDIA_BASE}/${encodeURI(key)}`).filter((u) => IMAGE_EXT.test(u));
   } catch (err) {
     console.error("[r2] listR2Images failed:", err);
