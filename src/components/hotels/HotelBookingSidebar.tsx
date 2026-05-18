@@ -103,7 +103,7 @@ function CalendarGrid({ checkIn, checkOut, hovered, selecting, onHover, onSelect
                   past ? "text-[var(--text-tertiary)] opacity-30 cursor-not-allowed" : "",
                   (isCI || isCO) ? "bg-[var(--primary)] text-[var(--text-inverse)] font-bold shadow-sm" : "",
                   !isCI && !isCO && !past ? "hover:bg-[var(--primary-light)] hover:text-[var(--primary)]" : "",
-                  isToday && !isCI && !isCO ? "border border-[var(--primary)] text-[var(--primary)]" : "",
+                  isToday && !isCI && !isCO ? "" : "",
                   inRange && !isCI && !isCO ? "text-[var(--primary)] font-semibold" : "",
                 ].join(" ")}>
                 {date.getDate()}
