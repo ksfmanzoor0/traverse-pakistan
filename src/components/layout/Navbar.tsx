@@ -51,11 +51,11 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
   const pathname = usePathname() ?? "";
   const isHome = pathname === "/";
   const isListing = LISTING_PATHS.some(p => pathname === p);
-  // Only the immediate slug level — excludes /packages/slug/checkout, /hotels/slug/checkout/success, etc.
+  // Slug level + checkout pages — excludes /success and deeper pages
   const isDetail = !isListing && LISTING_PATHS.some(p => {
     if (!pathname.startsWith(p + "/")) return false;
     const rest = pathname.slice(p.length + 1);
-    return !rest.includes("/");
+    return !rest.includes("/") || rest.endsWith("/checkout");
   });
   const showDesktopSearch = !isHome;
 
