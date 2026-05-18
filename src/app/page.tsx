@@ -68,10 +68,10 @@ export default async function Home() {
       <WhyUsSection />
       <GoogleReviews />
 
-      {/* Desktop only — video + blog */}
+      {/* Desktop only — blog + video */}
       <DesktopOnly>
-        <VideoStories />
         <BlogGrid />
+        <VideoStories />
       </DesktopOnly>
     </>
   );
