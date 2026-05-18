@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface Props {
   images: string[];
@@ -11,23 +11,39 @@ interface Props {
 }
 
 export function RoomImageCarousel({ images, fallback, alt, available }: Props) {
-  const imgs = (images.length > 0 ? images : fallback ? [fallback] : []).filter(Boolean);
+  const allImgs = (images.length > 0 ? images : fallback ? [fallback] : []).filter(Boolean);
+  const [errored, setErrored] = useState<Set<string>>(() => new Set());
+  const imgs = allImgs.filter((u) => !errored.has(u));
   const [idx, setIdx] = useState(0);
+
+  // Keep idx in bounds when errored images are removed
+  useEffect(() => {
+    if (idx >= imgs.length && imgs.length > 0) setIdx(imgs.length - 1);
+  }, [imgs.length, idx]);
 
   const prev = () => setIdx((i) => (i - 1 + imgs.length) % imgs.length);
   const next = () => setIdx((i) => (i + 1) % imgs.length);
 
+  const current = imgs[idx];
+
   return (
     <div className="relative aspect-[3/2] bg-[var(--bg-subtle)]">
-      {imgs[idx] && (
+      {current ? (
         <Image
-          key={idx}
-          src={imgs[idx]}
+          key={current}
+          src={current}
           alt={`${alt} — photo ${idx + 1}`}
           fill
           className="object-cover"
-          sizes="300px"
+          sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+          onError={() => setErrored((prev) => new Set([...prev, current]))}
         />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--border-strong)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+          </svg>
+        </div>
       )}
 
       {/* Availability badge */}
@@ -43,7 +59,6 @@ export function RoomImageCarousel({ images, fallback, alt, available }: Props) {
 
       {imgs.length > 1 && (
         <>
-          {/* Prev */}
           <button
             type="button"
             onClick={prev}
@@ -55,7 +70,6 @@ export function RoomImageCarousel({ images, fallback, alt, available }: Props) {
             </svg>
           </button>
 
-          {/* Next */}
           <button
             type="button"
             onClick={next}
@@ -67,7 +81,6 @@ export function RoomImageCarousel({ images, fallback, alt, available }: Props) {
             </svg>
           </button>
 
-          {/* Dot indicators */}
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
             {imgs.map((_, i) => (
               <button
