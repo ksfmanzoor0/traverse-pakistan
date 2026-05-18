@@ -49,8 +49,8 @@ export function MosaicGallery({ images: rawImages, tourName }: MosaicGalleryProp
                 src={images[0].url}
                 alt={images[0].alt}
                 fill
+                unoptimized
                 className="object-cover hover:scale-105 transition-transform duration-500"
-                sizes="(max-width: 640px) 100vw, 50vw"
                 priority
                 onError={() => onImgError(images[0].url)}
               />
@@ -70,8 +70,8 @@ export function MosaicGallery({ images: rawImages, tourName }: MosaicGalleryProp
                   src={img.url}
                   alt={img.alt}
                   fill
+                  unoptimized
                   className="object-cover hover:scale-105 transition-transform duration-500"
-                  sizes="(max-width: 640px) 0px, 12.5vw"
                   onError={() => onImgError(img.url)}
                 />
               </button>
@@ -144,8 +144,8 @@ export function MosaicGallery({ images: rawImages, tourName }: MosaicGalleryProp
                 src={images[activeIndex].url}
                 alt={images[activeIndex].alt}
                 fill
+                unoptimized
                 className="object-contain"
-                sizes="90vw"
                 onError={() => onImgError(images[activeIndex].url)}
               />
             )}

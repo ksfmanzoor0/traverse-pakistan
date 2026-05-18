@@ -34,8 +34,8 @@ export function RoomImageCarousel({ images, fallback, alt, available }: Props) {
           src={current}
           alt={`${alt} — photo ${idx + 1}`}
           fill
+          unoptimized
           className="object-cover"
-          sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
           onError={() => setErrored((prev) => new Set([...prev, current]))}
         />
       ) : (
