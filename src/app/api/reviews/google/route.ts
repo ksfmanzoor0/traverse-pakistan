@@ -29,7 +29,12 @@ export async function GET() {
 
     const data = await res.json();
 
-    if (data.status !== "OK") throw new Error(`Places API status: ${data.status}`);
+    if (data.status !== "OK") {
+      return NextResponse.json(
+        { error: `Places API: ${data.status}`, message: data.error_message ?? null },
+        { status: 502 }
+      );
+    }
 
     const result = data.result;
 
