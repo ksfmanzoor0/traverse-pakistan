@@ -71,7 +71,7 @@ export function MosaicGallery({ images: rawImages, tourName }: MosaicGalleryProp
                   alt={img.alt}
                   fill
                   className="object-cover hover:scale-105 transition-transform duration-500"
-                  sizes="25vw"
+                  sizes="(max-width: 640px) 0px, 12.5vw"
                   onError={() => onImgError(img.url)}
                 />
               </button>

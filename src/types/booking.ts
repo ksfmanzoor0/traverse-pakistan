@@ -16,7 +16,7 @@ export interface Departure {
 }
 
 export interface Participant {
-  fullName: string;
+  fullName?: string;
   cnicOrPassport?: string;
   dateOfBirth?: string;
   dietary?: string;

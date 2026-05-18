@@ -4,6 +4,15 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "./env";
 import type { Database } from "./types";
 
+// Service-role client — bypasses RLS. Use only in trusted server-side API routes.
+export function getSupabaseAdmin(): SupabaseClient<Database> {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceRoleKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set.");
+  return createClient<Database>(SUPABASE_URL, serviceRoleKey, {
+    auth: { persistSession: false },
+  });
+}
+
 type ServerClient = SupabaseClient<Database>;
 
 // Cookie-free client for public data and generateStaticParams contexts

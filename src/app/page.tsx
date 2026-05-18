@@ -12,6 +12,8 @@ import { FeaturedHotels } from "@/components/home/FeaturedHotels";
 import { BlogGrid } from "@/components/home/BlogGrid";
 import { WhyUsSection } from "@/components/home/WhyUsSection";
 import { ReviewsCarousel } from "@/components/home/ReviewsCarousel";
+import { DesktopOnly } from "@/components/ui/DesktopOnly";
+import { LazyMount } from "@/components/ui/LazyMount";
 import { buildMetadata } from "@/lib/seo/metadata";
 
 // VideoStories is deep below the fold and ships a client modal — defer its JS chunk
@@ -40,17 +42,35 @@ export default async function Home() {
 
   return (
     <>
-      {/* Desktop hero — hidden on mobile, client-only to prevent SearchWidget mounting on iOS */}
-      <HeroSectionWrapper destinations={destinations} />
+      {/* Desktop only — hero + stats */}
+      <DesktopOnly>
+        <HeroSectionWrapper destinations={destinations} />
+        <StatsBar />
+      </DesktopOnly>
 
-      <div className="hidden md:block"><StatsBar /></div>
-      <div className="hidden md:block"><FeaturedPackagesCarousel /></div>
-      <div className="hidden md:block"><PopularToursCarousel /></div>
-      <div className="hidden md:block"><FeaturedHotels /></div>
-      <DestinationsScroll />
-      <TravelStylesGrid />
-      <BlogGrid />
-      <div className="hidden md:block"><VideoStories /></div>
+      {/* All devices — lazy-mounted to prevent iOS OOM on scroll */}
+      <LazyMount>
+        <FeaturedPackagesCarousel />
+      </LazyMount>
+      <LazyMount>
+        <PopularToursCarousel />
+      </LazyMount>
+      <LazyMount>
+        <FeaturedHotels />
+      </LazyMount>
+      <LazyMount>
+        <DestinationsScroll />
+      </LazyMount>
+      <LazyMount>
+        <TravelStylesGrid />
+      </LazyMount>
+
+      {/* Desktop only — video + blog (after carousels, matching original order) */}
+      <DesktopOnly>
+        <VideoStories />
+        <BlogGrid />
+      </DesktopOnly>
+
       <WhyUsSection />
       <ReviewsCarousel />
     </>

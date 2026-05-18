@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { alfaConfig } from "@/lib/alfa/config";
 import { generateAlfaHash } from "@/lib/alfa/hash";
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 interface Body {
   bookingRef: string;
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing bookingRef" }, { status: 400 });
     }
 
-    const supabase = await getSupabaseServer();
+    const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("hotel_bookings")
       .select("total_amount")
@@ -29,15 +29,18 @@ export async function POST(req: NextRequest) {
 
     const amount: number = data.total_amount as number;
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://traversepakistan.com";
-    const returnUrl = `${siteUrl}/payments/hotel/return`;
+    const proto = req.headers.get("x-forwarded-proto") ?? "https";
+    const host = req.headers.get("host") ?? "traversepakistan.com";
+    const siteUrl = `${proto}://${host}`;
+    const returnUrl = `${siteUrl}/payments/return`;
 
     const hsParams: Record<string, string> = {
-      HS_ChannelId: alfaConfig.channelId,
+      HS_RequestHash: "",
       HS_IsRedirectionRequest: "0",
+      HS_ChannelId: alfaConfig.channelId,
+      HS_ReturnURL: returnUrl,
       HS_MerchantId: alfaConfig.merchantId,
       HS_StoreId: alfaConfig.storeId,
-      HS_ReturnURL: returnUrl,
       HS_MerchantHash: alfaConfig.merchantHash,
       HS_MerchantUsername: alfaConfig.merchantUsername,
       HS_MerchantPassword: alfaConfig.merchantPassword,
@@ -86,7 +89,7 @@ export async function POST(req: NextRequest) {
       MerchantPassword: alfaConfig.merchantPassword,
       TransactionTypeId: "3",
       TransactionReferenceNumber: bookingRef,
-      TransactionAmount: String(amount),
+      TransactionAmount: Number(amount).toFixed(2),
     };
 
     const ssoHash = generateAlfaHash(ssoHashParams, alfaConfig.key1, alfaConfig.key2);

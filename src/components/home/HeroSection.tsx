@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { SearchWidget, type DestinationOption } from "./SearchWidget";
 
@@ -9,27 +12,39 @@ const heroImages = [15, 1, 9, 12, 14, 10].map((n) => ({
 }));
 
 export function HeroSection({ destinations = [] }: { destinations?: DestinationOption[] }) {
+  const [slidesReady, setSlidesReady] = useState(false);
+
+  // Only render slides 1-5 after mount — avoids downloading 6 images on initial load.
+  // Slide 0 has priority and loads immediately; the rest wait until hydration.
+  useEffect(() => {
+    setSlidesReady(true);
+  }, []);
+
   return (
     <section className="relative hidden md:block">
       <div className="absolute inset-0 overflow-hidden">
-        {heroImages.map((img, i) => (
-          <div
-            key={img.url}
-            className="hero-slide absolute inset-0"
-            style={{ animationDelay: `${-i * 6}s` }}
-          >
-            <Image
-              src={img.url}
-              alt={img.alt}
-              fill
-              priority={i === 0}
-              fetchPriority={i === 0 ? "high" : "low"}
-              sizes="100vw"
-              quality={95}
-              className="object-cover"
-            />
-          </div>
-        ))}
+        {heroImages.map((img, i) => {
+          if (i > 0 && !slidesReady) return null;
+          return (
+            <div
+              key={img.url}
+              className="hero-slide absolute inset-0"
+              style={{ animationDelay: `${-i * 6}s` }}
+            >
+              <Image
+                src={img.url}
+                alt={img.alt}
+                fill
+                priority={i === 0}
+                fetchPriority={i === 0 ? "high" : "low"}
+                loading={i === 0 ? "eager" : "lazy"}
+                sizes="100vw"
+                quality={75}
+                className="object-cover"
+              />
+            </div>
+          );
+        })}
         {/* Overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-[rgba(15,34,32,0.5)] via-[rgba(0,0,0,0.15)] to-[rgba(15,34,32,0.6)]" />
       </div>
