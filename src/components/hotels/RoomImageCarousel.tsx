@@ -27,7 +27,7 @@ export function RoomImageCarousel({ images, fallback, alt, available }: Props) {
   const current = imgs[idx];
 
   return (
-    <div className="relative aspect-[3/2] bg-[var(--bg-subtle)]">
+    <div className="relative w-full h-full bg-[var(--bg-subtle)]">
       {current ? (
         <Image
           key={current}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { formatPrice } from "@/lib/utils";
 import { Icon } from "@/components/ui/Icon";
 import { DEFAULT_ROOM_CAPACITY, applyHotelMargin } from "@/lib/constants";
@@ -65,6 +65,7 @@ interface RoomCardProps {
 function RoomCard({ room, roomIndex, roomImagesMap, seasons }: RoomCardProps) {
   const { selections, setQty, setAdults, setChildren, setInfant, checkIn } = useHotelRoom();
   const [expanded, setExpanded] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const seasonLabel = checkIn && seasons.length > 0 ? getSeasonLabel(checkIn, seasons) : null;
   const displayPrice = getSeasonalPrice(room, seasonLabel);
@@ -80,16 +81,29 @@ function RoomCard({ room, roomIndex, roomImagesMap, seasons }: RoomCardProps) {
   const maxGuests = maxOcc * qty;
   const isOpen = expanded || qty > 0;
 
-  // Auto-expand when a room is first added
-  useEffect(() => { if (qty > 0) setExpanded(true); }, [qty]);
+  // Auto-expand and scroll to card on mobile when first selected
+  useEffect(() => {
+    if (qty > 0) {
+      setExpanded(true);
+      if (window.innerWidth < 640) {
+        setTimeout(() => {
+          cardRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }, 50);
+      }
+    }
+  }, [qty]);
 
   const r2imgs = roomImagesMap[roomIndex] ?? [];
 
+  const bedsLine = [room.beds, room.capacity ? `Max ${maxOcc} guest${maxOcc !== 1 ? "s" : ""}` : null]
+    .filter(Boolean).join(" · ");
+
   return (
     <div
+      ref={cardRef}
       className={`rounded-[var(--radius-md)] border transition-all duration-[var(--duration-normal)] flex flex-col ${
         qty > 0
-          ? "border-[var(--primary)] ring-1 ring-[var(--primary)]"
+          ? "border-[var(--primary)] ring-2 ring-[var(--primary)]"
           : expanded
           ? "border-[var(--primary)]"
           : "border-[var(--border-default)]"
@@ -99,37 +113,27 @@ function RoomCard({ room, roomIndex, roomImagesMap, seasons }: RoomCardProps) {
         className={`overflow-hidden rounded-t-[var(--radius-md)] ${!isOpen ? "cursor-pointer" : ""}`}
         onClick={() => { if (!isOpen) setExpanded(true); }}
       >
-        <RoomImageCarousel
-          images={r2imgs}
-          fallback={room.image}
-          alt={room.name}
-          available={room.available}
-        />
+        <div className="aspect-[2/1] sm:aspect-[3/2]">
+          <RoomImageCarousel
+            images={r2imgs}
+            fallback={room.image}
+            alt={room.name}
+            available={room.available}
+          />
+        </div>
       </div>
 
       {/* Info area — clickable to expand when not yet open */}
       <div
-        className={`p-4 flex-1 flex flex-col ${!isOpen ? "cursor-pointer" : ""}`}
+        className={`p-3 sm:p-4 flex-1 flex flex-col ${!isOpen ? "cursor-pointer" : ""}`}
         onClick={() => { if (!isOpen) setExpanded(true); }}
       >
-        <h3 className="text-[15px] font-bold text-[var(--text-primary)]">{room.name}</h3>
-        <p className="text-[17px] font-bold text-[var(--text-primary)] mt-1 tabular-nums">
+        <h3 className="text-[13px] sm:text-[15px] font-bold text-[var(--text-primary)]">{room.name}</h3>
+        <p className="text-[15px] sm:text-[17px] font-bold text-[var(--text-primary)] mt-1 tabular-nums">
           {formatPrice(displayPrice)}
-          <span className="text-[12px] font-normal text-[var(--text-tertiary)]"> /night</span>
+          <span className="text-[11px] sm:text-[12px] font-normal text-[var(--text-tertiary)]"> /night</span>
         </p>
-        <div className="mt-2 space-y-0.5">
-          {room.beds.split(" · ").map((detail, i) => (
-            <p key={i} className="text-[13px] text-[var(--text-tertiary)]">{detail}</p>
-          ))}
-        </div>
-        {room.capacity && (
-          <div className="flex items-center gap-1 mt-2">
-            <Icon name="users" size="xs" color="var(--text-tertiary)" />
-            <span className="text-[12px] text-[var(--text-tertiary)]">
-              Max {maxOcc} guest{maxOcc !== 1 ? "s" : ""}
-            </span>
-          </div>
-        )}
+        <p className="text-[11px] sm:text-[13px] text-[var(--text-tertiary)] mt-1.5 truncate">{bedsLine}</p>
 
         {/* Add room — mt-auto pins it to bottom of flex info area */}
         {!isOpen && (
