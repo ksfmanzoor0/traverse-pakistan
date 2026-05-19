@@ -24,7 +24,7 @@ export function RoomImageCarousel({ images, fallback, alt, available }: Props) {
   const current = imgs[idx];
 
   return (
-    <div className="relative aspect-[3/2] bg-[var(--bg-subtle)]">
+    <div className="relative aspect-[5/2] sm:aspect-[3/2] bg-[var(--bg-subtle)]">
       {current ? (
         <SmartImage
           key={current}
@@ -32,6 +32,7 @@ export function RoomImageCarousel({ images, fallback, alt, available }: Props) {
           alt={`${alt} — photo ${idx + 1}`}
           fill
           className="object-cover"
+          sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
         />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center">
