@@ -573,12 +573,12 @@ function StepDates({
                   onClick={() => onCityChange(city)}
                   className={`text-left p-4 rounded-[var(--radius-sm)] border-2 transition-all cursor-pointer ${
                     active
-                      ? "border-[var(--primary)] bg-[var(--primary-light)]"
+                      ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--text-inverse)]"
                       : "border-[var(--border-default)] bg-[var(--bg-primary)] hover:border-[var(--primary)]"
                   }`}
                 >
-                  <p className="text-[15px] font-bold text-[var(--text-primary)] capitalize">{city}</p>
-                  <p className="text-[12px] text-[var(--text-secondary)] mt-0.5">{formatPrice(price)} per person</p>
+                  <p className={`text-[15px] font-bold capitalize ${active ? "text-[var(--text-inverse)]" : "text-[var(--text-primary)]"}`}>{city}</p>
+                  <p className={`text-[12px] mt-0.5 ${active ? "text-[var(--text-inverse)] opacity-80" : "text-[var(--text-secondary)]"}`}>{formatPrice(price)} per person</p>
                 </button>
               );
             })}
