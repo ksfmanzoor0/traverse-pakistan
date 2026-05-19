@@ -30,7 +30,7 @@ export const DEFAULT_DRAFT = (tourSlug: string, city: DepartureCity = "islamabad
   tourSlug,
   departureCity: city,
   departureDate: null,
-  adults: 2,
+  adults: 1,
   childCount: 0,
   singleRooms: 0,
   travelers: [],

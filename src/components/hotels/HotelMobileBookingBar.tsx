@@ -100,7 +100,7 @@ function CalendarGrid({ checkIn, checkOut, hovered, selecting, onHover, onSelect
                   past ? "text-[var(--text-tertiary)] opacity-30 cursor-not-allowed" : "",
                   (isCI || isCO) ? "bg-[var(--primary)] text-[var(--text-inverse)] font-bold shadow-sm" : "",
                   !isCI && !isCO && !past ? "hover:bg-[var(--primary-light)] hover:text-[var(--primary)]" : "",
-                  isToday && !isCI && !isCO ? "border border-[var(--primary)] text-[var(--primary)]" : "",
+                  isToday && !isCI && !isCO ? "" : "",
                   inRange && !isCI && !isCO ? "text-[var(--primary)] font-semibold" : "",
                 ].join(" ")}>{date.getDate()}</button>
             </div>
@@ -383,9 +383,26 @@ export function HotelMobileBookingBar({ hotel }: { hotel: Hotel }) {
                 </Link>
               ) : (
                 <button type="button"
-                  onClick={() => !hasSelections ? setSheetOpen(false) : openFor("checkin")}
+                  onClick={() => {
+                    if (!hasSelections && checkIn && checkOut) {
+                      setSheetOpen(false);
+                      setTimeout(() => {
+                        document.getElementById("rooms")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }, 150);
+                    } else if (!hasSelections) {
+                      setSheetOpen(false);
+                    } else {
+                      openFor("checkin");
+                    }
+                  }}
                   className="w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-semibold rounded-[var(--radius-sm)] flex items-center justify-center hover:bg-[var(--primary-hover)] active:scale-[0.98] transition-all cursor-pointer">
-                  {!hasSelections ? "Select rooms above" : checkIn ? "Select check-out date" : "Select dates to book"}
+                  {!hasSelections && checkIn && checkOut
+                    ? "Select rooms below"
+                    : !hasSelections
+                    ? "Select dates to book"
+                    : checkIn
+                    ? "Select check-out date"
+                    : "Select dates to book"}
                 </button>
               )}
               <p className="text-center text-[12px] text-[var(--text-tertiary)] mt-2">You won&apos;t be charged yet</p>

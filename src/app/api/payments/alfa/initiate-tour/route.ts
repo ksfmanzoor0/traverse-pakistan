@@ -2,45 +2,42 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { alfaConfig } from "@/lib/alfa/config";
 import { generateAlfaHash } from "@/lib/alfa/hash";
-import { createBooking } from "@/services/booking.service.server";
+import { getSupabaseAdmin } from "@/lib/supabase/server";
 
-const ParticipantSchema = z.object({
-  fullName: z.string().max(100).optional(),
-  cnicOrPassport: z.string().max(30).optional(),
-  dateOfBirth: z.string().optional(),
-  dietary: z.string().max(200).optional(),
-  emergencyContact: z.string().max(100).optional(),
+const Schema = z.object({
+  bookingRef: z.string().min(1),
+  plan: z.enum(["full", "installments"]).default("full"),
 });
 
-const BookingInputSchema = z.object({
-  departureId: z.string().uuid(),
-  seats: z.number().int().min(1).max(20),
-  singleRooms: z.number().int().min(0).max(20),
-  contact: z.object({
-    name: z.string().min(2).max(100),
-    email: z.string().email().optional().or(z.literal("")),
-    phone: z.string().min(7).max(20),
-  }),
-  participants: z.array(ParticipantSchema).min(1).max(20),
-  notes: z.string().max(500).optional(),
-});
+const INSTALLMENT_DEPOSIT_PCT = 0.2;
 
 export async function POST(req: NextRequest) {
   try {
     const raw = await req.json();
-    const parsed = BookingInputSchema.safeParse(raw.booking);
+    const parsed = Schema.safeParse(raw);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Invalid booking data", issues: parsed.error.issues },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
-    const summary = await createBooking({
-      ...parsed.data,
-      contact: { ...parsed.data.contact, email: parsed.data.contact.email ?? "" },
-    });
+    const { bookingRef, plan } = parsed.data;
+
+    // Look up amount server-side — never trust client-supplied amount
+    const supabase = getSupabaseAdmin();
+    const { data: booking, error: dbError } = await supabase
+      .from("bookings")
+      .select("total_amount")
+      .eq("booking_ref", bookingRef)
+      .single();
+
+    if (dbError || !booking) {
+      return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+    }
+
+    const totalAmount = Number(booking.total_amount);
+    const amount = plan === "installments"
+      ? Math.round(totalAmount * INSTALLMENT_DEPOSIT_PCT)
+      : totalAmount;
 
     const proto = req.headers.get("x-forwarded-proto") ?? "https";
     const host = req.headers.get("host") ?? "traversepakistan.com";
@@ -57,12 +54,11 @@ export async function POST(req: NextRequest) {
       HS_MerchantHash: alfaConfig.merchantHash,
       HS_MerchantUsername: alfaConfig.merchantUsername,
       HS_MerchantPassword: alfaConfig.merchantPassword,
-      HS_TransactionReferenceNumber: summary.bookingRef,
+      HS_TransactionReferenceNumber: bookingRef,
     };
 
     const requestHash = generateAlfaHash(hsParams, alfaConfig.key1, alfaConfig.key2);
 
-    // APG expects form-urlencoded, not JSON
     const hsFormBody = new URLSearchParams({ ...hsParams, HS_RequestHash: requestHash });
     const hsResponse = await fetch(alfaConfig.hsUrl, {
       method: "POST",
@@ -75,7 +71,7 @@ export async function POST(req: NextRequest) {
     try {
       hsData = JSON.parse(hsText);
     } catch {
-      console.error("[alfa/initiate] HS non-JSON response:", hsText.slice(0, 500));
+      console.error("[alfa/initiate-tour] HS non-JSON response:", hsText.slice(0, 500));
       return NextResponse.json(
         { error: `Handshake returned unexpected response (HTTP ${hsResponse.status}): ${hsText.slice(0, 200)}` },
         { status: 502 }
@@ -89,7 +85,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // PHP includes RequestHash="" (null) in the hash string before computing — order matters
     const ssoHashParams: Record<string, string> = {
       AuthToken: hsData.AuthToken,
       RequestHash: "",
@@ -103,8 +98,8 @@ export async function POST(req: NextRequest) {
       MerchantUsername: alfaConfig.merchantUsername,
       MerchantPassword: alfaConfig.merchantPassword,
       TransactionTypeId: "3",
-      TransactionReferenceNumber: summary.bookingRef,
-      TransactionAmount: Number(summary.totalAmount).toFixed(2),
+      TransactionReferenceNumber: bookingRef,
+      TransactionAmount: Number(amount).toFixed(2),
     };
 
     const ssoHash = generateAlfaHash(ssoHashParams, alfaConfig.key1, alfaConfig.key2);
@@ -112,11 +107,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ssoUrl: alfaConfig.ssoUrl,
       ssoParams: { ...ssoHashParams, RequestHash: ssoHash },
-      bookingRef: summary.bookingRef,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Internal error";
-    console.error("[alfa/initiate]", err);
+    console.error("[alfa/initiate-tour]", err);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

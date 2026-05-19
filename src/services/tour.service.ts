@@ -1,5 +1,7 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
+
+const todayISO = () => new Date().toISOString().split("T")[0];
 import { getSupabaseAnon } from "@/lib/supabase/server";
 import { listR2Images, buildImagesFromR2 } from "@/lib/r2";
 import type { TourRow, TourItineraryDayRow } from "@/lib/supabase/types";
@@ -38,7 +40,9 @@ function toTour(
     languages: row.languages,
     freeCancellation: row.free_cancellation,
     reserveNowPayLater: row.reserve_now_pay_later,
-    images: r2Images ?? (row.images as TourImage[]) ?? [],
+    images: r2Images ?? ((row.images as unknown as (TourImage | string)[] | null) ?? []).map((img) =>
+      typeof img === "string" ? { url: img, alt: row.name } : img
+    ),
     guide: row.guide ?? undefined,
     highlights: row.highlights,
     inclusions: row.inclusions,
@@ -88,7 +92,7 @@ async function buildPriceMap(supabase: ReturnType<typeof getSupabaseAnon>, slugs
 const _fetchAllTours = unstable_cache(
   async (): Promise<Tour[]> => {
     const supabase = getSupabaseAnon();
-    const { data, error } = await supabase.from("tours").select("*").order("departure_date", { nullsFirst: false });
+    const { data, error } = await supabase.from("tours").select("*").gte("departure_date", todayISO()).order("departure_date", { nullsFirst: false });
     if (error) throw new Error(`getAllTours: ${error.message}`);
     const rows = data as TourRow[];
     const priceMap = await buildPriceMap(supabase, rows.map((r) => r.slug));
@@ -116,7 +120,7 @@ export const getTourBySlug = cache(async (slug: string): Promise<Tour | null> =>
 
 export const getToursByDestination = cache(async (destinationSlug: string): Promise<Tour[]> => {
   const supabase = getSupabaseAnon();
-  const { data, error } = await supabase.from("tours").select("*").eq("destination_slug", destinationSlug);
+  const { data, error } = await supabase.from("tours").select("*").eq("destination_slug", destinationSlug).gte("departure_date", todayISO());
   if (error) throw new Error(`getToursByDestination: ${error.message}`);
   const rows = data as TourRow[];
   const priceMap = await buildPriceMap(supabase, rows.map((r) => r.slug));
@@ -125,7 +129,7 @@ export const getToursByDestination = cache(async (destinationSlug: string): Prom
 
 export const getToursByRegion = cache(async (regionSlug: string): Promise<Tour[]> => {
   const supabase = getSupabaseAnon();
-  const { data, error } = await supabase.from("tours").select("*").eq("region_slug", regionSlug);
+  const { data, error } = await supabase.from("tours").select("*").eq("region_slug", regionSlug).gte("departure_date", todayISO());
   if (error) throw new Error(`getToursByRegion: ${error.message}`);
   const rows = data as TourRow[];
   const priceMap = await buildPriceMap(supabase, rows.map((r) => r.slug));
@@ -134,7 +138,7 @@ export const getToursByRegion = cache(async (regionSlug: string): Promise<Tour[]
 
 export const getToursByCategory = cache(async (category: TourCategory): Promise<Tour[]> => {
   const supabase = getSupabaseAnon();
-  const { data, error } = await supabase.from("tours").select("*").eq("category", category);
+  const { data, error } = await supabase.from("tours").select("*").eq("category", category).gte("departure_date", todayISO());
   if (error) throw new Error(`getToursByCategory: ${error.message}`);
   const rows = data as TourRow[];
   const priceMap = await buildPriceMap(supabase, rows.map((r) => r.slug));
@@ -143,7 +147,7 @@ export const getToursByCategory = cache(async (category: TourCategory): Promise<
 
 export const getToursByStyle = cache(async (styleSlug: string): Promise<Tour[]> => {
   const supabase = getSupabaseAnon();
-  const { data, error } = await supabase.from("tours").select("*").contains("travel_style_slugs", [styleSlug]).order("created_at", { ascending: false });
+  const { data, error } = await supabase.from("tours").select("*").contains("travel_style_slugs", [styleSlug]).gte("departure_date", todayISO()).order("created_at", { ascending: false });
   if (error) throw new Error(`getToursByStyle: ${error.message}`);
   const rows = data as TourRow[];
   const priceMap = await buildPriceMap(supabase, rows.map((r) => r.slug));
@@ -152,7 +156,7 @@ export const getToursByStyle = cache(async (styleSlug: string): Promise<Tour[]> 
 
 export const getFeaturedTours = cache(async (limit?: number): Promise<Tour[]> => {
   const supabase = getSupabaseAnon();
-  let query = supabase.from("tours").select("*").not("badge", "is", null).order("review_count", { ascending: false });
+  let query = supabase.from("tours").select("*").not("badge", "is", null).gte("departure_date", todayISO()).order("review_count", { ascending: false });
   if (limit) query = query.limit(limit);
   const { data, error } = await query;
   if (error) throw new Error(`getFeaturedTours: ${error.message}`);
