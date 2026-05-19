@@ -55,8 +55,12 @@ function CheckoutInner() {
       });
   }, [ref]);
 
-  // Load jQuery then Alfa script in sequence; initialize checkout once both are ready
+  // Load jQuery then Alfa script only after form is in DOM (state === "ready")
+  // Alfa's script binds #InitiateTrans click handler in $(document).ready —
+  // if it loads before the form renders, the binding silently fails
   useEffect(() => {
+    if (state !== "ready" || !initParams || scriptReady.current) return;
+
     function loadScript(src: string, onload: () => void) {
       const s = document.createElement("script");
       s.src = src;
@@ -70,17 +74,11 @@ function CheckoutInner() {
         "https://merchants.bankalfalah.com/merchantportalprelive/HostedCheckoutFiles/HostedCheckoutPayments.js",
         () => {
           scriptReady.current = true;
-          if (state === "ready" && initParams) initializeCheckout(initParams);
+          initializeCheckout(initParams);
         }
       );
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (state === "ready" && initParams && scriptReady.current) {
-      initializeCheckout(initParams);
-    }
   }, [state, initParams]);
 
   function initializeCheckout(params: typeof initParams) {
