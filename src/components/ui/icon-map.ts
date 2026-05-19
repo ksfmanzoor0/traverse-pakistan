@@ -65,6 +65,8 @@ import {
   FacebookLogo,
   InstagramLogo,
   YoutubeLogo,
+  Bookmark,
+  PencilSimple,
 } from "@phosphor-icons/react/dist/ssr";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 
@@ -135,6 +137,8 @@ export const iconMap = {
   facebook: FacebookLogo,
   instagram: InstagramLogo,
   youtube: YoutubeLogo,
+  bookmark: Bookmark,
+  edit: PencilSimple,
 } satisfies Record<string, PhosphorIcon>;
 
 export type IconName = keyof typeof iconMap;
