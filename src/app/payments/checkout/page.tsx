@@ -211,10 +211,19 @@ function CheckoutInner() {
                   <input className="CustomerName allow_alphabet w-full h-11 px-3 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] focus:outline-none focus:border-[var(--primary)]" id="CustomerName" name="TransCustomerName" type="text" placeholder="Cardholder name" />
                   <input className="CustomerEmailAddress w-full h-11 px-3 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] focus:outline-none focus:border-[var(--primary)]" id="CustomerEmailAddress" name="TransCustomerEmailAddress" type="email" placeholder="Email address" />
                   <input className="CustomerMobileNumber w-full h-11 px-3 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] focus:outline-none focus:border-[var(--primary)]" id="CustomerMobileNumber" name="TransCustomerMobileNumber" type="tel" placeholder="+923331234567" />
+
+                  {/* Alfa requires these elements — shown/hidden by its script */}
+                  <div id="dvFailed" style={{ display: "none" }} className="p-3 bg-[var(--error)]/10 rounded-[var(--radius-sm)] text-center">
+                    <p id="failedMsg" className="text-[13px] text-[var(--error)] font-medium" />
+                  </div>
+                  <div id="dvSuccess" style={{ display: "none" }} />
+
+                  {/* Hidden initially — Alfa's FetchKeys success shows it once encryption keys are ready */}
                   <button
                     type="button"
                     id="InitiateTrans"
                     name="TransInitiateTrans"
+                    style={{ display: "none" }}
                     className="w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-bold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors cursor-pointer"
                   >
                     Pay PKR {amount ? Number(amount).toLocaleString() : ""}
