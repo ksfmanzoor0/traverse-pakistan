@@ -26,7 +26,6 @@ const nextConfig: NextConfig = {
         hostname: "media.traversepakistan.com",
         pathname: "/**",
       },
-
       {
         protocol: "https",
         hostname: "traversepakistan.com",

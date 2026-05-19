@@ -40,7 +40,9 @@ function toTour(
     languages: row.languages,
     freeCancellation: row.free_cancellation,
     reserveNowPayLater: row.reserve_now_pay_later,
-    images: r2Images ?? (row.images as TourImage[]) ?? [],
+    images: r2Images ?? ((row.images as unknown as (TourImage | string)[] | null) ?? []).map((img) =>
+      typeof img === "string" ? { url: img, alt: row.name } : img
+    ),
     guide: row.guide ?? undefined,
     highlights: row.highlights,
     inclusions: row.inclusions,
