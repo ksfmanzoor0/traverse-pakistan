@@ -8,7 +8,6 @@ interface SmartImageProps extends Omit<ImageProps, "src"> {
 }
 
 export default function SmartImage({ src, alt, ...props }: SmartImageProps) {
-  const [useBackup, setUseBackup] = useState(false);
   const [isBroken, setIsBroken] = useState(false);
 
   if (isBroken) return null;
@@ -16,16 +15,9 @@ export default function SmartImage({ src, alt, ...props }: SmartImageProps) {
   return (
     <Image
       {...props}
-      src={useBackup ? `${src}?fallback=true` : src}
+      src={src}
       alt={alt}
-      unoptimized={useBackup}
-      onError={() => {
-        if (!useBackup) {
-          setUseBackup(true);
-        } else {
-          setIsBroken(true);
-        }
-      }}
+      onError={() => setIsBroken(true)}
     />
   );
 }
