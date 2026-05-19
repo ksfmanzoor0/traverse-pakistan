@@ -70,13 +70,15 @@ function CheckoutInner() {
     }
 
     loadScript("https://code.jquery.com/jquery-3.7.1.min.js", () => {
-      loadScript(
-        "https://merchants.bankalfalah.com/merchantportalprelive/HostedCheckoutFiles/HostedCheckoutPayments.js",
-        () => {
-          scriptReady.current = true;
-          initializeCheckout(initParams);
-        }
-      );
+      loadScript("https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/rollups/aes.js", () => {
+        loadScript(
+          "https://merchants.bankalfalah.com/merchantportalprelive/HostedCheckoutFiles/HostedCheckoutPayments.js",
+          () => {
+            scriptReady.current = true;
+            initializeCheckout(initParams);
+          }
+        );
+      });
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, initParams]);
