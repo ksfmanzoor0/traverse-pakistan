@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import SmartImage from "@/components/ui/SmartImage";
 import { useState, useEffect } from "react";
 
 interface Props {
@@ -11,12 +11,9 @@ interface Props {
 }
 
 export function RoomImageCarousel({ images, fallback, alt, available }: Props) {
-  const allImgs = (images.length > 0 ? images : fallback ? [fallback] : []).filter(Boolean);
-  const [errored, setErrored] = useState<Set<string>>(() => new Set());
-  const imgs = allImgs.filter((u) => !errored.has(u));
+  const imgs = (images.length > 0 ? images : fallback ? [fallback] : []).filter(Boolean);
   const [idx, setIdx] = useState(0);
 
-  // Keep idx in bounds when errored images are removed
   useEffect(() => {
     if (idx >= imgs.length && imgs.length > 0) setIdx(imgs.length - 1);
   }, [imgs.length, idx]);
@@ -27,16 +24,14 @@ export function RoomImageCarousel({ images, fallback, alt, available }: Props) {
   const current = imgs[idx];
 
   return (
-    <div className="relative w-full h-full bg-[var(--bg-subtle)]">
+    <div className="relative aspect-[3/2] bg-[var(--bg-subtle)]">
       {current ? (
-        <Image
+        <SmartImage
           key={current}
           src={current}
           alt={`${alt} — photo ${idx + 1}`}
           fill
           className="object-cover"
-          sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-          onError={() => setErrored((prev) => new Set([...prev, current]))}
         />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center">
