@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import SmartImage from "@/components/ui/SmartImage";
 import type { TourImage } from "@/types/tour";
 
 interface MosaicGalleryProps {
@@ -10,13 +10,9 @@ interface MosaicGalleryProps {
   tourName: string;
 }
 
-export function MosaicGallery({ images: rawImages, tourName }: MosaicGalleryProps) {
+export function MosaicGallery({ images, tourName }: MosaicGalleryProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [failedUrls, setFailedUrls] = useState<Set<string>>(new Set());
-
-  const images = rawImages.filter(img => !failedUrls.has(img.url));
-  const onImgError = (url: string) => setFailedUrls(prev => new Set([...prev, url]));
 
   const openLightbox = (index: number) => {
     setActiveIndex(index);
@@ -45,14 +41,13 @@ export function MosaicGallery({ images: rawImages, tourName }: MosaicGalleryProp
             className="relative h-full cursor-pointer overflow-hidden"
           >
             {images[0] && (
-              <Image
+              <SmartImage
                 src={images[0].url}
                 alt={images[0].alt}
                 fill
-                unoptimized
                 className="object-cover hover:scale-105 transition-transform duration-500"
+                sizes="(max-width: 640px) 100vw, 50vw"
                 priority
-                onError={() => onImgError(images[0].url)}
               />
             )}
           </button>
@@ -66,13 +61,12 @@ export function MosaicGallery({ images: rawImages, tourName }: MosaicGalleryProp
                 onClick={() => openLightbox(i + 1)}
                 className="relative overflow-hidden cursor-pointer"
               >
-                <Image
+                <SmartImage
                   src={img.url}
                   alt={img.alt}
                   fill
-                  unoptimized
                   className="object-cover hover:scale-105 transition-transform duration-500"
-                  onError={() => onImgError(img.url)}
+                  sizes="(max-width: 640px) 0px, 12.5vw"
                 />
               </button>
             ))}
@@ -140,13 +134,12 @@ export function MosaicGallery({ images: rawImages, tourName }: MosaicGalleryProp
           {/* Image */}
           <div className="relative w-full max-w-4xl h-[70vh] mx-8">
             {images[activeIndex] && (
-              <Image
+              <SmartImage
                 src={images[activeIndex].url}
                 alt={images[activeIndex].alt}
                 fill
-                unoptimized
                 className="object-contain"
-                onError={() => onImgError(images[activeIndex].url)}
+                sizes="90vw"
               />
             )}
           </div>
