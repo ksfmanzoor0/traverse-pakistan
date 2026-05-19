@@ -164,6 +164,7 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
                 height={706}
                 className="h-8 w-auto sm:h-11 hidden [[data-theme=dark]_&]:block"
                 priority
+                unoptimized
               />
               <Image
                 src="/logo-day.png"
@@ -172,6 +173,7 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
                 height={700}
                 className="h-8 w-auto sm:h-11 [[data-theme=dark]_&]:hidden"
                 priority
+                unoptimized
               />
             </Link>
           </div>

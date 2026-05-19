@@ -10,8 +10,12 @@ export default function imageKitLoader({
   width: number;
   quality?: number;
 }): string {
-  // Non-R2 images (WP, YouTube, placehold.co, Google) pass through unchanged
-  if (!src.startsWith(R2_ORIGIN)) return src;
+  // Non-R2 images (WP, YouTube, placehold.co, Google, local)
+  // Append width so Next.js loader contract is satisfied; servers ignore unknown params
+  if (!src.startsWith(R2_ORIGIN)) {
+    const sep = src.includes("?") ? "&" : "?";
+    return `${src}${sep}w=${width}`;
+  }
 
   const path = src.slice(R2_ORIGIN.length);
   const q = quality ?? 80;
