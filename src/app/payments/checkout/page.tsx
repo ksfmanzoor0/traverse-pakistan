@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import Script from "next/script";
 import Link from "next/link";
 import { Icon } from "@/components/ui/Icon";
 import { getWhatsAppUrl } from "@/lib/utils";
@@ -56,6 +55,28 @@ function CheckoutInner() {
       });
   }, [ref]);
 
+  // Load jQuery then Alfa script in sequence; initialize checkout once both are ready
+  useEffect(() => {
+    function loadScript(src: string, onload: () => void) {
+      const s = document.createElement("script");
+      s.src = src;
+      s.async = false;
+      s.onload = onload;
+      document.head.appendChild(s);
+    }
+
+    loadScript("https://code.jquery.com/jquery-3.7.1.min.js", () => {
+      loadScript(
+        "https://merchants.bankalfalah.com/merchantportalprelive/HostedCheckoutFiles/HostedCheckoutPayments.js",
+        () => {
+          scriptReady.current = true;
+          if (state === "ready" && initParams) initializeCheckout(initParams);
+        }
+      );
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (state === "ready" && initParams && scriptReady.current) {
       initializeCheckout(initParams);
@@ -67,13 +88,6 @@ function CheckoutInner() {
     window.successCallback = () => setState("paid");
     window.failedCallback = () => setState("failed");
     window.InitializeValues(params.storeId, params.transType, params.orderId, params.amount, params.secretKey);
-  }
-
-  function onScriptLoad() {
-    scriptReady.current = true;
-    if (state === "ready" && initParams) {
-      initializeCheckout(initParams);
-    }
   }
 
   if (state === "error") {
@@ -168,16 +182,6 @@ function CheckoutInner() {
 
   return (
     <>
-      <Script
-        src="https://code.jquery.com/jquery-3.7.1.min.js"
-        strategy="beforeInteractive"
-      />
-      <Script
-        src="https://merchants.bankalfalah.com/merchantportalprelive/HostedCheckoutFiles/HostedCheckoutPayments.js"
-        strategy="afterInteractive"
-        onLoad={onScriptLoad}
-      />
-
       <div className="min-h-[60vh] py-10 px-4">
         <div className="max-w-md mx-auto space-y-6">
           {state === "loading" && (
