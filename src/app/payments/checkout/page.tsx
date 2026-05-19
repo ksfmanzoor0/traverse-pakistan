@@ -169,6 +169,10 @@ function CheckoutInner() {
   return (
     <>
       <Script
+        src="https://code.jquery.com/jquery-3.7.1.min.js"
+        strategy="beforeInteractive"
+      />
+      <Script
         src="https://merchants.bankalfalah.com/merchantportalprelive/HostedCheckoutFiles/HostedCheckoutPayments.js"
         strategy="afterInteractive"
         onLoad={onScriptLoad}
