@@ -44,16 +44,25 @@ export async function POST(req: NextRequest) {
   const code = generateOtp();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
+  try {
+    const { error: sendError } = await getResend().emails.send({
+      from: FROM,
+      to: email,
+      subject: `Your verification code — ${bookingRef}`,
+      html: otpEmailHtml(code, bookingRef, action),
+      text: otpEmailText(code, bookingRef, action),
+    });
+    if (sendError) {
+      console.error("[otp/send] Resend error:", sendError);
+      return NextResponse.json({ error: "Failed to send verification email. Please try again." }, { status: 502 });
+    }
+  } catch (err) {
+    console.error("[otp/send] exception:", err);
+    return NextResponse.json({ error: "Failed to send verification email. Please try again." }, { status: 502 });
+  }
+
   const supabase = getSupabaseAdmin();
   await supabase.from("booking_otps").insert({ booking_ref: bookingRef, code, expires_at: expiresAt });
-
-  await getResend().emails.send({
-    from: FROM,
-    to: email,
-    subject: `Your verification code — ${bookingRef}`,
-    html: otpEmailHtml(code, bookingRef, action),
-    text: otpEmailText(code, bookingRef, action),
-  });
 
   return NextResponse.json({ sent: true });
 }

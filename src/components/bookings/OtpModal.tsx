@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 interface Props {
   bookingRef: string;
@@ -9,13 +9,22 @@ interface Props {
   onClose: () => void;
 }
 
+const RESEND_COOLDOWN = 30;
+
 export function OtpModal({ bookingRef, action, onVerified, onClose }: Props) {
   const [step, setStep] = useState<"send" | "verify">("send");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
 
-  async function sendOtp() {
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
+  const sendOtp = useCallback(async () => {
     setError(null);
     setLoading(true);
     try {
@@ -24,14 +33,19 @@ export function OtpModal({ bookingRef, action, onVerified, onClose }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bookingRef, action }),
       });
-      if (!res.ok) throw new Error("Failed to send code");
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Could not send verification code. Please try again.");
+        return;
+      }
       setStep("verify");
+      setCooldown(RESEND_COOLDOWN);
     } catch {
       setError("Could not send verification code. Please try again.");
     } finally {
       setLoading(false);
     }
-  }
+  }, [bookingRef, action]);
 
   async function verifyOtp(e: React.FormEvent) {
     e.preventDefault();
@@ -88,11 +102,13 @@ export function OtpModal({ bookingRef, action, onVerified, onClose }: Props) {
             </p>
             <input
               type="text"
+              inputMode="numeric"
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
               placeholder="000000"
               maxLength={6}
               required
+              autoFocus
               className="w-full h-12 px-4 text-center text-[20px] font-mono tracking-[0.3em] rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--primary)] transition-colors"
             />
             {error && <p className="text-[13px] text-[var(--error)]">{error}</p>}
@@ -105,10 +121,11 @@ export function OtpModal({ bookingRef, action, onVerified, onClose }: Props) {
             </button>
             <button
               type="button"
-              onClick={() => { setStep("send"); setCode(""); setError(null); }}
-              className="w-full text-[13px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+              onClick={sendOtp}
+              disabled={loading || cooldown > 0}
+              className="w-full text-[13px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
             >
-              Resend code
+              {cooldown > 0 ? `Resend code in ${cooldown}s` : "Resend code"}
             </button>
           </form>
         )}
