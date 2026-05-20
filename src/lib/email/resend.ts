@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 
-export const FROM = process.env.EMAIL_FROM ?? "Traverse Pakistan <bookings@traversepakistan.com>";
+export const FROM = process.env.EMAIL_FROM ?? "Traverse Pakistan <info@traversepakistan.com>";
 
 export function getResend(): Resend {
   const key = process.env.RESEND_API_KEY;
