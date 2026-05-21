@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { markBooking } from "@/lib/payments/markBooking";
-import { sendBookingConfirmation } from "@/lib/email/sendBookingConfirmation";
 
 // Per Alfa docs: APG POSTs to the listener URL with "url" as a query parameter:
 // e.g. /api/payments/alfa/ipn?url=https://sandbox.bankalfalah.com/HS/api/IPN/OrderStatus/...
@@ -27,13 +26,9 @@ export async function POST(req: NextRequest) {
     console.log("[alfa/ipn POST] bookingRef:", bookingRef, "isPaid:", isPaid);
 
     if (bookingRef) {
+      // markBooking handles the confirmation send internally (guarded on
+      // pending → paid transition, safe against duplicate IPN calls).
       await markBooking(bookingRef, isPaid);
-      if (isPaid) {
-        // Fire-and-forget — don't block IPN response on email
-        sendBookingConfirmation(bookingRef).catch((e) =>
-          console.error("[alfa/ipn] email send failed:", e)
-        );
-      }
     }
 
     return new NextResponse("OK", { status: 200 });
