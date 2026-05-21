@@ -54,13 +54,11 @@ export async function POST(req: NextRequest) {
     });
     if (sendError) {
       console.error("[otp/send] Resend error:", sendError);
-      const detail = sendError.message ?? JSON.stringify(sendError);
-      return NextResponse.json({ error: `Email send failed: ${detail}` }, { status: 502 });
+      return NextResponse.json({ error: "Could not send verification code. Please try again." }, { status: 502 });
     }
   } catch (err) {
     console.error("[otp/send] exception:", err);
-    const detail = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: `Email send failed: ${detail}` }, { status: 502 });
+    return NextResponse.json({ error: "Could not send verification code. Please try again." }, { status: 502 });
   }
 
   const supabase = getSupabaseAdmin();
