@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { formatPrice, getWhatsAppUrl } from "@/lib/utils";
 import { Icon } from "@/components/ui/Icon";
-import { OtpModal } from "./OtpModal";
 import type { BookingStatus, RefundStatus } from "@/types/booking-status";
 
 interface BookingData {
@@ -52,9 +51,10 @@ export function BookingDetail({ bookingRef, data }: Props) {
   const [editingName, setEditingName] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [newName, setNewName] = useState(String(booking.contact_name ?? ""));
-  const [otpAction, setOtpAction] = useState<"name" | "cancel" | null>(null);
   const [localBooking, setLocalBooking] = useState(booking);
   const [actionDone, setActionDone] = useState<"name" | "cancel" | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const bookingStatus = String(localBooking.booking_status ?? "pending") as BookingStatus;
   const refundStatus = localBooking.refund_status ? String(localBooking.refund_status) as RefundStatus : null;
@@ -62,26 +62,42 @@ export function BookingDetail({ bookingRef, data }: Props) {
   const statusInfo = statusLabel(bookingStatus);
 
   async function applyNameChange() {
-    const res = await fetch(`/api/bookings/${bookingRef}/name`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName }),
-    });
-    if (res.ok) {
+    setActionError(null);
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/bookings/${bookingRef}/name`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setActionError(data.error ?? "Failed to update name.");
+        return;
+      }
       setLocalBooking((b) => ({ ...b, contact_name: newName }));
       setEditingName(false);
-      setOtpAction(null);
       setActionDone("name");
+    } finally {
+      setBusy(false);
     }
   }
 
   async function applyCancel() {
-    const res = await fetch(`/api/bookings/${bookingRef}/cancel`, { method: "POST" });
-    if (res.ok) {
+    setActionError(null);
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/bookings/${bookingRef}/cancel`, { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setActionError(data.error ?? "Failed to cancel booking.");
+        return;
+      }
       setLocalBooking((b) => ({ ...b, booking_status: "cancelled" }));
       setCancelling(false);
-      setOtpAction(null);
       setActionDone("cancel");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -197,11 +213,11 @@ export function BookingDetail({ bookingRef, data }: Props) {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setOtpAction("name")}
-                  disabled={!newName.trim() || newName === localBooking.contact_name}
+                  onClick={applyNameChange}
+                  disabled={busy || !newName.trim() || newName === localBooking.contact_name}
                   className="flex-1 h-10 bg-[var(--primary)] text-[var(--text-inverse)] text-[13px] font-semibold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors disabled:opacity-50 cursor-pointer"
                 >
-                  Save name
+                  {busy ? "Saving…" : "Save name"}
                 </button>
                 <button
                   type="button"
@@ -226,14 +242,15 @@ export function BookingDetail({ bookingRef, data }: Props) {
           ) : (
             <div className="p-4 border border-[var(--error)]/30 rounded-[var(--radius-md)] bg-[var(--error)]/5 space-y-3">
               <p className="text-[13px] text-[var(--text-primary)] font-medium">Are you sure you want to cancel this booking?</p>
-              <p className="text-[12px] text-[var(--text-secondary)]">This action requires email verification and cannot be undone.</p>
+              <p className="text-[12px] text-[var(--text-secondary)]">This action cannot be undone.</p>
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setOtpAction("cancel")}
-                  className="flex-1 h-10 bg-[var(--error)] text-[var(--on-dark)] text-[13px] font-semibold rounded-[var(--radius-sm)] hover:opacity-90 transition-opacity cursor-pointer"
+                  onClick={applyCancel}
+                  disabled={busy}
+                  className="flex-1 h-10 bg-[var(--error)] text-[var(--on-dark)] text-[13px] font-semibold rounded-[var(--radius-sm)] hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
                 >
-                  Yes, cancel booking
+                  {busy ? "Cancelling…" : "Yes, cancel booking"}
                 </button>
                 <button
                   type="button"
@@ -263,22 +280,8 @@ export function BookingDetail({ bookingRef, data }: Props) {
         Back to home
       </Link>
 
-      {/* OTP modals */}
-      {otpAction === "name" && (
-        <OtpModal
-          bookingRef={bookingRef}
-          action="update your contact name"
-          onVerified={applyNameChange}
-          onClose={() => setOtpAction(null)}
-        />
-      )}
-      {otpAction === "cancel" && (
-        <OtpModal
-          bookingRef={bookingRef}
-          action="cancel your booking"
-          onVerified={applyCancel}
-          onClose={() => setOtpAction(null)}
-        />
+      {actionError && (
+        <p className="text-center text-[13px] text-[var(--error)] font-medium">{actionError}</p>
       )}
     </div>
   );

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { alfaConfig } from "@/lib/alfa/config";
 import { generateAlfaHash } from "@/lib/alfa/hash";
 import { createBooking } from "@/services/booking.service.server";
+import { stampBookingWithUser } from "@/lib/auth/stampBookingWithUser";
 
 const ParticipantSchema = z.object({
   fullName: z.string().max(100).optional(),
@@ -41,6 +42,8 @@ export async function POST(req: NextRequest) {
       ...parsed.data,
       contact: { ...parsed.data.contact, email: parsed.data.contact.email ?? "" },
     });
+
+    await stampBookingWithUser(summary.bookingRef);
 
     const proto = req.headers.get("x-forwarded-proto") ?? "https";
     const host = req.headers.get("host") ?? "traversepakistan.com";

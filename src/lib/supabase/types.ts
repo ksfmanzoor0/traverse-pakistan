@@ -356,6 +356,8 @@ export type Database = {
           expires_at: string;
           used: boolean;
           created_at: string;
+          auth_user_id: string | null;
+          channel: "email" | "whatsapp" | null;
         };
         Insert: {
           booking_ref: string;
@@ -364,8 +366,10 @@ export type Database = {
           id?: string;
           used?: boolean;
           created_at?: string;
+          auth_user_id?: string | null;
+          channel?: "email" | "whatsapp" | null;
         };
-        Update: Partial<{ booking_ref: string; code: string; expires_at: string; used: boolean; created_at: string }>;
+        Update: Partial<{ booking_ref: string; code: string; expires_at: string; used: boolean; created_at: string; auth_user_id: string | null; channel: "email" | "whatsapp" | null }>;
         Relationships: [];
       };
       package_bookings: {
@@ -400,6 +404,7 @@ export type Database = {
           status: string;
           contact_name: string;
           updated_at: string;
+          user_id: string | null;
         }>;
         Relationships: [];
       };
@@ -434,6 +439,7 @@ export type Database = {
           refund_status: string | null;
           contact_name: string;
           updated_at: string;
+          user_id: string | null;
         }>;
         Relationships: [];
       };
@@ -513,6 +519,10 @@ export type Database = {
           p_line_items: { roomName: string; qty: number; adults: number; children: number; pricePerNight: number }[];
         };
         Returns: { booking_id: string; booking_ref: string; total_amount: number }[];
+      };
+      find_auth_user_by_contact: {
+        Args: { p_email: string | null; p_phone: string | null };
+        Returns: string | null;
       };
     };
   };

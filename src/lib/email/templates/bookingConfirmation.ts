@@ -1,5 +1,3 @@
-const SITE = "https://traversepakistan.com";
-
 interface BookingConfirmationParams {
   bookingRef: string;
   contactName: string;
@@ -8,10 +6,11 @@ interface BookingConfirmationParams {
   itemName: string;
   totalAmount: number;
   details: Record<string, string>;
+  viewUrl: string; // magic-link URL — signs the user in on click
 }
 
 export function bookingConfirmationHtml(p: BookingConfirmationParams): string {
-  const viewUrl = `${SITE}/bookings/${p.bookingRef}`;
+  const viewUrl = p.viewUrl;
   const whatsappUrl = `https://wa.me/923216650670?text=Hi%2C%20I%20need%20help%20with%20booking%20${p.bookingRef}`;
 
   const detailRows = Object.entries(p.details)
@@ -100,7 +99,7 @@ export function bookingConfirmationHtml(p: BookingConfirmationParams): string {
 }
 
 export function bookingConfirmationText(p: BookingConfirmationParams): string {
-  const viewUrl = `https://traversepakistan.com/bookings/${p.bookingRef}`;
+  const viewUrl = p.viewUrl;
   const details = Object.entries(p.details).map(([k, v]) => `${k}: ${v}`).join("\n");
   return `Payment Confirmed — Traverse Pakistan
 
