@@ -88,6 +88,7 @@ export type BookingRow = {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  confirmation_sent_at: string | null;
 };
 
 export type BookingParticipantRow = {
@@ -395,6 +396,7 @@ export type Database = {
           notes: string | null;
           created_at: string;
           updated_at: string;
+          confirmation_sent_at: string | null;
         };
         Insert: Record<string, unknown>;
         Update: Partial<{
@@ -405,6 +407,7 @@ export type Database = {
           contact_name: string;
           updated_at: string;
           user_id: string | null;
+          confirmation_sent_at: string | null;
         }>;
         Relationships: [];
       };
@@ -431,6 +434,7 @@ export type Database = {
           notes: string | null;
           created_at: string;
           updated_at: string;
+          confirmation_sent_at: string | null;
         };
         Insert: Record<string, unknown>;
         Update: Partial<{
@@ -440,6 +444,7 @@ export type Database = {
           contact_name: string;
           updated_at: string;
           user_id: string | null;
+          confirmation_sent_at: string | null;
         }>;
         Relationships: [];
       };

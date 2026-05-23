@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { alfaConfig } from "@/lib/alfa/config";
 import { markBooking } from "@/lib/payments/markBooking";
+import { mintLoginTokenForBooking } from "@/lib/auth/mintLoginToken";
 
 async function checkAlfaIPN(ref: string): Promise<"paid" | "failed" | "pending"> {
   try {
@@ -15,6 +16,22 @@ async function checkAlfaIPN(ref: string): Promise<"paid" | "failed" | "pending">
   } catch {
     return "pending";
   }
+}
+
+interface StatusResponse {
+  bookingRef: string;
+  status: "paid" | "failed" | "pending";
+  amount: number;
+  tokenHash?: string | null;
+}
+
+async function buildResponse(ref: string, amount: number, status: "paid" | "failed" | "pending"): Promise<NextResponse<StatusResponse>> {
+  const body: StatusResponse = { bookingRef: ref, status, amount };
+  // Mint a fresh login token only when paid — return page uses it for auto-sign-in.
+  if (status === "paid") {
+    body.tokenHash = await mintLoginTokenForBooking(ref);
+  }
+  return NextResponse.json(body);
 }
 
 export async function GET(req: NextRequest) {
@@ -33,13 +50,9 @@ export async function GET(req: NextRequest) {
       .select("booking_ref, payment_status, total_amount")
       .eq("booking_ref", ref)
       .maybeSingle();
+    if (error || !data) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
 
-    if (error || !data) {
-      return NextResponse.json({ error: "Booking not found" }, { status: 404 });
-    }
-
-    let status = data.payment_status ?? "pending";
-
+    let status = (data.payment_status ?? "pending") as "paid" | "failed" | "pending";
     if (status === "pending") {
       const alfaStatus = await checkAlfaIPN(ref);
       if (alfaStatus === "paid") {
@@ -47,8 +60,7 @@ export async function GET(req: NextRequest) {
         status = "paid";
       }
     }
-
-    return NextResponse.json({ bookingRef: data.booking_ref, status, amount: data.total_amount });
+    return buildResponse(ref, Number(data.total_amount), status);
   }
 
   if (ref.startsWith("HTL-")) {
@@ -57,13 +69,9 @@ export async function GET(req: NextRequest) {
       .select("booking_ref, payment_status, total_amount")
       .eq("booking_ref", ref)
       .maybeSingle();
+    if (error || !data) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
 
-    if (error || !data) {
-      return NextResponse.json({ error: "Booking not found" }, { status: 404 });
-    }
-
-    let status = data.payment_status ?? "pending";
-
+    let status = (data.payment_status ?? "pending") as "paid" | "failed" | "pending";
     if (status === "pending") {
       const alfaStatus = await checkAlfaIPN(ref);
       if (alfaStatus === "paid") {
@@ -71,8 +79,7 @@ export async function GET(req: NextRequest) {
         status = "paid";
       }
     }
-
-    return NextResponse.json({ bookingRef: data.booking_ref, status, amount: data.total_amount });
+    return buildResponse(ref, Number(data.total_amount), status);
   }
 
   const { data, error } = await supabase
@@ -80,12 +87,9 @@ export async function GET(req: NextRequest) {
     .select("booking_ref, status, total_amount")
     .eq("booking_ref", ref)
     .maybeSingle();
+  if (error || !data) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
 
-  if (error || !data) {
-    return NextResponse.json({ error: "Booking not found" }, { status: 404 });
-  }
-
-  let normalized =
+  let normalized: "paid" | "failed" | "pending" =
     data.status === "confirmed" ? "paid" :
     data.status === "cancelled" ? "failed" :
     "pending";
@@ -98,5 +102,5 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ bookingRef: data.booking_ref, status: normalized, amount: data.total_amount });
+  return buildResponse(ref, Number(data.total_amount), normalized);
 }

@@ -9,6 +9,14 @@ function siteUrl(): string {
   return fromEnv || "https://traversepakistan.com";
 }
 
+type BookingTable = "package_bookings" | "hotel_bookings" | "bookings";
+
+function tableFromRef(bookingRef: string): BookingTable {
+  if (bookingRef.startsWith("PKG-")) return "package_bookings";
+  if (bookingRef.startsWith("HTL-")) return "hotel_bookings";
+  return "bookings";
+}
+
 interface BookingRecord {
   contactName: string;
   contactEmail: string;
@@ -18,6 +26,8 @@ interface BookingRecord {
   bookingType: "tour" | "package" | "hotel";
   itemName: string;
   details: Record<string, string>;
+  paymentStatus: "pending" | "paid" | "failed";
+  confirmationSentAt: string | null;
 }
 
 async function loadBooking(bookingRef: string): Promise<BookingRecord | null> {
@@ -26,7 +36,7 @@ async function loadBooking(bookingRef: string): Promise<BookingRecord | null> {
   if (bookingRef.startsWith("PKG-")) {
     const { data } = await supabase
       .from("package_bookings")
-      .select("contact_name, contact_email, contact_phone, total_amount, package_slug, tier, departure_city, start_date, adults, user_id")
+      .select("contact_name, contact_email, contact_phone, total_amount, package_slug, tier, departure_city, start_date, adults, user_id, payment_status, confirmation_sent_at")
       .eq("booking_ref", bookingRef)
       .single();
     if (!data) return null;
@@ -38,6 +48,8 @@ async function loadBooking(bookingRef: string): Promise<BookingRecord | null> {
       userId: (data.user_id as string | null) ?? null,
       bookingType: "package",
       itemName: data.package_slug,
+      paymentStatus: ((data.payment_status as string) ?? "pending") as BookingRecord["paymentStatus"],
+      confirmationSentAt: (data.confirmation_sent_at as string | null) ?? null,
       details: {
         Package: data.package_slug.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
         Tier: data.tier.charAt(0).toUpperCase() + data.tier.slice(1),
@@ -51,7 +63,7 @@ async function loadBooking(bookingRef: string): Promise<BookingRecord | null> {
   if (bookingRef.startsWith("HTL-")) {
     const { data } = await supabase
       .from("hotel_bookings")
-      .select("contact_name, contact_email, contact_phone, total_amount, hotel_slug, checkin_date, checkout_date, nights, adults, children, user_id")
+      .select("contact_name, contact_email, contact_phone, total_amount, hotel_slug, checkin_date, checkout_date, nights, adults, children, user_id, payment_status, confirmation_sent_at")
       .eq("booking_ref", bookingRef)
       .single();
     if (!data) return null;
@@ -63,6 +75,8 @@ async function loadBooking(bookingRef: string): Promise<BookingRecord | null> {
       userId: (data.user_id as string | null) ?? null,
       bookingType: "hotel",
       itemName: data.hotel_slug,
+      paymentStatus: ((data.payment_status as string) ?? "pending") as BookingRecord["paymentStatus"],
+      confirmationSentAt: (data.confirmation_sent_at as string | null) ?? null,
       details: {
         Hotel: data.hotel_slug.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
         "Check-in": data.checkin_date ? new Date(data.checkin_date).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" }) : "-",
@@ -75,7 +89,7 @@ async function loadBooking(bookingRef: string): Promise<BookingRecord | null> {
 
   const { data } = await supabase
     .from("bookings")
-    .select("contact_name, contact_email, contact_phone, total_amount, seats, user_id")
+    .select("contact_name, contact_email, contact_phone, total_amount, seats, user_id, status, confirmation_sent_at")
     .eq("booking_ref", bookingRef)
     .single();
   if (!data) return null;
@@ -87,11 +101,12 @@ async function loadBooking(bookingRef: string): Promise<BookingRecord | null> {
     userId: (data.user_id as string | null) ?? null,
     bookingType: "tour",
     itemName: "",
+    paymentStatus: (data.status === "confirmed" ? "paid" : data.status === "cancelled" ? "failed" : "pending") as BookingRecord["paymentStatus"],
+    confirmationSentAt: (data.confirmation_sent_at as string | null) ?? null,
     details: { Seats: String(data.seats) },
   };
 }
 
-// Generates a magic-link URL that signs the user in and lands them on /bookings/[ref].
 async function buildMagicLinkUrl(userId: string | null, bookingRef: string): Promise<string | null> {
   if (!userId) return null;
   try {
@@ -114,30 +129,44 @@ async function buildMagicLinkUrl(userId: string | null, bookingRef: string): Pro
   }
 }
 
+async function markConfirmationSent(bookingRef: string): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  const now = new Date().toISOString();
+  const table = tableFromRef(bookingRef);
+  if (table === "package_bookings") {
+    await supabase.from("package_bookings").update({ confirmation_sent_at: now }).eq("booking_ref", bookingRef);
+  } else if (table === "hotel_bookings") {
+    await supabase.from("hotel_bookings").update({ confirmation_sent_at: now }).eq("booking_ref", bookingRef);
+  } else {
+    await supabase.from("bookings").update({ confirmation_sent_at: now }).eq("booking_ref", bookingRef);
+  }
+}
+
+// Idempotent — checks confirmation_sent_at and exits if already sent.
+// Safe to call from success page renders, IPN, polling fallback, etc.
 export async function sendBookingConfirmation(bookingRef: string): Promise<void> {
   const record = await loadBooking(bookingRef);
   if (!record) return;
+  if (record.confirmationSentAt) return; // Already sent — do nothing.
 
   const magicUrl = await buildMagicLinkUrl(record.userId, bookingRef);
   const viewUrl = magicUrl ?? `${siteUrl()}/bookings/${bookingRef}`;
 
-  // Email (skip if contactEmail is synthesized — that means user gave phone only).
   const realEmail = record.contactEmail && !isSynthesizedEmail(record.contactEmail) ? record.contactEmail : null;
   if (realEmail) {
     try {
       await getResend().emails.send({
         from: FROM,
         to: realEmail,
-        subject: `Booking Confirmed — ${bookingRef} | Traverse Pakistan`,
-        html: bookingConfirmationHtml({ bookingRef, contactName: record.contactName, contactEmail: realEmail, bookingType: record.bookingType, itemName: record.itemName, totalAmount: record.totalAmount, details: record.details, viewUrl }),
-        text: bookingConfirmationText({ bookingRef, contactName: record.contactName, contactEmail: realEmail, bookingType: record.bookingType, itemName: record.itemName, totalAmount: record.totalAmount, details: record.details, viewUrl }),
+        subject: `Booking received — ${bookingRef} | Traverse Pakistan`,
+        html: bookingConfirmationHtml({ bookingRef, contactName: record.contactName, contactEmail: realEmail, bookingType: record.bookingType, itemName: record.itemName, totalAmount: record.totalAmount, details: record.details, viewUrl, paymentStatus: record.paymentStatus }),
+        text: bookingConfirmationText({ bookingRef, contactName: record.contactName, contactEmail: realEmail, bookingType: record.bookingType, itemName: record.itemName, totalAmount: record.totalAmount, details: record.details, viewUrl, paymentStatus: record.paymentStatus }),
       });
     } catch (err) {
       console.error("[sendBookingConfirmation] email send failed:", err);
     }
   }
 
-  // WhatsApp (always when phone is present and Cloud API is configured).
   if (record.contactPhone && isWhatsAppConfigured() && magicUrl) {
     try {
       await sendBookingConfirmedViaWhatsApp({
@@ -150,4 +179,7 @@ export async function sendBookingConfirmation(bookingRef: string): Promise<void>
       console.error("[sendBookingConfirmation] whatsapp send failed:", err);
     }
   }
+
+  // Mark sent regardless of partial failures — we don't want to spam on retry.
+  await markConfirmationSent(bookingRef).catch(() => {});
 }

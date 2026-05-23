@@ -4,6 +4,7 @@ import { alfaConfig } from "@/lib/alfa/config";
 import { generateAlfaHash } from "@/lib/alfa/hash";
 import { createBooking } from "@/services/booking.service.server";
 import { stampBookingWithUser } from "@/lib/auth/stampBookingWithUser";
+import { sendBookingConfirmation } from "@/lib/email/sendBookingConfirmation";
 
 const ParticipantSchema = z.object({
   fullName: z.string().max(100).optional(),
@@ -44,6 +45,13 @@ export async function POST(req: NextRequest) {
     });
 
     await stampBookingWithUser(summary.bookingRef);
+
+    // Tour flow skips a success page — fire booking-received email here so the
+    // user gets the magic link before they finish at Alfa. Idempotent — checks
+    // confirmation_sent_at internally.
+    sendBookingConfirmation(summary.bookingRef).catch((err) =>
+      console.error("[alfa/initiate] sendBookingConfirmation failed:", err)
+    );
 
     const proto = req.headers.get("x-forwarded-proto") ?? "https";
     const host = req.headers.get("host") ?? "traversepakistan.com";

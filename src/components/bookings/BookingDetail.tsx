@@ -5,6 +5,7 @@ import Link from "next/link";
 import { formatPrice, getWhatsAppUrl } from "@/lib/utils";
 import { Icon } from "@/components/ui/Icon";
 import type { BookingStatus, RefundStatus } from "@/types/booking-status";
+import { CompletePaymentButton } from "./CompletePaymentButton";
 
 interface BookingData {
   type: "tour" | "package" | "hotel";
@@ -60,6 +61,11 @@ export function BookingDetail({ bookingRef, data }: Props) {
   const refundStatus = localBooking.refund_status ? String(localBooking.refund_status) as RefundStatus : null;
   const isCancelled = bookingStatus === "cancelled";
   const statusInfo = statusLabel(bookingStatus);
+  const rawPaymentStatus = type === "tour"
+    ? String(localBooking.status ?? "pending")
+    : String(localBooking.payment_status ?? "pending");
+  const isUnpaid = !isCancelled && rawPaymentStatus !== "paid" && rawPaymentStatus !== "confirmed";
+  const totalAmount = Number(localBooking.total_amount ?? 0);
 
   async function applyNameChange() {
     setActionError(null);
@@ -124,6 +130,11 @@ export function BookingDetail({ bookingRef, data }: Props) {
         </span>
       </div>
 
+      {/* Complete payment CTA */}
+      {isUnpaid && totalAmount > 0 && (
+        <CompletePaymentButton bookingRef={bookingRef} amount={totalAmount} type={type} />
+      )}
+
       {/* Refund status */}
       {isCancelled && refundStatus && (
         <div className="p-4 rounded-[var(--radius-md)] border"
@@ -152,7 +163,7 @@ export function BookingDetail({ bookingRef, data }: Props) {
         <Row label="Contact Name" value={String(localBooking.contact_name ?? "-")} />
         <Row label="Email" value={String(localBooking.contact_email ?? "-")} />
         <Row label="Phone" value={String(localBooking.contact_phone ?? "-")} />
-        <Row label="Amount Paid" value={formatPrice(Number(localBooking.total_amount ?? 0))} />
+        <Row label={isUnpaid ? "Amount Due" : "Amount Paid"} value={formatPrice(totalAmount)} />
 
         {type === "package" && (
           <>
