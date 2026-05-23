@@ -5,8 +5,9 @@ import { sendBookingConfirmedViaWhatsApp, isWhatsAppConfigured } from "@/lib/wha
 import { isSynthesizedEmail } from "@/lib/auth/phone";
 
 function siteUrl(): string {
-  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
-  return fromEnv || "https://traversepakistan.com";
+  const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/+$/, "");
+  if (!raw) return "https://traversepakistan.com";
+  return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
 }
 
 type BookingTable = "package_bookings" | "hotel_bookings" | "bookings";
