@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "@/components/ui/Icon";
 import { getWhatsAppUrl } from "@/lib/utils";
-import { AutoSignIn } from "@/components/auth/AutoSignIn";
 
 type PollState = "loading" | "paid" | "failed" | "processing" | "error";
 
@@ -23,7 +22,6 @@ function ReturnInner() {
   const [bookingRef, setBookingRef] = useState(orderId);
   const [amount, setAmount] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [tokenHash, setTokenHash] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { label, browseHref, browseLabel } = bookingMeta(bookingRef || orderId);
@@ -48,7 +46,6 @@ function ReturnInner() {
 
         setBookingRef(data.bookingRef ?? orderId);
         setAmount(data.amount ?? null);
-        if (data.tokenHash) setTokenHash(data.tokenHash);
 
         if (data.status === "paid") {
           clearInterval(intervalRef.current!);
@@ -173,7 +170,6 @@ function ReturnInner() {
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-4">
-      <AutoSignIn token={tokenHash} />
       <div className="max-w-md w-full text-center space-y-6">
         <div className="w-16 h-16 mx-auto rounded-full bg-[var(--success)]/10 flex items-center justify-center">
           <Icon name="check" size="lg" className="text-[var(--success)]" />

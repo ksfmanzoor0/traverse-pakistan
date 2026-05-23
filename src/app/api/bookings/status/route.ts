@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { alfaConfig } from "@/lib/alfa/config";
 import { markBooking } from "@/lib/payments/markBooking";
-import { mintLoginTokenForBooking } from "@/lib/auth/mintLoginToken";
 
 async function checkAlfaIPN(ref: string): Promise<"paid" | "failed" | "pending"> {
   try {
@@ -22,16 +21,13 @@ interface StatusResponse {
   bookingRef: string;
   status: "paid" | "failed" | "pending";
   amount: number;
-  tokenHash?: string | null;
 }
 
-async function buildResponse(ref: string, amount: number, status: "paid" | "failed" | "pending"): Promise<NextResponse<StatusResponse>> {
-  const body: StatusResponse = { bookingRef: ref, status, amount };
-  // Mint a fresh login token only when paid — return page uses it for auto-sign-in.
-  if (status === "paid") {
-    body.tokenHash = await mintLoginTokenForBooking(ref);
-  }
-  return NextResponse.json(body);
+function buildResponse(ref: string, amount: number, status: "paid" | "failed" | "pending"): NextResponse<StatusResponse> {
+  // Intentionally no tokenHash here — payment completion is not identity proof.
+  // Users return signed-in from the success-page cookies, or fall through to
+  // /bookings/find / the magic link in their email.
+  return NextResponse.json({ bookingRef: ref, status, amount });
 }
 
 export async function GET(req: NextRequest) {
