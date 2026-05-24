@@ -8,8 +8,11 @@ function FindBookingInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryError = searchParams?.get("error") ?? null;
+  const prefilledRef = searchParams?.get("ref")?.toUpperCase() ?? "";
+  const nextRaw = searchParams?.get("next") ?? null;
+  const nextPath = nextRaw && nextRaw.startsWith("/") && !nextRaw.startsWith("//") ? nextRaw : null;
 
-  const [bookingRef, setBookingRef] = useState("");
+  const [bookingRef, setBookingRef] = useState(prefilledRef);
   const [contact, setContact] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(queryError);
@@ -21,14 +24,15 @@ function FindBookingInner() {
 
     setLoading(true);
     try {
+      const ref = bookingRef.trim().toUpperCase();
       const res = await fetch("/api/bookings/view-grant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingRef: bookingRef.trim().toUpperCase(), contact: contact.trim() }),
+        body: JSON.stringify({ bookingRef: ref, contact: contact.trim() }),
       });
       const data = await res.json();
       if (data.granted) {
-        router.replace(`/bookings/${bookingRef.trim().toUpperCase()}`);
+        router.replace(nextPath ?? `/bookings/${ref}`);
         return;
       }
       setError("We couldn't match that booking ref with the email or phone you entered. Please check and try again.");

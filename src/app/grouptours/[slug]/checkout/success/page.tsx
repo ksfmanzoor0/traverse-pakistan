@@ -5,9 +5,7 @@ import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { getAllTours, getTourBySlug } from "@/services/tour.service";
 import { BookingSuccessClient } from "@/components/tours/BookingSuccessClient";
 import { stampBookingWithUser } from "@/lib/auth/stampBookingWithUser";
-import { mintLoginTokenForBooking } from "@/lib/auth/mintLoginToken";
 import { sendBookingConfirmation } from "@/lib/email/sendBookingConfirmation";
-import { AutoSignIn } from "@/components/auth/AutoSignIn";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -31,10 +29,8 @@ export default async function BookingSuccessPage({ params, searchParams }: Props
   const tour = await getTourBySlug(slug);
   if (!tour) notFound();
 
-  let tokenHash: string | null = null;
   if (ref) {
     await stampBookingWithUser(ref);
-    tokenHash = await mintLoginTokenForBooking(ref);
     sendBookingConfirmation(ref).catch((err) =>
       console.error("[grouptour/success] sendBookingConfirmation failed:", err)
     );
@@ -42,7 +38,6 @@ export default async function BookingSuccessPage({ params, searchParams }: Props
 
   return (
     <div className="py-10 sm:py-16">
-      <AutoSignIn token={tokenHash} />
       <Container>
         <Breadcrumb
           items={[

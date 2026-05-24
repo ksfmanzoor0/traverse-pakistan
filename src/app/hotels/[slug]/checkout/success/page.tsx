@@ -7,10 +7,8 @@ import { getAllHotels, getHotelBySlug } from "@/services/hotel.service";
 import { getWhatsAppUrl } from "@/lib/utils";
 import { HotelPayButton } from "@/components/hotels/HotelPayButton";
 import { stampBookingWithUser } from "@/lib/auth/stampBookingWithUser";
-import { mintLoginTokenForBooking } from "@/lib/auth/mintLoginToken";
 import { sendBookingConfirmation } from "@/lib/email/sendBookingConfirmation";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { AutoSignIn } from "@/components/auth/AutoSignIn";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -44,12 +42,10 @@ export default async function HotelCheckoutSuccessPage({ params, searchParams }:
   const hotel = await getHotelBySlug(slug);
   if (!hotel) notFound();
 
-  let tokenHash: string | null = null;
   let summary: Awaited<ReturnType<typeof getBookingSummary>> = null;
 
   if (ref) {
     await stampBookingWithUser(ref);
-    tokenHash = await mintLoginTokenForBooking(ref);
     sendBookingConfirmation(ref).catch((err) =>
       console.error("[hotel/success] sendBookingConfirmation failed:", err)
     );
@@ -60,7 +56,6 @@ export default async function HotelCheckoutSuccessPage({ params, searchParams }:
 
   return (
     <div className="py-10 sm:py-16">
-      <AutoSignIn token={tokenHash} />
       <Container>
         <Breadcrumb
           items={[
@@ -119,12 +114,12 @@ export default async function HotelCheckoutSuccessPage({ params, searchParams }:
         )}
 
         {ref && (
-          <div className="mt-4 max-w-[480px] mx-auto">
+          <div className="mt-3 max-w-[480px] mx-auto">
             <Link
-              href={`/bookings/${ref}`}
-              className="block text-center text-[13px] text-[var(--text-secondary)] hover:text-[var(--primary)] transition-colors"
+              href={`/bookings/find?ref=${encodeURIComponent(ref)}&next=${encodeURIComponent(`/bookings/${ref}`)}`}
+              className="block w-full h-[52px] flex items-center justify-center border border-[var(--border-default)] text-[15px] font-bold text-[var(--text-primary)] rounded-[var(--radius-sm)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors"
             >
-              Manage booking →
+              Manage My Booking
             </Link>
           </div>
         )}

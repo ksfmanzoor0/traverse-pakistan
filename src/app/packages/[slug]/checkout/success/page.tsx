@@ -7,10 +7,8 @@ import { getAllPackages, getPackageBySlug } from "@/services/package.service";
 import { getWhatsAppUrl } from "@/lib/utils";
 import { PackagePayButton } from "@/components/packages/PackagePayButton";
 import { stampBookingWithUser } from "@/lib/auth/stampBookingWithUser";
-import { mintLoginTokenForBooking } from "@/lib/auth/mintLoginToken";
 import { sendBookingConfirmation } from "@/lib/email/sendBookingConfirmation";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { AutoSignIn } from "@/components/auth/AutoSignIn";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -44,14 +42,13 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
   const pkg = await getPackageBySlug(slug);
   if (!pkg) notFound();
 
-  let tokenHash: string | null = null;
   let summary: Awaited<ReturnType<typeof getBookingSummary>> = null;
 
   if (ref) {
-    // Silent signup (idempotent), mint a login token, and fire booking-received
-    // email/WhatsApp. All best-effort — page still renders if any step fails.
+    // Silent signup (idempotent) + fire booking-received email/WhatsApp.
+    // No client-side auto-sign-in — view access is granted only via the
+    // ref+contact match flow on /bookings/find, or the magic link in email.
     await stampBookingWithUser(ref);
-    tokenHash = await mintLoginTokenForBooking(ref);
     sendBookingConfirmation(ref).catch((err) =>
       console.error("[package/success] sendBookingConfirmation failed:", err)
     );
@@ -62,7 +59,6 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
 
   return (
     <div className="py-10 sm:py-16">
-      <AutoSignIn token={tokenHash} />
       <Container>
         <Breadcrumb
           items={[
@@ -122,12 +118,12 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
 
         {/* Manage booking */}
         {ref && (
-          <div className="mt-4 max-w-[480px] mx-auto">
+          <div className="mt-3 max-w-[480px] mx-auto">
             <Link
-              href={`/bookings/${ref}`}
-              className="block text-center text-[13px] text-[var(--text-secondary)] hover:text-[var(--primary)] transition-colors"
+              href={`/bookings/find?ref=${encodeURIComponent(ref)}&next=${encodeURIComponent(`/bookings/${ref}`)}`}
+              className="block w-full h-[52px] flex items-center justify-center border border-[var(--border-default)] text-[15px] font-bold text-[var(--text-primary)] rounded-[var(--radius-sm)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors"
             >
-              Manage booking →
+              Manage My Booking
             </Link>
           </div>
         )}
