@@ -6,7 +6,7 @@ import { formatPrice, getWhatsAppUrl } from "@/lib/utils";
 import { Icon } from "@/components/ui/Icon";
 import type { BookingStatus, RefundStatus } from "@/types/booking-status";
 import { CompletePaymentButton } from "./CompletePaymentButton";
-import { StepUpModal } from "./StepUpModal";
+import { ManageBanner } from "./ManageBanner";
 
 interface BookingData {
   type: "tour" | "package" | "hotel";
@@ -58,7 +58,6 @@ export function BookingDetail({ bookingRef, data, canManage }: Props) {
   const [actionDone, setActionDone] = useState<"name" | "cancel" | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [stepUpOpen, setStepUpOpen] = useState(false);
 
   const bookingStatus = String(localBooking.booking_status ?? "pending") as BookingStatus;
   const refundStatus = localBooking.refund_status ? String(localBooking.refund_status) as RefundStatus : null;
@@ -202,25 +201,19 @@ export function BookingDetail({ bookingRef, data, canManage }: Props) {
         <Row label="Booked On" value={localBooking.created_at ? new Date(String(localBooking.created_at)).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" }) : "-"} />
       </div>
 
+      {/* Manage banner — shown above edit/cancel when user hasn't verified yet */}
+      {!isCancelled && !canManage && <ManageBanner bookingRef={bookingRef} />}
+
       {/* Actions */}
-      {!isCancelled && !canManage && (
-        <button
-          type="button"
-          onClick={() => setStepUpOpen(true)}
-          className="w-full h-11 border border-[var(--border-default)] rounded-[var(--radius-sm)] text-[14px] font-semibold text-[var(--text-primary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer flex items-center justify-center gap-2"
-        >
-          <Icon name="lock" size="sm" />
-          Manage booking (sign in to edit or cancel)
-        </button>
-      )}
-      {!isCancelled && canManage && (
+      {!isCancelled && (
         <div className="space-y-3">
           {/* Edit name */}
           {!editingName ? (
             <button
               type="button"
-              onClick={() => setEditingName(true)}
-              className="w-full h-11 border border-[var(--border-default)] rounded-[var(--radius-sm)] text-[14px] font-semibold text-[var(--text-primary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer flex items-center justify-center gap-2"
+              onClick={() => canManage && setEditingName(true)}
+              disabled={!canManage}
+              className="w-full h-11 border border-[var(--border-default)] rounded-[var(--radius-sm)] text-[14px] font-semibold text-[var(--text-primary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-[var(--border-default)] disabled:hover:text-[var(--text-primary)]"
             >
               <Icon name="edit" size="sm" />
               Edit contact name
@@ -258,8 +251,9 @@ export function BookingDetail({ bookingRef, data, canManage }: Props) {
           {!cancelling ? (
             <button
               type="button"
-              onClick={() => setCancelling(true)}
-              className="w-full h-11 border border-[var(--error)]/40 rounded-[var(--radius-sm)] text-[14px] font-semibold text-[var(--error)] hover:bg-[var(--error)]/5 transition-colors cursor-pointer"
+              onClick={() => canManage && setCancelling(true)}
+              disabled={!canManage}
+              className="w-full h-11 border border-[var(--error)]/40 rounded-[var(--radius-sm)] text-[14px] font-semibold text-[var(--error)] hover:bg-[var(--error)]/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
             >
               Cancel booking
             </button>
@@ -306,14 +300,6 @@ export function BookingDetail({ bookingRef, data, canManage }: Props) {
 
       {actionError && (
         <p className="text-center text-[13px] text-[var(--error)] font-medium">{actionError}</p>
-      )}
-
-      {stepUpOpen && (
-        <StepUpModal
-          bookingRef={bookingRef}
-          onClose={() => setStepUpOpen(false)}
-          onVerified={() => setStepUpOpen(false)}
-        />
       )}
     </div>
   );

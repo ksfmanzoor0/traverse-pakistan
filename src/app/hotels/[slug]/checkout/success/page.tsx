@@ -114,14 +114,14 @@ export default async function HotelCheckoutSuccessPage({ params, searchParams }:
         )}
 
         {ref && (
-          <div className="mt-3 max-w-[480px] mx-auto">
-            <Link
-              href={`/bookings/find?ref=${encodeURIComponent(ref)}&next=${encodeURIComponent(`/bookings/${ref}`)}`}
-              className="block w-full h-[52px] flex items-center justify-center border border-[var(--border-default)] text-[15px] font-bold text-[var(--text-primary)] rounded-[var(--radius-sm)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors"
+          <form action={`/api/bookings/${encodeURIComponent(ref)}/manage-init`} method="POST" className="mt-3 max-w-[480px] mx-auto">
+            <button
+              type="submit"
+              className="block w-full h-[52px] flex items-center justify-center border border-[var(--border-default)] text-[15px] font-bold text-[var(--text-primary)] rounded-[var(--radius-sm)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer"
             >
               Manage My Booking
-            </Link>
-          </div>
+            </button>
+          </form>
         )}
 
         <div className="mt-8 max-w-[680px] mx-auto p-5 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-md)]">
