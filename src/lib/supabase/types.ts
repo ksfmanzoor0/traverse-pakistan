@@ -373,6 +373,26 @@ export type Database = {
         Update: Partial<{ booking_ref: string; code: string; expires_at: string; used: boolean; created_at: string; auth_user_id: string | null; channel: "email" | "whatsapp" | null }>;
         Relationships: [];
       };
+      auth_otps: {
+        Row: {
+          id: string;
+          email: string;
+          code: string;
+          expires_at: string;
+          used: boolean;
+          created_at: string;
+        };
+        Insert: {
+          email: string;
+          code: string;
+          expires_at: string;
+          id?: string;
+          used?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<{ email: string; code: string; expires_at: string; used: boolean; created_at: string }>;
+        Relationships: [];
+      };
       package_bookings: {
         Row: {
           id: string;

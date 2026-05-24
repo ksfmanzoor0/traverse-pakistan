@@ -41,10 +41,13 @@ export async function POST(req: NextRequest) {
     const url = data.properties?.action_link;
     if (!url) return NextResponse.json({ ok: true });
 
-    // generateLink also returns an `email_otp` — the 6-digit equivalent of the
-    // magic-link hashed_token. Include it in the email so the user can fall back
-    // to manual code entry if the link doesn't work.
-    const code = (data.properties as { email_otp?: string })?.email_otp ?? null;
+    // Independent OTP: generate our own 6-digit code and store it in
+    // auth_otps. Clicking the magic link consumes Supabase's token; our OTP
+    // remains valid (separate row, separate verification path). At verify
+    // time we mint a fresh Supabase magic-link token server-side.
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1h
+    await admin.from("auth_otps").insert({ email, code, expires_at: expiresAt });
 
     const resend = getResend();
     const template = buildMagicLinkEmail(url, code);

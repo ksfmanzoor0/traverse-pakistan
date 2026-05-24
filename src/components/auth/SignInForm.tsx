@@ -107,11 +107,21 @@ function SignInInner() {
     setCodeError(null);
     setVerifying(true);
     try {
+      const res = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), code }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.tokenHash) {
+        setCodeError(data.error ?? "Invalid or expired code");
+        return;
+      }
+      // Exchange the server-minted magic-link token for a real session.
       const supabase = getSupabaseBrowser();
       const { error: err } = await supabase.auth.verifyOtp({
-        email: email.trim(),
-        token: code,
-        type: "email",
+        token_hash: data.tokenHash,
+        type: data.type ?? "magiclink",
       });
       if (err) {
         setCodeError(err.message);
