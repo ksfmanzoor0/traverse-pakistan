@@ -41,9 +41,9 @@ export default async function TripsPage() {
   return (
     <div className="py-8 sm:py-12">
       <Container>
-        <Breadcrumb items={[{ label: "My Trips" }]} />
+        <Breadcrumb items={[{ label: "My Bookings" }]} />
         <div className="mt-6 mb-6">
-          <h1 className="text-[28px] font-bold text-[var(--text-primary)]">My Trips</h1>
+          <h1 className="text-[28px] font-bold text-[var(--text-primary)]">My Bookings</h1>
           <p className="text-[var(--text-tertiary)] mt-2 text-[14px]">
             All your bookings with Traverse Pakistan.
           </p>
