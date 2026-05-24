@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { Icon } from "@/components/ui/Icon";
@@ -47,6 +47,7 @@ function Divider() {
 }
 
 function SignInInner() {
+  const router = useRouter();
   const search = useSearchParams();
   const next = search.get("redirect") || search.get("next") || "/account/trips";
 
@@ -54,6 +55,10 @@ function SignInInner() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(search.get("error"));
   const [sent, setSent] = useState(false);
+  const [showCode, setShowCode] = useState(false);
+  const [code, setCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [codeError, setCodeError] = useState<string | null>(null);
 
   if (!isSupabaseConfigured) {
     return (
@@ -63,20 +68,78 @@ function SignInInner() {
     );
   }
 
+  async function verifyCode(e: React.FormEvent) {
+    e.preventDefault();
+    setCodeError(null);
+    setVerifying(true);
+    try {
+      const supabase = getSupabaseBrowser();
+      const { error: err } = await supabase.auth.verifyOtp({
+        email: email.trim(),
+        token: code,
+        type: "email",
+      });
+      if (err) {
+        setCodeError(err.message);
+        return;
+      }
+      router.replace(next);
+      router.refresh();
+    } catch (err) {
+      setCodeError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setVerifying(false);
+    }
+  }
+
   if (sent) {
     return (
-      <div className="p-6 bg-[var(--primary-light)] border border-[var(--primary)]/30 rounded-[var(--radius-md)] text-center space-y-3">
-        <div className="w-12 h-12 mx-auto rounded-full bg-[var(--primary)]/10 flex items-center justify-center">
-          <Icon name="envelope" size="lg" color="var(--primary)" />
+      <div className="p-6 bg-[var(--primary-light)] border border-[var(--primary)]/30 rounded-[var(--radius-md)] space-y-4">
+        <div className="text-center space-y-3">
+          <div className="w-12 h-12 mx-auto rounded-full bg-[var(--primary)]/10 flex items-center justify-center">
+            <Icon name="envelope" size="lg" color="var(--primary)" />
+          </div>
+          <p className="text-[16px] font-bold text-[var(--primary-deep)]">Check your email</p>
+          <p className="text-[13px] text-[var(--text-secondary)]">
+            We sent a sign-in link to <span className="font-semibold">{email}</span>. Tap it to sign in — no password needed.
+          </p>
         </div>
-        <p className="text-[16px] font-bold text-[var(--primary-deep)]">Check your email</p>
-        <p className="text-[13px] text-[var(--text-secondary)]">
-          We sent a sign-in link to <span className="font-semibold">{email}</span>. Tap it to sign in — no password needed.
-        </p>
+
+        {!showCode ? (
+          <button
+            type="button"
+            onClick={() => setShowCode(true)}
+            className="w-full text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+          >
+            Didn&apos;t get the link? Enter the 6-digit code instead
+          </button>
+        ) : (
+          <form onSubmit={verifyCode} className="space-y-2 pt-1">
+            <input
+              type="text"
+              inputMode="numeric"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="000000"
+              maxLength={6}
+              autoFocus
+              className="w-full h-11 px-4 text-center text-[18px] font-mono tracking-[0.3em] rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--primary)] transition-colors"
+            />
+            {codeError && <p className="text-[12px] text-[var(--error)] font-medium">{codeError}</p>}
+            <button
+              type="submit"
+              disabled={verifying || code.length !== 6}
+              className="w-full h-10 bg-[var(--primary)] text-[var(--text-inverse)] text-[13px] font-semibold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {verifying ? "Verifying…" : "Confirm code"}
+            </button>
+          </form>
+        )}
+
         <button
           type="button"
-          onClick={() => { setSent(false); setEmail(""); }}
-          className="text-[12px] text-[var(--primary)] hover:underline"
+          onClick={() => { setSent(false); setEmail(""); setShowCode(false); setCode(""); setCodeError(null); }}
+          className="block mx-auto text-[12px] text-[var(--primary)] hover:underline"
         >
           Use a different email
         </button>

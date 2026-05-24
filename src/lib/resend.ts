@@ -46,7 +46,17 @@ function baseLayout(content: string) {
 </html>`;
 }
 
-export function buildMagicLinkEmail(magicUrl: string) {
+export function buildMagicLinkEmail(magicUrl: string, code?: string | null) {
+  const codeBlock = code
+    ? `
+    <div style="border-top:1px solid #ede8e0;margin:28px 0 0;padding-top:20px">
+      <p style="margin:0 0 8px;font-size:12px;color:#888;text-align:center">Or enter this code if the link doesn't work</p>
+      <div style="background:#faf9f7;border-radius:10px;padding:16px;text-align:center;letter-spacing:0.3em">
+        <span style="font-size:28px;font-weight:700;color:#2d6a4f;font-family:'Courier New',monospace">${code}</span>
+      </div>
+    </div>`
+    : "";
+
   const html = baseLayout(`
     <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#1a1a1a;">Sign in to Traverse Pakistan</h1>
     <p style="margin:0 0 24px;font-size:14px;color:#555;line-height:1.6;">
@@ -61,6 +71,7 @@ export function buildMagicLinkEmail(magicUrl: string) {
     <p style="margin:12px 0 0;font-size:12px;color:#aaa;">
       Or copy this link: <span style="color:#2d6a4f;word-break:break-all;">${magicUrl}</span>
     </p>
+    ${codeBlock}
   `);
 
   return {

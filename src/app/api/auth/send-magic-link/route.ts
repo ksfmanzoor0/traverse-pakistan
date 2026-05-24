@@ -41,8 +41,13 @@ export async function POST(req: NextRequest) {
     const url = data.properties?.action_link;
     if (!url) return NextResponse.json({ ok: true });
 
+    // generateLink also returns an `email_otp` — the 6-digit equivalent of the
+    // magic-link hashed_token. Include it in the email so the user can fall back
+    // to manual code entry if the link doesn't work.
+    const code = (data.properties as { email_otp?: string })?.email_otp ?? null;
+
     const resend = getResend();
-    const template = buildMagicLinkEmail(url);
+    const template = buildMagicLinkEmail(url, code);
     await resend.emails.send({ to: email, ...template });
 
     return NextResponse.json({ ok: true });
