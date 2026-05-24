@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useCallback, useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { Icon } from "@/components/ui/Icon";
+
+const RESEND_COOLDOWN = 30;
 
 function getCallbackUrl(next: string) {
   if (typeof window === "undefined") return next;
@@ -59,6 +61,38 @@ function SignInInner() {
   const [code, setCode] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [codeError, setCodeError] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+  const [resending, setResending] = useState(false);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
+  const triggerSend = useCallback(async (targetEmail: string) => {
+    const res = await fetch("/api/auth/send-magic-link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: targetEmail, next }),
+    });
+    if (!res.ok) throw new Error("Could not send sign-in link. Please try again.");
+  }, [next]);
+
+  async function resendCode() {
+    if (cooldown > 0 || resending) return;
+    setCodeError(null);
+    setResending(true);
+    try {
+      await triggerSend(email.trim());
+      setCode("");
+      setCooldown(RESEND_COOLDOWN);
+    } catch (err) {
+      setCodeError(err instanceof Error ? err.message : "Could not send a new code");
+    } finally {
+      setResending(false);
+    }
+  }
 
   if (!isSupabaseConfigured) {
     return (
@@ -125,13 +159,25 @@ function SignInInner() {
               autoFocus
               className="w-full h-11 px-4 text-center text-[18px] font-mono tracking-[0.3em] rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--primary)] transition-colors"
             />
-            {codeError && <p className="text-[12px] text-[var(--error)] font-medium">{codeError}</p>}
+            {codeError && (
+              <p className="text-[12px] text-[var(--error)] font-medium">
+                {codeError}
+              </p>
+            )}
             <button
               type="submit"
               disabled={verifying || code.length !== 6}
               className="w-full h-10 bg-[var(--primary)] text-[var(--text-inverse)] text-[13px] font-semibold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors disabled:opacity-50 cursor-pointer"
             >
               {verifying ? "Verifying…" : "Confirm code"}
+            </button>
+            <button
+              type="button"
+              onClick={resendCode}
+              disabled={cooldown > 0 || resending}
+              className="w-full text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+            >
+              {cooldown > 0 ? `Send a new code in ${cooldown}s` : resending ? "Sending…" : "Send a new code"}
             </button>
           </form>
         )}
@@ -165,13 +211,9 @@ function SignInInner() {
     setError(null);
     setSubmitting(true);
     try {
-      const res = await fetch("/api/auth/send-magic-link", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), next }),
-      });
-      if (!res.ok) throw new Error("Could not send sign-in link. Please try again.");
+      await triggerSend(email.trim());
       setSent(true);
+      setCooldown(RESEND_COOLDOWN);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
