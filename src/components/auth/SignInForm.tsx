@@ -99,7 +99,7 @@ function SignInInner() {
           <div className="w-12 h-12 mx-auto rounded-full bg-[var(--primary)]/10 flex items-center justify-center">
             <Icon name="envelope" size="lg" color="var(--primary)" />
           </div>
-          <p className="text-[16px] font-bold text-[var(--primary-deep)]">Check your email</p>
+          <p className="text-[16px] font-bold text-[var(--text-primary)]">Check your email</p>
           <p className="text-[13px] text-[var(--text-secondary)]">
             We sent a sign-in link to <span className="font-semibold">{email}</span>. Tap it to sign in — no password needed.
           </p>
