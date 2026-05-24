@@ -117,7 +117,7 @@ export default async function HotelCheckoutSuccessPage({ params, searchParams }:
           <form action={`/api/bookings/${encodeURIComponent(ref)}/manage-init`} method="POST" className="mt-3 max-w-[480px] mx-auto">
             <button
               type="submit"
-              className="block w-full h-[52px] flex items-center justify-center border border-[var(--border-default)] text-[15px] font-bold text-[var(--text-primary)] rounded-[var(--radius-sm)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer"
+              className="w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-bold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors active:scale-[0.98] cursor-pointer"
             >
               Manage My Booking
             </button>
