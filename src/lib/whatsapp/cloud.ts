@@ -109,14 +109,15 @@ export async function sendBookingConfirmedViaWhatsApp(args: {
   toPhone: string;
   name: string;
   bookingRef: string;
-  magicLinkPath: string; // e.g. "auth/callback?token_hash=..." — joined with NEXT_PUBLIC_SITE_URL
+  magicLinkPath: string; // full magic-link URL — passed as a body variable {{3}}
 }): Promise<SendResult> {
   const cfg = getConfig();
   if (!cfg) return { ok: true, skipped: true };
+  // Full URL goes in the body ({{3}}), not a URL button — keeps the template
+  // domain-agnostic so the same template works on sandbox and production.
   return sendTemplate(
     args.toPhone,
     cfg.bookingConfirmedTemplate,
-    [args.name, args.bookingRef],
-    args.magicLinkPath
+    [args.name, args.bookingRef, args.magicLinkPath]
   );
 }
