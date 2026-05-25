@@ -102,7 +102,9 @@ async function sendTemplate(
 export async function sendOtpViaWhatsApp(toPhone: string, code: string): Promise<SendResult> {
   const cfg = getConfig();
   if (!cfg) return { ok: true, skipped: true };
-  return sendTemplate(toPhone, cfg.otpTemplate, [code], code);
+  // Utility template — code in the body ({{1}}), no copy-code button (that's
+  // an authentication-category feature, which requires business verification).
+  return sendTemplate(toPhone, cfg.otpTemplate, [code]);
 }
 
 export async function sendBookingConfirmedViaWhatsApp(args: {
