@@ -39,21 +39,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Anonymous visitor fast path — no cookie, no session, no network call.
-    if (!hasSupabaseAuthCookie()) {
-      setLoading(false);
-      return;
-    }
-
     const supabase = getSupabaseBrowser();
 
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
+    // Anonymous visitor fast path — no cookie means no existing session, so
+    // skip the getSession network call. We STILL subscribe to auth changes
+    // below so a later client-side sign-in (e.g. OTP verifyOtp without a full
+    // page navigation) updates the navbar live.
+    if (!hasSupabaseAuthCookie()) {
       setLoading(false);
-    });
+    } else {
+      supabase.auth.getSession().then(({ data }) => {
+        setSession(data.session);
+        setLoading(false);
+      });
+    }
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
+      setLoading(false);
     });
     return () => sub.subscription.unsubscribe();
   }, []);

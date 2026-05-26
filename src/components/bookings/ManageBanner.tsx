@@ -147,7 +147,7 @@ export function ManageBanner({ bookingRef }: Props) {
         <button
           type="button"
           onClick={() => setShowCode(true)}
-          className="w-full text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+          className="w-full text-[14px] font-bold text-[var(--primary)] underline underline-offset-2 hover:text-[var(--primary-hover)] transition-colors cursor-pointer"
         >
           Didn&apos;t get the link? Enter the 6-digit code instead
         </button>
