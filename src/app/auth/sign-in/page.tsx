@@ -15,13 +15,13 @@ export default function SignInPage() {
         <div className="max-w-[420px] mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-[28px] sm:text-[32px] font-bold text-[var(--text-primary)] tracking-tight">
-              Welcome back
+              Sign in
             </h1>
             <p className="text-[14px] text-[var(--text-secondary)] mt-2">
-              Sign in or create a new account.
+              Use your email to sign in or create an account. No password required.
             </p>
           </div>
-          <SignInForm defaultMode="sign-in" />
+          <SignInForm />
         </div>
       </Container>
     </div>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { alfaConfig } from "@/lib/alfa/config";
 import { generateAlfaHash } from "@/lib/alfa/hash";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { stampBookingWithUser } from "@/lib/auth/stampBookingWithUser";
 
 interface Body {
   bookingRef: string;
@@ -28,6 +29,8 @@ export async function POST(req: NextRequest) {
     }
 
     const amount: number = data.total_amount as number;
+
+    await stampBookingWithUser(bookingRef);
 
     const proto = req.headers.get("x-forwarded-proto") ?? "https";
     const host = req.headers.get("host") ?? "traversepakistan.com";

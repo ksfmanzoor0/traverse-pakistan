@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "@/components/ui/Icon";
 import { getWhatsAppUrl } from "@/lib/utils";
@@ -15,6 +15,7 @@ function bookingMeta(ref: string): { label: string; browseHref: string; browseLa
 }
 
 function ReturnInner() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const orderId = searchParams?.get("O") ?? "";
 
@@ -72,6 +73,15 @@ function ReturnInner() {
     intervalRef.current = setInterval(check, 1500);
     return () => clearInterval(intervalRef.current!);
   }, [orderId]);
+
+  // Once payment confirms, the status route has set our view cookie. Jump
+  // straight to the booking detail page — it's richer than the confirmation
+  // card here, and the CONFIRMED status badge is the explicit success signal.
+  useEffect(() => {
+    if (state === "paid" && bookingRef) {
+      router.replace(`/bookings/${bookingRef}`);
+    }
+  }, [state, bookingRef, router]);
 
   if (state === "loading") {
     return (
@@ -149,16 +159,16 @@ function ReturnInner() {
           </div>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
-              href={browseHref}
-              className="inline-flex h-11 px-6 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border-default)] text-[14px] font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] transition-colors"
+              href={`/bookings/${bookingRef}`}
+              className="inline-flex h-11 px-6 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--primary)] text-[var(--text-inverse)] text-[14px] font-semibold hover:bg-[var(--primary-hover)] transition-colors"
             >
-              {browseLabel}
+              Try Again
             </Link>
             <a
               href={getWhatsAppUrl(`Hi, I tried to pay for ${label} booking ${bookingRef} but the payment didn't go through. Can you help?`)}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-11 px-6 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--primary)] text-[var(--text-inverse)] text-[14px] font-semibold hover:bg-[var(--primary-hover)] transition-colors"
+              className="inline-flex h-11 px-6 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border-default)] text-[14px] font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] transition-colors"
             >
               Contact us
             </a>

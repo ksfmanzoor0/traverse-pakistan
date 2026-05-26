@@ -81,7 +81,7 @@ export function UserMenu() {
           <nav className="py-1">
             {[
               { href: "/account", label: "Account" },
-              { href: "/account/trips", label: "My Trips" },
+              { href: "/account/trips", label: "My Bookings" },
               { href: "/account/wishlist", label: "Wishlist" },
               { href: "/account/settings", label: "Settings" },
             ].map((item) => (

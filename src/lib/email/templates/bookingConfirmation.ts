@@ -1,5 +1,3 @@
-const SITE = "https://traversepakistan.com";
-
 interface BookingConfirmationParams {
   bookingRef: string;
   contactName: string;
@@ -8,11 +6,35 @@ interface BookingConfirmationParams {
   itemName: string;
   totalAmount: number;
   details: Record<string, string>;
+  viewUrl: string; // magic-link URL — signs the user in on click
+  paymentStatus: "pending" | "paid" | "failed";
+}
+
+function copyFor(status: BookingConfirmationParams["paymentStatus"], bookingType: BookingConfirmationParams["bookingType"]) {
+  if (status === "paid") {
+    return {
+      title: "Booking Confirmed",
+      subhead: `Your ${bookingType} booking is confirmed. We'll be in touch shortly with trip details.`,
+      amountLabel: "Amount Paid",
+      cta: "View My Booking",
+      textTitle: "Booking Confirmed",
+      textBody: `Your ${bookingType} booking is confirmed. We'll be in touch shortly.`,
+    };
+  }
+  return {
+    title: "Booking Received",
+    subhead: `Your ${bookingType} booking is reserved. Complete payment to confirm your spot.`,
+    amountLabel: "Amount Due",
+    cta: "Complete Payment",
+    textTitle: "Booking Received",
+    textBody: `Your ${bookingType} booking is reserved. Complete payment to confirm your spot.`,
+  };
 }
 
 export function bookingConfirmationHtml(p: BookingConfirmationParams): string {
-  const viewUrl = `${SITE}/bookings/${p.bookingRef}`;
+  const viewUrl = p.viewUrl;
   const whatsappUrl = `https://wa.me/923216650670?text=Hi%2C%20I%20need%20help%20with%20booking%20${p.bookingRef}`;
+  const c = copyFor(p.paymentStatus, p.bookingType);
 
   const detailRows = Object.entries(p.details)
     .map(([k, v]) => `
@@ -39,14 +61,14 @@ export function bookingConfirmationHtml(p: BookingConfirmationParams): string {
         <!-- Body -->
         <tr><td style="background:#FFFFFF;padding:32px 32px 24px;border-radius:0 0 12px 12px">
 
-          <!-- Success icon + title -->
+          <!-- Icon + title -->
           <div style="text-align:center;margin-bottom:28px">
             <div style="width:56px;height:56px;background:#E7F3EE;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px">
               <span style="color:#1E6A52;font-size:26px">&#10003;</span>
             </div>
-            <h1 style="margin:0;font-size:22px;font-weight:700;color:#151515">Payment Confirmed</h1>
+            <h1 style="margin:0;font-size:22px;font-weight:700;color:#151515">${c.title}</h1>
             <p style="margin:8px 0 0;font-size:14px;color:#525252">
-              Your ${p.bookingType} booking is confirmed. We'll be in touch shortly.
+              ${c.subhead}
             </p>
           </div>
 
@@ -63,7 +85,7 @@ export function bookingConfirmationHtml(p: BookingConfirmationParams): string {
                 <td style="padding:8px 0;color:#151515;font-size:13px;font-weight:600">${p.contactName}</td>
               </tr>
               <tr>
-                <td style="padding:8px 0;color:#8A8A8A;font-size:13px">Amount Paid</td>
+                <td style="padding:8px 0;color:#8A8A8A;font-size:13px">${c.amountLabel}</td>
                 <td style="padding:8px 0;color:#1E6A52;font-size:15px;font-weight:700">PKR ${p.totalAmount.toLocaleString()}</td>
               </tr>
               ${detailRows}
@@ -73,8 +95,9 @@ export function bookingConfirmationHtml(p: BookingConfirmationParams): string {
           <!-- CTA -->
           <div style="text-align:center;margin-bottom:24px">
             <a href="${viewUrl}" style="display:inline-block;background:#1E6A52;color:#FFFFFF;font-size:14px;font-weight:700;padding:14px 32px;border-radius:8px;text-decoration:none">
-              View My Booking
+              ${c.cta}
             </a>
+            <p style="margin:14px 0 0;font-size:12px;color:#8A8A8A">Tap the button to securely access your booking — no password needed.</p>
           </div>
 
           <!-- WhatsApp -->
@@ -100,18 +123,18 @@ export function bookingConfirmationHtml(p: BookingConfirmationParams): string {
 }
 
 export function bookingConfirmationText(p: BookingConfirmationParams): string {
-  const viewUrl = `https://traversepakistan.com/bookings/${p.bookingRef}`;
+  const c = copyFor(p.paymentStatus, p.bookingType);
   const details = Object.entries(p.details).map(([k, v]) => `${k}: ${v}`).join("\n");
-  return `Payment Confirmed — Traverse Pakistan
+  return `${c.textTitle} — Traverse Pakistan
 
-Your ${p.bookingType} booking is confirmed.
+${c.textBody}
 
 Booking Ref: ${p.bookingRef}
 Name: ${p.contactName}
-Amount Paid: PKR ${p.totalAmount.toLocaleString()}
+${c.amountLabel}: PKR ${p.totalAmount.toLocaleString()}
 ${details}
 
-View your booking: ${viewUrl}
+${c.cta}: ${p.viewUrl}
 
 Need help? WhatsApp us at +92-321-6650670
 

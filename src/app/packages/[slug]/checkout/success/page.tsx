@@ -6,6 +6,9 @@ import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { getAllPackages, getPackageBySlug } from "@/services/package.service";
 import { getWhatsAppUrl } from "@/lib/utils";
 import { PackagePayButton } from "@/components/packages/PackagePayButton";
+import { stampBookingWithUser } from "@/lib/auth/stampBookingWithUser";
+import { sendBookingConfirmation } from "@/lib/email/sendBookingConfirmation";
+import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -20,7 +23,17 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const pkg = await getPackageBySlug(slug);
-  return { title: pkg ? `Booking confirmed — ${pkg.name}` : "Booking confirmed" };
+  return { title: pkg ? `Booking received — ${pkg.name}` : "Booking received" };
+}
+
+async function getBookingSummary(ref: string) {
+  const supabase = getSupabaseAdmin();
+  const { data } = await supabase
+    .from("package_bookings")
+    .select("contact_name, contact_email, contact_phone, tier, departure_city, start_date, adults, rooms, total_amount, payment_status")
+    .eq("booking_ref", ref)
+    .maybeSingle();
+  return data;
 }
 
 export default async function PackageCheckoutSuccessPage({ params, searchParams }: Props) {
@@ -28,7 +41,21 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
   const { ref, amount: amountParam } = await searchParams;
   const pkg = await getPackageBySlug(slug);
   if (!pkg) notFound();
-  const amount = amountParam ? Number(amountParam) : null;
+
+  let summary: Awaited<ReturnType<typeof getBookingSummary>> = null;
+
+  if (ref) {
+    // Silent signup (idempotent) + fire booking-received email/WhatsApp.
+    // No client-side auto-sign-in — view access is granted only via the
+    // ref+contact match flow on /bookings/find, or the magic link in email.
+    await stampBookingWithUser(ref);
+    sendBookingConfirmation(ref).catch((err) =>
+      console.error("[package/success] sendBookingConfirmation failed:", err)
+    );
+    summary = await getBookingSummary(ref);
+  }
+
+  const amount = amountParam ? Number(amountParam) : summary?.total_amount ? Number(summary.total_amount) : null;
 
   return (
     <div className="py-10 sm:py-16">
@@ -37,7 +64,7 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
           items={[
             { label: "Holiday Packages", href: "/packages" },
             { label: pkg.name, href: `/packages/${pkg.slug}` },
-            { label: "Booking confirmed" },
+            { label: "Booking received" },
           ]}
         />
 
@@ -56,26 +83,56 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
             </p>
           )}
           <p className="mt-3 text-[15px] text-[var(--text-secondary)] max-w-[480px] mx-auto">
-            Pay now to secure your spot, or our team will reach out within 1 hour with a payment link.
+            Pay now to secure your spot. Booking details have been sent to your email and WhatsApp.
           </p>
         </div>
 
-        {/* Pay now section */}
+        {/* Pay now */}
         {ref && amount && (
           <div className="mt-8 max-w-[480px] mx-auto">
             <PackagePayButton
               bookingRef={ref}
               amount={amount}
-              paymentStatus="pending"
+              paymentStatus={summary?.payment_status ?? "pending"}
             />
           </div>
+        )}
+
+        {/* Inline booking summary */}
+        {summary && (
+          <div className="mt-6 max-w-[680px] mx-auto bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-[var(--radius-md)] px-5 py-3">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] mb-2">Booking Summary</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-[13px]">
+              <div className="flex justify-between gap-3"><span className="text-[var(--text-tertiary)]">Package</span><span className="font-semibold text-[var(--text-primary)] text-right">{pkg.name}</span></div>
+              <div className="flex justify-between gap-3"><span className="text-[var(--text-tertiary)]">Tier</span><span className="font-semibold text-[var(--text-primary)] capitalize text-right">{summary.tier}</span></div>
+              <div className="flex justify-between gap-3"><span className="text-[var(--text-tertiary)]">Departure</span><span className="font-semibold text-[var(--text-primary)] capitalize text-right">{summary.departure_city}</span></div>
+              {summary.start_date && (
+                <div className="flex justify-between gap-3"><span className="text-[var(--text-tertiary)]">Start Date</span><span className="font-semibold text-[var(--text-primary)] text-right">{new Date(summary.start_date).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}</span></div>
+              )}
+              <div className="flex justify-between gap-3"><span className="text-[var(--text-tertiary)]">Adults</span><span className="font-semibold text-[var(--text-primary)] text-right">{summary.adults}</span></div>
+              <div className="flex justify-between gap-3"><span className="text-[var(--text-tertiary)]">Rooms</span><span className="font-semibold text-[var(--text-primary)] text-right">{summary.rooms}</span></div>
+              <div className="flex justify-between gap-3 sm:col-span-2 pt-2 mt-1 border-t border-[var(--border-default)]"><span className="text-[var(--text-tertiary)]">Contact</span><span className="font-semibold text-[var(--text-primary)] text-right truncate">{summary.contact_name} · {summary.contact_phone}</span></div>
+            </div>
+          </div>
+        )}
+
+        {/* Manage booking — POST to send magic link + grant view-tier access */}
+        {ref && (
+          <form action={`/api/bookings/${encodeURIComponent(ref)}/manage-init`} method="POST" className="mt-3 max-w-[480px] mx-auto">
+            <button
+              type="submit"
+              className="w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-bold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors active:scale-[0.98] cursor-pointer"
+            >
+              Manage My Booking
+            </button>
+          </form>
         )}
 
         <div className="mt-8 max-w-[680px] mx-auto p-5 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-md)]">
           <h2 className="text-[14px] font-bold text-[var(--text-primary)] mb-3">What happens next</h2>
           <ol className="space-y-2.5 text-[13px] text-[var(--text-secondary)]">
             {[
-              "Pay now via card, JazzCash, or bank transfer — or wait for our team to send you a link.",
+              "Pay now via card, JazzCash, or bank transfer — or tap the link in your email/WhatsApp to come back anytime.",
               "Once paid, you receive the full itinerary, hotel details, and driver contact.",
               `We stay in touch via WhatsApp throughout your ${pkg.duration}-day journey.`,
             ].map((step, i) => (

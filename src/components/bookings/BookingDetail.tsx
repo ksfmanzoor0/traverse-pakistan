@@ -4,8 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { formatPrice, getWhatsAppUrl } from "@/lib/utils";
 import { Icon } from "@/components/ui/Icon";
-import { OtpModal } from "./OtpModal";
 import type { BookingStatus, RefundStatus } from "@/types/booking-status";
+import { CompletePaymentButton } from "./CompletePaymentButton";
+import { ManageBanner } from "./ManageBanner";
 
 interface BookingData {
   type: "tour" | "package" | "hotel";
@@ -45,43 +46,66 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 interface Props {
   bookingRef: string;
   data: BookingData;
+  canManage: boolean;
 }
 
-export function BookingDetail({ bookingRef, data }: Props) {
+export function BookingDetail({ bookingRef, data, canManage }: Props) {
   const { type, booking } = data;
   const [editingName, setEditingName] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [newName, setNewName] = useState(String(booking.contact_name ?? ""));
-  const [otpAction, setOtpAction] = useState<"name" | "cancel" | null>(null);
   const [localBooking, setLocalBooking] = useState(booking);
   const [actionDone, setActionDone] = useState<"name" | "cancel" | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const bookingStatus = String(localBooking.booking_status ?? "pending") as BookingStatus;
   const refundStatus = localBooking.refund_status ? String(localBooking.refund_status) as RefundStatus : null;
   const isCancelled = bookingStatus === "cancelled";
   const statusInfo = statusLabel(bookingStatus);
+  const rawPaymentStatus = type === "tour"
+    ? String(localBooking.status ?? "pending")
+    : String(localBooking.payment_status ?? "pending");
+  const isUnpaid = !isCancelled && rawPaymentStatus !== "paid" && rawPaymentStatus !== "confirmed";
+  const totalAmount = Number(localBooking.total_amount ?? 0);
 
   async function applyNameChange() {
-    const res = await fetch(`/api/bookings/${bookingRef}/name`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName }),
-    });
-    if (res.ok) {
+    setActionError(null);
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/bookings/${bookingRef}/name`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setActionError(data.error ?? "Failed to update name.");
+        return;
+      }
       setLocalBooking((b) => ({ ...b, contact_name: newName }));
       setEditingName(false);
-      setOtpAction(null);
       setActionDone("name");
+    } finally {
+      setBusy(false);
     }
   }
 
   async function applyCancel() {
-    const res = await fetch(`/api/bookings/${bookingRef}/cancel`, { method: "POST" });
-    if (res.ok) {
+    setActionError(null);
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/bookings/${bookingRef}/cancel`, { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setActionError(data.error ?? "Failed to cancel booking.");
+        return;
+      }
       setLocalBooking((b) => ({ ...b, booking_status: "cancelled" }));
       setCancelling(false);
-      setOtpAction(null);
       setActionDone("cancel");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -107,6 +131,11 @@ export function BookingDetail({ bookingRef, data }: Props) {
           {statusInfo.label}
         </span>
       </div>
+
+      {/* Complete payment CTA */}
+      {isUnpaid && totalAmount > 0 && (
+        <CompletePaymentButton bookingRef={bookingRef} amount={totalAmount} type={type} />
+      )}
 
       {/* Refund status */}
       {isCancelled && refundStatus && (
@@ -136,7 +165,7 @@ export function BookingDetail({ bookingRef, data }: Props) {
         <Row label="Contact Name" value={String(localBooking.contact_name ?? "-")} />
         <Row label="Email" value={String(localBooking.contact_email ?? "-")} />
         <Row label="Phone" value={String(localBooking.contact_phone ?? "-")} />
-        <Row label="Amount Paid" value={formatPrice(Number(localBooking.total_amount ?? 0))} />
+        <Row label={isUnpaid ? "Amount Due" : "Amount Paid"} value={formatPrice(totalAmount)} />
 
         {type === "package" && (
           <>
@@ -172,6 +201,9 @@ export function BookingDetail({ bookingRef, data }: Props) {
         <Row label="Booked On" value={localBooking.created_at ? new Date(String(localBooking.created_at)).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" }) : "-"} />
       </div>
 
+      {/* Manage banner — shown above edit/cancel when user hasn't verified yet */}
+      {!isCancelled && !canManage && <ManageBanner bookingRef={bookingRef} />}
+
       {/* Actions */}
       {!isCancelled && (
         <div className="space-y-3">
@@ -179,8 +211,9 @@ export function BookingDetail({ bookingRef, data }: Props) {
           {!editingName ? (
             <button
               type="button"
-              onClick={() => setEditingName(true)}
-              className="w-full h-11 border border-[var(--border-default)] rounded-[var(--radius-sm)] text-[14px] font-semibold text-[var(--text-primary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer flex items-center justify-center gap-2"
+              onClick={() => canManage && setEditingName(true)}
+              disabled={!canManage}
+              className="w-full h-11 border border-[var(--border-default)] rounded-[var(--radius-sm)] text-[14px] font-semibold text-[var(--text-primary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-[var(--border-default)] disabled:hover:text-[var(--text-primary)]"
             >
               <Icon name="edit" size="sm" />
               Edit contact name
@@ -197,11 +230,11 @@ export function BookingDetail({ bookingRef, data }: Props) {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setOtpAction("name")}
-                  disabled={!newName.trim() || newName === localBooking.contact_name}
+                  onClick={applyNameChange}
+                  disabled={busy || !newName.trim() || newName === localBooking.contact_name}
                   className="flex-1 h-10 bg-[var(--primary)] text-[var(--text-inverse)] text-[13px] font-semibold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors disabled:opacity-50 cursor-pointer"
                 >
-                  Save name
+                  {busy ? "Saving…" : "Save name"}
                 </button>
                 <button
                   type="button"
@@ -218,22 +251,24 @@ export function BookingDetail({ bookingRef, data }: Props) {
           {!cancelling ? (
             <button
               type="button"
-              onClick={() => setCancelling(true)}
-              className="w-full h-11 border border-[var(--error)]/40 rounded-[var(--radius-sm)] text-[14px] font-semibold text-[var(--error)] hover:bg-[var(--error)]/5 transition-colors cursor-pointer"
+              onClick={() => canManage && setCancelling(true)}
+              disabled={!canManage}
+              className="w-full h-11 border border-[var(--error)]/40 rounded-[var(--radius-sm)] text-[14px] font-semibold text-[var(--error)] hover:bg-[var(--error)]/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
             >
               Cancel booking
             </button>
           ) : (
             <div className="p-4 border border-[var(--error)]/30 rounded-[var(--radius-md)] bg-[var(--error)]/5 space-y-3">
               <p className="text-[13px] text-[var(--text-primary)] font-medium">Are you sure you want to cancel this booking?</p>
-              <p className="text-[12px] text-[var(--text-secondary)]">This action requires email verification and cannot be undone.</p>
+              <p className="text-[12px] text-[var(--text-secondary)]">This action cannot be undone.</p>
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setOtpAction("cancel")}
-                  className="flex-1 h-10 bg-[var(--error)] text-[var(--on-dark)] text-[13px] font-semibold rounded-[var(--radius-sm)] hover:opacity-90 transition-opacity cursor-pointer"
+                  onClick={applyCancel}
+                  disabled={busy}
+                  className="flex-1 h-10 bg-[var(--error)] text-[var(--on-dark)] text-[13px] font-semibold rounded-[var(--radius-sm)] hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
                 >
-                  Yes, cancel booking
+                  {busy ? "Cancelling…" : "Yes, cancel booking"}
                 </button>
                 <button
                   type="button"
@@ -263,22 +298,8 @@ export function BookingDetail({ bookingRef, data }: Props) {
         Back to home
       </Link>
 
-      {/* OTP modals */}
-      {otpAction === "name" && (
-        <OtpModal
-          bookingRef={bookingRef}
-          action="update your contact name"
-          onVerified={applyNameChange}
-          onClose={() => setOtpAction(null)}
-        />
-      )}
-      {otpAction === "cancel" && (
-        <OtpModal
-          bookingRef={bookingRef}
-          action="cancel your booking"
-          onVerified={applyCancel}
-          onClose={() => setOtpAction(null)}
-        />
+      {actionError && (
+        <p className="text-center text-[13px] text-[var(--error)] font-medium">{actionError}</p>
       )}
     </div>
   );

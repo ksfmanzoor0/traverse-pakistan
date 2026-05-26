@@ -46,52 +46,38 @@ function baseLayout(content: string) {
 </html>`;
 }
 
-export function buildForgotPasswordEmail(resetUrl: string) {
+export function buildMagicLinkEmail(magicUrl: string, code?: string | null) {
+  const codeBlock = code
+    ? `
+    <div style="border-top:1px solid #ede8e0;margin:28px 0 0;padding-top:20px">
+      <p style="margin:0 0 8px;font-size:12px;color:#888;text-align:center">Or enter this code if the link doesn't work</p>
+      <div style="background:#faf9f7;border-radius:10px;padding:16px;text-align:center;letter-spacing:0.3em">
+        <span style="font-size:28px;font-weight:700;color:#2d6a4f;font-family:'Courier New',monospace">${code}</span>
+      </div>
+    </div>`
+    : "";
+
   const html = baseLayout(`
-    <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#1a1a1a;">Reset your password</h1>
+    <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#1a1a1a;">Sign in to Traverse Pakistan</h1>
     <p style="margin:0 0 24px;font-size:14px;color:#555;line-height:1.6;">
-      We received a request to reset the password for your account. Click the button below to choose a new password. This link expires in 1 hour.
+      Tap the button below to sign in. No password needed. This link expires in 1 hour and can only be used once.
     </p>
-    <a href="${resetUrl}" style="display:inline-block;background:#2d6a4f;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:13px 28px;border-radius:8px;">
-      Reset password
+    <a href="${magicUrl}" style="display:inline-block;background:#2d6a4f;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:13px 28px;border-radius:8px;">
+      Sign in
     </a>
     <p style="margin:24px 0 0;font-size:12px;color:#888;line-height:1.6;">
-      If you did not request a password reset, you can safely ignore this email. Your password will not change.
+      If you didn't request this, you can safely ignore this email.
     </p>
     <p style="margin:12px 0 0;font-size:12px;color:#aaa;">
-      Or copy this link: <span style="color:#2d6a4f;word-break:break-all;">${resetUrl}</span>
+      Or copy this link: <span style="color:#2d6a4f;word-break:break-all;">${magicUrl}</span>
     </p>
+    ${codeBlock}
   `);
 
   return {
     from: FROM,
-    subject: "Reset your Traverse Pakistan password",
+    subject: "Your sign-in link · Traverse Pakistan",
     html,
   };
 }
 
-export function buildConfirmationEmail(confirmUrl: string, name?: string) {
-  const greeting = name ? `Hi ${name},` : "Welcome to Traverse Pakistan,";
-  const html = baseLayout(`
-    <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#1a1a1a;">Confirm your email</h1>
-    <p style="margin:0 0 4px;font-size:14px;color:#555;line-height:1.6;">${greeting}</p>
-    <p style="margin:0 0 24px;font-size:14px;color:#555;line-height:1.6;">
-      Thanks for creating an account. Click the button below to verify your email address and start exploring Pakistan's most extraordinary destinations.
-    </p>
-    <a href="${confirmUrl}" style="display:inline-block;background:#2d6a4f;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:13px 28px;border-radius:8px;">
-      Confirm email address
-    </a>
-    <p style="margin:24px 0 0;font-size:12px;color:#888;line-height:1.6;">
-      This link expires in 24 hours. If you did not create an account, you can safely ignore this email.
-    </p>
-    <p style="margin:12px 0 0;font-size:12px;color:#aaa;">
-      Or copy this link: <span style="color:#2d6a4f;word-break:break-all;">${confirmUrl}</span>
-    </p>
-  `);
-
-  return {
-    from: FROM,
-    subject: "Confirm your Traverse Pakistan account",
-    html,
-  };
-}
