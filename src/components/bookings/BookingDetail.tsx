@@ -159,46 +159,55 @@ export function BookingDetail({ bookingRef, data, canManage }: Props) {
         </div>
       )}
 
-      {/* Booking details card */}
-      <div className="bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-[var(--radius-md)] px-5 py-2">
-        <Row label="Booking Ref" value={<span className="font-mono">{bookingRef}</span>} />
-        <Row label="Contact Name" value={String(localBooking.contact_name ?? "-")} />
-        <Row label="Email" value={String(localBooking.contact_email ?? "-")} />
-        <Row label="Phone" value={String(localBooking.contact_phone ?? "-")} />
-        <Row label={isUnpaid ? "Amount Due" : "Amount Paid"} value={formatPrice(totalAmount)} />
+      {/* Booking details — two columns on desktop, stacks on mobile */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Your details */}
+        <div className="bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-[var(--radius-md)] px-5 py-2">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] pt-3 pb-1">Your details</p>
+          <Row label="Contact Name" value={String(localBooking.contact_name ?? "-")} />
+          <Row label="Email" value={String(localBooking.contact_email ?? "-")} />
+          <Row label="Phone" value={String(localBooking.contact_phone ?? "-")} />
+          <Row label="Booking Ref" value={<span className="font-mono">{bookingRef}</span>} />
+          <Row label="Booked On" value={localBooking.created_at ? new Date(String(localBooking.created_at)).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" }) : "-"} />
+        </div>
 
-        {type === "package" && (
-          <>
-            <Row label="Package" value={String(localBooking.package_slug ?? "-").replace(/-/g, " ")} />
-            <Row label="Tier" value={String(localBooking.tier ?? "-")} />
-            <Row label="Departure City" value={String(localBooking.departure_city ?? "-")} />
-            {localBooking.start_date && (
-              <Row label="Start Date" value={new Date(String(localBooking.start_date)).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })} />
-            )}
-            <Row label="Adults" value={String(localBooking.adults ?? "-")} />
-            <Row label="Rooms" value={String(localBooking.rooms ?? "-")} />
-          </>
-        )}
+        {/* Trip details */}
+        <div className="bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-[var(--radius-md)] px-5 py-2">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] pt-3 pb-1">Trip details</p>
 
-        {type === "hotel" && (
-          <>
-            <Row label="Hotel" value={String(localBooking.hotel_slug ?? "-").replace(/-/g, " ")} />
-            {localBooking.checkin_date && (
-              <Row label="Check-in" value={new Date(String(localBooking.checkin_date)).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })} />
-            )}
-            {localBooking.checkout_date && (
-              <Row label="Check-out" value={new Date(String(localBooking.checkout_date)).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })} />
-            )}
-            <Row label="Nights" value={String(localBooking.nights ?? "-")} />
-            <Row label="Guests" value={`${localBooking.adults ?? 0} adults${Number(localBooking.children) > 0 ? `, ${localBooking.children} children` : ""}`} />
-          </>
-        )}
+          {type === "package" && (
+            <>
+              <Row label="Package" value={String(localBooking.package_slug ?? "-").replace(/-/g, " ")} />
+              <Row label="Tier" value={String(localBooking.tier ?? "-")} />
+              <Row label="Departure City" value={String(localBooking.departure_city ?? "-")} />
+              {localBooking.start_date && (
+                <Row label="Start Date" value={new Date(String(localBooking.start_date)).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })} />
+              )}
+              <Row label="Adults" value={String(localBooking.adults ?? "-")} />
+              <Row label="Rooms" value={String(localBooking.rooms ?? "-")} />
+            </>
+          )}
 
-        {type === "tour" && (
-          <Row label="Seats" value={String(localBooking.seats ?? "-")} />
-        )}
+          {type === "hotel" && (
+            <>
+              <Row label="Hotel" value={String(localBooking.hotel_slug ?? "-").replace(/-/g, " ")} />
+              {localBooking.checkin_date && (
+                <Row label="Check-in" value={new Date(String(localBooking.checkin_date)).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })} />
+              )}
+              {localBooking.checkout_date && (
+                <Row label="Check-out" value={new Date(String(localBooking.checkout_date)).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })} />
+              )}
+              <Row label="Nights" value={String(localBooking.nights ?? "-")} />
+              <Row label="Guests" value={`${localBooking.adults ?? 0} adults${Number(localBooking.children) > 0 ? `, ${localBooking.children} children` : ""}`} />
+            </>
+          )}
 
-        <Row label="Booked On" value={localBooking.created_at ? new Date(String(localBooking.created_at)).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" }) : "-"} />
+          {type === "tour" && (
+            <Row label="Seats" value={String(localBooking.seats ?? "-")} />
+          )}
+
+          <Row label={isUnpaid ? "Amount Due" : "Amount Paid"} value={formatPrice(totalAmount)} />
+        </div>
       </div>
 
       {/* Manage banner — shown above edit/cancel when user hasn't verified yet */}
