@@ -36,11 +36,15 @@ function refundLabel(status: string): { label: string; color: string } {
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-3 border-b border-[var(--border-default)] last:border-0">
-      <span className="text-[13px] text-[var(--text-tertiary)] shrink-0 w-36">{label}</span>
-      <span className="text-[13px] font-medium text-[var(--text-primary)] text-right">{value}</span>
+    <div className="flex items-start justify-between gap-3 py-3 border-b border-[var(--border-default)] last:border-0">
+      <span className="text-[13px] text-[var(--text-tertiary)] shrink-0">{label}</span>
+      <span className="text-[13px] font-medium text-[var(--text-primary)] text-right break-words min-w-0">{value}</span>
     </div>
   );
+}
+
+function titleCase(s: string): string {
+  return s.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 interface Props {
@@ -164,7 +168,7 @@ export function BookingDetail({ bookingRef, data, canManage }: Props) {
         {/* Your details */}
         <div className="bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-[var(--radius-md)] px-5 py-2">
           <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] pt-3 pb-1">Your details</p>
-          <Row label="Contact Name" value={String(localBooking.contact_name ?? "-")} />
+          <Row label="Contact Name" value={titleCase(String(localBooking.contact_name ?? "-"))} />
           <Row label="Email" value={String(localBooking.contact_email ?? "-")} />
           <Row label="Phone" value={String(localBooking.contact_phone ?? "-")} />
           <Row label="Booking Ref" value={<span className="font-mono">{bookingRef}</span>} />
@@ -177,9 +181,9 @@ export function BookingDetail({ bookingRef, data, canManage }: Props) {
 
           {type === "package" && (
             <>
-              <Row label="Package" value={String(localBooking.package_slug ?? "-").replace(/-/g, " ")} />
-              <Row label="Tier" value={String(localBooking.tier ?? "-")} />
-              <Row label="Departure City" value={String(localBooking.departure_city ?? "-")} />
+              <Row label="Package" value={titleCase(String(localBooking.package_slug ?? "-"))} />
+              <Row label="Tier" value={titleCase(String(localBooking.tier ?? "-"))} />
+              <Row label="Departure City" value={titleCase(String(localBooking.departure_city ?? "-"))} />
               {localBooking.start_date && (
                 <Row label="Start Date" value={new Date(String(localBooking.start_date)).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })} />
               )}
@@ -190,7 +194,7 @@ export function BookingDetail({ bookingRef, data, canManage }: Props) {
 
           {type === "hotel" && (
             <>
-              <Row label="Hotel" value={String(localBooking.hotel_slug ?? "-").replace(/-/g, " ")} />
+              <Row label="Hotel" value={titleCase(String(localBooking.hotel_slug ?? "-"))} />
               {localBooking.checkin_date && (
                 <Row label="Check-in" value={new Date(String(localBooking.checkin_date)).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })} />
               )}
