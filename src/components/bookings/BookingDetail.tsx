@@ -171,13 +171,14 @@ export function BookingDetail({ bookingRef, data, canManage }: Props) {
           <Row label="Contact Name" value={titleCase(String(localBooking.contact_name ?? "-"))} />
           <Row label="Email" value={String(localBooking.contact_email ?? "-")} />
           <Row label="Phone" value={String(localBooking.contact_phone ?? "-")} />
-          <Row label="Booking Ref" value={<span className="font-mono">{bookingRef}</span>} />
           <Row label="Booked On" value={localBooking.created_at ? new Date(String(localBooking.created_at)).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" }) : "-"} />
         </div>
 
         {/* Trip details */}
         <div className="bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-[var(--radius-md)] px-5 py-2">
           <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] pt-3 pb-1">Trip details</p>
+
+          <Row label="Booking Ref" value={<span className="font-mono">{bookingRef}</span>} />
 
           {type === "package" && (
             <>
