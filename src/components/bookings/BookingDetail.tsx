@@ -51,9 +51,10 @@ interface Props {
   bookingRef: string;
   data: BookingData;
   canManage: boolean;
+  needsEmail?: boolean;
 }
 
-export function BookingDetail({ bookingRef, data, canManage }: Props) {
+export function BookingDetail({ bookingRef, data, canManage, needsEmail = false }: Props) {
   const { type, booking } = data;
   const [editingName, setEditingName] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -216,7 +217,7 @@ export function BookingDetail({ bookingRef, data, canManage }: Props) {
       </div>
 
       {/* Manage banner — shown above edit/cancel when user hasn't verified yet */}
-      {!isCancelled && !canManage && <ManageBanner bookingRef={bookingRef} />}
+      {!isCancelled && !canManage && <ManageBanner bookingRef={bookingRef} needsEmail={needsEmail} />}
 
       {/* Actions */}
       {!isCancelled && (
