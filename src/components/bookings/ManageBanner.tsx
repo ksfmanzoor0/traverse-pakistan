@@ -152,14 +152,18 @@ export function ManageBanner({ bookingRef, needsEmail = false }: Props) {
             <>
               <p className="text-[14px] font-bold text-[var(--text-primary)]">Sign-in link sent</p>
               <p className="text-[13px] text-[var(--text-secondary)]">
-                Tap the link in your email or WhatsApp to access edit and cancel options. This page will update automatically.
+                {needsEmail
+                  ? "Tap the link in your WhatsApp to access edit and cancel options. This page will update automatically."
+                  : "Tap the link in your email or WhatsApp to access edit and cancel options. This page will update automatically."}
               </p>
             </>
           ) : (
             <>
               <p className="text-[14px] font-bold text-[var(--text-primary)]">Sign in to edit or cancel</p>
               <p className="text-[13px] text-[var(--text-secondary)]">
-                We&apos;ll send a one-tap sign-in link to your email and WhatsApp.
+                {needsEmail
+                  ? "We'll send a one-tap sign-in link to your WhatsApp."
+                  : "We'll send a one-tap sign-in link to your email and WhatsApp."}
               </p>
             </>
           )}
@@ -177,7 +181,7 @@ export function ManageBanner({ bookingRef, needsEmail = false }: Props) {
         </button>
       )}
 
-      {hasSent && !showCode && (
+      {hasSent && !needsEmail && !showCode && (
         <button
           type="button"
           onClick={() => setShowCode(true)}
@@ -187,7 +191,7 @@ export function ManageBanner({ bookingRef, needsEmail = false }: Props) {
         </button>
       )}
 
-      {hasSent && showCode && (
+      {hasSent && !needsEmail && showCode && (
         <form onSubmit={verify} className="space-y-2 pt-1">
           <input
             type="text"
@@ -226,7 +230,7 @@ export function ManageBanner({ bookingRef, needsEmail = false }: Props) {
               onClick={() => setShowEmailInput(true)}
               className="w-full text-[13px] font-semibold text-[var(--primary)] underline underline-offset-2 hover:text-[var(--primary-hover)] transition-colors cursor-pointer pt-2"
             >
-              Or get the sign-in link by email
+              Get the sign-in link by email
             </button>
           ) : (
             <form onSubmit={attachEmail} className="space-y-2 pt-2">
