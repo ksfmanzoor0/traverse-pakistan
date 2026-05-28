@@ -1,7 +1,7 @@
 import { getResend, FROM } from "./resend";
 import { bookingConfirmationHtml, bookingConfirmationText } from "./templates/bookingConfirmation";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { sendBookingConfirmedViaWhatsApp, isWhatsAppConfigured } from "@/lib/whatsapp/cloud";
+import { sendBookingReceivedViaWhatsApp, sendBookingConfirmedViaWhatsApp, isWhatsAppConfigured } from "@/lib/whatsapp/cloud";
 import { isSynthesizedEmail } from "@/lib/auth/phone";
 
 function siteUrl(): string {
@@ -170,7 +170,7 @@ export async function sendBookingConfirmation(bookingRef: string): Promise<void>
 
   if (record.contactPhone && isWhatsAppConfigured() && magicUrl) {
     try {
-      await sendBookingConfirmedViaWhatsApp({
+      await sendBookingReceivedViaWhatsApp({
         toPhone: record.contactPhone,
         name: record.contactName,
         bookingRef,
@@ -183,4 +183,44 @@ export async function sendBookingConfirmation(bookingRef: string): Promise<void>
 
   // Mark sent regardless of partial failures — we don't want to spam on retry.
   await markConfirmationSent(bookingRef).catch(() => {});
+}
+
+// Fires when payment confirms (IPN or polling flip). Caller (markBooking)
+// guards by transition so this fires once per pending→paid edge.
+// Sends a separate "your booking is confirmed" email + WhatsApp, with a fresh
+// magic link, status-aware email template renders the Confirmed copy.
+export async function sendPaymentConfirmation(bookingRef: string): Promise<void> {
+  const record = await loadBooking(bookingRef);
+  if (!record) return;
+
+  const magicUrl = await buildMagicLinkUrl(record.userId, bookingRef);
+  const viewUrl = magicUrl ?? `${siteUrl()}/bookings/${bookingRef}`;
+
+  const realEmail = record.contactEmail && !isSynthesizedEmail(record.contactEmail) ? record.contactEmail : null;
+  if (realEmail) {
+    try {
+      await getResend().emails.send({
+        from: FROM,
+        to: realEmail,
+        subject: `Booking confirmed — ${bookingRef} | Traverse Pakistan`,
+        html: bookingConfirmationHtml({ bookingRef, contactName: record.contactName, contactEmail: realEmail, bookingType: record.bookingType, itemName: record.itemName, totalAmount: record.totalAmount, details: record.details, viewUrl, paymentStatus: record.paymentStatus }),
+        text: bookingConfirmationText({ bookingRef, contactName: record.contactName, contactEmail: realEmail, bookingType: record.bookingType, itemName: record.itemName, totalAmount: record.totalAmount, details: record.details, viewUrl, paymentStatus: record.paymentStatus }),
+      });
+    } catch (err) {
+      console.error("[sendPaymentConfirmation] email send failed:", err);
+    }
+  }
+
+  if (record.contactPhone && isWhatsAppConfigured() && magicUrl) {
+    try {
+      await sendBookingConfirmedViaWhatsApp({
+        toPhone: record.contactPhone,
+        name: record.contactName,
+        bookingRef,
+        magicLinkPath: magicUrl,
+      });
+    } catch (err) {
+      console.error("[sendPaymentConfirmation] whatsapp send failed:", err);
+    }
+  }
 }
