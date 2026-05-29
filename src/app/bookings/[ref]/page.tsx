@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { requireBookingViewer } from "@/lib/auth/requireBookingViewer";
+import { isSynthesizedEmail } from "@/lib/auth/phone";
 import { BookingDetail } from "@/components/bookings/BookingDetail";
 
 interface Props {
@@ -50,11 +51,21 @@ export default async function BookingPage({ params }: Props) {
     );
   }
 
+  // For phone-only bookers, the auth user has a synthesized @traverse.internal
+  // email that can't receive mail. Detect this so ManageBanner can offer an
+  // "use email instead" prompt — useful when WhatsApp delivery isn't working.
+  let needsEmail = false;
+  if (viewer.bookingUserId) {
+    const { data: authUser } = await admin.auth.admin.getUserById(viewer.bookingUserId);
+    needsEmail = isSynthesizedEmail(authUser?.user?.email ?? null);
+  }
+
   return (
     <BookingDetail
       bookingRef={ref}
       data={{ type: KIND_FROM_TABLE[table], booking: booking as Record<string, unknown> }}
       canManage={viewer.canManage}
+      needsEmail={needsEmail}
     />
   );
 }

@@ -7,11 +7,12 @@ import { Icon } from "@/components/ui/Icon";
 
 interface Props {
   bookingRef: string;
+  needsEmail?: boolean;
 }
 
 const RESEND_COOLDOWN = 30;
 
-export function ManageBanner({ bookingRef }: Props) {
+export function ManageBanner({ bookingRef, needsEmail = false }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -25,6 +26,13 @@ export function ManageBanner({ bookingRef }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(sentFromUrl ? RESEND_COOLDOWN : 0);
   const stripped = useRef(false);
+
+  // Email-add flow for phone-only bookers (no real email on file).
+  const [showEmailInput, setShowEmailInput] = useState(false);
+  const [emailValue, setEmailValue] = useState("");
+  const [addingEmail, setAddingEmail] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailAttached, setEmailAttached] = useState(false);
 
   // Strip ?sent=1 from URL once we've consumed it.
   useEffect(() => {
@@ -75,6 +83,32 @@ export function ManageBanner({ bookingRef }: Props) {
     }
   }, [bookingRef]);
 
+  async function attachEmail(e: React.FormEvent) {
+    e.preventDefault();
+    setEmailError(null);
+    setAddingEmail(true);
+    try {
+      const res = await fetch(`/api/bookings/${bookingRef}/add-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emailValue.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setEmailError(data.error ?? "Could not save email. Please try again.");
+        return;
+      }
+      setEmailAttached(true);
+      setShowEmailInput(false);
+      // Trigger a fresh step-up send so the link reaches the new email.
+      await triggerSend();
+    } catch {
+      setEmailError("Could not save email. Please try again.");
+    } finally {
+      setAddingEmail(false);
+    }
+  }
+
   async function verify(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -118,14 +152,18 @@ export function ManageBanner({ bookingRef }: Props) {
             <>
               <p className="text-[14px] font-bold text-[var(--text-primary)]">Sign-in link sent</p>
               <p className="text-[13px] text-[var(--text-secondary)]">
-                Tap the link in your email or WhatsApp to access edit and cancel options. This page will update automatically.
+                {needsEmail
+                  ? "Tap the link in your WhatsApp to access edit and cancel options. This page will update automatically."
+                  : "Tap the link in your email or WhatsApp to access edit and cancel options. This page will update automatically."}
               </p>
             </>
           ) : (
             <>
               <p className="text-[14px] font-bold text-[var(--text-primary)]">Sign in to edit or cancel</p>
               <p className="text-[13px] text-[var(--text-secondary)]">
-                We&apos;ll send a one-tap sign-in link to your email and WhatsApp.
+                {needsEmail
+                  ? "We'll send a one-tap sign-in link to your WhatsApp."
+                  : "We'll send a one-tap sign-in link to your email and WhatsApp."}
               </p>
             </>
           )}
@@ -143,7 +181,7 @@ export function ManageBanner({ bookingRef }: Props) {
         </button>
       )}
 
-      {hasSent && !showCode && (
+      {hasSent && !needsEmail && !showCode && (
         <button
           type="button"
           onClick={() => setShowCode(true)}
@@ -153,7 +191,7 @@ export function ManageBanner({ bookingRef }: Props) {
         </button>
       )}
 
-      {hasSent && showCode && (
+      {hasSent && !needsEmail && showCode && (
         <form onSubmit={verify} className="space-y-2 pt-1">
           <input
             type="text"
@@ -181,6 +219,52 @@ export function ManageBanner({ bookingRef }: Props) {
             {cooldown > 0 ? `Resend in ${cooldown}s` : sending ? "Sending…" : "Resend link / code"}
           </button>
         </form>
+      )}
+
+      {/* Email-add option for phone-only bookers */}
+      {needsEmail && !emailAttached && (
+        <div className="pt-1 border-t border-[var(--primary)]/15">
+          {!showEmailInput ? (
+            <button
+              type="button"
+              onClick={() => setShowEmailInput(true)}
+              className="w-full text-[13px] font-semibold text-[var(--primary)] underline underline-offset-2 hover:text-[var(--primary-hover)] transition-colors cursor-pointer pt-2"
+            >
+              Get the sign-in link by email
+            </button>
+          ) : (
+            <form onSubmit={attachEmail} className="space-y-2 pt-2">
+              <p className="text-[12px] text-[var(--text-secondary)]">
+                We&apos;ll add this email to your booking and send the sign-in link there.
+              </p>
+              <input
+                type="email"
+                value={emailValue}
+                onChange={(e) => setEmailValue(e.target.value)}
+                placeholder="you@example.com"
+                required
+                className="w-full h-11 px-4 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] focus:outline-none focus:border-[var(--primary)] transition-colors"
+              />
+              {emailError && <p className="text-[12px] text-[var(--error)] font-medium">{emailError}</p>}
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={addingEmail || !emailValue.trim()}
+                  className="flex-1 h-10 bg-[var(--primary)] text-[var(--text-inverse)] text-[13px] font-semibold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {addingEmail ? "Saving…" : "Send link to email"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowEmailInput(false); setEmailValue(""); setEmailError(null); }}
+                  className="h-10 px-4 border border-[var(--border-default)] text-[13px] text-[var(--text-secondary)] rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
       )}
 
       {error && <p className="text-[12px] text-[var(--error)] font-medium">{error}</p>}

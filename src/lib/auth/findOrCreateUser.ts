@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { normalizePhone, synthesizeEmailFromPhone } from "./phone";
+import { normalizePhone, phoneDigitsOnly, synthesizeEmailFromPhone } from "./phone";
 
 export interface SilentSignupInput {
   name: string;
@@ -27,9 +27,13 @@ export async function findOrCreateUserForBooking(input: SilentSignupInput): Prom
   const realEmail = input.email?.trim() || null;
   const lookupEmail = realEmail && realEmail.length > 0 ? realEmail : null;
 
+  // Supabase stores auth.users.phone WITHOUT the leading '+', so look up by
+  // digits only. createUser still receives the E.164 '+' form (Supabase strips
+  // it on store). Mismatch was causing the second booking from the same phone
+  // to hit "Phone number already registered" because the find returned null.
   const { data: foundId, error: findError } = await admin.rpc("find_auth_user_by_contact", {
     p_email: lookupEmail,
-    p_phone: phone,
+    p_phone: phoneDigitsOnly(phone),
   });
   if (findError) throw findError;
 

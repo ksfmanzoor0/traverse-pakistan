@@ -10,6 +10,7 @@ interface CloudConfig {
   token: string;
   phoneId: string;
   otpTemplate: string;
+  bookingReceivedTemplate: string;
   bookingConfirmedTemplate: string;
 }
 
@@ -21,6 +22,7 @@ function getConfig(): CloudConfig | null {
     token,
     phoneId,
     otpTemplate: process.env.META_WHATSAPP_TEMPLATE_OTP ?? "verification_code",
+    bookingReceivedTemplate: process.env.META_WHATSAPP_TEMPLATE_BOOKING_RECEIVED ?? "booking_received",
     bookingConfirmedTemplate: process.env.META_WHATSAPP_TEMPLATE_BOOKING_CONFIRMED ?? "booking_confirmed",
   };
 }
@@ -107,6 +109,23 @@ export async function sendOtpViaWhatsApp(toPhone: string, code: string): Promise
   return sendTemplate(toPhone, cfg.otpTemplate, [code]);
 }
 
+// Fires at booking creation — wording: "your booking is reserved, complete payment to confirm".
+export async function sendBookingReceivedViaWhatsApp(args: {
+  toPhone: string;
+  name: string;
+  bookingRef: string;
+  magicLinkPath: string; // full magic-link URL — passed as a body variable {{3}}
+}): Promise<SendResult> {
+  const cfg = getConfig();
+  if (!cfg) return { ok: true, skipped: true };
+  return sendTemplate(
+    args.toPhone,
+    cfg.bookingReceivedTemplate,
+    [args.name, args.bookingRef, args.magicLinkPath]
+  );
+}
+
+// Fires after payment is confirmed (IPN or polling flip) — wording: "your booking is confirmed".
 export async function sendBookingConfirmedViaWhatsApp(args: {
   toPhone: string;
   name: string;
