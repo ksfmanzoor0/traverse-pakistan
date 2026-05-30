@@ -6,6 +6,7 @@ import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { getAllHotels, getHotelBySlug } from "@/services/hotel.service";
 import { getWhatsAppUrl } from "@/lib/utils";
 import { HotelPayButton } from "@/components/hotels/HotelPayButton";
+import { after } from "next/server";
 import { stampBookingWithUser } from "@/lib/auth/stampBookingWithUser";
 import { sendBookingConfirmation } from "@/lib/email/sendBookingConfirmation";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
@@ -46,9 +47,13 @@ export default async function HotelCheckoutSuccessPage({ params, searchParams }:
 
   if (ref) {
     await stampBookingWithUser(ref);
-    sendBookingConfirmation(ref).catch((err) =>
-      console.error("[hotel/success] sendBookingConfirmation failed:", err)
-    );
+    after(async () => {
+      try {
+        await sendBookingConfirmation(ref);
+      } catch (err) {
+        console.error("[hotel/success] sendBookingConfirmation failed:", err);
+      }
+    });
     summary = await getBookingSummary(ref);
   }
 

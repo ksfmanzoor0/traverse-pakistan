@@ -4,6 +4,7 @@ import { Container } from "@/components/ui/Container";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { getAllTours, getTourBySlug } from "@/services/tour.service";
 import { BookingSuccessClient } from "@/components/tours/BookingSuccessClient";
+import { after } from "next/server";
 import { stampBookingWithUser } from "@/lib/auth/stampBookingWithUser";
 import { sendBookingConfirmation } from "@/lib/email/sendBookingConfirmation";
 
@@ -31,9 +32,13 @@ export default async function BookingSuccessPage({ params, searchParams }: Props
 
   if (ref) {
     await stampBookingWithUser(ref);
-    sendBookingConfirmation(ref).catch((err) =>
-      console.error("[grouptour/success] sendBookingConfirmation failed:", err)
-    );
+    after(async () => {
+      try {
+        await sendBookingConfirmation(ref);
+      } catch (err) {
+        console.error("[grouptour/success] sendBookingConfirmation failed:", err);
+      }
+    });
   }
 
   return (
