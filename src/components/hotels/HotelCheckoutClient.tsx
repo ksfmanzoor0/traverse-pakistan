@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { formatPrice } from "@/lib/utils";
@@ -65,7 +65,6 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
 
   const [form, setForm] = useState({
     firstName: "",
-    lastName: "",
     email: "",
     phone: "",
     specialRequests: infant ? "Travelling with an infant — crib may be required" : "",
@@ -73,6 +72,8 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Stable per-attempt UUID — server dedups so retries can't create duplicates.
+  const submitUuidRef = useRef<string>(crypto.randomUUID());
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
@@ -82,29 +83,48 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
-    try {
-      const result = await createHotelBooking({
-        hotelSlug: hotel.slug,
-        lineItems,
-        checkinDate: checkin || null,
-        checkoutDate: checkout || null,
-        adults: totalAdults,
-        children: totalChildren,
-        nights,
-        totalAmount: subtotal,
-        contact: {
-          name: `${form.firstName} ${form.lastName}`.trim(),
-          email: form.email,
-          phone: form.phone,
-        },
-        arrivalTime: form.arrivalTime || undefined,
-        notes: form.specialRequests || undefined,
-      });
-      router.push(`/hotels/${hotel.slug}/checkout/success?ref=${result.bookingRef}&amount=${result.totalAmount}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Booking failed. Please try again.");
-      setSubmitting(false);
+    const input = {
+      hotelSlug: hotel.slug,
+      lineItems,
+      checkinDate: checkin || null,
+      checkoutDate: checkout || null,
+      adults: totalAdults,
+      children: totalChildren,
+      nights,
+      totalAmount: subtotal,
+      contact: {
+        name: form.firstName.trim(),
+        email: form.email,
+        phone: form.phone,
+      },
+      arrivalTime: form.arrivalTime || undefined,
+      notes: form.specialRequests || undefined,
+      submitUuid: submitUuidRef.current,
+    };
+    const isNetworkError = (e: unknown) => {
+      const msg = e instanceof Error ? e.message.toLowerCase() : "";
+      return msg.includes("load failed") || msg.includes("network") || msg.includes("fetch");
+    };
+    let lastErr: unknown = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const result = await createHotelBooking(input);
+        router.push(`/hotels/${hotel.slug}/checkout/success?ref=${result.bookingRef}&amount=${result.totalAmount}`);
+        return;
+      } catch (e) {
+        lastErr = e;
+        if (!isNetworkError(e) || attempt === 2) break;
+        setError("Connection issue — retrying…");
+        await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+      }
     }
+    const msg = lastErr instanceof Error ? lastErr.message : "";
+    setError(
+      isNetworkError(lastErr)
+        ? "We couldn't reach the server. Please check your connection and try again, or contact us on WhatsApp at +92 321 6650670."
+        : msg || "Booking failed. Please try again."
+    );
+    setSubmitting(false);
   }
 
   const isValid = form.firstName && form.phone && lineItems.length > 0;
@@ -118,30 +138,27 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
         {/* Guest details */}
         <section>
           <h2 className="text-[18px] font-bold text-[var(--text-primary)] mb-4">Guest details</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div>
               <label className="block text-[12px] font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wide">
-                First name <span className="text-[var(--error)]" aria-hidden="true">*</span>
+                Name <span className="text-[var(--error)]" aria-hidden="true">*</span>
               </label>
-              <input name="firstName" type="text" required value={form.firstName} onChange={handleChange} placeholder="Ali"
+              <input name="firstName" type="text" required value={form.firstName} onChange={handleChange} placeholder="Ali Khan"
                 className="w-full h-11 px-4 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)] transition-colors" />
             </div>
-            <div>
-              <label className="block text-[12px] font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wide">Last name</label>
-              <input name="lastName" type="text" value={form.lastName} onChange={handleChange} placeholder="Khan"
-                className="w-full h-11 px-4 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)] transition-colors" />
-            </div>
-            <div>
-              <label className="block text-[12px] font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wide">Email</label>
-              <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="ali@example.com"
-                className="w-full h-11 px-4 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)] transition-colors" />
-            </div>
-            <div>
-              <label className="block text-[12px] font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wide">
-                Phone <span className="text-[var(--error)]" aria-hidden="true">*</span>
-              </label>
-              <input name="phone" type="tel" required value={form.phone} onChange={handleChange} placeholder="+92 300 0000000"
-                className="w-full h-11 px-4 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)] transition-colors" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[12px] font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wide">
+                  Phone <span className="text-[var(--error)]" aria-hidden="true">*</span>
+                </label>
+                <input name="phone" type="tel" required value={form.phone} onChange={handleChange} placeholder="+92 300 0000000"
+                  className="w-full h-11 px-4 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)] transition-colors" />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wide">Email</label>
+                <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="ali@example.com"
+                  className="w-full h-11 px-4 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)] transition-colors" />
+              </div>
             </div>
           </div>
         </section>
@@ -174,19 +191,6 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
           <p className="text-[11px] text-[var(--text-tertiary)] mt-1.5">Special requests cannot be guaranteed — we&apos;ll do our best to accommodate them.</p>
         </section>
 
-        {/* Cancellation notice */}
-        <section className="p-4 bg-[var(--primary-light)] border border-[var(--primary)]/20 rounded-[var(--radius-md)]">
-          <div className="flex items-start gap-3">
-            <Icon name="lock" size="sm" color="var(--success)" className="mt-0.5 shrink-0" />
-            <div>
-              <p className="text-[13px] font-bold text-[var(--primary-deep)] mb-1">Free cancellation</p>
-              <p className="text-[12px] text-[var(--text-secondary)] leading-relaxed">
-                {hotel.policies.cancellation[0] ?? "Cancel anytime before check-in for a full refund."}
-              </p>
-            </div>
-          </div>
-        </section>
-
         {error && (
           <div className="p-3 bg-[var(--error)]/10 border border-[var(--error)]/30 rounded-[var(--radius-sm)] text-[13px] text-[var(--error)]">{error}</div>
         )}
@@ -198,6 +202,18 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
           </button>
         </div>
         <p className="text-center text-[12px] text-[var(--text-tertiary)] -mt-4">You won&apos;t be charged yet — pay securely on the next step.</p>
+
+        <section className="p-4 bg-[var(--primary-light)] border border-[var(--primary)]/20 rounded-[var(--radius-md)]">
+          <div className="flex items-start gap-3">
+            <Icon name="lock" size="sm" color="var(--success)" className="mt-0.5 shrink-0" />
+            <div>
+              <p className="text-[13px] font-bold text-[var(--primary-deep)] mb-1">Free cancellation</p>
+              <p className="text-[12px] text-[var(--text-secondary)] leading-relaxed">
+                Cancel up to 2 weeks before departure for a full refund. After that, 50% refund up to 72 hours before.
+              </p>
+            </div>
+          </div>
+        </section>
       </form>
 
       {/* ── Right: Booking summary ── */}

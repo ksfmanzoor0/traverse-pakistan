@@ -25,6 +25,7 @@ const BookingInputSchema = z.object({
   }),
   participants: z.array(ParticipantSchema).min(1).max(20),
   notes: z.string().max(500).optional(),
+  submitUuid: z.string().uuid().optional(),
 });
 
 export async function POST(req: NextRequest) {
