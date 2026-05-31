@@ -122,8 +122,7 @@ async function buildMagicLinkUrl(userId: string | null, bookingRef: string): Pro
     });
     if (error || !linkData?.properties?.hashed_token) return null;
 
-    const next = encodeURIComponent(`/bookings/${bookingRef}`);
-    return `${siteUrl()}/auth/callback?token_hash=${linkData.properties.hashed_token}&type=magiclink&next=${next}`;
+    return `${siteUrl()}/m/${bookingRef}/${linkData.properties.hashed_token}`;
   } catch (err) {
     console.error("[buildMagicLinkUrl] failed:", err);
     return null;
