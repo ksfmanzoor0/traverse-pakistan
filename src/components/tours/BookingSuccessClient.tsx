@@ -257,7 +257,7 @@ function SuccessInner({ tour }: { tour: Tour }) {
         <form action={`/api/bookings/${encodeURIComponent(ref)}/manage-init`} method="POST" className="mt-6">
           <button
             type="submit"
-            className="w-full h-[52px] border border-[var(--border-default)] bg-[var(--bg-primary)] text-[15px] font-bold text-[var(--text-primary)] rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] transition-colors active:scale-[0.98] cursor-pointer"
+            className="w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-bold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors active:scale-[0.98] cursor-pointer"
           >
             Manage My Booking
           </button>
