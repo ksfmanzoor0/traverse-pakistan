@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Container } from "@/components/ui/Container";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { getAllPackages, getPackageBySlug } from "@/services/package.service";
@@ -93,52 +94,61 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
           </p>
         </div>
 
+        {/* Your trip widget */}
+        {summary && (
+          <div
+            className="mt-6 max-w-[760px] mx-auto grid grid-cols-1 sm:grid-cols-[1fr_250px] gap-6 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] overflow-hidden sm:h-[250px]"
+            style={{ boxShadow: "var(--shadow-sm)" }}
+          >
+            <div className="p-6 order-2 sm:order-1">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--primary)]">Your trip</p>
+              <h2 className="text-[20px] font-bold text-[var(--text-primary)] tracking-tight mt-1">{pkg.name}</h2>
+              <dl className="mt-5 grid grid-cols-2 gap-y-3 text-[13px]">
+                {summary.start_date && (
+                  <>
+                    <dt className="text-[var(--text-tertiary)]">Start date</dt>
+                    <dd className="text-right text-[var(--text-primary)] font-medium">
+                      {new Date(summary.start_date).toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric", year: "numeric" })}
+                    </dd>
+                  </>
+                )}
+                <dt className="text-[var(--text-tertiary)]">Duration</dt>
+                <dd className="text-right text-[var(--text-primary)] font-medium">{pkg.duration} days</dd>
+                <dt className="text-[var(--text-tertiary)]">Tier</dt>
+                <dd className="text-right text-[var(--text-primary)] font-medium capitalize">{summary.tier}</dd>
+                <dt className="text-[var(--text-tertiary)]">Departure</dt>
+                <dd className="text-right text-[var(--text-primary)] font-medium capitalize">{summary.departure_city}</dd>
+                <dt className="text-[var(--text-tertiary)]">Travellers</dt>
+                <dd className="text-right text-[var(--text-primary)] font-medium">{summary.adults} adults · {summary.rooms} rooms</dd>
+              </dl>
+            </div>
+            {pkg.images[0] && (
+              <div className="relative w-full h-[220px] sm:h-full order-1 sm:order-2">
+                <Image src={pkg.images[0].url} alt={pkg.name} fill className="object-cover" sizes="250px" />
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Pay now */}
         {ref && amount && (
-          <div className="mt-8 max-w-[480px] mx-auto">
+          <div className="mt-6 max-w-[760px] mx-auto">
             <PackagePayButton
               bookingRef={ref}
               amount={amount}
               paymentStatus={summary?.payment_status ?? "pending"}
             />
+            <p className="mt-2 text-center text-[11px] text-[var(--text-tertiary)]">
+              Secure card payment via Alfa Bank
+            </p>
           </div>
         )}
 
-        {/* Inline booking summary */}
-        {summary && (
-          <div className="mt-6 max-w-[680px] mx-auto bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-[var(--radius-md)] px-5 py-3">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] mb-2">Booking Summary</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-[13px]">
-              <div className="flex justify-between gap-3"><span className="text-[var(--text-tertiary)]">Package</span><span className="font-semibold text-[var(--text-primary)] text-right">{pkg.name}</span></div>
-              <div className="flex justify-between gap-3"><span className="text-[var(--text-tertiary)]">Tier</span><span className="font-semibold text-[var(--text-primary)] capitalize text-right">{summary.tier}</span></div>
-              <div className="flex justify-between gap-3"><span className="text-[var(--text-tertiary)]">Departure</span><span className="font-semibold text-[var(--text-primary)] capitalize text-right">{summary.departure_city}</span></div>
-              {summary.start_date && (
-                <div className="flex justify-between gap-3"><span className="text-[var(--text-tertiary)]">Start Date</span><span className="font-semibold text-[var(--text-primary)] text-right">{new Date(summary.start_date).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}</span></div>
-              )}
-              <div className="flex justify-between gap-3"><span className="text-[var(--text-tertiary)]">Adults</span><span className="font-semibold text-[var(--text-primary)] text-right">{summary.adults}</span></div>
-              <div className="flex justify-between gap-3"><span className="text-[var(--text-tertiary)]">Rooms</span><span className="font-semibold text-[var(--text-primary)] text-right">{summary.rooms}</span></div>
-              <div className="flex justify-between gap-3 sm:col-span-2 pt-2 mt-1 border-t border-[var(--border-default)]"><span className="text-[var(--text-tertiary)]">Contact</span><span className="font-semibold text-[var(--text-primary)] text-right truncate">{summary.contact_name} · {summary.contact_phone}</span></div>
-            </div>
-          </div>
-        )}
-
-        {/* Manage booking — POST to send magic link + grant view-tier access */}
-        {ref && (
-          <form action={`/api/bookings/${encodeURIComponent(ref)}/manage-init`} method="POST" className="mt-3 max-w-[480px] mx-auto">
-            <button
-              type="submit"
-              className="w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-bold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors active:scale-[0.98] cursor-pointer"
-            >
-              Manage My Booking
-            </button>
-          </form>
-        )}
-
-        <div className="mt-8 max-w-[680px] mx-auto p-5 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-md)]">
+        <div className="mt-6 max-w-[760px] mx-auto p-5 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-md)]">
           <h2 className="text-[14px] font-bold text-[var(--text-primary)] mb-3">What happens next</h2>
           <ol className="space-y-2.5 text-[13px] text-[var(--text-secondary)]">
             {[
-              "Pay now via card, JazzCash, or bank transfer — or tap the link in your email/WhatsApp to come back anytime.",
+              "Pay now via Debit or Credit Card, for Bank Transfer or Jazz Cash reach us on WhatsApp — or tap the link in your email/WhatsApp to come back anytime.",
               "Once paid, you receive the full itinerary, hotel details, and driver contact.",
               `We stay in touch via WhatsApp throughout your ${pkg.duration}-day journey.`,
             ].map((step, i) => (
@@ -152,7 +162,19 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
           </ol>
         </div>
 
-        <div className="mt-6 max-w-[680px] mx-auto grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* Manage booking — POST to send magic link + grant view-tier access */}
+        {ref && (
+          <form action={`/api/bookings/${encodeURIComponent(ref)}/manage-init`} method="POST" className="mt-6 max-w-[760px] mx-auto">
+            <button
+              type="submit"
+              className="w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-bold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors active:scale-[0.98] cursor-pointer"
+            >
+              Manage My Booking
+            </button>
+          </form>
+        )}
+
+        <div className="mt-6 max-w-[760px] mx-auto grid grid-cols-1 sm:grid-cols-2 gap-3">
           <a
             href={getWhatsAppUrl(`Hi! I just sent a booking request for ${pkg.name}${ref ? ` (ref ${ref})` : ""}. I have a question.`)}
             target="_blank"
