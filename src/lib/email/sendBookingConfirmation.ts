@@ -168,26 +168,13 @@ export async function sendBookingConfirmation(bookingRef: string): Promise<void>
     }
   }
 
-  // DIAGNOSTIC — remove once booking_received WhatsApp issue is resolved
-  console.log(
-    `[sendBookingConfirmation-debug] ${bookingRef} phone=${record.contactPhone ? "set" : "missing"} configured=${isWhatsAppConfigured()} magicUrl=${magicUrl ? "set" : "null"}`
-  );
-
   if (record.contactPhone && isWhatsAppConfigured() && magicUrl) {
-    console.log(`[sendBookingConfirmation-debug] ${bookingRef} entering whatsapp send via ${process.env.META_WHATSAPP_TEMPLATE_BOOKING_RECEIVED ?? "booking_received (default)"}`);
-    try {
-      const result = await sendBookingReceivedViaWhatsApp({
-        toPhone: record.contactPhone,
-        name: record.contactName,
-        bookingRef,
-        magicLinkPath: magicUrl,
-      });
-      console.log(`[sendBookingConfirmation-debug] ${bookingRef} whatsapp send returned`, result);
-    } catch (err) {
-      console.error("[sendBookingConfirmation] whatsapp send failed:", err);
-    }
-  } else {
-    console.log(`[sendBookingConfirmation-debug] ${bookingRef} skipped whatsapp send (condition false)`);
+    await sendBookingReceivedViaWhatsApp({
+      toPhone: record.contactPhone,
+      name: record.contactName,
+      bookingRef,
+      magicLinkPath: magicUrl,
+    });
   }
 
   // Mark sent regardless of partial failures — we don't want to spam on retry.
