@@ -232,10 +232,10 @@ function SuccessInner({ tour }: { tour: Tour }) {
           Chat on WhatsApp
         </a>
         <Link
-          href="/account/trips"
+          href="/grouptours"
           className="flex items-center justify-center h-[52px] border border-[var(--border-default)] text-[15px] font-bold text-[var(--text-primary)] rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] transition-colors"
         >
-          View my trips
+          Browse more Tours
         </Link>
       </div>
 
@@ -282,14 +282,6 @@ function SuccessInner({ tour }: { tour: Tour }) {
         </button>
       </div>
 
-      <div className="mt-10 text-center">
-        <Link
-          href="/grouptours"
-          className="text-[13px] font-semibold text-[var(--primary)] hover:underline"
-        >
-          Browse more tours →
-        </Link>
-      </div>
     </div>
   );
 }
