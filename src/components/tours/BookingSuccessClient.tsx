@@ -253,7 +253,18 @@ function SuccessInner({ tour }: { tour: Tour }) {
         </div>
       )}
 
-      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {ref && (
+        <form action={`/api/bookings/${encodeURIComponent(ref)}/manage-init`} method="POST" className="mt-6">
+          <button
+            type="submit"
+            className="w-full h-[52px] border border-[var(--border-default)] bg-[var(--bg-primary)] text-[15px] font-bold text-[var(--text-primary)] rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] transition-colors active:scale-[0.98] cursor-pointer"
+          >
+            Manage My Booking
+          </button>
+        </form>
+      )}
+
+      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
         <a
           href={getWhatsAppUrl(`Hi! I just booked ${tour.name}${ref ? ` (ref ${ref})` : ""}. I have a quick question.`)}
           target="_blank"
