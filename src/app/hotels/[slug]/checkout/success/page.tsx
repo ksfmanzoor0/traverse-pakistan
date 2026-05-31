@@ -96,6 +96,9 @@ export default async function HotelCheckoutSuccessPage({ params, searchParams }:
               amount={amount}
               paymentStatus={summary?.payment_status ?? "pending"}
             />
+            <p className="mt-2 text-center text-[11px] text-[var(--text-tertiary)]">
+              Secure card payment via Alfa Bank
+            </p>
           </div>
         )}
 
