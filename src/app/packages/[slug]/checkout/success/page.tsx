@@ -94,17 +94,6 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
           </p>
         </div>
 
-        {/* Pay now */}
-        {ref && amount && (
-          <div className="mt-8 max-w-[480px] mx-auto">
-            <PackagePayButton
-              bookingRef={ref}
-              amount={amount}
-              paymentStatus={summary?.payment_status ?? "pending"}
-            />
-          </div>
-        )}
-
         {/* Your trip widget */}
         {summary && (
           <div
@@ -141,19 +130,7 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
           </div>
         )}
 
-        {/* Manage booking — POST to send magic link + grant view-tier access */}
-        {ref && (
-          <form action={`/api/bookings/${encodeURIComponent(ref)}/manage-init`} method="POST" className="mt-3 max-w-[480px] mx-auto">
-            <button
-              type="submit"
-              className="w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-bold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors active:scale-[0.98] cursor-pointer"
-            >
-              Manage My Booking
-            </button>
-          </form>
-        )}
-
-        <div className="mt-8 max-w-[680px] mx-auto p-5 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-md)]">
+        <div className="mt-6 max-w-[680px] mx-auto p-5 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-md)]">
           <h2 className="text-[14px] font-bold text-[var(--text-primary)] mb-3">What happens next</h2>
           <ol className="space-y-2.5 text-[13px] text-[var(--text-secondary)]">
             {[
@@ -170,6 +147,29 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
             ))}
           </ol>
         </div>
+
+        {/* Pay now */}
+        {ref && amount && (
+          <div className="mt-6 max-w-[480px] mx-auto">
+            <PackagePayButton
+              bookingRef={ref}
+              amount={amount}
+              paymentStatus={summary?.payment_status ?? "pending"}
+            />
+          </div>
+        )}
+
+        {/* Manage booking — POST to send magic link + grant view-tier access */}
+        {ref && (
+          <form action={`/api/bookings/${encodeURIComponent(ref)}/manage-init`} method="POST" className="mt-3 max-w-[480px] mx-auto">
+            <button
+              type="submit"
+              className="w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-bold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors active:scale-[0.98] cursor-pointer"
+            >
+              Manage My Booking
+            </button>
+          </form>
+        )}
 
         <div className="mt-6 max-w-[680px] mx-auto grid grid-cols-1 sm:grid-cols-2 gap-3">
           <a
