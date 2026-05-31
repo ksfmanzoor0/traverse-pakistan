@@ -6,6 +6,7 @@ import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { getAllPackages, getPackageBySlug } from "@/services/package.service";
 import { getWhatsAppUrl } from "@/lib/utils";
 import { PackagePayButton } from "@/components/packages/PackagePayButton";
+import { after } from "next/server";
 import { stampBookingWithUser } from "@/lib/auth/stampBookingWithUser";
 import { sendBookingConfirmation } from "@/lib/email/sendBookingConfirmation";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
@@ -46,12 +47,17 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
 
   if (ref) {
     // Silent signup (idempotent) + fire booking-received email/WhatsApp.
-    // No client-side auto-sign-in — view access is granted only via the
-    // ref+contact match flow on /bookings/find, or the magic link in email.
+    // The send is deferred via after() — runs after the page response is
+    // sent but keeps the lambda alive until it completes. Bare fire-and-
+    // forget was being killed mid-flight by the serverless runtime.
     await stampBookingWithUser(ref);
-    sendBookingConfirmation(ref).catch((err) =>
-      console.error("[package/success] sendBookingConfirmation failed:", err)
-    );
+    after(async () => {
+      try {
+        await sendBookingConfirmation(ref);
+      } catch (err) {
+        console.error("[package/success] sendBookingConfirmation failed:", err);
+      }
+    });
     summary = await getBookingSummary(ref);
   }
 

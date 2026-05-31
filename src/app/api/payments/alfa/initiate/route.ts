@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { z } from "zod";
 import { alfaConfig } from "@/lib/alfa/config";
 import { generateAlfaHash } from "@/lib/alfa/hash";
@@ -49,9 +49,13 @@ export async function POST(req: NextRequest) {
     // Tour flow skips a success page — fire booking-received email here so the
     // user gets the magic link before they finish at Alfa. Idempotent — checks
     // confirmation_sent_at internally.
-    sendBookingConfirmation(summary.bookingRef).catch((err) =>
-      console.error("[alfa/initiate] sendBookingConfirmation failed:", err)
-    );
+    after(async () => {
+      try {
+        await sendBookingConfirmation(summary.bookingRef);
+      } catch (err) {
+        console.error("[alfa/initiate] sendBookingConfirmation failed:", err);
+      }
+    });
 
     const proto = req.headers.get("x-forwarded-proto") ?? "https";
     const host = req.headers.get("host") ?? "traversepakistan.com";

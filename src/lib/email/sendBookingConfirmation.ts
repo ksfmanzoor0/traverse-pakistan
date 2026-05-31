@@ -122,8 +122,7 @@ async function buildMagicLinkUrl(userId: string | null, bookingRef: string): Pro
     });
     if (error || !linkData?.properties?.hashed_token) return null;
 
-    const next = encodeURIComponent(`/bookings/${bookingRef}`);
-    return `${siteUrl()}/auth/callback?token_hash=${linkData.properties.hashed_token}&type=magiclink&next=${next}`;
+    return `${siteUrl()}/m/${bookingRef}/${linkData.properties.hashed_token}`;
   } catch (err) {
     console.error("[buildMagicLinkUrl] failed:", err);
     return null;
@@ -169,16 +168,12 @@ export async function sendBookingConfirmation(bookingRef: string): Promise<void>
   }
 
   if (record.contactPhone && isWhatsAppConfigured() && magicUrl) {
-    try {
-      await sendBookingReceivedViaWhatsApp({
-        toPhone: record.contactPhone,
-        name: record.contactName,
-        bookingRef,
-        magicLinkPath: magicUrl,
-      });
-    } catch (err) {
-      console.error("[sendBookingConfirmation] whatsapp send failed:", err);
-    }
+    await sendBookingReceivedViaWhatsApp({
+      toPhone: record.contactPhone,
+      name: record.contactName,
+      bookingRef,
+      magicLinkPath: magicUrl,
+    });
   }
 
   // Mark sent regardless of partial failures — we don't want to spam on retry.
