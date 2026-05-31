@@ -149,6 +149,7 @@ export interface CreatePackageBookingInput {
   totalAmount: number;
   contact: { name: string; email: string; phone: string };
   notes?: string;
+  submitUuid?: string;
 }
 
 export interface PackageBookingSummary {
@@ -177,7 +178,8 @@ export async function createPackageBooking(
     p_contact_email: input.contact.email,
     p_contact_phone: input.contact.phone,
     p_notes: input.notes ?? null,
-  });
+    p_submit_uuid: input.submitUuid ?? null,
+  } as never);
 
   if (error) throw new Error(error.message);
 
