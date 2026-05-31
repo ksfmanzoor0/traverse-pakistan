@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { formatPrice } from "@/lib/utils";
@@ -169,6 +169,9 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
   const [error, setError] = useState<string | null>(null);
   const [attemptedNext, setAttemptedNext] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Stable per-attempt UUID so retries (manual double-click or auto) dedup
+  // on the server instead of creating duplicate bookings.
+  const submitUuidRef = useRef<string>(crypto.randomUUID());
   const router = useRouter();
 
   const pricing = pkg.tiers[state.tier];
@@ -218,27 +221,48 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
     if (err) { setAttemptedNext(true); setError(err); goToStep(3); return; }
     setSubmitting(true);
     setError(null);
-    try {
-      const result = await createPackageBooking({
-        packageSlug: pkg.slug,
-        tier: state.tier,
-        departureCity: state.city,
-        startDate: state.startDate ? state.startDate.toISOString().slice(0, 10) : null,
-        adults: state.adults,
-        rooms: state.rooms,
-        totalAmount: total,
-        contact: {
-          name: `${state.firstName} ${state.lastName}`.trim(),
-          email: state.email,
-          phone: state.phone,
-        },
-        notes: state.specialRequests || undefined,
-      });
-      router.push(`/packages/${pkg.slug}/checkout/success?ref=${result.bookingRef}&amount=${result.totalAmount}`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Booking failed. Please try again.");
-      setSubmitting(false);
+    const input = {
+      packageSlug: pkg.slug,
+      tier: state.tier,
+      departureCity: state.city,
+      startDate: state.startDate ? state.startDate.toISOString().slice(0, 10) : null,
+      adults: state.adults,
+      rooms: state.rooms,
+      totalAmount: total,
+      contact: {
+        name: `${state.firstName} ${state.lastName}`.trim(),
+        email: state.email,
+        phone: state.phone,
+      },
+      notes: state.specialRequests || undefined,
+      submitUuid: submitUuidRef.current,
+    };
+    // Up to 3 attempts on network-ish failures. Server dedups by submitUuid
+    // so retries are safe — at most one row created per attempt UUID.
+    const isNetworkError = (e: unknown) => {
+      const msg = e instanceof Error ? e.message.toLowerCase() : "";
+      return msg.includes("load failed") || msg.includes("network") || msg.includes("fetch");
+    };
+    let lastErr: unknown = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const result = await createPackageBooking(input);
+        router.push(`/packages/${pkg.slug}/checkout/success?ref=${result.bookingRef}&amount=${result.totalAmount}`);
+        return;
+      } catch (e) {
+        lastErr = e;
+        if (!isNetworkError(e) || attempt === 2) break;
+        setError("Connection issue — retrying…");
+        await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+      }
     }
+    const msg = lastErr instanceof Error ? lastErr.message : "";
+    setError(
+      isNetworkError(lastErr)
+        ? "We couldn't reach the server. Please check your connection and try again, or contact us on WhatsApp at +92 321 6650670."
+        : msg || "Booking failed. Please try again."
+    );
+    setSubmitting(false);
   }
 
   const validationError = attemptedNext ? validateStep(state.step) : null;

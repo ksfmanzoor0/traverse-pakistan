@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { formatPrice, getWhatsAppUrl } from "@/lib/utils";
@@ -103,6 +103,8 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
   const [maxReachedStep, setMaxReachedStep] = useState<number>(initStep);
   const [submitting, setSubmitting] = useState(false);
   const [submittedRef, setSubmittedRef] = useState<string | null>(null);
+  // Stable per-attempt UUID so a network blip + retry never creates two bookings.
+  const submitUuidRef = useRef<string>(crypto.randomUUID());
   const [whatsappSubmitted, setWhatsappSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attemptedNext, setAttemptedNext] = useState(false);
@@ -282,6 +284,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
               emergencyContact: t.emergencyContact,
             })),
             notes: draft.specialRequests || undefined,
+            submitUuid: submitUuidRef.current,
           },
           amount: pricing.dueNow,
         }),
@@ -340,6 +343,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
             emergencyContact: t.emergencyContact,
           })),
           notes: draft.specialRequests || undefined,
+          submitUuid: submitUuidRef.current,
         });
         setSubmittedRef(result.bookingRef);
         clearDraft();
