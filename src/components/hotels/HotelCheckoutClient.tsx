@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { formatPrice } from "@/lib/utils";
@@ -73,6 +73,8 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Stable per-attempt UUID — server dedups so retries can't create duplicates.
+  const submitUuidRef = useRef<string>(crypto.randomUUID());
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
@@ -82,29 +84,48 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
-    try {
-      const result = await createHotelBooking({
-        hotelSlug: hotel.slug,
-        lineItems,
-        checkinDate: checkin || null,
-        checkoutDate: checkout || null,
-        adults: totalAdults,
-        children: totalChildren,
-        nights,
-        totalAmount: subtotal,
-        contact: {
-          name: `${form.firstName} ${form.lastName}`.trim(),
-          email: form.email,
-          phone: form.phone,
-        },
-        arrivalTime: form.arrivalTime || undefined,
-        notes: form.specialRequests || undefined,
-      });
-      router.push(`/hotels/${hotel.slug}/checkout/success?ref=${result.bookingRef}&amount=${result.totalAmount}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Booking failed. Please try again.");
-      setSubmitting(false);
+    const input = {
+      hotelSlug: hotel.slug,
+      lineItems,
+      checkinDate: checkin || null,
+      checkoutDate: checkout || null,
+      adults: totalAdults,
+      children: totalChildren,
+      nights,
+      totalAmount: subtotal,
+      contact: {
+        name: `${form.firstName} ${form.lastName}`.trim(),
+        email: form.email,
+        phone: form.phone,
+      },
+      arrivalTime: form.arrivalTime || undefined,
+      notes: form.specialRequests || undefined,
+      submitUuid: submitUuidRef.current,
+    };
+    const isNetworkError = (e: unknown) => {
+      const msg = e instanceof Error ? e.message.toLowerCase() : "";
+      return msg.includes("load failed") || msg.includes("network") || msg.includes("fetch");
+    };
+    let lastErr: unknown = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const result = await createHotelBooking(input);
+        router.push(`/hotels/${hotel.slug}/checkout/success?ref=${result.bookingRef}&amount=${result.totalAmount}`);
+        return;
+      } catch (e) {
+        lastErr = e;
+        if (!isNetworkError(e) || attempt === 2) break;
+        setError("Connection issue — retrying…");
+        await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+      }
     }
+    const msg = lastErr instanceof Error ? lastErr.message : "";
+    setError(
+      isNetworkError(lastErr)
+        ? "We couldn't reach the server. Please check your connection and try again, or contact us on WhatsApp at +92 321 6650670."
+        : msg || "Booking failed. Please try again."
+    );
+    setSubmitting(false);
   }
 
   const isValid = form.firstName && form.phone && lineItems.length > 0;

@@ -29,7 +29,7 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingS
     p_notes: input.notes ?? null,
   };
 
-  const { data, error } = await supabase.rpc("create_booking", args);
+  const { data, error } = await supabase.rpc("create_booking", { ...args, p_submit_uuid: input.submitUuid ?? null } as never);
   if (error) throw new Error(error.message);
 
   const result = Array.isArray(data) ? (data[0] as CreateBookingResult) : null;

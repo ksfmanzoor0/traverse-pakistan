@@ -102,7 +102,7 @@ export async function createBooking(
     p_notes: input.notes ?? null,
   };
 
-  const { data, error } = await supabase.rpc("create_booking", args);
+  const { data, error } = await supabase.rpc("create_booking", { ...args, p_submit_uuid: input.submitUuid ?? null } as never);
 
   if (error) throw new Error(error.message);
 
@@ -213,6 +213,7 @@ export interface CreateHotelBookingInput {
   contact: { name: string; email: string; phone: string };
   arrivalTime?: string;
   notes?: string;
+  submitUuid?: string;
 }
 
 export interface HotelBookingSummary {
@@ -244,7 +245,8 @@ export async function createHotelBooking(
     p_arrival_time: input.arrivalTime ?? null,
     p_notes: input.notes ?? null,
     p_line_items: input.lineItems,
-  });
+    p_submit_uuid: input.submitUuid ?? null,
+  } as never);
 
   if (error) throw new Error(error.message);
 

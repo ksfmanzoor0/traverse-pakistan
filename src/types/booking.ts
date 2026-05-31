@@ -34,6 +34,7 @@ export interface CreateBookingInput {
   };
   participants: Participant[];
   notes?: string;
+  submitUuid?: string;
 }
 
 export interface BookingSummary {
