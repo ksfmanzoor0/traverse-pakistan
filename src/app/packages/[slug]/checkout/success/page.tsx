@@ -97,7 +97,7 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
         {/* Your trip widget */}
         {summary && (
           <div
-            className="mt-6 max-w-[680px] mx-auto grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-6 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] overflow-hidden"
+            className="mt-6 max-w-[760px] mx-auto grid grid-cols-1 sm:grid-cols-[1fr_250px] gap-6 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] overflow-hidden sm:h-[250px]"
             style={{ boxShadow: "var(--shadow-sm)" }}
           >
             <div className="p-6 order-2 sm:order-1">
@@ -123,14 +123,25 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
               </dl>
             </div>
             {pkg.images[0] && (
-              <div className="relative w-full sm:w-[200px] h-[180px] sm:h-auto order-1 sm:order-2">
-                <Image src={pkg.images[0].url} alt={pkg.name} fill className="object-cover" sizes="200px" />
+              <div className="relative w-full h-[220px] sm:h-full order-1 sm:order-2">
+                <Image src={pkg.images[0].url} alt={pkg.name} fill className="object-cover" sizes="250px" />
               </div>
             )}
           </div>
         )}
 
-        <div className="mt-6 max-w-[680px] mx-auto p-5 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-md)]">
+        {/* Pay now */}
+        {ref && amount && (
+          <div className="mt-6 max-w-[760px] mx-auto">
+            <PackagePayButton
+              bookingRef={ref}
+              amount={amount}
+              paymentStatus={summary?.payment_status ?? "pending"}
+            />
+          </div>
+        )}
+
+        <div className="mt-6 max-w-[760px] mx-auto p-5 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-md)]">
           <h2 className="text-[14px] font-bold text-[var(--text-primary)] mb-3">What happens next</h2>
           <ol className="space-y-2.5 text-[13px] text-[var(--text-secondary)]">
             {[
@@ -148,20 +159,9 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
           </ol>
         </div>
 
-        {/* Pay now */}
-        {ref && amount && (
-          <div className="mt-6 max-w-[480px] mx-auto">
-            <PackagePayButton
-              bookingRef={ref}
-              amount={amount}
-              paymentStatus={summary?.payment_status ?? "pending"}
-            />
-          </div>
-        )}
-
         {/* Manage booking — POST to send magic link + grant view-tier access */}
         {ref && (
-          <form action={`/api/bookings/${encodeURIComponent(ref)}/manage-init`} method="POST" className="mt-3 max-w-[480px] mx-auto">
+          <form action={`/api/bookings/${encodeURIComponent(ref)}/manage-init`} method="POST" className="mt-6 max-w-[760px] mx-auto">
             <button
               type="submit"
               className="w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-bold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors active:scale-[0.98] cursor-pointer"
@@ -171,7 +171,7 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
           </form>
         )}
 
-        <div className="mt-6 max-w-[680px] mx-auto grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="mt-6 max-w-[760px] mx-auto grid grid-cols-1 sm:grid-cols-2 gap-3">
           <a
             href={getWhatsAppUrl(`Hi! I just sent a booking request for ${pkg.name}${ref ? ` (ref ${ref})` : ""}. I have a question.`)}
             target="_blank"
