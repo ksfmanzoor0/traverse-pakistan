@@ -173,10 +173,10 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
   useEffect(() => {
     const leadIdx = draft.travelers.findIndex((t) => t.isLead);
     if (leadIdx < 0) return;
-    const combined = `${draft.contact.firstName} ${draft.contact.lastName}`.trim();
+    const combined = draft.contact.firstName.trim();
     if (combined) patchTraveler(leadIdx, { fullName: combined });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft.contact.firstName, draft.contact.lastName]);
+  }, [draft.contact.firstName]);
 
   const totalTravelers = draft.adults + draft.childCount;
   const hasCapacity = liveDeparture ? liveDeparture.seatsAvailable >= totalTravelers : true;
@@ -195,7 +195,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
       return null;
     }
     if (step === 3) {
-      if (!draft.contact.firstName.trim()) return "Lead traveller first name required";
+      if (!draft.contact.firstName.trim()) return "Lead traveller name required";
       if (!validPhone(draft.contact.phone)) return "Enter a valid phone number";
       if (draft.contact.email && !validEmail(draft.contact.email)) return "Enter a valid email address";
       return null;
@@ -235,7 +235,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
       draft.paymentPlan === "installments" ? `*Payment:* 20% deposit (${formatPrice(pricing.dueNow)} now)` : null,
       "",
       `*Lead traveller:*`,
-      `${draft.contact.firstName} ${draft.contact.lastName}`,
+      draft.contact.firstName,
       draft.contact.email,
       draft.contact.phone,
       "",
@@ -271,7 +271,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
             seats: totalTravelers,
             singleRooms: draft.singleRooms,
             contact: {
-              name: `${draft.contact.firstName} ${draft.contact.lastName}`.trim(),
+              name: draft.contact.firstName.trim(),
               email: draft.contact.email,
               phone: draft.contact.phone,
             },
@@ -330,7 +330,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
           seats: totalTravelers,
           singleRooms: draft.singleRooms,
           contact: {
-            name: `${draft.contact.firstName} ${draft.contact.lastName}`.trim(),
+            name: draft.contact.firstName.trim(),
             email: draft.contact.email,
             phone: draft.contact.phone,
           },
@@ -481,6 +481,22 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
           <p className="text-center text-[11px] text-[var(--text-tertiary)] -mt-4">
             You won&apos;t be charged yet — pay securely on the next page.
           </p>
+        )}
+
+        {draft.step === 4 && (
+          <div className="p-4 bg-[var(--primary-light)] border border-[var(--primary)]/20 rounded-[var(--radius-md)]">
+            <div className="flex items-start gap-3">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2" className="mt-0.5 shrink-0">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              <div>
+                <p className="text-[13px] font-bold text-[var(--primary-deep)] mb-1">Free cancellation</p>
+                <p className="text-[12px] text-[var(--text-secondary)]">
+                  Cancel up to 2 weeks before departure for a full refund. After that, 50% refund up to 72 hours before.
+                </p>
+              </div>
+            </div>
+          </div>
         )}
 
         {draft.step >= 2 && <TrustStrip variant="grid" showSecurePayment />}
@@ -729,8 +745,8 @@ function StepDetails({
   travelers,
   onTravelerChange,
 }: {
-  contact: { firstName: string; lastName: string; email: string; phone: string };
-  onContactChange: (p: Partial<{ firstName: string; lastName: string; email: string; phone: string }>) => void;
+  contact: { firstName: string; email: string; phone: string };
+  onContactChange: (p: Partial<{ firstName: string; email: string; phone: string }>) => void;
   travelers: TravelerProfile[];
   onTravelerChange: (index: number, p: Partial<TravelerProfile>) => void;
 }) {
@@ -740,37 +756,33 @@ function StepDetails({
 
       <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] p-5">
         <p className="text-[13px] font-bold uppercase tracking-wider text-[var(--primary)] mb-3">Lead contact</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-4">
           <LabeledInput
-            label="First name"
+            label="Name"
             required
             value={contact.firstName}
             onChange={(v) => onContactChange({ firstName: v })}
-            placeholder="Ali"
+            placeholder="Ali Khan"
           />
-          <LabeledInput
-            label="Last name"
-            value={contact.lastName}
-            onChange={(v) => onContactChange({ lastName: v })}
-            placeholder="Khan"
-          />
-          <LabeledInput
-            label="Email"
-            type="email"
-            value={contact.email}
-            onChange={(v) => onContactChange({ email: v })}
-            placeholder="ali@example.com"
-            error={contact.email && !validEmail(contact.email) ? "Enter a valid email" : undefined}
-          />
-          <LabeledInput
-            label="Phone"
-            required
-            type="tel"
-            value={contact.phone}
-            onChange={(v) => onContactChange({ phone: v })}
-            placeholder="+92 300 0000000"
-            error={contact.phone && !validPhone(contact.phone) ? "Enter a valid phone" : undefined}
-          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <LabeledInput
+              label="Phone"
+              required
+              type="tel"
+              value={contact.phone}
+              onChange={(v) => onContactChange({ phone: v })}
+              placeholder="+92 300 0000000"
+              error={contact.phone && !validPhone(contact.phone) ? "Enter a valid phone" : undefined}
+            />
+            <LabeledInput
+              label="Email"
+              type="email"
+              value={contact.email}
+              onChange={(v) => onContactChange({ email: v })}
+              placeholder="ali@example.com"
+              error={contact.email && !validEmail(contact.email) ? "Enter a valid email" : undefined}
+            />
+          </div>
         </div>
       </div>
 
@@ -858,20 +870,6 @@ function StepReview({
         <p className="text-[10px] text-[var(--text-tertiary)] text-right mt-1 tabular-nums">
           {specialRequests.length}/500
         </p>
-      </div>
-
-      <div className="p-4 bg-[var(--primary-light)] border border-[var(--primary)]/20 rounded-[var(--radius-md)]">
-        <div className="flex items-start gap-3">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2" className="mt-0.5 shrink-0">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          </svg>
-          <div>
-            <p className="text-[13px] font-bold text-[var(--primary-deep)] mb-1">Free cancellation</p>
-            <p className="text-[12px] text-[var(--text-secondary)]">
-              Cancel up to 7 days before departure for a full refund. After that, 50% refund up to 48 hours before.
-            </p>
-          </div>
-        </div>
       </div>
 
       {travelers.length > 1 && (
