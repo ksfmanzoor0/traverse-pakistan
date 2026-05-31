@@ -157,7 +157,7 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
           <h2 className="text-[14px] font-bold text-[var(--text-primary)] mb-3">What happens next</h2>
           <ol className="space-y-2.5 text-[13px] text-[var(--text-secondary)]">
             {[
-              "Pay now via card, JazzCash, or bank transfer — or tap the link in your email/WhatsApp to come back anytime.",
+              "Pay now via Debit or Credit Card, for Bank Transfer or Jazz Cash reach us on WhatsApp — or tap the link in your email/WhatsApp to come back anytime.",
               "Once paid, you receive the full itinerary, hotel details, and driver contact.",
               `We stay in touch via WhatsApp throughout your ${pkg.duration}-day journey.`,
             ].map((step, i) => (
