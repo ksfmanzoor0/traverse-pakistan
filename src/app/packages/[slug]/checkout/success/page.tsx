@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Container } from "@/components/ui/Container";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { getAllPackages, getPackageBySlug } from "@/services/package.service";
@@ -104,21 +105,39 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
           </div>
         )}
 
-        {/* Inline booking summary */}
+        {/* Your trip widget */}
         {summary && (
-          <div className="mt-6 max-w-[680px] mx-auto bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-[var(--radius-md)] px-5 py-3">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] mb-2">Booking Summary</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-[13px]">
-              <div className="flex justify-between gap-3"><span className="text-[var(--text-tertiary)]">Package</span><span className="font-semibold text-[var(--text-primary)] text-right">{pkg.name}</span></div>
-              <div className="flex justify-between gap-3"><span className="text-[var(--text-tertiary)]">Tier</span><span className="font-semibold text-[var(--text-primary)] capitalize text-right">{summary.tier}</span></div>
-              <div className="flex justify-between gap-3"><span className="text-[var(--text-tertiary)]">Departure</span><span className="font-semibold text-[var(--text-primary)] capitalize text-right">{summary.departure_city}</span></div>
-              {summary.start_date && (
-                <div className="flex justify-between gap-3"><span className="text-[var(--text-tertiary)]">Start Date</span><span className="font-semibold text-[var(--text-primary)] text-right">{new Date(summary.start_date).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}</span></div>
-              )}
-              <div className="flex justify-between gap-3"><span className="text-[var(--text-tertiary)]">Adults</span><span className="font-semibold text-[var(--text-primary)] text-right">{summary.adults}</span></div>
-              <div className="flex justify-between gap-3"><span className="text-[var(--text-tertiary)]">Rooms</span><span className="font-semibold text-[var(--text-primary)] text-right">{summary.rooms}</span></div>
-              <div className="flex justify-between gap-3 sm:col-span-2 pt-2 mt-1 border-t border-[var(--border-default)]"><span className="text-[var(--text-tertiary)]">Contact</span><span className="font-semibold text-[var(--text-primary)] text-right truncate">{summary.contact_name} · {summary.contact_phone}</span></div>
+          <div
+            className="mt-6 max-w-[680px] mx-auto grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-6 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] overflow-hidden"
+            style={{ boxShadow: "var(--shadow-sm)" }}
+          >
+            <div className="p-6 order-2 sm:order-1">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--primary)]">Your trip</p>
+              <h2 className="text-[20px] font-bold text-[var(--text-primary)] tracking-tight mt-1">{pkg.name}</h2>
+              <dl className="mt-5 grid grid-cols-2 gap-y-3 text-[13px]">
+                {summary.start_date && (
+                  <>
+                    <dt className="text-[var(--text-tertiary)]">Start date</dt>
+                    <dd className="text-right text-[var(--text-primary)] font-medium">
+                      {new Date(summary.start_date).toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric", year: "numeric" })}
+                    </dd>
+                  </>
+                )}
+                <dt className="text-[var(--text-tertiary)]">Duration</dt>
+                <dd className="text-right text-[var(--text-primary)] font-medium">{pkg.duration} days</dd>
+                <dt className="text-[var(--text-tertiary)]">Tier</dt>
+                <dd className="text-right text-[var(--text-primary)] font-medium capitalize">{summary.tier}</dd>
+                <dt className="text-[var(--text-tertiary)]">Departure</dt>
+                <dd className="text-right text-[var(--text-primary)] font-medium capitalize">{summary.departure_city}</dd>
+                <dt className="text-[var(--text-tertiary)]">Travellers</dt>
+                <dd className="text-right text-[var(--text-primary)] font-medium">{summary.adults} adults · {summary.rooms} rooms</dd>
+              </dl>
             </div>
+            {pkg.images[0] && (
+              <div className="relative w-full sm:w-[200px] h-[180px] sm:h-auto order-1 sm:order-2">
+                <Image src={pkg.images[0].url} alt={pkg.name} fill className="object-cover" sizes="200px" />
+              </div>
+            )}
           </div>
         )}
 
