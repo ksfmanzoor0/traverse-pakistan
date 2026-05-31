@@ -102,7 +102,6 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
   const [departuresLoaded, setDeparturesLoaded] = useState(false);
   const [maxReachedStep, setMaxReachedStep] = useState<number>(initStep);
   const [submitting, setSubmitting] = useState(false);
-  const [submittedRef, setSubmittedRef] = useState<string | null>(null);
   // Stable per-attempt UUID so a network blip + retry never creates two bookings.
   const submitUuidRef = useRef<string>(crypto.randomUUID());
   const [whatsappSubmitted, setWhatsappSubmitted] = useState(false);
@@ -345,7 +344,6 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
           notes: draft.specialRequests || undefined,
           submitUuid: submitUuidRef.current,
         });
-        setSubmittedRef(result.bookingRef);
         clearDraft();
         router.push(`/grouptours/${tour.slug}/checkout/success?ref=${result.bookingRef}&plan=${draft.paymentPlan}&amount=${pricing.dueNow}`);
         return;
@@ -362,17 +360,6 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
 
   if (whatsappSubmitted) {
     return <WhatsAppSentCard tour={tour} onClose={onClose} />;
-  }
-
-  if (submittedRef) {
-    return (
-      <div className="p-6 rounded-[var(--radius-md)] bg-[var(--primary-light)] border border-[var(--primary)]/30 text-center">
-        <p className="text-[16px] font-bold text-[var(--primary-deep)]">Reserved!</p>
-        <p className="text-[13px] text-[var(--text-secondary)] mt-1">
-          Reference <span className="font-mono font-semibold">{submittedRef}</span>
-        </p>
-      </div>
-    );
   }
 
   const validationError = attemptedNext ? validateStep(draft.step) : null;
