@@ -226,7 +226,7 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
                   href={link.href}
                   onClick={closeAll}
                   className={cn(
-                    "py-3.5 text-[15px] font-semibold border-b border-[var(--border-default)] last:border-0 transition-colors",
+                    "py-3.5 text-[15px] font-semibold border-b border-[var(--border-default)] transition-colors",
                     pathname.startsWith(link.href)
                       ? "text-[var(--primary)]"
                       : "text-[var(--text-primary)] hover:text-[var(--primary)]"
@@ -235,6 +235,19 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
                   {link.label}
                 </Link>
               ))}
+              <Link
+                href="/account/trips"
+                onClick={closeAll}
+                className={cn(
+                  "flex items-center gap-2 py-3.5 text-[15px] font-semibold transition-colors",
+                  pathname.startsWith("/account/trips") || pathname.startsWith("/bookings")
+                    ? "text-[var(--primary)]"
+                    : "text-[var(--text-primary)] hover:text-[var(--primary)]"
+                )}
+              >
+                <Icon name="bookmark" size="xs" />
+                My Bookings
+              </Link>
             </nav>
 
           </div>

@@ -164,6 +164,14 @@ export function BookingDetail({ bookingRef, data, canManage, needsEmail = false 
         </div>
       )}
 
+      {/* On mobile, surface the verify CTA before the details grid so the
+          user knows what's gated. Desktop renders it once below (line ~220). */}
+      {!isCancelled && !canManage && (
+        <div className="sm:hidden">
+          <ManageBanner bookingRef={bookingRef} needsEmail={needsEmail} />
+        </div>
+      )}
+
       {/* Booking details — two columns on desktop, stacks on mobile */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Your details */}
@@ -216,8 +224,13 @@ export function BookingDetail({ bookingRef, data, canManage, needsEmail = false 
         </div>
       </div>
 
-      {/* Manage banner — shown above edit/cancel when user hasn't verified yet */}
-      {!isCancelled && !canManage && <ManageBanner bookingRef={bookingRef} needsEmail={needsEmail} />}
+      {/* Manage banner — desktop only; mobile renders it above the details
+          grid earlier. */}
+      {!isCancelled && !canManage && (
+        <div className="hidden sm:block">
+          <ManageBanner bookingRef={bookingRef} needsEmail={needsEmail} />
+        </div>
+      )}
 
       {/* Actions */}
       {!isCancelled && (
