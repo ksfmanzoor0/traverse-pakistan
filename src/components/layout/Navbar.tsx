@@ -187,7 +187,7 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
           <div className="ml-auto flex items-center md:justify-end gap-1 h-[64px] sm:h-[76px]">
             <ThemeToggle />
             <Link
-              href="/account/trips"
+              href="/bookings/find"
               className="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-sm)] text-[13px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] transition-colors"
             >
               <Icon name="bookmark" size="xs" />

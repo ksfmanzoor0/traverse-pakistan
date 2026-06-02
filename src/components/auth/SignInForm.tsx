@@ -51,7 +51,7 @@ function Divider() {
 function SignInInner() {
   const router = useRouter();
   const search = useSearchParams();
-  const next = search.get("redirect") || search.get("next") || "/account/trips";
+  const next = search.get("redirect") || search.get("next") || "/mybookings";
 
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);

@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { email, next } = parsed.data;
-  const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/account/trips";
+  const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/mybookings";
 
   const origin = new URL(req.url).origin;
   const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(safeNext)}`;

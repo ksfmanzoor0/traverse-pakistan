@@ -28,7 +28,7 @@ export default async function TripsPage() {
   const user = sessionData?.user;
 
   if (!user) {
-    redirect("/bookings/find?next=/account/trips");
+    redirect("/auth/sign-in");
   }
 
   const bookings = await getBookingsForUser(user.id);
