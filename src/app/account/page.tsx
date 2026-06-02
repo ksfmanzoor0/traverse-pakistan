@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 const menuItems: Array<{ label: string; href: string; icon: IconName; description: string }> = [
-  { label: "My Bookings", href: "/account/trips", icon: "list-checks", description: "View your tours, packages, and hotel bookings" },
+  { label: "My Bookings", href: "/mybookings", icon: "list-checks", description: "View your tours, packages, and hotel bookings" },
   { label: "Wishlist", href: "/account/wishlist", icon: "heart", description: "Tours you've saved for later" },
   { label: "Settings", href: "/account/settings", icon: "gear", description: "Profile and preferences" },
 ];

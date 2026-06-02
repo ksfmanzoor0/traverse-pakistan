@@ -4,7 +4,7 @@ import { getBookingsForUser } from "@/lib/auth/getUserBookings";
 import { FindBookingForm } from "@/components/bookings/FindBookingForm";
 
 interface Props {
-  searchParams: Promise<{ next?: string; ref?: string; error?: string }>;
+  searchParams: Promise<{ ref?: string; error?: string }>;
 }
 
 // /bookings/find
@@ -12,21 +12,18 @@ interface Props {
 // - Verified user: skip the form — route them to their booking(s):
 //     0 bookings → keep form (rare edge case)
 //     1 booking → redirect to that booking
-//     2+        → redirect to /account/trips list
+//     2+        → redirect to /mybookings list
 export default async function FindBookingPage({ searchParams }: Props) {
-  const { next } = await searchParams;
+  await searchParams;
 
   const supabase = await getSupabaseServer();
   const { data: sessionData } = await supabase.auth.getUser();
   const user = sessionData?.user;
 
   if (user && user.user_metadata?.verified_via_otp === true) {
-    if (next && next.startsWith("/") && !next.startsWith("//")) {
-      redirect(next);
-    }
     const bookings = await getBookingsForUser(user.id);
     if (bookings.length === 1) redirect(`/bookings/${bookings[0].ref}`);
-    if (bookings.length > 1) redirect("/account/trips");
+    if (bookings.length > 1) redirect("/mybookings");
     // 0 bookings → fall through to form (edge case)
   }
 

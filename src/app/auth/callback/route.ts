@@ -5,8 +5,8 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 export const dynamic = "force-dynamic";
 
 function safeNext(next: string | null): string {
-  if (!next) return "/account/trips";
-  if (!next.startsWith("/") || next.startsWith("//")) return "/account/trips";
+  if (!next) return "/mybookings";
+  if (!next.startsWith("/") || next.startsWith("//")) return "/mybookings";
   return next;
 }
 
