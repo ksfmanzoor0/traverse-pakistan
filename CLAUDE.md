@@ -37,6 +37,28 @@ Pull from `origin/main` (or feature base) after switching to any branch before d
 
 ---
 
+## Recent shipped work (chronological, by branch)
+
+Bottom-up: most recent first. Each row = one merged PR onto Dev-Main.
+
+| Branch | What it added / changed |
+|---|---|
+| `rename-mybookings-find-flow` *(pending PR)* | Move `/account/trips` → `/mybookings`. Drop `?next=` from `/bookings/find` — always lands on `/bookings/[ref]` after match. Add "Get a Magic Link" CTA on find page → `/auth/sign-in`. Updates all 9 callers (navbar, user menu, account dashboard, signin defaults). Navbar "My Bookings" now points to `/bookings/find`. |
+| `fix-hotel-tour-notifications` | Step-up WhatsApp template now state-aware (`booking_received` if unpaid, `booking_confirmed` if paid). `view-grant` null-safe for phone-only bookings (was 500ing). Drop redundant `stampBookingWithUser` from all `/api/payments/alfa/initiate-{type}` routes — success-page stamp is canonical. Delete dead `/api/payments/alfa/initiate` route + unwired `handleCardPayment` in BookingWizard. |
+| `fix-past-tours-filter` | Tour list queries no longer trust the denormalized `tours.departure_date` column. Filter through `getActiveTourSlugs()` which queries `departures` for at-least-one open future row. Applied to `getAllTours`, `getToursByDestination/Region/Category/Style`, `getFeaturedTours`, `getSimilarTours`. |
+| `success-page-unify` | Unified 760×250 "Your trip / Your stay" widget on tour + package + hotel success pages. Reorder: trip card → Pay → What happens next → Manage → bottom-row. Tour wizard: drop intermediate "Reserved!" card flash. Booking forms: single full-width Name field (drop Last name), Phone before Email, "Free cancellation" callout below Confirm. Uniform "Secure card payment via Alfa Bank" caption under all Pay buttons. |
+| `booking-idempotency` | `submit_uuid` column + unique partial index on `package_bookings`, `hotel_bookings`, `bookings`. RPCs (`create_package_booking`, `create_hotel_booking`, `create_booking`) short-circuit to existing row when `p_submit_uuid` matches. Client wizards generate a per-attempt UUID via `useRef(crypto.randomUUID())` and auto-retry 3× on network errors. Eliminates the "TypeError: Load failed" double-booking edge case. |
+| `passwordless-signup` | Full passwordless auth foundation. Silent admin-create at booking, magic link via email + WhatsApp (`booking_received` template), short URL redirect `/m/[ref]/[hash]`. Tiered access (view via ref+contact, manage via OTP step-up). `/bookings/find` with ref+contact lookup. Phone-only ManageBanner with "attach email" flow. `booking_received` vs `booking_confirmed` template split. `after()` used everywhere fire-and-forget sends happen. |
+
+### Open / known gaps
+
+- **WhatsApp OTP** (`verification_code` template) — not delivering. Currently the only working OTP channel is email. Affects step-up fallback for phone-only bookers.
+- **`booking_received` Meta status** — recently approved (was in review). Untested end-to-end on production.
+- **Mobile-Frontend port lag** — Mobile-Frontend tracks Dev-Main but the hamburger "My Bookings" entry was added there separately. Future Dev-Main UX changes need explicit ports.
+- **`rename-mybookings-find-flow`** not yet on Dev-Main — current production URL is still `/account/trips`.
+
+---
+
 ## File map — where things live
 
 ### Routes & pages
@@ -71,28 +93,47 @@ Pull from `origin/main` (or feature base) after switching to any branch before d
 
 - [src/lib/supabase/server.ts](src/lib/supabase/server.ts) — `getSupabaseServer()` (cookie-aware, for user-context reads) and `getSupabaseAdmin()` (service-role, bypasses RLS)
 - [src/lib/auth/](src/lib/auth/)
-  - `phone.ts` — E.164 normalize + `synthesizeEmailFromPhone(phone)` → `wa-{digits}@traverse.internal`
+  - `phone.ts` — E.164 normalize + `synthesizeEmailFromPhone(phone)` → `wa-{digits}@traverse.internal`; `isSynthesizedEmail(email)` for downstream filtering
   - `findOrCreateUser.ts` — silent admin-create with `email_confirm: true` + `user_metadata { verified_via_otp: false, origin: "silent_checkout" }`
-  - `stampBookingWithUser.ts` — best-effort hook called from all 4 initiate routes; populates `bookings.user_id`
-  - `requireBookingOwner.ts` — guard for booking-action routes: requires session + verified_via_otp + user_id match
-- [src/lib/whatsapp/cloud.ts](src/lib/whatsapp/cloud.ts) — Meta Cloud API client; env-gated (no-ops if `META_WHATSAPP_TOKEN` unset); two senders: `sendOtpViaWhatsApp` (auth template) and `sendBookingConfirmedViaWhatsApp` (utility template)
-- [src/lib/email/](src/lib/email/) — `resend.ts` (lazy client init, `FROM` env-overridable), `sendBookingConfirmation.ts` (generates magic link, dispatches to email + WhatsApp), templates
+  - `stampBookingWithUser.ts` — best-effort hook called from each booking's checkout success page (NOT from initiate routes — those got pruned). Populates `bookings.user_id`.
+  - `requireBookingOwner.ts` — guard for manage-tier routes: requires session + `verified_via_otp` + user_id match
+  - `requireBookingViewer.ts` — guard for view-tier routes: accepts either an owning session OR a per-booking signed view cookie
+  - `viewCookie.ts` — signed per-booking `tp_v_{ref}` cookie (HMAC, 1h TTL). Gives view-only access when user doesn't have a Supabase session yet.
+- [src/lib/whatsapp/cloud.ts](src/lib/whatsapp/cloud.ts) — Meta Cloud API client; env-gated. Three senders: `sendOtpViaWhatsApp`, `sendBookingReceivedViaWhatsApp` (utility), `sendBookingConfirmedViaWhatsApp` (utility). Magic-link URL goes in `{{3}}` body var.
+- [src/lib/email/](src/lib/email/) — `resend.ts` (lazy client init, `FROM` env-overridable), `sendBookingConfirmation.ts` (two exports: `sendBookingConfirmation` for the at-creation send, `sendPaymentConfirmation` for the at-payment send), templates
 - [src/lib/alfa/](src/lib/alfa/) — config + hash helpers for Alfa Hosted Checkout
-- [src/lib/payments/markBooking.ts](src/lib/payments/markBooking.ts) — IPN-triggered status updates across all 3 booking tables
+- [src/lib/payments/markBooking.ts](src/lib/payments/markBooking.ts) — IPN/poll-triggered status updates across all 3 booking tables. On the pending → paid transition, fires `sendPaymentConfirmation` via `after()`.
 
 ### Auth flow (passwordless)
 
-1. **Booking checkout** — user enters contact + pays. Server (`/api/payments/alfa/initiate*`) calls `stampBookingWithUser` which silent-creates an `auth.users` row keyed by email (or synthesized email if phone-only) and stamps `booking.user_id`.
-2. **Payment confirmed** — IPN triggers `sendBookingConfirmation`, which mints a Supabase magic-link token via `auth.admin.generateLink` and sends `${SITE}/auth/callback?token_hash=...&next=/bookings/{ref}` via Resend email (if real email) + WhatsApp Cloud API.
-3. **User clicks magic link** — [/auth/callback](src/app/auth/callback/route.ts) consumes the token, flips `verified_via_otp = true`, redirects to `next`.
-4. **User opens /bookings/[ref] cold** — [server-side gate](src/app/bookings/[ref]/page.tsx) checks session + verified_via_otp + user_id; missing → redirects to `/bookings/find?next=/bookings/{ref}`.
-5. **Find-booking** — [/bookings/find](src/app/bookings/find/page.tsx) takes email or phone, sends OTP via chosen channel. Verify route mints a magic-link token, client calls `supabase.auth.verifyOtp({ token_hash, type: 'magiclink' })` → real session.
+**Access tiers** — every booking-action route resolves to one of three:
+
+| Tier | What you can do | How you get it |
+|---|---|---|
+| **None** | Nothing — gated routes refuse | No cookie, no session |
+| **View** | See `/bookings/[ref]` (contact, dates, amount, status) | `view-grant` (ref + contact match → `tp_v_{ref}` signed cookie) OR a real Supabase session owning the booking |
+| **Manage** | Edit name, cancel, etc. | Supabase session with `user_metadata.verified_via_otp = true` AND `user_id` matches booking |
+
+**Lifecycle:**
+
+1. **Booking checkout** — wizard creates booking client-side via Supabase RPC (`createPackageBooking` / `createHotelBooking` / `createBooking`). Returns `bookingRef`; success page renders next.
+2. **Success page** — server component runs `stampBookingWithUser(ref)` (silent admin-create `auth.users` keyed by email or synthesized `wa-{digits}@traverse.internal` for phone-only) and `after(sendBookingConfirmation(ref))`. Email + WhatsApp `booking_received` template both carry a magic link.
+3. **Magic-link URL is short** — `${SITE}/m/{ref}/{hash}`, 302's to `/auth/callback?token_hash=...&type=magiclink&next=/bookings/{ref}`. Shortened to avoid Meta's ecosystem-health filter on WhatsApp utility templates.
+4. **Payment** — user clicks Pay → `/api/payments/alfa/initiate-{type}` → Alfa SSO → user pays → Alfa redirects to `/payments/return?O={ref}` → page polls `/api/bookings/status?ref={ref}`. When status flips paid, `markBooking(ref, true)` updates the row and fires `sendPaymentConfirmation` via `after()` — that send uses the `booking_confirmed` template.
+5. **User clicks magic link** — `/auth/callback` consumes the token, flips `verified_via_otp = true` if not already, redirects to `next`.
+6. **Step-up** — when a view-tier user clicks "Manage My Booking", `/api/bookings/[ref]/step-up` sends a fresh magic-link + 6-digit OTP. **Template choice is state-aware:** `booking_received` if `payment_status !== "paid"`, else `booking_confirmed`. (Tour uses `status === "confirmed"` as the paid signal.)
+7. **/bookings/find** — ref + contact lookup. POST to `/api/bookings/view-grant`; on match sets `tp_v_{ref}` view cookie and redirects to `/bookings/[ref]`. Currently no longer accepts a `next` redirect param (PR `rename-mybookings-find-flow`).
 
 ### Auth routes
-- `POST /api/bookings/otp` — `{ identifier, channel }` (channel: `email` | `whatsapp`); always 200 to prevent enumeration
+- `POST /api/bookings/otp` — `{ identifier, channel }` for sign-in OTP; always 200 to prevent enumeration
 - `PUT  /api/bookings/otp` — `{ identifier, code }`; on success returns `{ tokenHash, type: 'magiclink' }` and flips `verified_via_otp`
-- `GET  /auth/callback` — handles both OAuth `code` and magic-link `token_hash`; sets session cookies
-- `GET/POST/PATCH /api/bookings/[ref]/...` — gated by `requireBookingOwner`
+- `POST /api/bookings/view-grant` — `{ bookingRef, contact }`; null-safe for phone-only bookings; sets `tp_v_{ref}` cookie on contact match
+- `POST /api/bookings/[ref]/manage-init` — fires step-up + sets view cookie + 303 to `/bookings/{ref}?sent=1`
+- `POST /api/bookings/[ref]/step-up` — sends magic link (template by payment status) + OTP via email/WhatsApp
+- `PUT  /api/bookings/[ref]/step-up` — verifies 6-digit code, flips `verified_via_otp`, returns `{ tokenHash, type: 'magiclink' }`
+- `GET  /auth/callback` — consumes OAuth `code` OR magic-link `token_hash`; sets session cookies
+- `GET  /m/[ref]/[hash]` — short-URL redirect to `/auth/callback` with full magic-link params
+- Manage-tier routes (`/api/bookings/[ref]/cancel`, `/name`) — gated by `requireBookingOwner`
 
 ---
 
@@ -107,7 +148,7 @@ Pull from `origin/main` (or feature base) after switching to any branch before d
 | Empty state | Use `<EmptyState icon="..." title="..." description="..." action={...} />` |
 | Add a seasonal tint | Already derived in [SeasonCard.tsx](src/components/destination/SeasonCard.tsx) from `season` name — don't add per-destination |
 | Scroll-reveal wrap | `<Reveal delayMs={60}>…</Reveal>` (respects `prefers-reduced-motion`) |
-| Send something via WhatsApp | Use `sendOtpViaWhatsApp` / `sendBookingConfirmedViaWhatsApp` from [cloud.ts](src/lib/whatsapp/cloud.ts) — env-gated, safe to call when not configured |
+| Send something via WhatsApp | Use one of `sendOtpViaWhatsApp` / `sendBookingReceivedViaWhatsApp` / `sendBookingConfirmedViaWhatsApp` from [cloud.ts](src/lib/whatsapp/cloud.ts) — env-gated, safe to call when not configured |
 | Gate a booking action by ownership | Wrap route in `requireBookingOwner(ref)` from [requireBookingOwner.ts](src/lib/auth/requireBookingOwner.ts); the `ok: false` branch returns a ready `NextResponse` |
 | Add a new package | See "Adding a new package — checklist" below |
 | Add a new hotel | Add slug to `SUPABASE_HOTEL_SLUGS` in [hotel.service.ts](src/services/hotel.service.ts) + insert rows into 6 Supabase tables. **Never** add new hotels to static data. |
@@ -150,7 +191,9 @@ Required for full functionality. Most are also set in [.env.example](.env.exampl
 - `META_WHATSAPP_TOKEN` — system user permanent token
 - `META_WHATSAPP_PHONE_ID` — phone number ID from WhatsApp Manager
 - `META_WHATSAPP_TEMPLATE_OTP` — authentication template name (default `verification_code`)
-- `META_WHATSAPP_TEMPLATE_BOOKING_CONFIRMED` — utility template name (default `booking_confirmed`)
+- `META_WHATSAPP_TEMPLATE_BOOKING_RECEIVED` — utility template, fires at booking creation (default `booking_received`)
+- `META_WHATSAPP_TEMPLATE_BOOKING_CONFIRMED` — utility template, fires after payment confirmed (default `booking_confirmed`)
+- `AUTH_COOKIE_SECRET` — HMAC secret for the per-booking view cookie (`tp_v_{ref}`). Must be set; route 500s if missing.
 
 ### Payments (Alfa Hosted Checkout)
 - `ALFA_MERCHANT_ID` · `ALFA_STORE_ID` · `ALFA_MERCHANT_HASH` · `ALFA_MERCHANT_USERNAME` · `ALFA_MERCHANT_PASSWORD` · `ALFA_KEY1` · `ALFA_KEY2`
