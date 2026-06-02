@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { getResend, FROM } from "@/lib/email/resend";
 import { otpEmailHtml, otpEmailText } from "@/lib/email/templates/otpEmail";
-import { sendOtpViaWhatsApp, sendBookingConfirmedViaWhatsApp, isWhatsAppConfigured } from "@/lib/whatsapp/cloud";
+import { sendOtpViaWhatsApp, sendBookingReceivedViaWhatsApp, sendBookingConfirmedViaWhatsApp, isWhatsAppConfigured } from "@/lib/whatsapp/cloud";
 import { isSynthesizedEmail } from "@/lib/auth/phone";
 import { mintLoginTokenForBooking } from "@/lib/auth/mintLoginToken";
 
@@ -31,6 +31,7 @@ interface UserBundle {
   realEmail: string | null;
   phone: string;
   contactName: string;
+  isPaid: boolean;
 }
 
 async function loadUserForBooking(ref: string): Promise<UserBundle | null> {
@@ -40,25 +41,29 @@ async function loadUserForBooking(ref: string): Promise<UserBundle | null> {
   let userId: string | null = null;
   let phone = "";
   let contactName = "";
+  let isPaid = false;
 
   if (table === "package_bookings") {
-    const { data } = await supabase.from("package_bookings").select("user_id, contact_phone, contact_name").eq("booking_ref", ref).maybeSingle();
+    const { data } = await supabase.from("package_bookings").select("user_id, contact_phone, contact_name, payment_status").eq("booking_ref", ref).maybeSingle();
     if (!data) return null;
     userId = data.user_id as string | null;
     phone = data.contact_phone;
     contactName = data.contact_name;
+    isPaid = data.payment_status === "paid";
   } else if (table === "hotel_bookings") {
-    const { data } = await supabase.from("hotel_bookings").select("user_id, contact_phone, contact_name").eq("booking_ref", ref).maybeSingle();
+    const { data } = await supabase.from("hotel_bookings").select("user_id, contact_phone, contact_name, payment_status").eq("booking_ref", ref).maybeSingle();
     if (!data) return null;
     userId = data.user_id as string | null;
     phone = data.contact_phone;
     contactName = data.contact_name;
+    isPaid = data.payment_status === "paid";
   } else {
-    const { data } = await supabase.from("bookings").select("user_id, contact_phone, contact_name").eq("booking_ref", ref).maybeSingle();
+    const { data } = await supabase.from("bookings").select("user_id, contact_phone, contact_name, status").eq("booking_ref", ref).maybeSingle();
     if (!data) return null;
     userId = data.user_id as string | null;
     phone = data.contact_phone;
     contactName = data.contact_name;
+    isPaid = data.status === "confirmed";
   }
 
   if (!userId) return null;
@@ -73,6 +78,7 @@ async function loadUserForBooking(ref: string): Promise<UserBundle | null> {
     realEmail: isSynthesizedEmail(email) ? null : email,
     phone,
     contactName,
+    isPaid,
   };
 }
 
@@ -125,7 +131,13 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ re
   // WhatsApp dispatch — magic link (utility template) + OTP (authentication template)
   if (isWhatsAppConfigured()) {
     if (magicUrl) {
-      sendBookingConfirmedViaWhatsApp({
+      // Use the template whose copy matches the booking's actual state.
+      // Unpaid → 'reserved, complete payment' wording.
+      // Paid   → 'confirmed' wording.
+      const sendMagicLink = bundle.isPaid
+        ? sendBookingConfirmedViaWhatsApp
+        : sendBookingReceivedViaWhatsApp;
+      sendMagicLink({
         toPhone: bundle.phone,
         name: bundle.contactName,
         bookingRef: ref,

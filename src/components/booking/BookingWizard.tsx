@@ -250,68 +250,6 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
     return lines.join("\n");
   }
 
-  async function handleCardPayment() {
-    setError(null);
-    const err = validateStep(3);
-    if (err) {
-      setAttemptedNext(true);
-      setError(err);
-      goToStep(3);
-      return;
-    }
-    if (!liveDeparture) return;
-    setSubmitting(true);
-    try {
-      const res = await fetch("/api/payments/alfa/initiate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          booking: {
-            departureId: liveDeparture.id,
-            seats: totalTravelers,
-            singleRooms: draft.singleRooms,
-            contact: {
-              name: draft.contact.firstName.trim(),
-              email: draft.contact.email,
-              phone: draft.contact.phone,
-            },
-            participants: draft.travelers.map((t) => ({
-              fullName: t.fullName,
-              dateOfBirth: t.dateOfBirth,
-              cnicOrPassport: t.cnicOrPassport,
-              dietary: t.dietary,
-              emergencyContact: t.emergencyContact,
-            })),
-            notes: draft.specialRequests || undefined,
-            submitUuid: submitUuidRef.current,
-          },
-          amount: pricing.dueNow,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        const detail = data.issues ? data.issues.map((i: { message: string }) => i.message).join(", ") : null;
-        throw new Error(detail ? `${data.error}: ${detail}` : (data.error ?? "Payment initiation failed"));
-      }
-      clearDraft();
-      const form = document.createElement("form");
-      form.method = "POST";
-      form.action = data.ssoUrl;
-      for (const [key, value] of Object.entries(data.ssoParams as Record<string, string>)) {
-        const input = document.createElement("input");
-        input.type = "hidden";
-        input.name = key;
-        input.value = value;
-        form.appendChild(input);
-      }
-      document.body.appendChild(form);
-      form.submit();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Payment initiation failed. Please try again.");
-      setSubmitting(false);
-    }
-  }
-
   async function handleSubmit() {
     setError(null);
     const err = validateStep(3);

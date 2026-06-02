@@ -3,7 +3,6 @@ import { z } from "zod";
 import { alfaConfig } from "@/lib/alfa/config";
 import { generateAlfaHash } from "@/lib/alfa/hash";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { stampBookingWithUser } from "@/lib/auth/stampBookingWithUser";
 
 const Schema = z.object({
   bookingRef: z.string().min(1),
@@ -39,8 +38,6 @@ export async function POST(req: NextRequest) {
     const amount = plan === "installments"
       ? Math.round(totalAmount * INSTALLMENT_DEPOSIT_PCT)
       : totalAmount;
-
-    await stampBookingWithUser(bookingRef);
 
     const proto = req.headers.get("x-forwarded-proto") ?? "https";
     const host = req.headers.get("host") ?? "traversepakistan.com";
