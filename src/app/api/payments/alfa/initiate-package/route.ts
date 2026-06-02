@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { alfaConfig } from "@/lib/alfa/config";
 import { generateAlfaHash } from "@/lib/alfa/hash";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { stampBookingWithUser } from "@/lib/auth/stampBookingWithUser";
-
 interface Body {
   bookingRef: string;
 }
@@ -29,10 +27,6 @@ export async function POST(req: NextRequest) {
     }
 
     const amount: number = data.total_amount as number;
-
-    // Silent signup — find-or-create auth.users for this booking's contact, stamp user_id.
-    // Best-effort; logged on failure but does not block payment.
-    await stampBookingWithUser(bookingRef);
 
     const proto = req.headers.get("x-forwarded-proto") ?? "https";
     const host = req.headers.get("host") ?? "traversepakistan.com";

@@ -21,7 +21,7 @@ function looksLikeEmail(s: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 }
 
-async function fetchContact(table: BookingTable, ref: string): Promise<{ email: string; phone: string } | null> {
+async function fetchContact(table: BookingTable, ref: string): Promise<{ email: string | null; phone: string | null } | null> {
   const supabase = getSupabaseAdmin();
   if (table === "package_bookings") {
     const { data } = await supabase.from("package_bookings").select("contact_email, contact_phone").eq("booking_ref", ref).maybeSingle();
@@ -53,10 +53,11 @@ export async function POST(req: NextRequest) {
 
   let matched = false;
   if (looksLikeEmail(trimmed)) {
-    matched = record.email.toLowerCase() === trimmed.toLowerCase();
+    // Phone-only bookings have a null/empty email — no email match possible.
+    matched = !!record.email && record.email.toLowerCase() === trimmed.toLowerCase();
   } else {
     const normalized = normalizePhone(trimmed);
-    matched = normalized.length > 0 && normalizePhone(record.phone) === normalized;
+    matched = normalized.length > 0 && !!record.phone && normalizePhone(record.phone) === normalized;
   }
 
   if (!matched) return NextResponse.json({ granted: false });
