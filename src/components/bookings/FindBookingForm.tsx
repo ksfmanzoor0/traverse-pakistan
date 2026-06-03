@@ -34,7 +34,7 @@ function FindBookingInner() {
         router.replace(`/bookings/${ref}`);
         return;
       }
-      setError("We couldn't match that booking ref with the email or phone you entered. Please check and try again.");
+      setError("We couldn't find a booking matching that reference and contact. Double-check both and try again.");
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -83,7 +83,12 @@ function FindBookingInner() {
               className="w-full h-11 px-4 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] focus:outline-none focus:border-[var(--primary)] transition-colors"
             />
           </div>
-          {error && <p className="text-[13px] text-[var(--error)]">{error}</p>}
+          {error && (
+            <div className="flex items-start gap-2.5 p-3 bg-[var(--error)]/8 border border-[var(--error)]/25 rounded-[var(--radius-sm)]">
+              <Icon name="x" size="xs" color="var(--error)" className="mt-0.5 shrink-0" />
+              <p className="text-[13px] text-[var(--error)] leading-snug">{error}</p>
+            </div>
+          )}
           <button
             type="submit"
             disabled={loading || !bookingRef.trim() || !contact.trim()}
