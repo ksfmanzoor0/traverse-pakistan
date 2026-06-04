@@ -53,8 +53,11 @@ export async function GET(request: NextRequest) {
       | "email_change";
     const { data, error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: verifyType });
     if (error || !data?.user) {
-      const redirect = new URL("/bookings/find", url.origin);
-      redirect.searchParams.set("error", error?.message ?? "Invalid or expired link");
+      // Single-use token already consumed (common: Gmail prefetch click) or TTL
+      // expired. Route the user to sign-in with a clear message + the email
+      // pre-filled so they can request the 6-digit code or a fresh link.
+      const redirect = new URL("/auth/sign-in", url.origin);
+      redirect.searchParams.set("error", "This sign-in link has already been used or has expired. Request a new code below.");
       return NextResponse.redirect(redirect);
     }
     await flipVerifiedFlag(data.user.id, data.user.user_metadata as Record<string, unknown> | undefined);
