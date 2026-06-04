@@ -102,7 +102,7 @@ function FindBookingInner() {
             Get a Magic Link
           </Link>
           <p className="text-center text-[12px] text-[var(--text-tertiary)]">
-            On your Email to view all bookings
+            On your WhatsApp or Email to view all bookings
           </p>
         </div>
 
