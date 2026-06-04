@@ -6,6 +6,7 @@ import Image from "next/image";
 import { formatPrice } from "@/lib/utils";
 import { createHotelBooking } from "@/services/booking.service";
 import { Icon } from "@/components/ui/Icon";
+import { InlineAlert } from "@/components/ui/InlineAlert";
 import type { Hotel } from "@/types/hotel";
 
 function fmt(dateStr: string) {
@@ -191,9 +192,7 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
           <p className="text-[11px] text-[var(--text-tertiary)] mt-1.5">Special requests cannot be guaranteed — we&apos;ll do our best to accommodate them.</p>
         </section>
 
-        {error && (
-          <div className="p-3 bg-[var(--error)]/10 border border-[var(--error)]/30 rounded-[var(--radius-sm)] text-[13px] text-[var(--error)]">{error}</div>
-        )}
+        {error && <InlineAlert>{error}</InlineAlert>}
 
         <div className="space-y-2">
           <button type="submit" disabled={!isValid || submitting}

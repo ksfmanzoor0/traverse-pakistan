@@ -21,6 +21,7 @@ import { calculatePricing, type PaymentPlan } from "./pricing";
 import { deriveUrgency } from "./urgency";
 import type { TravelerProfile } from "./types";
 import { useCheckoutDraft } from "@/hooks/useCheckoutDraft";
+import { InlineAlert } from "@/components/ui/InlineAlert";
 
 const STEP_LABELS = ["Dates", "Travellers", "Your details", "Review"];
 
@@ -372,17 +373,9 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
           />
         )}
 
-        {validationError && (
-          <div className="p-3 bg-[var(--error)]/10 border border-[var(--error)]/30 rounded-[var(--radius-sm)] text-[13px] text-[var(--error)] font-medium">
-            {validationError}
-          </div>
-        )}
+        {validationError && <InlineAlert>{validationError}</InlineAlert>}
 
-        {error && (
-          <div className="p-3 bg-[var(--error)]/10 border border-[var(--error)]/30 rounded-[var(--radius-sm)] text-[13px] text-[var(--error)] font-medium">
-            {error}
-          </div>
-        )}
+        {error && <InlineAlert>{error}</InlineAlert>}
 
         <div className="flex items-center gap-3 pt-2">
           {draft.step > 1 && (

@@ -4,6 +4,7 @@ import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
+import { InlineAlert } from "@/components/ui/InlineAlert";
 
 function FindBookingInner() {
   const router = useRouter();
@@ -83,12 +84,7 @@ function FindBookingInner() {
               className="w-full h-11 px-4 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] focus:outline-none focus:border-[var(--primary)] transition-colors"
             />
           </div>
-          {error && (
-            <div className="flex items-start gap-2.5 p-3 bg-[var(--error)]/8 border border-[var(--error)]/25 rounded-[var(--radius-sm)]">
-              <Icon name="x" size="xs" color="var(--error)" className="mt-0.5 shrink-0" />
-              <p className="text-[13px] text-[var(--error)] leading-snug">{error}</p>
-            </div>
-          )}
+          {error && <InlineAlert>{error}</InlineAlert>}
           <button
             type="submit"
             disabled={loading || !bookingRef.trim() || !contact.trim()}
