@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { Icon } from "@/components/ui/Icon";
+import { InlineAlert } from "@/components/ui/InlineAlert";
 import { useAuth } from "./AuthProvider";
 
 const RESEND_COOLDOWN = 30;
@@ -287,7 +288,7 @@ function SignInInner() {
           />
         </div>
 
-        {error && <p className="text-[13px] text-[var(--error)]">{error}</p>}
+        {error && <InlineAlert>{error}</InlineAlert>}
 
         <button
           type="submit"
