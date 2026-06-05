@@ -56,8 +56,10 @@ export async function GET(request: NextRequest) {
       // Single-use token already consumed (common: Gmail prefetch click) or TTL
       // expired. Route the user to sign-in with a clear message + the email
       // pre-filled so they can request the 6-digit code or a fresh link.
+      const hint = url.searchParams.get("hint");
       const redirect = new URL("/auth/sign-in", url.origin);
-      redirect.searchParams.set("error", "This sign-in link has already been used or has expired. Request a new code below.");
+      redirect.searchParams.set("error", "This sign-in link has already been used or has expired. Request a new one below.");
+      if (hint) redirect.searchParams.set("email", hint);
       return NextResponse.redirect(redirect);
     }
     await flipVerifiedFlag(data.user.id, data.user.user_metadata as Record<string, unknown> | undefined);

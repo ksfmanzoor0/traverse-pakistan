@@ -45,9 +45,12 @@ export async function POST(req: NextRequest) {
     // URL hash fragment we can't see. /auth/callback handles both the success
     // path (verifyOtp + session) and the error path (graceful redirect to
     // sign-in with a friendly "link expired, use the code" message).
+    //
+    // The `hint` param carries the email forward so /auth/callback can pass
+    // it to /auth/sign-in on failure → form pre-fills → one-click resend.
     const tokenHash = data.properties?.hashed_token;
     const url = tokenHash
-      ? `${origin}/auth/callback?token_hash=${tokenHash}&type=magiclink&next=${encodeURIComponent(safeNext)}`
+      ? `${origin}/auth/callback?token_hash=${tokenHash}&type=magiclink&next=${encodeURIComponent(safeNext)}&hint=${encodeURIComponent(email)}`
       : data.properties?.action_link;
 
     // Independent OTP: generate our own 6-digit code and store it in

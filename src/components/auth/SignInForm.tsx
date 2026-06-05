@@ -56,7 +56,9 @@ function SignInInner() {
   const { user: currentUser, signOut } = useAuth();
   const [switchingAccount, setSwitchingAccount] = useState(false);
 
-  const [email, setEmail] = useState("");
+  // Pre-fill from ?email= when /auth/callback bounces an expired link back.
+  // One-tap resend = user just clicks the same Send button.
+  const [email, setEmail] = useState(search.get("email") ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(search.get("error"));
   const [sent, setSent] = useState(false);
