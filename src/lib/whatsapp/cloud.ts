@@ -12,6 +12,7 @@ interface CloudConfig {
   otpTemplate: string;
   bookingReceivedTemplate: string;
   bookingConfirmedTemplate: string;
+  viewMyBookingsTemplate: string;
 }
 
 function getConfig(): CloudConfig | null {
@@ -24,6 +25,7 @@ function getConfig(): CloudConfig | null {
     otpTemplate: process.env.META_WHATSAPP_TEMPLATE_OTP ?? "verification_code",
     bookingReceivedTemplate: process.env.META_WHATSAPP_TEMPLATE_BOOKING_RECEIVED ?? "booking_received",
     bookingConfirmedTemplate: process.env.META_WHATSAPP_TEMPLATE_BOOKING_CONFIRMED ?? "booking_confirmed",
+    viewMyBookingsTemplate: process.env.META_WHATSAPP_TEMPLATE_VIEW_MYBOOKINGS ?? "view_mybookings",
   };
 }
 
@@ -140,5 +142,22 @@ export async function sendBookingConfirmedViaWhatsApp(args: {
     args.toPhone,
     cfg.bookingConfirmedTemplate,
     [args.name, args.bookingRef, args.magicLinkPath]
+  );
+}
+
+// Fires from /bookings/find Get a Magic Link CTA when a phone is entered.
+// Template body: "Hi {{1}}, here's your secure link to view all your
+// Traverse Pakistan bookings: {{2}}. Tap to sign in."
+export async function sendViewMyBookingsViaWhatsApp(args: {
+  toPhone: string;
+  name: string;
+  magicLinkPath: string; // full magic-link URL — passed as a body variable {{2}}
+}): Promise<SendResult> {
+  const cfg = getConfig();
+  if (!cfg) return { ok: true, skipped: true };
+  return sendTemplate(
+    args.toPhone,
+    cfg.viewMyBookingsTemplate,
+    [args.name, args.magicLinkPath]
   );
 }

@@ -2,26 +2,45 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getResend, buildMagicLinkEmail } from "@/lib/resend";
+import { normalizePhone, phoneDigitsOnly } from "@/lib/auth/phone";
+import { sendViewMyBookingsViaWhatsApp, isWhatsAppConfigured } from "@/lib/whatsapp/cloud";
 
 const schema = z.object({
-  email: z.string().email().max(120),
+  identifier: z.string().min(3).max(120),
   next: z.string().optional(),
 });
 
+function looksLikeEmail(s: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+}
+
+function siteUrl(req: NextRequest): string {
+  const env = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/+$/, "");
+  if (env) return /^https?:\/\//i.test(env) ? env : `https://${env}`;
+  return new URL(req.url).origin;
+}
+
 // POST /api/auth/send-magic-link
-// Body: { email, next? }
-// Generates a magic-link URL and emails it via Resend. New emails are silently
-// upserted by admin.generateLink — same flow works for sign-in and sign-up.
-// Always returns 200 to prevent enumeration.
+// Body: { identifier, next? }
+// identifier = email OR WhatsApp number. Email path uses Resend; phone path
+// looks up the user by phone and delivers a Supabase magic link via WhatsApp
+// using the view_mybookings template. Always returns 200 to prevent enumeration.
 export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) {
-    return NextResponse.json({ ok: true });
-  }
+  if (!parsed.success) return NextResponse.json({ ok: true });
 
-  const { email, next } = parsed.data;
+  const { identifier, next } = parsed.data;
   const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/mybookings";
 
+  const trimmed = identifier.trim();
+  if (looksLikeEmail(trimmed)) return sendEmail(req, trimmed.toLowerCase(), safeNext);
+
+  const phone = normalizePhone(trimmed);
+  if (!phone) return NextResponse.json({ ok: true });
+  return sendWhatsApp(req, phone, safeNext);
+}
+
+async function sendEmail(req: NextRequest, email: string, safeNext: string) {
   const origin = new URL(req.url).origin;
   const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(safeNext)}`;
 
@@ -32,12 +51,10 @@ export async function POST(req: NextRequest) {
       email,
       options: { redirectTo },
     });
-
     if (error) {
-      console.warn("[send-magic-link] generateLink error:", error.message);
+      console.warn("[send-magic-link] generateLink (email):", error.message);
       return NextResponse.json({ ok: true });
     }
-
     // Construct a direct /auth/callback URL using the hashed token instead of
     // sending Supabase's intermediate /auth/v1/verify URL. On token failure
     // (Gmail prefetch consumed the token, TTL expired, etc.) errors land on
@@ -52,13 +69,11 @@ export async function POST(req: NextRequest) {
     const url = tokenHash
       ? `${origin}/auth/callback?token_hash=${tokenHash}&type=magiclink&next=${encodeURIComponent(safeNext)}&hint=${encodeURIComponent(email)}`
       : data.properties?.action_link;
+    if (!url) return NextResponse.json({ ok: true });
 
-    // Independent OTP: generate our own 6-digit code and store it in
-    // auth_otps. Clicking the magic link consumes Supabase's token; our OTP
-    // remains valid (separate row, separate verification path). At verify
-    // time we mint a fresh Supabase magic-link token server-side.
+    // Independent OTP fallback for email path
     const code = String(Math.floor(100000 + Math.random() * 900000));
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1h
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
     await admin.from("auth_otps").insert({ email, code, expires_at: expiresAt });
 
     const resend = getResend();
@@ -67,7 +82,49 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error("[send-magic-link]", err);
+    console.error("[send-magic-link/email]", err);
+    return NextResponse.json({ ok: true });
+  }
+}
+
+async function sendWhatsApp(req: NextRequest, phone: string, safeNext: string) {
+  if (!isWhatsAppConfigured()) return NextResponse.json({ ok: true });
+  try {
+    const admin = getSupabaseAdmin();
+    const { data: userId } = await admin.rpc("find_auth_user_by_contact", {
+      p_email: null,
+      p_phone: phoneDigitsOnly(phone),
+    });
+    if (!userId) return NextResponse.json({ ok: true });
+
+    const { data: userResult } = await admin.auth.admin.getUserById(userId);
+    const user = userResult?.user;
+    if (!user?.email) return NextResponse.json({ ok: true });
+
+    // generateLink needs the user's email even if synthesized (wa-*@traverse.internal).
+    const origin = siteUrl(req);
+    const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(safeNext)}`;
+    const { data: linkData, error } = await admin.auth.admin.generateLink({
+      type: "magiclink",
+      email: user.email,
+      options: { redirectTo },
+    });
+    if (error || !linkData?.properties?.hashed_token) {
+      console.warn("[send-magic-link] generateLink (phone):", error?.message);
+      return NextResponse.json({ ok: true });
+    }
+
+    // Use the short /m/[ref]/[hash] form. There's no booking ref in this flow,
+    // so use a 'me' sentinel — the redirect handler ignores it and only the
+    // token_hash matters for sign-in. Keeps URL short for Meta's filter.
+    const magicUrl = `${origin}/m/me/${linkData.properties.hashed_token}?next=${encodeURIComponent(safeNext)}`;
+
+    const name = (user.user_metadata?.full_name as string | undefined) ?? "there";
+    await sendViewMyBookingsViaWhatsApp({ toPhone: phone, name, magicLinkPath: magicUrl });
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("[send-magic-link/whatsapp]", err);
     return NextResponse.json({ ok: true });
   }
 }

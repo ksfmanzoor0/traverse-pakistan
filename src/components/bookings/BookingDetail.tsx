@@ -7,6 +7,7 @@ import { Icon } from "@/components/ui/Icon";
 import type { BookingStatus, RefundStatus } from "@/types/booking-status";
 import { CompletePaymentButton } from "./CompletePaymentButton";
 import { ManageBanner } from "./ManageBanner";
+import { InlineAlert } from "@/components/ui/InlineAlert";
 
 interface BookingData {
   type: "tour" | "package" | "hotel";
@@ -154,14 +155,10 @@ export function BookingDetail({ bookingRef, data, canManage, needsEmail = false 
 
       {/* Action feedback */}
       {actionDone === "name" && (
-        <div className="p-3 bg-[var(--success)]/10 rounded-[var(--radius-sm)] text-[13px] text-[var(--success)] font-medium">
-          Name updated successfully.
-        </div>
+        <InlineAlert variant="success">Name updated successfully.</InlineAlert>
       )}
       {actionDone === "cancel" && (
-        <div className="p-3 bg-[var(--error)]/10 rounded-[var(--radius-sm)] text-[13px] text-[var(--error)] font-medium">
-          Your booking has been cancelled. Contact us on WhatsApp for refund queries.
-        </div>
+        <InlineAlert variant="error">Your booking has been cancelled. Contact us on WhatsApp for refund queries.</InlineAlert>
       )}
 
       {/* Booking details — two columns on desktop, stacks on mobile */}
@@ -313,9 +310,7 @@ export function BookingDetail({ bookingRef, data, canManage, needsEmail = false 
         Back to home
       </Link>
 
-      {actionError && (
-        <p className="text-center text-[13px] text-[var(--error)] font-medium">{actionError}</p>
-      )}
+      {actionError && <InlineAlert>{actionError}</InlineAlert>}
     </div>
   );
 }

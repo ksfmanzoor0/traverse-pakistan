@@ -4,6 +4,7 @@ import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
+import { InlineAlert } from "@/components/ui/InlineAlert";
 
 function FindBookingInner() {
   const router = useRouter();
@@ -34,7 +35,7 @@ function FindBookingInner() {
         router.replace(`/bookings/${ref}`);
         return;
       }
-      setError("We couldn't match that booking ref with the email or phone you entered. Please check and try again.");
+      setError("We couldn't find a booking matching that reference and contact. Double-check both and try again.");
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -83,7 +84,7 @@ function FindBookingInner() {
               className="w-full h-11 px-4 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] focus:outline-none focus:border-[var(--primary)] transition-colors"
             />
           </div>
-          {error && <p className="text-[13px] text-[var(--error)]">{error}</p>}
+          {error && <InlineAlert>{error}</InlineAlert>}
           <button
             type="submit"
             disabled={loading || !bookingRef.trim() || !contact.trim()}
