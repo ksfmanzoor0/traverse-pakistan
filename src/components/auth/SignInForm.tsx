@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { Icon } from "@/components/ui/Icon";
+import { useAuth } from "./AuthProvider";
 
 const RESEND_COOLDOWN = 30;
 
@@ -52,8 +53,12 @@ function SignInInner() {
   const router = useRouter();
   const search = useSearchParams();
   const next = search.get("redirect") || search.get("next") || "/mybookings";
+  const { user: currentUser, signOut } = useAuth();
+  const [switchingAccount, setSwitchingAccount] = useState(false);
 
-  const [email, setEmail] = useState("");
+  // Pre-fill from ?email= when /auth/callback bounces an expired link back.
+  // One-tap resend = user just clicks the same Send button.
+  const [email, setEmail] = useState(search.get("email") ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(search.get("error"));
   const [sent, setSent] = useState(false);
@@ -229,6 +234,35 @@ function SignInInner() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  // Already-signed-in interception: clear up confusion when a stale session
+  // exists in this browser before showing the sign-in form. Show who's signed
+  // in + a "Use this account" / "Sign out and use a different account" choice.
+  if (currentUser && !switchingAccount) {
+    const displayName = (currentUser.user_metadata?.full_name as string | undefined) ?? currentUser.email ?? "your account";
+    return (
+      <div className="space-y-4">
+        <div className="p-5 bg-[var(--primary-light)] border border-[var(--primary)]/30 rounded-[var(--radius-md)] text-center space-y-2">
+          <p className="text-[13px] text-[var(--text-secondary)]">You&apos;re already signed in as</p>
+          <p className="text-[15px] font-bold text-[var(--text-primary)] break-all">{displayName}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => { router.replace(next); router.refresh(); }}
+          className="w-full h-12 bg-[var(--primary)] text-[var(--text-inverse)] text-[14px] font-bold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors cursor-pointer"
+        >
+          Continue as {displayName}
+        </button>
+        <button
+          type="button"
+          onClick={async () => { await signOut(); setSwitchingAccount(true); }}
+          className="w-full h-11 border border-[var(--border-default)] text-[14px] font-semibold text-[var(--text-primary)] rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
+        >
+          Use a different account
+        </button>
+      </div>
+    );
   }
 
   return (
