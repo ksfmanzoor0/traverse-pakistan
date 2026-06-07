@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
 import { Icon } from "@/components/ui/Icon";
+import { WishlistButton } from "@/components/ui/WishlistButton";
 import type { Hotel } from "@/types/hotel";
 
 const allDestinations = [
@@ -96,6 +97,9 @@ export function HotelsClient({ hotels }: { hotels: Hotel[] }) {
                     <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] bg-[var(--primary)] text-[var(--on-dark)] rounded-[var(--radius-full)]">
                       {hotel.tier}
                     </span>
+                  </div>
+                  <div className="absolute top-3 right-3">
+                    <WishlistButton itemType="hotel" itemSlug={hotel.slug} />
                   </div>
                 </div>
                 <div className="p-4 sm:p-5">
