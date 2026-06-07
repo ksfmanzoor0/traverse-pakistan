@@ -65,7 +65,7 @@ export function TourCard({ tour, variant = "carousel", className }: TourCardProp
 
         {/* Wishlist + social-proof saved count — top right */}
         <div className="absolute top-3 right-3">
-          <WishlistButton savedCount={savedCount} />
+          <WishlistButton itemType="tour" itemSlug={tour.slug} savedCount={savedCount} />
         </div>
 
         {/* Quick View — bottom left on hover */}

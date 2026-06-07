@@ -2,19 +2,46 @@
 
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { useWishlist, type WishlistItemType } from "@/components/auth/WishlistProvider";
 
 interface WishlistButtonProps {
+  itemType: WishlistItemType;
+  itemSlug: string;
   savedCount?: number;
   className?: string;
 }
 
-export function WishlistButton({ savedCount, className }: WishlistButtonProps) {
-  const [saved, setSaved] = useState(false);
+export function WishlistButton({ itemType, itemSlug, savedCount, className }: WishlistButtonProps) {
+  const { user } = useAuth();
+  const { isSaved, toggle } = useWishlist();
+  const router = useRouter();
+  const pathname = usePathname() ?? "/";
+  const [busy, setBusy] = useState(false);
 
-  const toggle = (e: React.MouseEvent) => {
+  const saved = isSaved(itemType, itemSlug);
+
+  const handleClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setSaved(!saved);
+    if (busy) return;
+
+    if (!user) {
+      // Logged-out — send to sign-in carrying current path so they return here.
+      const next = encodeURIComponent(pathname);
+      router.push(`/auth/sign-in?next=${next}`);
+      return;
+    }
+
+    setBusy(true);
+    try {
+      await toggle(itemType, itemSlug);
+    } catch {
+      /* Provider already rolled back; silent for now. */
+    } finally {
+      setBusy(false);
+    }
   };
 
   const displayCount = savedCount !== undefined
@@ -24,9 +51,10 @@ export function WishlistButton({ savedCount, className }: WishlistButtonProps) {
   return (
     <button
       type="button"
-      onClick={toggle}
+      onClick={handleClick}
+      disabled={busy}
       className={cn(
-        "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all duration-200 cursor-pointer backdrop-blur-sm active:scale-95",
+        "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all duration-200 cursor-pointer backdrop-blur-sm active:scale-95 disabled:opacity-70 disabled:cursor-wait",
         saved ? "text-[var(--error)]" : "text-[var(--on-dark)]",
         className
       )}
