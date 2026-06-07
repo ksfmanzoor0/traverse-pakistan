@@ -29,7 +29,7 @@ export function AccountGreeting() {
     );
   }
 
-  const name = (user.user_metadata?.full_name as string | undefined) ?? user.email ?? "there";
+  const name = ((user.user_metadata?.name ?? user.user_metadata?.full_name) as string | undefined) ?? user.email ?? "there";
   return (
     <div className="mt-6 mb-10">
       <h1 className="text-[32px] font-bold text-[var(--text-primary)]">Hi, {name.split("@")[0]}</h1>

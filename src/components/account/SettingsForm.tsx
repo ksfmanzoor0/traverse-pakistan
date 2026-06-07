@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { InlineAlert } from "@/components/ui/InlineAlert";
+import { getSupabaseBrowser } from "@/lib/supabase/client";
 
 interface Props {
   initialName: string;
@@ -34,6 +35,12 @@ export function SettingsForm({ initialName, username, email }: Props) {
         setError(data.error ?? "Could not save name");
         return;
       }
+      // PATCH updated user_metadata server-side but the client's session JWT
+      // still carries the old metadata. refreshSession() mints a fresh JWT
+      // with the updated name → onAuthStateChange in AuthProvider fires →
+      // UserMenu re-renders with the new name. router.refresh() then rebuilds
+      // server components (Settings page itself, breadcrumbs, etc).
+      await getSupabaseBrowser().auth.refreshSession();
       setSaved(true);
       router.refresh();
     } catch (err) {

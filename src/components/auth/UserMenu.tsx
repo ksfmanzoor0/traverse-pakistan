@@ -51,7 +51,9 @@ export function UserMenu() {
     );
   }
 
-  const name = (user.user_metadata?.full_name as string | undefined) ?? user.email;
+  // `name` is set by silent-signup + Settings; `full_name` is what Supabase
+  // auto-populates for Google OAuth — fall back to that.
+  const name = ((user.user_metadata?.name ?? user.user_metadata?.full_name) as string | undefined) ?? user.email;
   const avatarUrl = user.user_metadata?.avatar_url as string | undefined;
 
   return (
@@ -68,7 +70,7 @@ export function UserMenu() {
           <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
         ) : (
           <span className="text-[12px] font-bold text-[var(--text-primary)]">
-            {initials(user.user_metadata?.full_name as string | undefined, user.email)}
+            {initials((user.user_metadata?.name ?? user.user_metadata?.full_name) as string | undefined, user.email)}
           </span>
         )}
       </button>
