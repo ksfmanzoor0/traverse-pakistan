@@ -50,13 +50,21 @@ export async function findOrCreateUserForBooking(input: SilentSignupInput): Prom
 
   const authEmail = lookupEmail ?? synthesizeEmailFromPhone(phone);
 
+  // Default username from a SQL sequence — assigns `traverser01`, `traverser02`,
+  // etc. so phone-only signups don't show up as their synthesized email. The
+  // booking contact name overrides this if provided; user can rename later.
+  const { data: usernameData } = await admin.rpc("next_traverser_username" as never);
+  const defaultUsername = (usernameData as string | null) ?? null;
+  const displayName = input.name?.trim() || defaultUsername || "there";
+
   const { data: created, error: createErr } = await admin.auth.admin.createUser({
     email: authEmail,
     phone,
     email_confirm: true,
     phone_confirm: true,
     user_metadata: {
-      name: input.name,
+      name: displayName,
+      username: defaultUsername,
       verified_via_otp: false,
       origin: "silent_checkout",
     },
