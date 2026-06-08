@@ -163,6 +163,7 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
                 width={1609}
                 height={706}
                 className="h-8 w-auto sm:h-11 hidden [[data-theme=dark]_&]:block"
+                style={{ mixBlendMode: "screen" }}
                 priority
                 unoptimized
               />
@@ -172,6 +173,7 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
                 width={1596}
                 height={700}
                 className="h-8 w-auto sm:h-11 [[data-theme=dark]_&]:hidden"
+                style={{ mixBlendMode: "multiply" }}
                 priority
                 unoptimized
               />
