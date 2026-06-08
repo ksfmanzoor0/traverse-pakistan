@@ -236,11 +236,11 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
                 </Link>
               ))}
               <Link
-                href="/account/trips"
+                href="/bookings/find"
                 onClick={closeAll}
                 className={cn(
                   "flex items-center gap-2 py-3.5 text-[15px] font-semibold transition-colors",
-                  pathname.startsWith("/account/trips") || pathname.startsWith("/bookings")
+                  pathname.startsWith("/bookings") || pathname.startsWith("/mybookings")
                     ? "text-[var(--primary)]"
                     : "text-[var(--text-primary)] hover:text-[var(--primary)]"
                 )}
