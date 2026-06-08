@@ -9,6 +9,7 @@ import { SITE_CONFIG } from "@/lib/constants";
 import { buildIcsDataUri, googleCalendarLink } from "@/components/booking/calendar";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getBookingByRef } from "@/services/booking.service";
+import { TourPayButton } from "@/components/tours/TourPayButton";
 import type { Booking } from "@/types/booking";
 import type { Tour } from "@/types/tour";
 
@@ -16,6 +17,8 @@ function SuccessInner({ tour }: { tour: Tour }) {
   const params = useSearchParams();
   const ref = params.get("ref");
   const plan = params.get("plan");
+  const urlAmount = params.get("amount");
+  const dueNow = urlAmount ? Number(urlAmount) : null;
   const [booking, setBooking] = useState<Booking | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -150,10 +153,20 @@ function SuccessInner({ tour }: { tour: Tour }) {
                 <dd className="text-right text-[var(--text-primary)] font-bold tabular-nums">
                   {formatPrice(booking.totalAmount)}
                 </dd>
-                {plan === "installments" && (
+                {dueNow !== null && plan === "installments" && (
                   <>
-                    <dt className="text-[var(--text-tertiary)]">Payment plan</dt>
-                    <dd className="text-right text-[var(--primary)] font-semibold">20% deposit</dd>
+                    <dt className="text-[var(--text-tertiary)]">Due now (20% deposit)</dt>
+                    <dd className="text-right text-[var(--primary)] font-bold tabular-nums">
+                      {formatPrice(dueNow)}
+                    </dd>
+                  </>
+                )}
+                {dueNow !== null && plan !== "installments" && (
+                  <>
+                    <dt className="text-[var(--text-tertiary)]">Due now</dt>
+                    <dd className="text-right text-[var(--primary)] font-bold tabular-nums">
+                      {formatPrice(dueNow)}
+                    </dd>
                   </>
                 )}
               </>
@@ -165,6 +178,65 @@ function SuccessInner({ tour }: { tour: Tour }) {
             <Image src={tour.images[0].url} alt={tour.name} fill className="object-cover" sizes="200px" />
           </div>
         )}
+      </div>
+
+      {ref && dueNow !== null && (
+        <div className="mt-6">
+          <TourPayButton bookingRef={ref} amount={dueNow} plan={plan === "installments" ? "installments" : "full"} />
+          <p className="mt-2 text-center text-[11px] text-[var(--text-tertiary)]">
+            Secure card payment via Alfa Bank
+          </p>
+        </div>
+      )}
+
+      <div className="mt-6 p-5 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-md)]">
+        <h2 className="text-[14px] font-bold text-[var(--text-primary)] mb-3">What happens next</h2>
+        <ol className="space-y-2.5 text-[13px] text-[var(--text-secondary)]">
+          {[
+            "We confirm your seat and contact you within 2 hours via WhatsApp.",
+            "Pay now via Debit or Credit Card, for Bank Transfer or Jazz Cash reach us on WhatsApp — or tap the link in your email/WhatsApp to come back anytime.",
+            "Once paid, you receive the full itinerary, packing list, and driver contact.",
+            "We stay in touch via WhatsApp from arrival to departure.",
+          ].map((step, i) => (
+            <li key={i} className="flex items-start gap-3">
+              <span className="shrink-0 w-6 h-6 rounded-full bg-[var(--primary)] text-[var(--text-inverse)] text-[11px] font-bold flex items-center justify-center">
+                {i + 1}
+              </span>
+              <span className="pt-0.5">{step}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      {ref && (
+        <form action={`/api/bookings/${encodeURIComponent(ref)}/manage-init`} method="POST" className="mt-6">
+          <button
+            type="submit"
+            className="w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-bold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors active:scale-[0.98] cursor-pointer"
+          >
+            Manage My Booking
+          </button>
+        </form>
+      )}
+
+      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <a
+          href={getWhatsAppUrl(`Hi! I just booked ${tour.name}${ref ? ` (ref ${ref})` : ""}. I have a quick question.`)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 h-[52px] bg-[var(--whatsapp)] text-white text-[15px] font-bold rounded-[var(--radius-sm)] hover:opacity-90 transition-opacity"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+          </svg>
+          Chat on WhatsApp
+        </a>
+        <Link
+          href="/grouptours"
+          className="flex items-center justify-center h-[52px] border border-[var(--border-default)] text-[15px] font-bold text-[var(--text-primary)] rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] transition-colors"
+        >
+          Browse more Tours
+        </Link>
       </div>
 
       <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -210,55 +282,6 @@ function SuccessInner({ tour }: { tour: Tour }) {
         </button>
       </div>
 
-      <div className="mt-8 p-5 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-md)]">
-        <h2 className="text-[14px] font-bold text-[var(--text-primary)] mb-3">What happens next</h2>
-        <ol className="space-y-2.5 text-[13px] text-[var(--text-secondary)]">
-          {[
-            "We confirm your seat and contact you within 2 hours via WhatsApp.",
-            plan === "installments"
-              ? "We send a secure deposit link (bank transfer, JazzCash, or card). Balance due 30 days before departure."
-              : "We send a secure payment link (bank transfer, JazzCash, or card).",
-            "Once paid, you receive the full itinerary, packing list, and driver contact.",
-            "We stay in touch via WhatsApp from arrival to departure.",
-          ].map((step, i) => (
-            <li key={i} className="flex items-start gap-3">
-              <span className="shrink-0 w-6 h-6 rounded-full bg-[var(--primary)] text-[var(--text-inverse)] text-[11px] font-bold flex items-center justify-center">
-                {i + 1}
-              </span>
-              <span className="pt-0.5">{step}</span>
-            </li>
-          ))}
-        </ol>
-      </div>
-
-      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <a
-          href={getWhatsAppUrl(`Hi! I just booked ${tour.name}${ref ? ` (ref ${ref})` : ""}. I have a quick question.`)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 h-[52px] bg-[var(--whatsapp)] text-white text-[15px] font-bold rounded-[var(--radius-sm)] hover:opacity-90 transition-opacity"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
-          </svg>
-          Chat on WhatsApp
-        </a>
-        <Link
-          href="/account/trips"
-          className="flex items-center justify-center h-[52px] border border-[var(--border-default)] text-[15px] font-bold text-[var(--text-primary)] rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] transition-colors"
-        >
-          View my trips
-        </Link>
-      </div>
-
-      <div className="mt-10 text-center">
-        <Link
-          href="/grouptours"
-          className="text-[13px] font-semibold text-[var(--primary)] hover:underline"
-        >
-          Browse more tours →
-        </Link>
-      </div>
     </div>
   );
 }

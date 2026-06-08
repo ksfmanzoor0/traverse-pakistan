@@ -80,12 +80,15 @@ export type BookingRow = {
   total_amount: number;
   currency: string;
   status: BookingStatus;
+  booking_status: string;
+  refund_status: string | null;
   contact_name: string;
   contact_email: string;
   contact_phone: string;
   notes: string | null;
   created_at: string;
   updated_at: string;
+  confirmation_sent_at: string | null;
 };
 
 export type BookingParticipantRow = {
@@ -346,6 +349,50 @@ export type Database = {
         Update: Partial<PackageItineraryDayRow>;
         Relationships: [];
       };
+      booking_otps: {
+        Row: {
+          id: string;
+          booking_ref: string;
+          code: string;
+          expires_at: string;
+          used: boolean;
+          created_at: string;
+          auth_user_id: string | null;
+          channel: "email" | "whatsapp" | null;
+        };
+        Insert: {
+          booking_ref: string;
+          code: string;
+          expires_at: string;
+          id?: string;
+          used?: boolean;
+          created_at?: string;
+          auth_user_id?: string | null;
+          channel?: "email" | "whatsapp" | null;
+        };
+        Update: Partial<{ booking_ref: string; code: string; expires_at: string; used: boolean; created_at: string; auth_user_id: string | null; channel: "email" | "whatsapp" | null }>;
+        Relationships: [];
+      };
+      auth_otps: {
+        Row: {
+          id: string;
+          email: string;
+          code: string;
+          expires_at: string;
+          used: boolean;
+          created_at: string;
+        };
+        Insert: {
+          email: string;
+          code: string;
+          expires_at: string;
+          id?: string;
+          used?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<{ email: string; code: string; expires_at: string; used: boolean; created_at: string }>;
+        Relationships: [];
+      };
       package_bookings: {
         Row: {
           id: string;
@@ -359,16 +406,29 @@ export type Database = {
           rooms: number;
           total_amount: number;
           currency: string;
+          status: string;
           payment_status: string;
+          booking_status: string;
+          refund_status: string | null;
           contact_name: string;
           contact_email: string;
           contact_phone: string;
           notes: string | null;
           created_at: string;
           updated_at: string;
+          confirmation_sent_at: string | null;
         };
         Insert: Record<string, unknown>;
-        Update: Partial<{ payment_status: string; updated_at: string }>;
+        Update: Partial<{
+          payment_status: string;
+          booking_status: string;
+          refund_status: string | null;
+          status: string;
+          contact_name: string;
+          updated_at: string;
+          user_id: string | null;
+          confirmation_sent_at: string | null;
+        }>;
         Relationships: [];
       };
       hotel_bookings: {
@@ -377,16 +437,16 @@ export type Database = {
           booking_ref: string;
           user_id: string | null;
           hotel_slug: string;
-          room_name: string;
           checkin_date: string | null;
           checkout_date: string | null;
           adults: number;
           children: number;
-          rooms: number;
           nights: number;
           total_amount: number;
           currency: string;
           payment_status: string;
+          booking_status: string;
+          refund_status: string | null;
           contact_name: string;
           contact_email: string;
           contact_phone: string;
@@ -394,9 +454,18 @@ export type Database = {
           notes: string | null;
           created_at: string;
           updated_at: string;
+          confirmation_sent_at: string | null;
         };
         Insert: Record<string, unknown>;
-        Update: Partial<{ payment_status: string; updated_at: string }>;
+        Update: Partial<{
+          payment_status: string;
+          booking_status: string;
+          refund_status: string | null;
+          contact_name: string;
+          updated_at: string;
+          user_id: string | null;
+          confirmation_sent_at: string | null;
+        }>;
         Relationships: [];
       };
       hotels: {
@@ -475,6 +544,10 @@ export type Database = {
           p_line_items: { roomName: string; qty: number; adults: number; children: number; pricePerNight: number }[];
         };
         Returns: { booking_id: string; booking_ref: string; total_amount: number }[];
+      };
+      find_auth_user_by_contact: {
+        Args: { p_email: string | null; p_phone: string | null };
+        Returns: string | null;
       };
     };
   };

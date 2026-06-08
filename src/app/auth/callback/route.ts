@@ -1,19 +1,32 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { getSupabaseServer, getSupabaseAdmin } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 export const dynamic = "force-dynamic";
 
 function safeNext(next: string | null): string {
-  if (!next) return "/account/trips";
-  // Prevent open redirects — only allow same-origin absolute paths
-  if (!next.startsWith("/") || next.startsWith("//")) return "/account/trips";
+  if (!next) return "/mybookings";
+  if (!next.startsWith("/") || next.startsWith("//")) return "/mybookings";
   return next;
+}
+
+async function flipVerifiedFlag(userId: string, currentMetadata: Record<string, unknown> | undefined) {
+  if (currentMetadata?.verified_via_otp === true) return;
+  try {
+    const admin = getSupabaseAdmin();
+    await admin.auth.admin.updateUserById(userId, {
+      user_metadata: { ...(currentMetadata ?? {}), verified_via_otp: true },
+    });
+  } catch (err) {
+    console.error("[auth/callback] failed to flip verified_via_otp:", err);
+  }
 }
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
+  const tokenHash = url.searchParams.get("token_hash");
+  const type = url.searchParams.get("type");
   const errorDescription = url.searchParams.get("error_description");
   const next = safeNext(url.searchParams.get("next"));
 
@@ -23,18 +36,49 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(redirect);
   }
 
-  if (!isSupabaseConfigured || !code) {
+  if (!isSupabaseConfigured) {
     return NextResponse.redirect(new URL("/auth/sign-in", url.origin));
   }
 
   const supabase = await getSupabaseServer();
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-  if (error) {
-    const redirect = new URL("/auth/sign-in", url.origin);
-    redirect.searchParams.set("error", error.message);
-    return NextResponse.redirect(redirect);
+  // Magic-link / email-confirmation flow (token_hash + type).
+  if (tokenHash) {
+    const verifyType = (type ?? "magiclink") as
+      | "magiclink"
+      | "email"
+      | "recovery"
+      | "invite"
+      | "signup"
+      | "email_change";
+    const { data, error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: verifyType });
+    if (error || !data?.user) {
+      // Single-use token already consumed (common: Gmail prefetch click) or TTL
+      // expired. Route the user to sign-in with a clear message + the email
+      // pre-filled so they can request the 6-digit code or a fresh link.
+      const hint = url.searchParams.get("hint");
+      const redirect = new URL("/auth/sign-in", url.origin);
+      redirect.searchParams.set("error", "This sign-in link has already been used or has expired. Request a new one below.");
+      if (hint) redirect.searchParams.set("email", hint);
+      return NextResponse.redirect(redirect);
+    }
+    await flipVerifiedFlag(data.user.id, data.user.user_metadata as Record<string, unknown> | undefined);
+    return NextResponse.redirect(new URL(next, url.origin));
   }
 
-  return NextResponse.redirect(new URL(next, url.origin));
+  // OAuth PKCE flow (code).
+  if (code) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      const redirect = new URL("/auth/sign-in", url.origin);
+      redirect.searchParams.set("error", error.message);
+      return NextResponse.redirect(redirect);
+    }
+    if (data?.user) {
+      await flipVerifiedFlag(data.user.id, data.user.user_metadata as Record<string, unknown> | undefined);
+    }
+    return NextResponse.redirect(new URL(next, url.origin));
+  }
+
+  return NextResponse.redirect(new URL("/auth/sign-in", url.origin));
 }

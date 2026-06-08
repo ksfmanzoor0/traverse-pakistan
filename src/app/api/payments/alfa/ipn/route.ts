@@ -1,112 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
-import { alfaConfig } from "@/lib/alfa/config";
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { markBooking } from "@/lib/payments/markBooking";
 
+// Per Alfa docs: APG POSTs to the listener URL with "url" as a query parameter:
+// e.g. /api/payments/alfa/ipn?url=https://sandbox.bankalfalah.com/HS/api/IPN/OrderStatus/...
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.formData().catch(() => null);
-    const orderId = body?.get("orderId") as string | null;
+    const { searchParams } = new URL(req.url);
+    const ipnUrl = searchParams.get("url");
 
-    if (!orderId) {
-      return NextResponse.json({ error: "Missing orderId param" }, { status: 400 });
+    console.log("[alfa/ipn POST] received url param:", ipnUrl);
+
+    if (!ipnUrl) {
+      return new NextResponse("Missing url param", { status: 400 });
     }
 
-    const ipnUrl = `${alfaConfig.ipnBaseUrl}/${alfaConfig.merchantId}/${alfaConfig.storeId}/${encodeURIComponent(orderId)}`;
     const statusRes = await fetch(ipnUrl);
-    const status = await statusRes.json();
+    const raw = await statusRes.json();
+    const status = typeof raw === "string" ? JSON.parse(raw) : raw;
+
+    console.log("[alfa/ipn POST] status response:", JSON.stringify(status));
 
     const bookingRef: string = status.TransactionReferenceNumber ?? "";
     const isPaid: boolean = status.TransactionStatus === "Paid";
 
-    if (bookingRef) {
-      const supabase = await getSupabaseServer();
-      if (bookingRef.startsWith("PKG-")) {
-        await supabase
-          .from("package_bookings")
-          .update({
-            payment_status: isPaid ? "paid" : "failed",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("booking_ref", bookingRef);
-      } else if (bookingRef.startsWith("HTL-")) {
-        await supabase
-          .from("hotel_bookings")
-          .update({
-            payment_status: isPaid ? "paid" : "failed",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("booking_ref", bookingRef);
-      } else {
-        await supabase
-          .from("bookings")
-          .update({
-            status: isPaid ? "confirmed" : "cancelled",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("booking_ref", bookingRef);
-      }
-    }
-
-    return NextResponse.json({ received: true });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Internal error";
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
-}
-
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const orderId = searchParams.get("O");
-
-  if (!orderId) {
-    return NextResponse.json({ error: "Missing order id" }, { status: 400 });
-  }
-
-  try {
-    const ipnUrl = `${alfaConfig.ipnBaseUrl}/${alfaConfig.merchantId}/${alfaConfig.storeId}/${orderId}`;
-    const statusRes = await fetch(ipnUrl);
-    const status = await statusRes.json();
-
-    const isPaid: boolean = status.TransactionStatus === "Paid";
-    const bookingRef: string = status.TransactionReferenceNumber ?? orderId;
+    console.log("[alfa/ipn POST] bookingRef:", bookingRef, "isPaid:", isPaid);
 
     if (bookingRef) {
-      const supabase = await getSupabaseServer();
-      if (bookingRef.startsWith("PKG-")) {
-        await supabase
-          .from("package_bookings")
-          .update({
-            payment_status: isPaid ? "paid" : "failed",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("booking_ref", bookingRef);
-      } else if (bookingRef.startsWith("HTL-")) {
-        await supabase
-          .from("hotel_bookings")
-          .update({
-            payment_status: isPaid ? "paid" : "failed",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("booking_ref", bookingRef);
-      } else {
-        await supabase
-          .from("bookings")
-          .update({
-            status: isPaid ? "confirmed" : "cancelled",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("booking_ref", bookingRef);
-      }
+      // markBooking handles the confirmation send internally (guarded on
+      // pending → paid transition, safe against duplicate IPN calls).
+      await markBooking(bookingRef, isPaid);
     }
 
-    return NextResponse.json({
-      paid: isPaid,
-      bookingRef,
-      transactionId: status.TransactionId ?? null,
-      amount: status.TransactionAmount ?? null,
-    });
+    return new NextResponse("OK", { status: 200 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Internal error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[alfa/ipn POST] error:", err);
+    return new NextResponse("Error", { status: 500 });
   }
 }

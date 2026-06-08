@@ -57,7 +57,7 @@ export function TripsList() {
         title="Sign in to view your trips"
         description="Sign in with email or Google to see bookings and manage trips."
         action={
-          <Link href="/auth/sign-in?redirect=/account/trips">
+          <Link href="/auth/sign-in?redirect=/mybookings">
             <Button size="lg">Sign in</Button>
           </Link>
         }

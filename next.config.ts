@@ -12,6 +12,7 @@ const isGitHubPages = process.env.GITHUB_PAGES === "true";
 const repoBasePath = process.env.GITHUB_PAGES_BASE_PATH ?? "/traverse-pakistan";
 
 const nextConfig: NextConfig = {
+
   ...(isGitHubPages && {
     output: "export",
     basePath: repoBasePath,
@@ -19,11 +20,18 @@ const nextConfig: NextConfig = {
     trailingSlash: true,
   }),
   images: {
+    loader: isGitHubPages ? "default" : "custom",
+    loaderFile: isGitHubPages ? undefined : "./src/lib/imageLoader.ts",
     remotePatterns: [
       {
         protocol: "https",
         hostname: "media.traversepakistan.com",
         pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "ik.imagekit.io",
+        pathname: "/traversepakistan/**",
       },
       {
         protocol: "https",
@@ -44,12 +52,13 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "placehold.co",
       },
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+        pathname: "/**",
+      },
     ],
-    formats: ["image/avif", "image/webp"],
-    qualities: [75, 80, 95],
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    // GitHub Pages can't run the Next image optimizer (no Node runtime).
+    // GitHub Pages: fall back to unoptimized (no Node runtime)
     unoptimized: isGitHubPages,
   },
   // headers() is ignored under `output: export`, so skip it for GH Pages.

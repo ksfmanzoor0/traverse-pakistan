@@ -4,6 +4,7 @@ import { Container } from "@/components/ui/Container";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Carousel } from "@/components/ui/Carousel";
 import { Icon } from "@/components/ui/Icon";
+import { WishlistButton } from "@/components/ui/WishlistButton";
 import { formatPrice } from "@/lib/utils";
 import { getFeaturedHotels } from "@/services/hotel.service";
 
@@ -45,6 +46,9 @@ export async function FeaturedHotels() {
                   <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] bg-[var(--primary)] text-[var(--on-dark)] rounded-[var(--radius-full)]">
                     {hotel.tier === "luxury" ? "LUXURY" : hotel.tier === "premium" ? "PREMIUM" : hotel.tier === "standard" ? "CAMP" : "GUEST FAV"}
                   </span>
+                </div>
+                <div className="absolute top-3 right-3">
+                  <WishlistButton itemType="hotel" itemSlug={hotel.slug} />
                 </div>
               </div>
               <div className="p-4 sm:p-5 bg-[var(--bg-primary)]">

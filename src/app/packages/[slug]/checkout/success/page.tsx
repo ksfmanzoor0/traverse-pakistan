@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Container } from "@/components/ui/Container";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { getAllPackages, getPackageBySlug } from "@/services/package.service";
 import { getWhatsAppUrl } from "@/lib/utils";
 import { PackagePayButton } from "@/components/packages/PackagePayButton";
+import { after } from "next/server";
+import { stampBookingWithUser } from "@/lib/auth/stampBookingWithUser";
+import { sendBookingConfirmation } from "@/lib/email/sendBookingConfirmation";
+import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -20,7 +25,17 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const pkg = await getPackageBySlug(slug);
-  return { title: pkg ? `Booking confirmed — ${pkg.name}` : "Booking confirmed" };
+  return { title: pkg ? `Booking received — ${pkg.name}` : "Booking received" };
+}
+
+async function getBookingSummary(ref: string) {
+  const supabase = getSupabaseAdmin();
+  const { data } = await supabase
+    .from("package_bookings")
+    .select("contact_name, contact_email, contact_phone, tier, departure_city, start_date, adults, rooms, total_amount, payment_status")
+    .eq("booking_ref", ref)
+    .maybeSingle();
+  return data;
 }
 
 export default async function PackageCheckoutSuccessPage({ params, searchParams }: Props) {
@@ -28,7 +43,26 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
   const { ref, amount: amountParam } = await searchParams;
   const pkg = await getPackageBySlug(slug);
   if (!pkg) notFound();
-  const amount = amountParam ? Number(amountParam) : null;
+
+  let summary: Awaited<ReturnType<typeof getBookingSummary>> = null;
+
+  if (ref) {
+    // Silent signup (idempotent) + fire booking-received email/WhatsApp.
+    // The send is deferred via after() — runs after the page response is
+    // sent but keeps the lambda alive until it completes. Bare fire-and-
+    // forget was being killed mid-flight by the serverless runtime.
+    await stampBookingWithUser(ref);
+    after(async () => {
+      try {
+        await sendBookingConfirmation(ref);
+      } catch (err) {
+        console.error("[package/success] sendBookingConfirmation failed:", err);
+      }
+    });
+    summary = await getBookingSummary(ref);
+  }
+
+  const amount = amountParam ? Number(amountParam) : summary?.total_amount ? Number(summary.total_amount) : null;
 
   return (
     <div className="py-10 sm:py-16">
@@ -37,7 +71,7 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
           items={[
             { label: "Holiday Packages", href: "/packages" },
             { label: pkg.name, href: `/packages/${pkg.slug}` },
-            { label: "Booking confirmed" },
+            { label: "Booking received" },
           ]}
         />
 
@@ -56,26 +90,65 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
             </p>
           )}
           <p className="mt-3 text-[15px] text-[var(--text-secondary)] max-w-[480px] mx-auto">
-            Pay now to secure your spot, or our team will reach out within 1 hour with a payment link.
+            Pay now to secure your spot. Booking details have been sent to your email and WhatsApp.
           </p>
         </div>
 
-        {/* Pay now section */}
-        {ref && amount && (
-          <div className="mt-8 max-w-[480px] mx-auto">
-            <PackagePayButton
-              bookingRef={ref}
-              amount={amount}
-              paymentStatus="pending"
-            />
+        {/* Your trip widget */}
+        {summary && (
+          <div
+            className="mt-6 max-w-[760px] mx-auto grid grid-cols-1 sm:grid-cols-[1fr_250px] gap-6 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] overflow-hidden sm:h-[250px]"
+            style={{ boxShadow: "var(--shadow-sm)" }}
+          >
+            <div className="p-6 order-2 sm:order-1">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--primary)]">Your trip</p>
+              <h2 className="text-[20px] font-bold text-[var(--text-primary)] tracking-tight mt-1">{pkg.name}</h2>
+              <dl className="mt-5 grid grid-cols-2 gap-y-3 text-[13px]">
+                {summary.start_date && (
+                  <>
+                    <dt className="text-[var(--text-tertiary)]">Start date</dt>
+                    <dd className="text-right text-[var(--text-primary)] font-medium">
+                      {new Date(summary.start_date).toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric", year: "numeric" })}
+                    </dd>
+                  </>
+                )}
+                <dt className="text-[var(--text-tertiary)]">Duration</dt>
+                <dd className="text-right text-[var(--text-primary)] font-medium">{pkg.duration} days</dd>
+                <dt className="text-[var(--text-tertiary)]">Tier</dt>
+                <dd className="text-right text-[var(--text-primary)] font-medium capitalize">{summary.tier}</dd>
+                <dt className="text-[var(--text-tertiary)]">Departure</dt>
+                <dd className="text-right text-[var(--text-primary)] font-medium capitalize">{summary.departure_city}</dd>
+                <dt className="text-[var(--text-tertiary)]">Travellers</dt>
+                <dd className="text-right text-[var(--text-primary)] font-medium">{summary.adults} adults · {summary.rooms} rooms</dd>
+              </dl>
+            </div>
+            {pkg.images[0] && (
+              <div className="relative w-full h-[220px] sm:h-full order-1 sm:order-2">
+                <Image src={pkg.images[0].url} alt={pkg.name} fill className="object-cover" sizes="250px" />
+              </div>
+            )}
           </div>
         )}
 
-        <div className="mt-8 max-w-[680px] mx-auto p-5 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-md)]">
+        {/* Pay now */}
+        {ref && amount && (
+          <div className="mt-6 max-w-[760px] mx-auto">
+            <PackagePayButton
+              bookingRef={ref}
+              amount={amount}
+              paymentStatus={summary?.payment_status ?? "pending"}
+            />
+            <p className="mt-2 text-center text-[11px] text-[var(--text-tertiary)]">
+              Secure card payment via Alfa Bank
+            </p>
+          </div>
+        )}
+
+        <div className="mt-6 max-w-[760px] mx-auto p-5 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-md)]">
           <h2 className="text-[14px] font-bold text-[var(--text-primary)] mb-3">What happens next</h2>
           <ol className="space-y-2.5 text-[13px] text-[var(--text-secondary)]">
             {[
-              "Pay now via card, JazzCash, or bank transfer — or wait for our team to send you a link.",
+              "Pay now via Debit or Credit Card, for Bank Transfer or Jazz Cash reach us on WhatsApp — or tap the link in your email/WhatsApp to come back anytime.",
               "Once paid, you receive the full itinerary, hotel details, and driver contact.",
               `We stay in touch via WhatsApp throughout your ${pkg.duration}-day journey.`,
             ].map((step, i) => (
@@ -89,7 +162,19 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
           </ol>
         </div>
 
-        <div className="mt-6 max-w-[680px] mx-auto grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* Manage booking — POST to send magic link + grant view-tier access */}
+        {ref && (
+          <form action={`/api/bookings/${encodeURIComponent(ref)}/manage-init`} method="POST" className="mt-6 max-w-[760px] mx-auto">
+            <button
+              type="submit"
+              className="w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-bold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors active:scale-[0.98] cursor-pointer"
+            >
+              Manage My Booking
+            </button>
+          </form>
+        )}
+
+        <div className="mt-6 max-w-[760px] mx-auto grid grid-cols-1 sm:grid-cols-2 gap-3">
           <a
             href={getWhatsAppUrl(`Hi! I just sent a booking request for ${pkg.name}${ref ? ` (ref ${ref})` : ""}. I have a question.`)}
             target="_blank"

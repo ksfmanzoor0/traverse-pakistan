@@ -16,7 +16,7 @@ export interface Departure {
 }
 
 export interface Participant {
-  fullName: string;
+  fullName?: string;
   cnicOrPassport?: string;
   dateOfBirth?: string;
   dietary?: string;
@@ -34,6 +34,7 @@ export interface CreateBookingInput {
   };
   participants: Participant[];
   notes?: string;
+  submitUuid?: string;
 }
 
 export interface BookingSummary {

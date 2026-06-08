@@ -11,7 +11,7 @@ import { DestinationsScroll } from "@/components/home/DestinationsScroll";
 import { FeaturedHotels } from "@/components/home/FeaturedHotels";
 import { BlogGrid } from "@/components/home/BlogGrid";
 import { WhyUsSection } from "@/components/home/WhyUsSection";
-import { ReviewsCarousel } from "@/components/home/ReviewsCarousel";
+import { GoogleReviews } from "@/components/home/GoogleReviews";
 import { DesktopOnly } from "@/components/ui/DesktopOnly";
 import { LazyMount } from "@/components/ui/LazyMount";
 import { buildMetadata } from "@/lib/seo/metadata";
@@ -65,14 +65,14 @@ export default async function Home() {
         <TravelStylesGrid />
       </LazyMount>
 
-      {/* Desktop only — video + blog (after carousels, matching original order) */}
+      <WhyUsSection />
+      <GoogleReviews />
+      <BlogGrid />
+
+      {/* Desktop only — video */}
       <DesktopOnly>
         <VideoStories />
-        <BlogGrid />
       </DesktopOnly>
-
-      <WhyUsSection />
-      <ReviewsCarousel />
     </>
   );
 }

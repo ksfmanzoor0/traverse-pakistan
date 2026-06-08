@@ -1,5 +1,7 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
+
+const todayISO = () => new Date().toISOString().split("T")[0];
 import { getSupabaseAnon } from "@/lib/supabase/server";
 import { listR2Images, buildImagesFromR2 } from "@/lib/r2";
 import type { TourRow, TourItineraryDayRow } from "@/lib/supabase/types";
@@ -38,7 +40,9 @@ function toTour(
     languages: row.languages,
     freeCancellation: row.free_cancellation,
     reserveNowPayLater: row.reserve_now_pay_later,
-    images: r2Images ?? (row.images as TourImage[]) ?? [],
+    images: r2Images ?? ((row.images as unknown as (TourImage | string)[] | null) ?? []).map((img) =>
+      typeof img === "string" ? { url: img, alt: row.name } : img
+    ),
     guide: row.guide ?? undefined,
     highlights: row.highlights,
     inclusions: row.inclusions,
@@ -85,10 +89,26 @@ async function buildPriceMap(supabase: ReturnType<typeof getSupabaseAnon>, slugs
   return map;
 }
 
+// Tour slugs with at least one open future departure. Source of truth for
+// "is this tour listable" — tours.departure_date is denormalized and can
+// go stale when departures roll over, so we never trust it for visibility.
+async function getActiveTourSlugs(supabase: ReturnType<typeof getSupabaseAnon>): Promise<string[]> {
+  const { data } = await supabase
+    .from("departures")
+    .select("tour_slug")
+    .eq("status", "open")
+    .gte("departure_date", todayISO());
+  const set = new Set<string>();
+  for (const row of (data ?? []) as { tour_slug: string }[]) set.add(row.tour_slug);
+  return [...set];
+}
+
 const _fetchAllTours = unstable_cache(
   async (): Promise<Tour[]> => {
     const supabase = getSupabaseAnon();
-    const { data, error } = await supabase.from("tours").select("*").order("departure_date", { nullsFirst: false });
+    const activeSlugs = await getActiveTourSlugs(supabase);
+    if (activeSlugs.length === 0) return [];
+    const { data, error } = await supabase.from("tours").select("*").in("slug", activeSlugs).order("departure_date", { nullsFirst: false });
     if (error) throw new Error(`getAllTours: ${error.message}`);
     const rows = data as TourRow[];
     const priceMap = await buildPriceMap(supabase, rows.map((r) => r.slug));
@@ -116,7 +136,9 @@ export const getTourBySlug = cache(async (slug: string): Promise<Tour | null> =>
 
 export const getToursByDestination = cache(async (destinationSlug: string): Promise<Tour[]> => {
   const supabase = getSupabaseAnon();
-  const { data, error } = await supabase.from("tours").select("*").eq("destination_slug", destinationSlug);
+  const activeSlugs = await getActiveTourSlugs(supabase);
+  if (activeSlugs.length === 0) return [];
+  const { data, error } = await supabase.from("tours").select("*").eq("destination_slug", destinationSlug).in("slug", activeSlugs);
   if (error) throw new Error(`getToursByDestination: ${error.message}`);
   const rows = data as TourRow[];
   const priceMap = await buildPriceMap(supabase, rows.map((r) => r.slug));
@@ -125,7 +147,9 @@ export const getToursByDestination = cache(async (destinationSlug: string): Prom
 
 export const getToursByRegion = cache(async (regionSlug: string): Promise<Tour[]> => {
   const supabase = getSupabaseAnon();
-  const { data, error } = await supabase.from("tours").select("*").eq("region_slug", regionSlug);
+  const activeSlugs = await getActiveTourSlugs(supabase);
+  if (activeSlugs.length === 0) return [];
+  const { data, error } = await supabase.from("tours").select("*").eq("region_slug", regionSlug).in("slug", activeSlugs);
   if (error) throw new Error(`getToursByRegion: ${error.message}`);
   const rows = data as TourRow[];
   const priceMap = await buildPriceMap(supabase, rows.map((r) => r.slug));
@@ -134,7 +158,9 @@ export const getToursByRegion = cache(async (regionSlug: string): Promise<Tour[]
 
 export const getToursByCategory = cache(async (category: TourCategory): Promise<Tour[]> => {
   const supabase = getSupabaseAnon();
-  const { data, error } = await supabase.from("tours").select("*").eq("category", category);
+  const activeSlugs = await getActiveTourSlugs(supabase);
+  if (activeSlugs.length === 0) return [];
+  const { data, error } = await supabase.from("tours").select("*").eq("category", category).in("slug", activeSlugs);
   if (error) throw new Error(`getToursByCategory: ${error.message}`);
   const rows = data as TourRow[];
   const priceMap = await buildPriceMap(supabase, rows.map((r) => r.slug));
@@ -143,7 +169,9 @@ export const getToursByCategory = cache(async (category: TourCategory): Promise<
 
 export const getToursByStyle = cache(async (styleSlug: string): Promise<Tour[]> => {
   const supabase = getSupabaseAnon();
-  const { data, error } = await supabase.from("tours").select("*").contains("travel_style_slugs", [styleSlug]);
+  const activeSlugs = await getActiveTourSlugs(supabase);
+  if (activeSlugs.length === 0) return [];
+  const { data, error } = await supabase.from("tours").select("*").contains("travel_style_slugs", [styleSlug]).in("slug", activeSlugs).order("created_at", { ascending: false });
   if (error) throw new Error(`getToursByStyle: ${error.message}`);
   const rows = data as TourRow[];
   const priceMap = await buildPriceMap(supabase, rows.map((r) => r.slug));
@@ -152,7 +180,9 @@ export const getToursByStyle = cache(async (styleSlug: string): Promise<Tour[]> 
 
 export const getFeaturedTours = cache(async (limit?: number): Promise<Tour[]> => {
   const supabase = getSupabaseAnon();
-  let query = supabase.from("tours").select("*").not("badge", "is", null).order("review_count", { ascending: false });
+  const activeSlugs = await getActiveTourSlugs(supabase);
+  if (activeSlugs.length === 0) return [];
+  let query = supabase.from("tours").select("*").not("badge", "is", null).in("slug", activeSlugs).order("review_count", { ascending: false });
   if (limit) query = query.limit(limit);
   const { data, error } = await query;
   if (error) throw new Error(`getFeaturedTours: ${error.message}`);
@@ -169,11 +199,14 @@ export const getSimilarTours = cache(async (tourSlug: string, limit = 4): Promis
     .eq("slug", tourSlug)
     .single();
   if (!tour) return [];
+  const activeSlugs = await getActiveTourSlugs(supabase);
+  if (activeSlugs.length === 0) return [];
   const { data, error } = await supabase
     .from("tours")
     .select("*")
     .eq("destination_slug", tour.destination_slug)
     .neq("slug", tourSlug)
+    .in("slug", activeSlugs)
     .limit(limit);
   if (error) throw new Error(`getSimilarTours: ${error.message}`);
   const rows = data as TourRow[];

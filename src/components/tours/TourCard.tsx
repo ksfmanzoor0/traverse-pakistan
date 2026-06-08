@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { cn, formatPrice, getSavedCountForSlug } from "@/lib/utils";
 import { WishlistButton } from "@/components/ui/WishlistButton";
+import { Badge } from "@/components/ui/Badge";
 import type { Tour } from "@/types/tour";
 
 interface TourCardProps {
@@ -9,13 +10,6 @@ interface TourCardProps {
   variant?: "carousel" | "grid";
   className?: string;
 }
-
-const badgeConfig: Record<string, { label: string; className: string }> = {
-  bestseller: { label: "Top Seller", className: "bg-[var(--primary)] text-[var(--text-inverse)]" },
-  "on-sale":  { label: "On Sale",   className: "bg-[var(--accent-warm)] text-[var(--text-inverse)]" },
-  "epic-trek":{ label: "Epic Trek", className: "bg-[var(--primary-deep)] text-[var(--text-inverse)]" },
-  new:        { label: "New",       className: "bg-[var(--info)] text-[var(--text-inverse)]" },
-};
 
 export function TourCard({ tour, variant = "carousel", className }: TourCardProps) {
   const routeStops = tour.route.split(/\s*→\s*/);
@@ -31,7 +25,6 @@ export function TourCard({ tour, variant = "carousel", className }: TourCardProp
     ? Math.round((1 - tour.pricing.islamabad / tour.originalPrice) * 100)
     : null;
 
-  const badge = tour.badge ? badgeConfig[tour.badge] : null;
   const savedCount = getSavedCountForSlug(
     tour.slug,
     Math.round((tour.rating - 4) * 80) + Math.min(tour.reviewCount / 6, 60)
@@ -64,18 +57,15 @@ export function TourCard({ tour, variant = "carousel", className }: TourCardProp
           sizes="(max-width: 640px) 261px, (max-width: 1024px) 50vw, 320px"
         />
 
-        {/* Badge — top left (frees top-right for wishlist + FOMO) */}
-        {badge && (
+        {tour.badge && (
           <div className="absolute top-3 left-3">
-            <span className={cn("px-2.5 py-1 text-[11px] font-bold rounded-full tracking-wide uppercase shadow-sm", badge.className)}>
-              {badge.label}
-            </span>
+            <Badge type={tour.badge} />
           </div>
         )}
 
         {/* Wishlist + social-proof saved count — top right */}
         <div className="absolute top-3 right-3">
-          <WishlistButton savedCount={savedCount} />
+          <WishlistButton itemType="tour" itemSlug={tour.slug} savedCount={savedCount} />
         </div>
 
         {/* Quick View — bottom left on hover */}

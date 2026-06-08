@@ -20,7 +20,7 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingS
     p_contact_email: input.contact.email,
     p_contact_phone: input.contact.phone,
     p_participants: input.participants.map((p) => ({
-      full_name: p.fullName,
+      full_name: p.fullName ?? "",
       cnic_or_passport: p.cnicOrPassport ?? null,
       date_of_birth: p.dateOfBirth ?? null,
       dietary: p.dietary ?? null,
@@ -29,7 +29,7 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingS
     p_notes: input.notes ?? null,
   };
 
-  const { data, error } = await supabase.rpc("create_booking", args);
+  const { data, error } = await supabase.rpc("create_booking", { ...args, p_submit_uuid: input.submitUuid ?? null } as never);
   if (error) throw new Error(error.message);
 
   const result = Array.isArray(data) ? (data[0] as CreateBookingResult) : null;

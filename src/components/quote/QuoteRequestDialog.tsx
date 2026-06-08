@@ -6,6 +6,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { createQuoteRequest } from "@/services/quote.service";
 import { getWhatsAppUrl } from "@/lib/utils";
 import type { QuoteRequestType } from "@/types/quote";
+import { InlineAlert } from "@/components/ui/InlineAlert";
 
 interface Props {
   open: boolean;
@@ -60,7 +61,7 @@ export function QuoteRequestDialog({
 
   useEffect(() => {
     if (!open) return;
-    const name = ((user?.user_metadata?.full_name as string | undefined) ?? "").trim();
+    const name = (((user?.user_metadata?.name ?? user?.user_metadata?.full_name) as string | undefined) ?? "").trim();
     setForm((f) => ({
       ...f,
       name: name || f.name,
@@ -242,11 +243,7 @@ export function QuoteRequestDialog({
               />
             </div>
 
-            {error && (
-              <div className="p-3 bg-[var(--error)]/10 border border-[var(--error)]/30 rounded-[var(--radius-sm)] text-[13px] text-[var(--error)]">
-                {error}
-              </div>
-            )}
+            {error && <InlineAlert>{error}</InlineAlert>}
 
             <div className="flex flex-col sm:flex-row gap-3">
               <button

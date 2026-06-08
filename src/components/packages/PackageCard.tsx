@@ -3,6 +3,7 @@ import Link from "next/link";
 import { cn, formatPrice } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 import { Icon } from "@/components/ui/Icon";
+import { WishlistButton } from "@/components/ui/WishlistButton";
 import type { Package } from "@/types/package";
 
 interface PackageCardProps {
@@ -53,13 +54,14 @@ export function PackageCard({ pkg, variant = "carousel", className }: PackageCar
           </div>
         )}
 
-        <div className="absolute top-3.5 right-3.5 flex gap-1.5">
+        <div className="absolute top-3.5 right-3.5 flex items-center gap-1.5">
           <span className="px-2 py-1 bg-black/40 backdrop-blur-md text-[var(--on-dark)] text-[10px] font-bold rounded-full border border-[var(--on-dark-border)] uppercase tracking-wide">
             Deluxe
           </span>
           <span className="px-2 py-1 bg-[var(--primary)]/80 backdrop-blur-md text-[var(--on-dark)] text-[10px] font-bold rounded-full uppercase tracking-wide">
             Luxury
           </span>
+          <WishlistButton itemType="package" itemSlug={pkg.slug} />
         </div>
 
         <div className="absolute bottom-3.5 left-3.5">

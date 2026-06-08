@@ -51,11 +51,11 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
   const pathname = usePathname() ?? "";
   const isHome = pathname === "/";
   const isListing = LISTING_PATHS.some(p => pathname === p);
-  // Only the immediate slug level — excludes /packages/slug/checkout, /hotels/slug/checkout/success, etc.
+  // Slug level + checkout pages — excludes /success and deeper pages
   const isDetail = !isListing && LISTING_PATHS.some(p => {
     if (!pathname.startsWith(p + "/")) return false;
     const rest = pathname.slice(p.length + 1);
-    return !rest.includes("/");
+    return !rest.includes("/") || rest.endsWith("/checkout");
   });
   const showDesktopSearch = !isHome;
 
@@ -164,6 +164,7 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
                 height={706}
                 className="h-8 w-auto sm:h-11 hidden [[data-theme=dark]_&]:block"
                 priority
+                unoptimized
               />
               <Image
                 src="/logo-day.png"
@@ -172,6 +173,7 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
                 height={700}
                 className="h-8 w-auto sm:h-11 [[data-theme=dark]_&]:hidden"
                 priority
+                unoptimized
               />
             </Link>
           </div>
@@ -184,6 +186,13 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
           {/* Right actions */}
           <div className="ml-auto flex items-center md:justify-end gap-1 h-[64px] sm:h-[76px]">
             <ThemeToggle />
+            <Link
+              href="/bookings/find"
+              className="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-sm)] text-[13px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] transition-colors"
+            >
+              <Icon name="bookmark" size="xs" />
+              My Bookings
+            </Link>
             <UserMenu />
 
             {/* Hamburger */}

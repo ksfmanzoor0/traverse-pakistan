@@ -22,7 +22,7 @@ interface BookingSidebarProps {
 }
 
 export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
-  const [adults, setAdults] = useState(2);
+  const [adults, setAdults] = useState(1);
   const [children, setChildren] = useState(0);
   const [singleRooms, setSingleRooms] = useState(0);
   const [departure, setDeparture] = useState<"islamabad" | "lahore" | "karachi">("islamabad");
@@ -38,7 +38,8 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
       const s = JSON.parse(raw) as {
         travelers?: { adults: number; children: number; infants: number };
       };
-      if (s.travelers) {
+      const widgetOpened = sessionStorage.getItem("tp_search_opened");
+      if (s.travelers && widgetOpened) {
         setAdults(Math.max(1, s.travelers.adults));
         setChildren(s.travelers.children);
       }

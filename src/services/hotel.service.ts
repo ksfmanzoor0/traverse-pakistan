@@ -185,9 +185,7 @@ export const getHotelsByDestination = cache(async (destinationSlug: string): Pro
   return all.filter((h) => h.destinationSlug === destinationSlug);
 });
 
-const EXCLUDED_FROM_FEATURED = new Set(["sapphire-hunza"]);
-
 export const getFeaturedHotels = cache(async (limit: number = 6): Promise<Hotel[]> => {
   const all = await getAllHotels();
-  return all.filter((h) => !EXCLUDED_FROM_FEATURED.has(h.slug)).slice(0, limit);
+  return all.filter((h) => h.guestFavourite).slice(0, limit);
 });

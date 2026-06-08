@@ -1,30 +1,28 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useCallback, useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { Icon } from "@/components/ui/Icon";
+import { InlineAlert } from "@/components/ui/InlineAlert";
+import { useAuth } from "./AuthProvider";
 
-export type AuthMode = "sign-in" | "sign-up";
+const RESEND_COOLDOWN = 30;
 
-interface Props {
-  defaultMode?: AuthMode;
-}
-
-function getCallbackUrl(redirectTo: string) {
-  if (typeof window === "undefined") return redirectTo;
+function getCallbackUrl(next: string) {
+  if (typeof window === "undefined") return next;
   const base = window.location.origin + (process.env.NEXT_PUBLIC_BASE_PATH ?? "");
-  const target = redirectTo.startsWith("/") ? redirectTo : `/${redirectTo}`;
+  const target = next.startsWith("/") ? next : `/${next}`;
   return `${base}/auth/callback?next=${encodeURIComponent(target)}`;
 }
 
 const inputCls =
   "w-full h-11 px-4 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)] transition-colors";
 
-const labelCls =
-  "block text-[12px] font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-1.5";
+function looksLikeEmail(s: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+}
 
 function GoogleButton({ onClick, disabled }: { onClick: () => void; disabled: boolean }) {
   return (
@@ -56,53 +54,57 @@ function Divider() {
   );
 }
 
-function PasswordInput({
-  value, onChange, placeholder, autoComplete, show, onToggle,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder: string;
-  autoComplete: string;
-  show: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <div className="relative">
-      <input
-        type={show ? "text" : "password"}
-        required
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        autoComplete={autoComplete}
-        className={inputCls + " pr-11"}
-      />
-      <button
-        type="button"
-        onClick={onToggle}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer"
-        aria-label={show ? "Hide password" : "Show password"}
-      >
-        <Icon name={show ? "eye-slash" : "eye"} size="md" />
-      </button>
-    </div>
-  );
-}
-
-function SignInInner({ defaultMode = "sign-in" }: Props) {
+function SignInInner() {
   const router = useRouter();
   const search = useSearchParams();
-  const redirectTo = search.get("redirect") || "/account/trips";
+  const next = search.get("redirect") || search.get("next") || "/mybookings";
+  const { user: currentUser, signOut } = useAuth();
+  const [switchingAccount, setSwitchingAccount] = useState(false);
 
-  const [mode, setMode] = useState<AuthMode>(defaultMode);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  // Pre-fill from ?email= when /auth/callback bounces an expired link back.
+  // One-tap resend = user just clicks the same Send button.
+  const [identifier, setIdentifier] = useState(search.get("email") ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(search.get("error"));
-  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [showCode, setShowCode] = useState(false);
+  const [code, setCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+  const [resending, setResending] = useState(false);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
+  const triggerSend = useCallback(async (targetIdentifier: string) => {
+    const res = await fetch("/api/auth/send-magic-link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identifier: targetIdentifier, next }),
+    });
+    if (!res.ok) throw new Error("Could not send sign-in link. Please try again.");
+  }, [next]);
+
+  const isEmailIdentifier = looksLikeEmail(identifier.trim());
+
+  async function resendCode() {
+    if (cooldown > 0 || resending) return;
+    setCodeError(null);
+    setResending(true);
+    try {
+      await triggerSend(identifier.trim());
+      setCode("");
+      setCooldown(RESEND_COOLDOWN);
+    } catch (err) {
+      setCodeError(err instanceof Error ? err.message : "Could not send a new code");
+    } finally {
+      setResending(false);
+    }
+  }
 
   if (!isSupabaseConfigured) {
     return (
@@ -112,22 +114,106 @@ function SignInInner({ defaultMode = "sign-in" }: Props) {
     );
   }
 
-  if (awaitingConfirmation) {
+  async function verifyCode(e: React.FormEvent) {
+    e.preventDefault();
+    setCodeError(null);
+    setVerifying(true);
+    try {
+      const res = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: identifier.trim(), code }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.tokenHash) {
+        setCodeError(data.error ?? "Invalid or expired code");
+        return;
+      }
+      // Exchange the server-minted magic-link token for a real session.
+      const supabase = getSupabaseBrowser();
+      const { error: err } = await supabase.auth.verifyOtp({
+        token_hash: data.tokenHash,
+        type: data.type ?? "magiclink",
+      });
+      if (err) {
+        setCodeError(err.message);
+        return;
+      }
+      router.replace(next);
+      router.refresh();
+    } catch (err) {
+      setCodeError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  if (sent) {
     return (
-      <div className="p-6 bg-[var(--primary-light)] border border-[var(--primary)]/30 rounded-[var(--radius-md)] text-center space-y-3">
-        <div className="w-12 h-12 mx-auto rounded-full bg-[var(--primary)]/10 flex items-center justify-center">
-          <Icon name="envelope" size="lg" color="var(--primary)" />
+      <div className="p-6 bg-[var(--primary-light)] border border-[var(--primary)]/30 rounded-[var(--radius-md)] space-y-4">
+        <div className="text-center space-y-3">
+          <div className="w-12 h-12 mx-auto rounded-full bg-[var(--primary)]/10 flex items-center justify-center">
+            <Icon name="envelope" size="lg" color="var(--primary)" />
+          </div>
+          <p className="text-[16px] font-bold text-[var(--text-primary)]">
+            {isEmailIdentifier ? "Check your email" : "Check your WhatsApp"}
+          </p>
+          <p className="text-[13px] text-[var(--text-secondary)]">
+            We sent a sign-in link to <span className="font-semibold">{identifier}</span>. Tap it to sign in — no password needed.
+          </p>
         </div>
-        <p className="text-[16px] font-bold text-[var(--primary-deep)]">Check your email</p>
-        <p className="text-[13px] text-[var(--text-secondary)]">
-          We sent a confirmation link to <span className="font-semibold">{email}</span>. Click it to activate your account.
-        </p>
+
+        {/* 6-digit OTP fallback only available on the email path (auth_otps is
+            keyed by email). Phone-only sign-in relies on the WhatsApp link. */}
+        {isEmailIdentifier && !showCode ? (
+          <button
+            type="button"
+            onClick={() => setShowCode(true)}
+            className="w-full text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+          >
+            Didn&apos;t get the link? Enter the 6-digit code instead
+          </button>
+        ) : isEmailIdentifier ? (
+          <form onSubmit={verifyCode} className="space-y-2 pt-1">
+            <input
+              type="text"
+              inputMode="numeric"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="000000"
+              maxLength={6}
+              autoFocus
+              className="w-full h-11 px-4 text-center text-[18px] font-mono tracking-[0.3em] rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--primary)] transition-colors"
+            />
+            {codeError && (
+              <p className="text-[12px] text-[var(--error)] font-medium">
+                {codeError}
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={verifying || code.length !== 6}
+              className="w-full h-10 bg-[var(--primary)] text-[var(--text-inverse)] text-[13px] font-semibold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {verifying ? "Verifying…" : "Confirm code"}
+            </button>
+            <button
+              type="button"
+              onClick={resendCode}
+              disabled={cooldown > 0 || resending}
+              className="w-full text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+            >
+              {cooldown > 0 ? `Send a new code in ${cooldown}s` : resending ? "Sending…" : "Send a new code"}
+            </button>
+          </form>
+        ) : null}
+
         <button
           type="button"
-          onClick={() => { setAwaitingConfirmation(false); setMode("sign-in"); setPassword(""); setConfirmPassword(""); }}
-          className="text-[12px] text-[var(--primary)] hover:underline"
+          onClick={() => { setSent(false); setIdentifier(""); setShowCode(false); setCode(""); setCodeError(null); }}
+          className="block mx-auto text-[12px] text-[var(--primary)] hover:underline"
         >
-          Back to sign in
+          Use a different email or phone
         </button>
       </div>
     );
@@ -138,7 +224,7 @@ function SignInInner({ defaultMode = "sign-in" }: Props) {
     try {
       const { error: err } = await getSupabaseBrowser().auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: getCallbackUrl(redirectTo) },
+        options: { redirectTo: getCallbackUrl(next) },
       });
       if (err) throw err;
     } catch (err) {
@@ -149,50 +235,11 @@ function SignInInner({ defaultMode = "sign-in" }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-
-    if (mode === "sign-up") {
-      if (password.length < 8) {
-        setError("Password must be at least 8 characters.");
-        return;
-      }
-      if (password !== confirmPassword) {
-        setError("Passwords do not match.");
-        return;
-      }
-    }
-
     setSubmitting(true);
-    const supabase = getSupabaseBrowser();
-
     try {
-      if (mode === "sign-in") {
-        const { error: err } = await supabase.auth.signInWithPassword({ email, password });
-        if (err) throw err;
-        router.push(redirectTo);
-        router.refresh();
-      } else {
-        const { data, error: err } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { full_name: name.trim() },
-          },
-        });
-        if (err) throw err;
-        if (data.session) {
-          // Email confirmation disabled — signed in immediately
-          router.push(redirectTo);
-          router.refresh();
-        } else {
-          // Send branded confirmation email via Resend
-          await fetch("/api/auth/send-confirmation", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, name: name.trim() || undefined }),
-          });
-          setAwaitingConfirmation(true);
-        }
-      }
+      await triggerSend(identifier.trim());
+      setSent(true);
+      setCooldown(RESEND_COOLDOWN);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
@@ -200,122 +247,79 @@ function SignInInner({ defaultMode = "sign-in" }: Props) {
     }
   }
 
-  const isValid =
-    mode === "sign-in"
-      ? !!(email && password)
-      : !!(name.trim() && email && password && confirmPassword);
+  // Already-signed-in interception: clear up confusion when a stale session
+  // exists in this browser before showing the sign-in form. Show who's signed
+  // in + a "Use this account" / "Sign out and use a different account" choice.
+  if (currentUser && !switchingAccount) {
+    const displayName = ((currentUser.user_metadata?.name ?? currentUser.user_metadata?.full_name) as string | undefined) ?? currentUser.email ?? "your account";
+    return (
+      <div className="space-y-4">
+        <div className="p-5 bg-[var(--primary-light)] border border-[var(--primary)]/30 rounded-[var(--radius-md)] text-center space-y-2">
+          <p className="text-[13px] text-[var(--text-secondary)]">You&apos;re already signed in as</p>
+          <p className="text-[15px] font-bold text-[var(--text-primary)] break-all">{displayName}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => { router.replace(next); router.refresh(); }}
+          className="w-full h-12 bg-[var(--primary)] text-[var(--text-inverse)] text-[14px] font-bold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors cursor-pointer"
+        >
+          Continue as {displayName}
+        </button>
+        <button
+          type="button"
+          onClick={async () => { await signOut(); setSwitchingAccount(true); }}
+          className="w-full h-11 border border-[var(--border-default)] text-[14px] font-semibold text-[var(--text-primary)] rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
+        >
+          Use a different account
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
-      {/* Mode tabs */}
-      <div className="flex rounded-[var(--radius-sm)] border border-[var(--border-default)] overflow-hidden">
-        {(["sign-in", "sign-up"] as AuthMode[]).map((m) => (
-          <button
-            key={m}
-            type="button"
-            onClick={() => { setMode(m); setError(null); }}
-            className={[
-              "flex-1 h-10 text-[13px] font-semibold transition-colors cursor-pointer",
-              mode === m
-                ? "bg-[var(--primary)] text-[var(--text-inverse)]"
-                : "text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]",
-            ].join(" ")}
-          >
-            {m === "sign-in" ? "Sign in" : "Sign up"}
-          </button>
-        ))}
-      </div>
-
       <GoogleButton onClick={handleGoogle} disabled={submitting} />
 
       <Divider />
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {mode === "sign-up" && (
-          <div>
-            <label className={labelCls}>Full name</label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ali Khan"
-              autoComplete="name"
-              className={inputCls}
-            />
-          </div>
-        )}
-
         <div>
-          <label className={labelCls}>Email</label>
+          <label className="block text-[12px] font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-1.5">
+            Email or WhatsApp number
+          </label>
           <input
-            type="email"
+            type="text"
             required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+            placeholder="you@example.com or +923216650670"
             autoComplete="email"
             className={inputCls}
           />
         </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="text-[12px] font-semibold text-[var(--text-secondary)] uppercase tracking-wide">
-              Password
-            </label>
-            {mode === "sign-in" && (
-              <Link href="/auth/forgot-password" className="text-[12px] text-[var(--primary)] hover:underline">
-                Forgot password?
-              </Link>
-            )}
-          </div>
-          <PasswordInput
-            value={password}
-            onChange={setPassword}
-            placeholder={mode === "sign-up" ? "At least 8 characters" : "Your password"}
-            autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
-            show={showPassword}
-            onToggle={() => setShowPassword((v) => !v)}
-          />
-        </div>
-
-        {mode === "sign-up" && (
-          <div>
-            <label className={labelCls}>Confirm password</label>
-            <PasswordInput
-              value={confirmPassword}
-              onChange={setConfirmPassword}
-              placeholder="Repeat your password"
-              autoComplete="new-password"
-              show={showPassword}
-              onToggle={() => setShowPassword((v) => !v)}
-            />
-          </div>
-        )}
-
-        {error && (
-          <p className="text-[13px] text-[var(--error)]">{error}</p>
-        )}
+        {error && <InlineAlert>{error}</InlineAlert>}
 
         <button
           type="submit"
-          disabled={!isValid || submitting}
+          disabled={!identifier || submitting}
           className="w-full h-12 bg-[var(--primary)] text-[var(--text-inverse)] text-[14px] font-bold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
-          {submitting
-            ? mode === "sign-in" ? "Signing in…" : "Creating account…"
-            : mode === "sign-in" ? "Sign in" : "Create account"}
+          {submitting ? "Sending…" : "Send sign-in link"}
         </button>
+
+        <p className="text-center text-[12px] text-[var(--text-tertiary)]">
+          We&apos;ll send a one-tap sign-in link to your email or WhatsApp. No password needed.
+        </p>
       </form>
     </div>
   );
 }
 
-export function SignInForm({ defaultMode = "sign-in" }: Props) {
+export function SignInForm() {
   return (
     <Suspense fallback={<div className="h-40 flex items-center justify-center text-[var(--text-tertiary)]">Loading…</div>}>
-      <SignInInner defaultMode={defaultMode} />
+      <SignInInner />
     </Suspense>
   );
 }
