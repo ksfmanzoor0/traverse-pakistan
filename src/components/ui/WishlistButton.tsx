@@ -28,7 +28,15 @@ export function WishlistButton({ itemType, itemSlug, savedCount, className }: Wi
     if (busy) return;
 
     if (!user) {
-      // Logged-out — send to sign-in carrying current path so they return here.
+      // Logged-out — stash the intent so WishlistProvider can replay the add
+      // after sign-in, then carry the current path forward so they return
+      // to this card.
+      try {
+        window.sessionStorage.setItem(
+          "pendingWishlistAdd",
+          JSON.stringify({ itemType, itemSlug })
+        );
+      } catch { /* private mode / quota — sign-in flow still proceeds */ }
       const next = encodeURIComponent(pathname);
       router.push(`/auth/sign-in?next=${next}`);
       return;
