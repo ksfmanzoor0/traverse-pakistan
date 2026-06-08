@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { Icon } from "@/components/ui/Icon";
+import { InlineAlert } from "@/components/ui/InlineAlert";
+import { useAuth } from "./AuthProvider";
 
 const RESEND_COOLDOWN = 30;
 
@@ -17,6 +19,10 @@ function getCallbackUrl(next: string) {
 
 const inputCls =
   "w-full h-11 px-4 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)] transition-colors";
+
+function looksLikeEmail(s: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+}
 
 function GoogleButton({ onClick, disabled }: { onClick: () => void; disabled: boolean }) {
   return (
@@ -51,9 +57,13 @@ function Divider() {
 function SignInInner() {
   const router = useRouter();
   const search = useSearchParams();
-  const next = search.get("redirect") || search.get("next") || "/account/trips";
+  const next = search.get("redirect") || search.get("next") || "/mybookings";
+  const { user: currentUser, signOut } = useAuth();
+  const [switchingAccount, setSwitchingAccount] = useState(false);
 
-  const [email, setEmail] = useState("");
+  // Pre-fill from ?email= when /auth/callback bounces an expired link back.
+  // One-tap resend = user just clicks the same Send button.
+  const [identifier, setIdentifier] = useState(search.get("email") ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(search.get("error"));
   const [sent, setSent] = useState(false);
@@ -70,21 +80,23 @@ function SignInInner() {
     return () => clearTimeout(t);
   }, [cooldown]);
 
-  const triggerSend = useCallback(async (targetEmail: string) => {
+  const triggerSend = useCallback(async (targetIdentifier: string) => {
     const res = await fetch("/api/auth/send-magic-link", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: targetEmail, next }),
+      body: JSON.stringify({ identifier: targetIdentifier, next }),
     });
     if (!res.ok) throw new Error("Could not send sign-in link. Please try again.");
   }, [next]);
+
+  const isEmailIdentifier = looksLikeEmail(identifier.trim());
 
   async function resendCode() {
     if (cooldown > 0 || resending) return;
     setCodeError(null);
     setResending(true);
     try {
-      await triggerSend(email.trim());
+      await triggerSend(identifier.trim());
       setCode("");
       setCooldown(RESEND_COOLDOWN);
     } catch (err) {
@@ -110,7 +122,7 @@ function SignInInner() {
       const res = await fetch("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), code }),
+        body: JSON.stringify({ email: identifier.trim(), code }),
       });
       const data = await res.json();
       if (!res.ok || !data.tokenHash) {
@@ -143,13 +155,17 @@ function SignInInner() {
           <div className="w-12 h-12 mx-auto rounded-full bg-[var(--primary)]/10 flex items-center justify-center">
             <Icon name="envelope" size="lg" color="var(--primary)" />
           </div>
-          <p className="text-[16px] font-bold text-[var(--text-primary)]">Check your email</p>
+          <p className="text-[16px] font-bold text-[var(--text-primary)]">
+            {isEmailIdentifier ? "Check your email" : "Check your WhatsApp"}
+          </p>
           <p className="text-[13px] text-[var(--text-secondary)]">
-            We sent a sign-in link to <span className="font-semibold">{email}</span>. Tap it to sign in — no password needed.
+            We sent a sign-in link to <span className="font-semibold">{identifier}</span>. Tap it to sign in — no password needed.
           </p>
         </div>
 
-        {!showCode ? (
+        {/* 6-digit OTP fallback only available on the email path (auth_otps is
+            keyed by email). Phone-only sign-in relies on the WhatsApp link. */}
+        {isEmailIdentifier && !showCode ? (
           <button
             type="button"
             onClick={() => setShowCode(true)}
@@ -157,7 +173,7 @@ function SignInInner() {
           >
             Didn&apos;t get the link? Enter the 6-digit code instead
           </button>
-        ) : (
+        ) : isEmailIdentifier ? (
           <form onSubmit={verifyCode} className="space-y-2 pt-1">
             <input
               type="text"
@@ -190,14 +206,14 @@ function SignInInner() {
               {cooldown > 0 ? `Send a new code in ${cooldown}s` : resending ? "Sending…" : "Send a new code"}
             </button>
           </form>
-        )}
+        ) : null}
 
         <button
           type="button"
-          onClick={() => { setSent(false); setEmail(""); setShowCode(false); setCode(""); setCodeError(null); }}
+          onClick={() => { setSent(false); setIdentifier(""); setShowCode(false); setCode(""); setCodeError(null); }}
           className="block mx-auto text-[12px] text-[var(--primary)] hover:underline"
         >
-          Use a different email
+          Use a different email or phone
         </button>
       </div>
     );
@@ -221,7 +237,7 @@ function SignInInner() {
     setError(null);
     setSubmitting(true);
     try {
-      await triggerSend(email.trim());
+      await triggerSend(identifier.trim());
       setSent(true);
       setCooldown(RESEND_COOLDOWN);
     } catch (err) {
@@ -229,6 +245,35 @@ function SignInInner() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  // Already-signed-in interception: clear up confusion when a stale session
+  // exists in this browser before showing the sign-in form. Show who's signed
+  // in + a "Use this account" / "Sign out and use a different account" choice.
+  if (currentUser && !switchingAccount) {
+    const displayName = ((currentUser.user_metadata?.name ?? currentUser.user_metadata?.full_name) as string | undefined) ?? currentUser.email ?? "your account";
+    return (
+      <div className="space-y-4">
+        <div className="p-5 bg-[var(--primary-light)] border border-[var(--primary)]/30 rounded-[var(--radius-md)] text-center space-y-2">
+          <p className="text-[13px] text-[var(--text-secondary)]">You&apos;re already signed in as</p>
+          <p className="text-[15px] font-bold text-[var(--text-primary)] break-all">{displayName}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => { router.replace(next); router.refresh(); }}
+          className="w-full h-12 bg-[var(--primary)] text-[var(--text-inverse)] text-[14px] font-bold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors cursor-pointer"
+        >
+          Continue as {displayName}
+        </button>
+        <button
+          type="button"
+          onClick={async () => { await signOut(); setSwitchingAccount(true); }}
+          className="w-full h-11 border border-[var(--border-default)] text-[14px] font-semibold text-[var(--text-primary)] rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] transition-colors cursor-pointer"
+        >
+          Use a different account
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -240,31 +285,31 @@ function SignInInner() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-[12px] font-semibold text-[var(--text-secondary)] uppercase tracking-wide mb-1.5">
-            Email address
+            Email or WhatsApp number
           </label>
           <input
-            type="email"
+            type="text"
             required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+            placeholder="you@example.com or +923216650670"
             autoComplete="email"
             className={inputCls}
           />
         </div>
 
-        {error && <p className="text-[13px] text-[var(--error)]">{error}</p>}
+        {error && <InlineAlert>{error}</InlineAlert>}
 
         <button
           type="submit"
-          disabled={!email || submitting}
+          disabled={!identifier || submitting}
           className="w-full h-12 bg-[var(--primary)] text-[var(--text-inverse)] text-[14px] font-bold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           {submitting ? "Sending…" : "Send sign-in link"}
         </button>
 
         <p className="text-center text-[12px] text-[var(--text-tertiary)]">
-          We&apos;ll email you a one-tap sign-in link. No password needed.
+          We&apos;ll send a one-tap sign-in link to your email or WhatsApp. No password needed.
         </p>
       </form>
     </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
 import { Icon } from "@/components/ui/Icon";
 
@@ -18,7 +18,14 @@ export function UserMenu() {
   const { user, loading, signOut } = useAuth();
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const pathname = usePathname() ?? "/";
   const ref = useRef<HTMLDivElement>(null);
+
+  // Pass the current page as ?next= so post-sign-in lands the user back
+  // where they clicked. Skip when already on an auth page (would loop).
+  const signInHref = pathname.startsWith("/auth")
+    ? "/auth/sign-in"
+    : `/auth/sign-in?next=${encodeURIComponent(pathname)}`;
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -35,7 +42,7 @@ export function UserMenu() {
   if (!user) {
     return (
       <Link
-        href="/auth/sign-in"
+        href={signInHref}
         className="w-9 h-9 rounded-full border border-[var(--border-default)] flex items-center justify-center text-[var(--text-primary)] hover:border-[var(--primary)] hover:bg-[var(--bg-subtle)] transition-colors"
         aria-label="Sign in"
       >
@@ -44,7 +51,9 @@ export function UserMenu() {
     );
   }
 
-  const name = (user.user_metadata?.full_name as string | undefined) ?? user.email;
+  // `name` is set by silent-signup + Settings; `full_name` is what Supabase
+  // auto-populates for Google OAuth — fall back to that.
+  const name = ((user.user_metadata?.name ?? user.user_metadata?.full_name) as string | undefined) ?? user.email;
   const avatarUrl = user.user_metadata?.avatar_url as string | undefined;
 
   return (
@@ -61,7 +70,7 @@ export function UserMenu() {
           <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
         ) : (
           <span className="text-[12px] font-bold text-[var(--text-primary)]">
-            {initials(user.user_metadata?.full_name as string | undefined, user.email)}
+            {initials((user.user_metadata?.name ?? user.user_metadata?.full_name) as string | undefined, user.email)}
           </span>
         )}
       </button>
@@ -81,7 +90,7 @@ export function UserMenu() {
           <nav className="py-1">
             {[
               { href: "/account", label: "Account" },
-              { href: "/account/trips", label: "My Bookings" },
+              { href: "/mybookings", label: "My Bookings" },
               { href: "/account/wishlist", label: "Wishlist" },
               { href: "/account/settings", label: "Settings" },
             ].map((item) => (

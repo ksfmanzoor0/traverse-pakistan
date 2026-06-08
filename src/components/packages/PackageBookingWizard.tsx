@@ -11,6 +11,7 @@ import { WizardProgress } from "@/components/booking/WizardProgress";
 import { Stepper } from "@/components/booking/Stepper";
 import { TrustStrip } from "@/components/booking/TrustStrip";
 import { ReviewQuoteCard } from "@/components/booking/ReviewQuoteCard";
+import { InlineAlert } from "@/components/ui/InlineAlert";
 
 type DepartureCity = "islamabad" | "lahore" | "karachi";
 
@@ -452,11 +453,7 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
           </section>
         )}
 
-        {(validationError || error) && (
-          <div className="p-3 bg-[var(--error)]/10 border border-[var(--error)]/30 rounded-[var(--radius-sm)] text-[13px] text-[var(--error)] font-medium">
-            {validationError ?? error}
-          </div>
-        )}
+        {(validationError || error) && <InlineAlert>{validationError ?? error}</InlineAlert>}
 
         {/* Nav buttons */}
         <div className="flex items-center gap-3 pt-2">

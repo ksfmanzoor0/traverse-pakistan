@@ -1,16 +1,16 @@
 "use client";
 
 import { useState, Suspense } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
+import { InlineAlert } from "@/components/ui/InlineAlert";
 
 function FindBookingInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryError = searchParams?.get("error") ?? null;
   const prefilledRef = searchParams?.get("ref")?.toUpperCase() ?? "";
-  const nextRaw = searchParams?.get("next") ?? null;
-  const nextPath = nextRaw && nextRaw.startsWith("/") && !nextRaw.startsWith("//") ? nextRaw : null;
 
   const [bookingRef, setBookingRef] = useState(prefilledRef);
   const [contact, setContact] = useState("");
@@ -32,10 +32,10 @@ function FindBookingInner() {
       });
       const data = await res.json();
       if (data.granted) {
-        router.replace(nextPath ?? `/bookings/${ref}`);
+        router.replace(`/bookings/${ref}`);
         return;
       }
-      setError("We couldn't match that booking ref with the email or phone you entered. Please check and try again.");
+      setError("We couldn't find a booking matching that reference and contact. Double-check both and try again.");
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -84,7 +84,7 @@ function FindBookingInner() {
               className="w-full h-11 px-4 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] focus:outline-none focus:border-[var(--primary)] transition-colors"
             />
           </div>
-          {error && <p className="text-[13px] text-[var(--error)]">{error}</p>}
+          {error && <InlineAlert>{error}</InlineAlert>}
           <button
             type="submit"
             disabled={loading || !bookingRef.trim() || !contact.trim()}
@@ -94,9 +94,19 @@ function FindBookingInner() {
           </button>
         </form>
 
+        <div className="space-y-1.5">
+          <Link
+            href="/auth/sign-in"
+            className="w-full h-11 flex items-center justify-center border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] font-semibold rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] transition-colors"
+          >
+            Get a Magic Link
+          </Link>
+          <p className="text-center text-[12px] text-[var(--text-tertiary)]">
+            On your WhatsApp or Email to view all bookings
+          </p>
+        </div>
+
         <p className="text-center text-[13px] text-[var(--text-tertiary)]">
-          To cancel or edit, tap the sign-in link in your booking confirmation email.
-          <br />
           <a href="https://wa.me/923216650670" target="_blank" rel="noopener noreferrer" className="text-[var(--primary)] hover:underline">
             Need help? Contact us on WhatsApp
           </a>
