@@ -251,7 +251,7 @@ function SignInInner() {
   // exists in this browser before showing the sign-in form. Show who's signed
   // in + a "Use this account" / "Sign out and use a different account" choice.
   if (currentUser && !switchingAccount) {
-    const displayName = (currentUser.user_metadata?.full_name as string | undefined) ?? currentUser.email ?? "your account";
+    const displayName = ((currentUser.user_metadata?.name ?? currentUser.user_metadata?.full_name) as string | undefined) ?? currentUser.email ?? "your account";
     return (
       <div className="space-y-4">
         <div className="p-5 bg-[var(--primary-light)] border border-[var(--primary)]/30 rounded-[var(--radius-md)] text-center space-y-2">

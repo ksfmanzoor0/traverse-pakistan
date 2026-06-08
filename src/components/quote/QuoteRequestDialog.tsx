@@ -61,7 +61,7 @@ export function QuoteRequestDialog({
 
   useEffect(() => {
     if (!open) return;
-    const name = ((user?.user_metadata?.full_name as string | undefined) ?? "").trim();
+    const name = (((user?.user_metadata?.name ?? user?.user_metadata?.full_name) as string | undefined) ?? "").trim();
     setForm((f) => ({
       ...f,
       name: name || f.name,
