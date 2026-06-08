@@ -28,14 +28,17 @@ function makeKey(type: WishlistItemType, slug: string) {
 // keeps it in memory so cards across the page reflect saved state without each
 // one making its own request. Logged-out users get an empty set; the heart
 // click is handled by the WishlistButton component (sign-in prompt).
+const PENDING_KEY = "pendingWishlistAdd";
+
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const [items, setItems] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) { setItems(new Set()); return; }
+    if (!user) { setItems(new Set()); setLoaded(false); return; }
     let cancelled = false;
     setLoading(true);
     fetch("/api/account/wishlist")
@@ -47,6 +50,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
           next.add(makeKey(row.item_type, row.item_slug));
         }
         setItems(next);
+        setLoaded(true);
       })
       .catch(() => { /* silent — wishlist is non-critical */ })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -93,6 +97,26 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     },
     [items]
   );
+
+  // Replay a pending save left by a logged-out heart tap. WishlistButton
+  // stores the intent in sessionStorage, redirects to /auth/sign-in, and
+  // after the user signs in (returning here via ?next=) we read the intent
+  // and add the item. Runs once the initial wishlist load completes so we
+  // don't accidentally toggle off something already saved.
+  useEffect(() => {
+    if (!user || !loaded) return;
+    if (typeof window === "undefined") return;
+    const raw = window.sessionStorage.getItem(PENDING_KEY);
+    if (!raw) return;
+    window.sessionStorage.removeItem(PENDING_KEY);
+    try {
+      const { itemType, itemSlug } = JSON.parse(raw) as { itemType: WishlistItemType; itemSlug: string };
+      if (items.has(makeKey(itemType, itemSlug))) return; // already saved
+      toggle(itemType, itemSlug).catch(() => { /* silent */ });
+    } catch {
+      /* malformed — already cleared */
+    }
+  }, [user, loaded, items, toggle]);
 
   const value = useMemo<WishlistContextValue>(
     () => ({ items, isSaved, toggle, loading }),
