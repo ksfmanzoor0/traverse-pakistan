@@ -10,6 +10,7 @@ const NAV = [
   { href: "/admin/bookings", label: "Bookings" },
   { href: "/admin/departures", label: "Departures" },
   { href: "/admin/reviews", label: "Reviews" },
+  { href: "/admin/revalidate", label: "Cache" },
 ];
 
 export function AdminSidebar({ email }: { email: string | null }) {
