@@ -69,40 +69,48 @@ export function RevalidatePanel({ title, endpoint, listingPath, pathPrefix, item
       </div>
 
       <div
-        className="mt-4 pt-4 border-t flex flex-col sm:flex-row gap-3 sm:items-center"
+        className="mt-5 pt-5 border-t"
         style={{ borderColor: "var(--border-default)" }}
       >
-        <select
-          value={slug}
-          onChange={(e) => setSlug(e.target.value)}
-          disabled={busy || items.length === 0}
-          className="flex-1 min-w-0 px-3 py-2 rounded-lg text-sm border outline-none"
-          style={{
-            borderColor: "var(--border-default)",
-            background: "var(--bg-primary)",
-            color: "var(--text-primary)",
-          }}
+        <label
+          className="block text-xs font-semibold tracking-wider uppercase mb-2"
+          style={{ color: "var(--text-tertiary)" }}
         >
-          {items.length === 0 && <option>No items</option>}
-          {items.map((it) => (
-            <option key={it.slug} value={it.slug}>
-              {it.name} ({it.slug})
-            </option>
-          ))}
-        </select>
+          Pick a {title.slice(0, -1).toLowerCase()}
+        </label>
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-stretch">
+          <select
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
+            disabled={busy || items.length === 0}
+            className="flex-1 min-w-0 px-4 py-3 rounded-xl text-base border outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-shadow"
+            style={{
+              borderColor: "var(--border-default)",
+              background: "var(--bg-primary)",
+              color: "var(--text-primary)",
+            }}
+          >
+            {items.length === 0 && <option>No items</option>}
+            {items.map((it) => (
+              <option key={it.slug} value={it.slug}>
+                {it.name}  ·  {it.slug}
+              </option>
+            ))}
+          </select>
 
-        <button
-          type="button"
-          onClick={() => slug && call(`${pathPrefix}${slug}`)}
-          disabled={busy || !slug}
-          className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
-          style={{
-            background: "var(--primary)",
-            color: "var(--on-primary, #fff)",
-          }}
-        >
-          Refresh this page (data + images)
-        </button>
+          <button
+            type="button"
+            onClick={() => slug && call(`${pathPrefix}${slug}`)}
+            disabled={busy || !slug}
+            className="px-5 py-3 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 whitespace-nowrap"
+            style={{
+              background: "var(--primary)",
+              color: "var(--on-primary, #fff)",
+            }}
+          >
+            Refresh this page (data + images)
+          </button>
+        </div>
       </div>
 
       {status.kind !== "idle" && (
