@@ -653,7 +653,15 @@ export function SearchWidget({
       const target = `${tabPath}${params.toString() ? `?${params.toString()}` : ""}`;
       // Temporary: diagnose intermittent "URL doesn't update" reports on hotels.
       // Safe to remove once the cause is pinned down.
+      console.log("[search] submit", { activeTab, selectedDest, destSearch, effectiveDest, target, currentUrl: typeof window !== "undefined" ? window.location.href : "" });
       router.push(target);
+      // Verify the navigation actually committed; if URL is still the same
+      // after one tick, log it so we can catch the race in the wild.
+      setTimeout(() => {
+        if (typeof window !== "undefined") {
+          console.log("[search] post-push url", window.location.href, "expected suffix:", target);
+        }
+      }, 100);
       onFilter?.({
         destination: effectiveDest ?? "",
         checkin: startDate?.toISOString().split("T")[0] ?? "",
