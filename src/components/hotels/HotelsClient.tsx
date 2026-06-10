@@ -15,8 +15,14 @@ export function HotelsClient({ hotels, destinations = [] }: { hotels: Hotel[]; d
 
   useEffect(() => {
     if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual";
-    window.scrollTo(0, 0);
   }, []);
+
+  // Scroll back to the top whenever the destination filter changes, so a new
+  // search lands on the first result instead of leaving the user mid-scroll.
+  const destinationFilter = searchParams.get("destination") ?? "";
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [destinationFilter]);
 
   const activeFilters = useMemo(() => ({
     destination: searchParams.get("destination") ?? "",

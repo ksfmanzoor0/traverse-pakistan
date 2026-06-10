@@ -650,7 +650,11 @@ export function SearchWidget({
 
     if (mode === "filter") {
       const tabPath = activeTab === "hotels" ? "/hotels" : activeTab === "grouptours" ? "/grouptours" : "/packages";
-      router.push(`${tabPath}${params.toString() ? `?${params.toString()}` : ""}`);
+      const target = `${tabPath}${params.toString() ? `?${params.toString()}` : ""}`;
+      // Temporary: diagnose intermittent "URL doesn't update" reports on hotels.
+      // Safe to remove once the cause is pinned down.
+      console.log("[search] submit", { activeTab, selectedDest, destSearch, effectiveDest, target });
+      router.push(target);
       onFilter?.({
         destination: effectiveDest ?? "",
         checkin: startDate?.toISOString().split("T")[0] ?? "",
