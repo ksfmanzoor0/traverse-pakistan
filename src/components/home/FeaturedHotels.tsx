@@ -23,12 +23,12 @@ export async function FeaturedHotels() {
         />
         <Carousel>
           {hotels.map((hotel) => (
-            <Link
+            <div
               key={hotel.id}
-              href={`/hotels/${hotel.slug}`}
-              className="group min-w-[270px] w-[270px] sm:min-w-[340px] sm:w-[340px] rounded-[var(--radius-md)] overflow-hidden bg-[var(--bg-dark)] transition-all duration-300 hover:-translate-y-1"
+              className="group relative min-w-[270px] w-[270px] sm:min-w-[340px] sm:w-[340px] rounded-[var(--radius-md)] overflow-hidden bg-[var(--bg-dark)] transition-all duration-300 hover:-translate-y-1"
               style={{ boxShadow: "var(--shadow-sm)" }}
             >
+              <Link href={`/hotels/${hotel.slug}`} className="block">
               <div className="relative aspect-[4/3] overflow-hidden">
                 <Image
                   src={hotel.image}
@@ -46,9 +46,6 @@ export async function FeaturedHotels() {
                   <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] bg-[var(--primary)] text-[var(--on-dark)] rounded-[var(--radius-full)]">
                     {hotel.tier === "luxury" ? "LUXURY" : hotel.tier === "premium" ? "PREMIUM" : hotel.tier === "standard" ? "CAMP" : "GUEST FAV"}
                   </span>
-                </div>
-                <div className="absolute top-3 right-3">
-                  <WishlistButton itemType="hotel" itemSlug={hotel.slug} />
                 </div>
               </div>
               <div className="p-4 sm:p-5 bg-[var(--bg-primary)]">
@@ -73,7 +70,11 @@ export async function FeaturedHotels() {
                   <span className="text-[12px] text-[var(--text-tertiary)]"> / night</span>
                 </div>
               </div>
-            </Link>
+              </Link>
+              <div className="absolute top-3 right-3 z-10">
+                <WishlistButton itemType="hotel" itemSlug={hotel.slug} />
+              </div>
+            </div>
           ))}
         </Carousel>
       </Container>

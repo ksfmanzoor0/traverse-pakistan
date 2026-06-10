@@ -24,10 +24,9 @@ function pickImage(slug: string, images: Package["images"]) {
 export function PackageCard({ pkg, variant = "carousel", className }: PackageCardProps) {
   const heroImage = pickImage(pkg.slug, pkg.images);
   return (
-    <Link
-      href={`/packages/${pkg.slug}`}
+    <div
       className={cn(
-        "group flex flex-col rounded-[var(--radius-md)] overflow-hidden bg-[var(--bg-primary)]",
+        "group relative flex flex-col rounded-[var(--radius-md)] overflow-hidden bg-[var(--bg-primary)]",
         "transition-all duration-[350ms] ease-[cubic-bezier(0.2,0,0,1)]",
         "hover:-translate-y-1 hover:shadow-[rgba(0,0,0,0.08)_0_4px_12px,rgba(0,0,0,0.04)_0_0_0_1px]",
         variant === "carousel"
@@ -37,6 +36,7 @@ export function PackageCard({ pkg, variant = "carousel", className }: PackageCar
       )}
       style={{ boxShadow: "rgba(0,0,0,0.04) 0 0 0 1px, rgba(0,0,0,0.06) 0 2px 8px" }}
     >
+      <Link href={`/packages/${pkg.slug}`} className="flex flex-col flex-1">
       {/* Image */}
       <div className="relative aspect-[5/4] overflow-hidden">
         <Image
@@ -54,15 +54,6 @@ export function PackageCard({ pkg, variant = "carousel", className }: PackageCar
           </div>
         )}
 
-        <div className="absolute top-3.5 right-3.5 flex items-center gap-1.5">
-          <span className="px-2 py-1 bg-black/40 backdrop-blur-md text-[var(--on-dark)] text-[10px] font-bold rounded-full border border-[var(--on-dark-border)] uppercase tracking-wide">
-            Deluxe
-          </span>
-          <span className="px-2 py-1 bg-[var(--primary)]/80 backdrop-blur-md text-[var(--on-dark)] text-[10px] font-bold rounded-full uppercase tracking-wide">
-            Luxury
-          </span>
-          <WishlistButton itemType="package" itemSlug={pkg.slug} />
-        </div>
 
         <div className="absolute bottom-3.5 left-3.5">
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black/40 backdrop-blur-md text-[var(--on-dark)] text-[11px] font-semibold rounded-full tracking-[0.04em] uppercase border border-[var(--on-dark-border)]">
@@ -139,6 +130,16 @@ export function PackageCard({ pkg, variant = "carousel", className }: PackageCar
           </p>
         </div>
       </div>
-    </Link>
+      </Link>
+      <div className="absolute top-3.5 right-3.5 z-10 flex items-center gap-1.5">
+        <span className="px-2 py-1 bg-black/40 backdrop-blur-md text-[var(--on-dark)] text-[10px] font-bold rounded-full border border-[var(--on-dark-border)] uppercase tracking-wide">
+          Deluxe
+        </span>
+        <span className="px-2 py-1 bg-[var(--primary)]/80 backdrop-blur-md text-[var(--on-dark)] text-[10px] font-bold rounded-full uppercase tracking-wide">
+          Luxury
+        </span>
+        <WishlistButton itemType="package" itemSlug={pkg.slug} />
+      </div>
+    </div>
   );
 }

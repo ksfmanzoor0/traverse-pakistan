@@ -112,12 +112,15 @@ export function HotelsClient({ hotels, destinations = [] }: { hotels: Hotel[]; d
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filtered.map((hotel) => (
-              <Link
+              <div
                 key={hotel.id}
-                href={`/hotels/${hotel.slug}${activeFilters.checkin ? `?checkin=${activeFilters.checkin}&checkout=${activeFilters.checkout}&guests=${activeFilters.guests}` : ""}`}
-                className="group rounded-[var(--radius-md)] overflow-hidden bg-[var(--bg-primary)] transition-all duration-300 hover:-translate-y-1"
+                className="group relative rounded-[var(--radius-md)] overflow-hidden bg-[var(--bg-primary)] transition-all duration-300 hover:-translate-y-1"
                 style={{ boxShadow: "var(--shadow-sm)" }}
               >
+                <Link
+                  href={`/hotels/${hotel.slug}${activeFilters.checkin ? `?checkin=${activeFilters.checkin}&checkout=${activeFilters.checkout}&guests=${activeFilters.guests}` : ""}`}
+                  className="block"
+                >
                 <div className="relative aspect-[4/3] overflow-hidden">
                   <Image
                     src={hotel.image} alt={hotel.name} fill
@@ -128,9 +131,6 @@ export function HotelsClient({ hotels, destinations = [] }: { hotels: Hotel[]; d
                     <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] bg-[var(--primary)] text-[var(--on-dark)] rounded-[var(--radius-full)]">
                       {hotel.tier}
                     </span>
-                  </div>
-                  <div className="absolute top-3 right-3">
-                    <WishlistButton itemType="hotel" itemSlug={hotel.slug} />
                   </div>
                 </div>
                 <div className="p-4 sm:p-5">
@@ -167,7 +167,11 @@ export function HotelsClient({ hotels, destinations = [] }: { hotels: Hotel[]; d
                     )}
                   </div>
                 </div>
-              </Link>
+                </Link>
+                <div className="absolute top-3 right-3 z-10">
+                  <WishlistButton itemType="hotel" itemSlug={hotel.slug} />
+                </div>
+              </div>
             ))}
           </div>
         )}
