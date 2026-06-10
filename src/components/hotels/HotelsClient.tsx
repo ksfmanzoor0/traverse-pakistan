@@ -8,20 +8,9 @@ import { formatPrice } from "@/lib/utils";
 import { Icon } from "@/components/ui/Icon";
 import { WishlistButton } from "@/components/ui/WishlistButton";
 import type { Hotel } from "@/types/hotel";
+import type { DestinationOption } from "@/components/home/SearchWidget";
 
-const allDestinations = [
-  { name: "Hunza Valley", slug: "hunza" },
-  { name: "Skardu", slug: "skardu" },
-  { name: "Fairy Meadows", slug: "fairy-meadows" },
-  { name: "Ghizar & Phandar", slug: "ghizer" },
-  { name: "Chitral & Kalash", slug: "chitral" },
-  { name: "Kumrat Valley", slug: "kumrat" },
-  { name: "Swat & Malam Jabba", slug: "swat" },
-  { name: "Neelam Valley", slug: "neelam-valley" },
-  { name: "Makran Coast & Gwadar", slug: "makran" },
-];
-
-export function HotelsClient({ hotels }: { hotels: Hotel[] }) {
+export function HotelsClient({ hotels, destinations = [] }: { hotels: Hotel[]; destinations?: DestinationOption[] }) {
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -36,17 +25,31 @@ export function HotelsClient({ hotels }: { hotels: Hotel[] }) {
     guests: Number(searchParams.get("guests") ?? 0),
   }), [searchParams]);
 
-  const filtered = useMemo(() => (
-    activeFilters.destination
-      ? hotels.filter((h) => h.destinationSlug === activeFilters.destination)
-      : hotels
-  ), [hotels, activeFilters.destination]);
+  // Sub-aware match: include hotels whose destinationSlug is a child of the filter
+  // (e.g. "skardu" matches hotels in shigar/deosai; "makran" matches gwadar/ormara).
+  const childrenByParent = useMemo(() => {
+    const map: Record<string, Set<string>> = {};
+    for (const d of destinations) {
+      if (!d.parentSlug) continue;
+      (map[d.parentSlug] ??= new Set()).add(d.slug);
+    }
+    return map;
+  }, [destinations]);
+
+  const filtered = useMemo(() => {
+    if (!activeFilters.destination) return hotels;
+    const filter = activeFilters.destination;
+    const children = childrenByParent[filter];
+    return hotels.filter(
+      (h) => h.destinationSlug === filter || (children?.has(h.destinationSlug) ?? false)
+    );
+  }, [hotels, activeFilters.destination, childrenByParent]);
 
   const nights = activeFilters.checkin && activeFilters.checkout
     ? Math.round((new Date(activeFilters.checkout).getTime() - new Date(activeFilters.checkin).getTime()) / 86400000)
     : 0;
 
-  const destName = allDestinations.find((d) => d.slug === activeFilters.destination)?.name;
+  const destName = destinations.find((d) => d.slug === activeFilters.destination)?.name;
   const hasFilters = !!(activeFilters.destination || activeFilters.checkin);
 
   return (
