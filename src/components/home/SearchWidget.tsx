@@ -640,8 +640,9 @@ export function SearchWidget({
 
     const params = new URLSearchParams();
     if (effectiveDest) {
-      const dest = destinations.find((d) => d.slug === effectiveDest);
-      params.set("destination", dest?.parentSlug ?? effectiveDest);
+      // Keep the exact slug the user picked. Each listing page resolves
+      // sub → parent itself so it can rank exact matches above siblings.
+      params.set("destination", effectiveDest);
     }
     if (startDate) params.set("checkin", startDate.toISOString().split("T")[0]);
     if (endDate) params.set("checkout", endDate.toISOString().split("T")[0]);

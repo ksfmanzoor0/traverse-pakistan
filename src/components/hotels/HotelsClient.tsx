@@ -25,8 +25,8 @@ export function HotelsClient({ hotels, destinations = [] }: { hotels: Hotel[]; d
     guests: Number(searchParams.get("guests") ?? 0),
   }), [searchParams]);
 
-  // Sub-aware match: include hotels whose destinationSlug is a child of the filter
-  // (e.g. "skardu" matches hotels in shigar/deosai; "makran" matches gwadar/ormara).
+  // Sub-aware ranked match: exact-match hotels (e.g. khaplu) come first,
+  // followed by siblings + parent in the same region (skardu).
   const childrenByParent = useMemo(() => {
     const map: Record<string, Set<string>> = {};
     for (const d of destinations) {
@@ -36,14 +36,31 @@ export function HotelsClient({ hotels, destinations = [] }: { hotels: Hotel[]; d
     return map;
   }, [destinations]);
 
-  const filtered = useMemo(() => {
-    if (!activeFilters.destination) return hotels;
+  const { exactHotels, regionHotels } = useMemo(() => {
     const filter = activeFilters.destination;
-    const children = childrenByParent[filter];
-    return hotels.filter(
-      (h) => h.destinationSlug === filter || (children?.has(h.destinationSlug) ?? false)
-    );
-  }, [hotels, activeFilters.destination, childrenByParent]);
+    if (!filter) return { exactHotels: hotels, regionHotels: [] as Hotel[] };
+
+    const picked = destinations.find((d) => d.slug === filter);
+    const rootSlug = picked?.parentSlug ?? filter;
+    const siblings = childrenByParent[rootSlug] ?? new Set<string>();
+
+    const exact: Hotel[] = [];
+    const region: Hotel[] = [];
+    for (const h of hotels) {
+      if (h.destinationSlug === filter) exact.push(h);
+      else if (h.destinationSlug === rootSlug || siblings.has(h.destinationSlug)) region.push(h);
+    }
+    return { exactHotels: exact, regionHotels: region };
+  }, [hotels, activeFilters.destination, destinations, childrenByParent]);
+
+  const isFilterSub = !!destinations.find((d) => d.slug === activeFilters.destination)?.parentSlug;
+  const showRegionFallback = isFilterSub && exactHotels.length === 0 && regionHotels.length > 0;
+  const rootName = (() => {
+    const picked = destinations.find((d) => d.slug === activeFilters.destination);
+    if (!picked?.parentSlug) return null;
+    return destinations.find((d) => d.slug === picked.parentSlug)?.name ?? null;
+  })();
+  const filtered = [...exactHotels, ...regionHotels];
 
   const nights = activeFilters.checkin && activeFilters.checkout
     ? Math.round((new Date(activeFilters.checkout).getTime() - new Date(activeFilters.checkin).getTime()) / 86400000)
@@ -73,6 +90,11 @@ export function HotelsClient({ hotels, destinations = [] }: { hotels: Hotel[]; d
 
       {/* Results */}
       <div className="max-w-[1400px] mx-auto px-5 sm:px-8 lg:px-16 py-8">
+        {showRegionFallback && (
+          <p className="mb-6 text-[14px] text-[var(--text-secondary)]">
+            No hotels in <span className="font-semibold text-[var(--text-primary)]">{destName}</span> — here are our top picks from {rootName ? `the ${rootName} region` : "the region"}.
+          </p>
+        )}
         {filtered.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-[18px] font-semibold text-[var(--text-primary)]">No hotels found</p>

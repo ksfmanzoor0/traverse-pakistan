@@ -6,6 +6,7 @@ import Link from "next/link";
 import { FilterTag } from "@/components/ui/FilterTag";
 import { TourGrid } from "@/components/tours/TourGrid";
 import type { Tour } from "@/types/tour";
+import type { DestinationOption } from "@/components/home/SearchWidget";
 
 const filterOptions = [
   { label: "All", value: "all" },
@@ -25,28 +26,21 @@ const sortOptions = [
   { label: "Rating", value: "rating" },
 ];
 
-const allDestinations = [
-  { name: "Hunza Valley", slug: "hunza" },
-  { name: "Skardu", slug: "skardu" },
-  { name: "Fairy Meadows", slug: "fairy-meadows" },
-  { name: "Ghizar & Phandar", slug: "ghizer" },
-  { name: "Chitral & Kalash", slug: "chitral" },
-  { name: "Kumrat Valley", slug: "kumrat" },
-  { name: "Swat & Malam Jabba", slug: "swat" },
-  { name: "Neelam Valley", slug: "neelam-valley" },
-  { name: "Makran Coast & Gwadar", slug: "makran" },
-];
-
-export function GroupToursClient({ tours }: { tours: Tour[] }) {
+export function GroupToursClient({ tours, destinations = [] }: { tours: Tour[]; destinations?: DestinationOption[] }) {
   const searchParams = useSearchParams();
   const [activeFilter, setActiveFilter] = useState("all");
   const [sort, setSort] = useState("date-asc");
   const destFilter = searchParams.get("destination") ?? "";
   const dateFilter = searchParams.get("checkin") ?? "";
 
+  // Sub → parent fallback: a search for "khaplu" should also surface tours
+  // tagged "skardu" (the parent region).
+  const picked = destinations.find((d) => d.slug === destFilter);
+  const parentSlug = picked?.parentSlug ?? null;
+
   const filtered = tours
     .filter((t) => activeFilter === "all" || t.category === activeFilter)
-    .filter((t) => !destFilter || t.destinationSlug === destFilter)
+    .filter((t) => !destFilter || t.destinationSlug === destFilter || (parentSlug ? t.destinationSlug === parentSlug : false))
     .sort((a, b) => {
       switch (sort) {
         case "date-asc":
@@ -61,7 +55,7 @@ export function GroupToursClient({ tours }: { tours: Tour[] }) {
       }
     });
 
-  const destName = allDestinations.find((d) => d.slug === destFilter)?.name;
+  const destName = destinations.find((d) => d.slug === destFilter)?.name;
   const hasFilters = !!(destFilter || dateFilter);
 
   return (
