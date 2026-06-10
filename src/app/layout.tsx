@@ -161,7 +161,9 @@ export default function RootLayout({
         </Suspense>
         <Providers>
           <AwardStrip />
-          <NavbarWrapper />
+          <Suspense fallback={null}>
+            <NavbarWrapper />
+          </Suspense>
           <main className="flex-1">{children}</main>
           <Footer />
           <WhatsAppFAB />

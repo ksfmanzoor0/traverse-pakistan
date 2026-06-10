@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { SearchWidget, type DestinationOption } from "@/components/home/SearchWidget";
@@ -57,6 +57,8 @@ const EASE_OUT = { duration: 0.4, ease: [0.32, 0.72, 0, 1] } as const;
 export function NavSearchBar({ destinations = [] }: { destinations?: DestinationOption[] }) {
   const destNamesMap = Object.fromEntries(destinations.map((d) => [d.slug, d.name]));
   const pathname = usePathname() ?? "";
+  const searchParams = useSearchParams();
+  const searchKey = searchParams?.toString() ?? "";
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>(getDefaultTab(pathname));
   const [mounted, setMounted] = useState(false);
@@ -70,10 +72,9 @@ export function NavSearchBar({ destinations = [] }: { destinations?: Destination
   useEffect(() => {
     if (open) return;
     const isListing = pathname === "/hotels" || pathname === "/grouptours" || pathname === "/packages";
-    const hasQuery = typeof window !== "undefined" && window.location.search.length > 0;
-    const isBare = pathname === "/" || (isListing && !hasQuery);
+    const isBare = pathname === "/" || (isListing && !searchKey);
     setPill(isBare ? null : readSavedSearch());
-  }, [open, pathname]);
+  }, [open, pathname, searchKey]);
 
   useEffect(() => {
     function handleOutside(e: MouseEvent) {
@@ -92,13 +93,12 @@ export function NavSearchBar({ destinations = [] }: { destinations?: Destination
     // search", so the pill resets to Anywhere instead of restoring the stale
     // last query from sessionStorage.
     const isListing = pathname === "/hotels" || pathname === "/grouptours" || pathname === "/packages";
-    const hasQuery = typeof window !== "undefined" && window.location.search.length > 0;
-    const isBare = pathname === "/" || (isListing && !hasQuery);
+    const isBare = pathname === "/" || (isListing && !searchKey);
     if (isBare) {
       try { sessionStorage.removeItem("tp_search"); } catch { /* ignore */ }
       setPill(null);
     }
-  }, [pathname]);
+  }, [pathname, searchKey]);
 
   useEffect(() => {
     if (!isHome) {
