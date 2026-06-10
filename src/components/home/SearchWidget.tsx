@@ -543,6 +543,16 @@ export function SearchWidget({
   }, []);
 
   const isDestSearchPrefilled = !!selectedDest && destSearch === (destinations.find((d) => d.slug === selectedDest)?.name ?? "");
+
+  // Typing over a prefilled destination must invalidate the prior selection,
+  // otherwise Search re-submits the stale slug and the page appears "stuck".
+  const handleDestSearchChange = (value: string) => {
+    setDestSearch(value);
+    if (selectedDest) {
+      const prefilled = destinations.find((d) => d.slug === selectedDest)?.name ?? "";
+      if (value !== prefilled) setSelectedDest(null);
+    }
+  };
   const PINNED = ["hunza", "skardu", "chitral", "naran", "kumrat", "lahore"];
   const parentDests = destinations
     .filter((d) => !d.parentSlug)
@@ -614,11 +624,25 @@ export function SearchWidget({
     }
   }
 
+  // Disable Search until the user has committed to *something*. Otherwise the
+  // button silently fires a no-op navigation, which feels broken.
+  const canSearch = !!selectedDest || !!destSearch.trim() || !!startDate;
+
   const handleSearch = () => {
+    // Auto-pick the top filtered destination if the user typed but never
+    // clicked a dropdown option — matches Google-style "Enter on top result".
+    let effectiveDest = selectedDest;
+    if (!effectiveDest && destSearch.trim() && filteredDests.length > 0) {
+      effectiveDest = filteredDests[0].slug;
+      setSelectedDest(effectiveDest);
+      setDestSearch(filteredDests[0].name);
+    }
+
     const params = new URLSearchParams();
-    if (selectedDest) {
-      const dest = destinations.find((d) => d.slug === selectedDest);
-      params.set("destination", dest?.parentSlug ?? selectedDest);
+    if (effectiveDest) {
+      // Keep the exact slug the user picked. Each listing page resolves
+      // sub → parent itself so it can rank exact matches above siblings.
+      params.set("destination", effectiveDest);
     }
     if (startDate) params.set("checkin", startDate.toISOString().split("T")[0]);
     if (endDate) params.set("checkout", endDate.toISOString().split("T")[0]);
@@ -626,9 +650,12 @@ export function SearchWidget({
 
     if (mode === "filter") {
       const tabPath = activeTab === "hotels" ? "/hotels" : activeTab === "grouptours" ? "/grouptours" : "/packages";
-      router.push(`${tabPath}${params.toString() ? `?${params.toString()}` : ""}`);
+      const target = `${tabPath}${params.toString() ? `?${params.toString()}` : ""}`;
+      // Temporary: diagnose intermittent "URL doesn't update" reports on hotels.
+      // Safe to remove once the cause is pinned down.
+      router.push(target);
       onFilter?.({
-        destination: selectedDest ?? "",
+        destination: effectiveDest ?? "",
         checkin: startDate?.toISOString().split("T")[0] ?? "",
         checkout: endDate?.toISOString().split("T")[0] ?? "",
         guests: String(travelers.adults + travelers.children),
@@ -638,7 +665,12 @@ export function SearchWidget({
       router.push(`${basePath}${params.toString() ? `?${params.toString()}` : ""}`);
     }
     setActiveField(null);
-    onClose?.();
+    // Defer the close until after the navigation commits. onClose fires
+    // setOpen(false) which triggers an AnimatePresence exit on this widget;
+    // running that on the same tick as router.push can race the navigation
+    // transition and drop the searchParams update (seen on /hotels where the
+    // pathname stays the same, so only searchParams change).
+    setTimeout(() => onClose?.(), 0);
   };
 
   const instanceId = useId();
@@ -686,7 +718,7 @@ export function SearchWidget({
           {activeTab === "packages" && (
             <>
               <DestinationField value={selectedDestName} active={activeField === "destination"}
-                destSearch={destSearch} onDestSearchChange={setDestSearch} className={mode === "navigate" ? "w-[295px] shrink-0" : "flex-1"}
+                destSearch={destSearch} onDestSearchChange={handleDestSearchChange} className={mode === "navigate" ? "w-[295px] shrink-0" : "flex-1"}
                 onActivate={() => setActiveField(activeField === "destination" ? null : "destination")}
                 onClear={() => { setSelectedDest(null); setDestSearch(""); setActiveField("destination"); }} />
               <Divider className={mode === "navigate" ? "mx-1" : ""} faded={activeField === "destination" || activeField === "when"} />
@@ -704,9 +736,10 @@ export function SearchWidget({
                   placeholder="Add guests" active={activeField === "travelers"} className="relative z-10 flex-1" noActiveBg
                   onClick={() => setActiveField(activeField === "travelers" ? null : "travelers")}
                   onClear={() => setTravelers({ adults: 0, children: 0, infants: 0 })} />
-                <button type="button" onClick={handleSearch}
+                <button type="button" onClick={handleSearch} disabled={!canSearch}
                   className={cn(
-                    "relative z-10 shrink-0 bg-[var(--primary)] rounded-full flex items-center justify-center text-[var(--text-inverse)] hover:bg-[var(--primary-hover)] active:scale-95 transition-all duration-200 cursor-pointer",
+                    "relative z-10 shrink-0 bg-[var(--primary)] rounded-full flex items-center justify-center text-[var(--text-inverse)] active:scale-95 transition-all duration-200",
+                    canSearch ? "cursor-pointer hover:bg-[var(--primary-hover)]" : "cursor-not-allowed opacity-50",
                     mode === "filter" ? "gap-1.5 px-4 h-12 self-center mr-1.5" : "self-center w-14 h-14 mr-2"
                   )}
                   style={{ boxShadow: "var(--shadow-sm)" }} aria-label="Search">
@@ -723,7 +756,7 @@ export function SearchWidget({
           {activeTab === "grouptours" && (
             <>
               <DestinationField value={selectedDestName} active={activeField === "destination"}
-                destSearch={destSearch} onDestSearchChange={setDestSearch} className={mode === "navigate" ? "w-[295px] shrink-0" : "flex-1"}
+                destSearch={destSearch} onDestSearchChange={handleDestSearchChange} className={mode === "navigate" ? "w-[295px] shrink-0" : "flex-1"}
                 onActivate={() => setActiveField(activeField === "destination" ? null : "destination")}
                 onClear={() => { setSelectedDest(null); setDestSearch(""); setActiveField("destination"); }} />
               <Divider className={mode === "navigate" ? "mx-1" : ""} faded={activeField === "destination" || activeField === "month"} />
@@ -741,9 +774,10 @@ export function SearchWidget({
                   placeholder="Add guests" active={activeField === "groupsize"} className="relative z-10 flex-1" noActiveBg
                   onClick={() => setActiveField(activeField === "groupsize" ? null : "groupsize")}
                   onClear={() => setTravelers({ adults: 0, children: 0, infants: 0 })} />
-                <button type="button" onClick={handleSearch}
+                <button type="button" onClick={handleSearch} disabled={!canSearch}
                   className={cn(
-                    "relative z-10 shrink-0 bg-[var(--primary)] rounded-full flex items-center justify-center text-[var(--text-inverse)] hover:bg-[var(--primary-hover)] active:scale-95 transition-all duration-200 cursor-pointer",
+                    "relative z-10 shrink-0 bg-[var(--primary)] rounded-full flex items-center justify-center text-[var(--text-inverse)] active:scale-95 transition-all duration-200",
+                    canSearch ? "cursor-pointer hover:bg-[var(--primary-hover)]" : "cursor-not-allowed opacity-50",
                     mode === "filter" ? "gap-1.5 px-4 h-12 self-center mr-1.5" : "self-center w-14 h-14 mr-2"
                   )}
                   style={{ boxShadow: "var(--shadow-sm)" }} aria-label="Search">
@@ -760,7 +794,7 @@ export function SearchWidget({
           {activeTab === "hotels" && (
             <>
               <DestinationField value={selectedDestName} active={activeField === "destination"}
-                destSearch={destSearch} onDestSearchChange={setDestSearch} className={mode === "navigate" ? "w-[295px] shrink-0" : "flex-1"}
+                destSearch={destSearch} onDestSearchChange={handleDestSearchChange} className={mode === "navigate" ? "w-[295px] shrink-0" : "flex-1"}
                 onActivate={() => setActiveField(activeField === "destination" ? null : "destination")}
                 onClear={() => { setSelectedDest(null); setDestSearch(""); setActiveField("destination"); }} />
               <Divider className={mode === "navigate" ? "mx-1" : ""} faded={activeField === "destination" || activeField === "checkin" || activeField === "checkout"} />
@@ -778,9 +812,10 @@ export function SearchWidget({
                   placeholder="Add guests" active={activeField === "guests"} className="relative z-10 flex-1" noActiveBg
                   onClick={() => setActiveField(activeField === "guests" ? null : "guests")}
                   onClear={() => setTravelers({ adults: 0, children: 0, infants: 0 })} />
-                <button type="button" onClick={handleSearch}
+                <button type="button" onClick={handleSearch} disabled={!canSearch}
                   className={cn(
-                    "relative z-10 shrink-0 bg-[var(--primary)] rounded-full flex items-center justify-center text-[var(--text-inverse)] hover:bg-[var(--primary-hover)] active:scale-95 transition-all duration-200 cursor-pointer",
+                    "relative z-10 shrink-0 bg-[var(--primary)] rounded-full flex items-center justify-center text-[var(--text-inverse)] active:scale-95 transition-all duration-200",
+                    canSearch ? "cursor-pointer hover:bg-[var(--primary-hover)]" : "cursor-not-allowed opacity-50",
                     mode === "filter" ? "gap-1.5 px-4 h-12 self-center mr-1.5" : "self-center w-14 h-14 mr-2"
                   )}
                   style={{ boxShadow: "var(--shadow-sm)" }} aria-label="Search">
