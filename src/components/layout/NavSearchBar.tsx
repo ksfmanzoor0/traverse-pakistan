@@ -68,7 +68,11 @@ export function NavSearchBar({ destinations = [] }: { destinations?: Destination
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
-    if (!open) setPill(pathname === "/" ? null : readSavedSearch());
+    if (open) return;
+    const isListing = pathname === "/hotels" || pathname === "/grouptours" || pathname === "/packages";
+    const hasQuery = typeof window !== "undefined" && window.location.search.length > 0;
+    const isBare = pathname === "/" || (isListing && !hasQuery);
+    setPill(isBare ? null : readSavedSearch());
   }, [open, pathname]);
 
   useEffect(() => {
@@ -84,7 +88,13 @@ export function NavSearchBar({ destinations = [] }: { destinations?: Destination
   useEffect(() => {
     setActiveTab(getDefaultTab(pathname));
     setOpen(false);
-    if (pathname === "/") {
+    // Treat home OR a bare listing page (no query params) as "user cleared the
+    // search", so the pill resets to Anywhere instead of restoring the stale
+    // last query from sessionStorage.
+    const isListing = pathname === "/hotels" || pathname === "/grouptours" || pathname === "/packages";
+    const hasQuery = typeof window !== "undefined" && window.location.search.length > 0;
+    const isBare = pathname === "/" || (isListing && !hasQuery);
+    if (isBare) {
       try { sessionStorage.removeItem("tp_search"); } catch { /* ignore */ }
       setPill(null);
     }
