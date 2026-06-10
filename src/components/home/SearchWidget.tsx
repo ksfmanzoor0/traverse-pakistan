@@ -651,8 +651,6 @@ export function SearchWidget({
     if (mode === "filter") {
       const tabPath = activeTab === "hotels" ? "/hotels" : activeTab === "grouptours" ? "/grouptours" : "/packages";
       const target = `${tabPath}${params.toString() ? `?${params.toString()}` : ""}`;
-      // Temporary: diagnose intermittent "URL doesn't update" reports on hotels.
-      // Safe to remove once the cause is pinned down.
       router.push(target);
       onFilter?.({
         destination: effectiveDest ?? "",
@@ -665,12 +663,7 @@ export function SearchWidget({
       router.push(`${basePath}${params.toString() ? `?${params.toString()}` : ""}`);
     }
     setActiveField(null);
-    // Defer the close until after the navigation commits. onClose fires
-    // setOpen(false) which triggers an AnimatePresence exit on this widget;
-    // running that on the same tick as router.push can race the navigation
-    // transition and drop the searchParams update (seen on /hotels where the
-    // pathname stays the same, so only searchParams change).
-    setTimeout(() => onClose?.(), 0);
+    onClose?.();
   };
 
   const instanceId = useId();
