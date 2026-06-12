@@ -35,11 +35,16 @@ export function UserMenu() {
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
-  if (loading) {
-    return <div className="w-9 h-9 rounded-full bg-[var(--bg-subtle)] animate-pulse" aria-hidden />;
-  }
-
-  if (!user) {
+  // While auth is still resolving (and for every logged-out visitor) render the
+  // sign-in link. This is deliberately the SAME element the server renders —
+  // the server has no auth knowledge so it always renders in the `loading`
+  // state. A logged-in session can only be confirmed asynchronously (after
+  // hydration), so the swap to the avatar happens as a normal post-hydration
+  // update, never as a hydration diff. Rendering a distinct loading skeleton
+  // here instead causes React error #418 because the navbar sits inside a
+  // <Suspense> boundary and the skeleton (server) wouldn't match the resolved
+  // link (client) at hydration time.
+  if (loading || !user) {
     return (
       <Link
         href={signInHref}
