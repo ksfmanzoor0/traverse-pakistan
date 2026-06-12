@@ -651,8 +651,6 @@ export function SearchWidget({
     if (mode === "filter") {
       const tabPath = activeTab === "hotels" ? "/hotels" : activeTab === "grouptours" ? "/grouptours" : "/packages";
       const target = `${tabPath}${params.toString() ? `?${params.toString()}` : ""}`;
-      // Temporary: diagnose intermittent "URL doesn't update" reports on hotels.
-      // Safe to remove once the cause is pinned down.
       router.push(target);
       onFilter?.({
         destination: effectiveDest ?? "",
@@ -665,12 +663,7 @@ export function SearchWidget({
       router.push(`${basePath}${params.toString() ? `?${params.toString()}` : ""}`);
     }
     setActiveField(null);
-    // Defer the close until after the navigation commits. onClose fires
-    // setOpen(false) which triggers an AnimatePresence exit on this widget;
-    // running that on the same tick as router.push can race the navigation
-    // transition and drop the searchParams update (seen on /hotels where the
-    // pathname stays the same, so only searchParams change).
-    setTimeout(() => onClose?.(), 0);
+    onClose?.();
   };
 
   const instanceId = useId();
@@ -687,7 +680,14 @@ export function SearchWidget({
           <button
             key={tab.id}
             type="button"
-            onClick={() => { setActiveTab(tab.id); setActiveField("destination"); }}
+            onClick={() => {
+              setActiveTab(tab.id);
+              setActiveField("destination");
+              // Activating destination shows the input bound to destSearch,
+              // which is empty after a prior pick — mirror selectedDest's
+              // name in so the field doesn't look empty after a tab switch.
+              if (selectedDestName && !destSearch) setDestSearch(selectedDestName);
+            }}
             className={cn(
               "px-5 py-2.5 text-[14px] font-semibold rounded-[var(--radius-full)] transition-all duration-200 cursor-pointer",
               activeTab === tab.id

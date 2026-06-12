@@ -1,10 +1,19 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useTheme } from "./ThemeProvider";
 import { cn } from "@/lib/utils";
 
 export function ThemeToggle({ className }: { className?: string }) {
   const { theme, toggleTheme } = useTheme();
+  // Until mounted, render the static "light" variant so the SSR HTML always
+  // matches the first client render. The pre-hydration <script> in
+  // <head> sets the real data-theme attribute on <html>, so the CSS picks
+  // up the correct colors even while this button is still showing the
+  // light-default icon for one frame.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const effectiveTheme = mounted ? theme : "light";
 
   return (
     <button
@@ -16,8 +25,8 @@ export function ThemeToggle({ className }: { className?: string }) {
         "transition-all duration-200 cursor-pointer",
         className
       )}
-      aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
-      title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+      aria-label={`Switch to ${effectiveTheme === "light" ? "dark" : "light"} mode`}
+      title={`Switch to ${effectiveTheme === "light" ? "dark" : "light"} mode`}
     >
       {/* Sun icon (shown in dark mode) */}
       <svg
@@ -31,7 +40,7 @@ export function ThemeToggle({ className }: { className?: string }) {
         strokeLinejoin="round"
         className={cn(
           "absolute transition-all duration-300",
-          theme === "dark"
+          effectiveTheme === "dark"
             ? "opacity-100 rotate-0 scale-100"
             : "opacity-0 rotate-90 scale-0"
         )}
@@ -59,7 +68,7 @@ export function ThemeToggle({ className }: { className?: string }) {
         strokeLinejoin="round"
         className={cn(
           "absolute transition-all duration-300",
-          theme === "light"
+          effectiveTheme === "light"
             ? "opacity-100 rotate-0 scale-100"
             : "opacity-0 -rotate-90 scale-0"
         )}

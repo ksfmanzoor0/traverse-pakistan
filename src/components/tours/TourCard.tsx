@@ -35,10 +35,9 @@ export function TourCard({ tour, variant = "carousel", className }: TourCardProp
     : null;
 
   return (
-    <Link
-      href={`/grouptours/${tour.slug}`}
+    <div
       className={cn(
-        "group flex flex-col rounded-[var(--radius-md)] overflow-hidden bg-[var(--bg-primary)]",
+        "group relative flex flex-col rounded-[var(--radius-md)] overflow-hidden bg-[var(--bg-primary)]",
         "transition-all duration-[350ms] ease-[cubic-bezier(0.2,0,0,1)] hover:-translate-y-1",
         variant === "carousel"
           ? "min-w-[261px] w-[261px] sm:min-w-[320px] sm:w-[320px]"
@@ -47,6 +46,7 @@ export function TourCard({ tour, variant = "carousel", className }: TourCardProp
       )}
       style={{ boxShadow: "rgba(0,0,0,0.04) 0 0 0 1px, rgba(0,0,0,0.08) 0 2px 10px" }}
     >
+      <Link href={`/grouptours/${tour.slug}`} className="flex flex-col flex-1">
       {/* Image — landscape */}
       <div className="relative aspect-[4/3] overflow-hidden">
         <Image
@@ -63,10 +63,6 @@ export function TourCard({ tour, variant = "carousel", className }: TourCardProp
           </div>
         )}
 
-        {/* Wishlist + social-proof saved count — top right */}
-        <div className="absolute top-3 right-3">
-          <WishlistButton itemType="tour" itemSlug={tour.slug} savedCount={savedCount} />
-        </div>
 
         {/* Quick View — bottom left on hover */}
         <div className="absolute bottom-3 left-3 opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-300">
@@ -176,6 +172,10 @@ export function TourCard({ tour, variant = "carousel", className }: TourCardProp
           </span>
         </div>
       </div>
-    </Link>
+      </Link>
+      <div className="absolute top-3 right-3 z-10">
+        <WishlistButton itemType="tour" itemSlug={tour.slug} savedCount={savedCount} />
+      </div>
+    </div>
   );
 }
