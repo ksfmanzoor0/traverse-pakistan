@@ -180,7 +180,13 @@ export function HotelBookingSidebar({ hotel }: { hotel: Hotel }) {
   });
 
   const perNightTotal = lineItems.reduce((s, li) => s + li.pricePerNight * li.sel.qty, 0);
-  const grandTotal = lineItems.reduce((s, li) => s + li.roomTotal + li.extraTotal, 0);
+  const subtotal = lineItems.reduce((s, li) => s + li.roomTotal + li.extraTotal, 0);
+  const gstRate = hotel.taxRate ?? 0;
+  const bedRate = hotel.bedTaxRate ?? 0;
+  const gstAmount = Math.round(subtotal * gstRate);
+  const bedAmount = Math.round(subtotal * bedRate);
+  const grandTotal = subtotal + gstAmount + bedAmount;
+  const hasAnyTax = gstAmount > 0 || bedAmount > 0;
 
   // Starting price shown in header
   const minRoomPrice = hotel.rooms.length > 0 ? Math.min(...hotel.rooms.map((r) => r.price)) : 0;
@@ -321,8 +327,20 @@ export function HotelBookingSidebar({ hotel }: { hotel: Hotel }) {
                 {roomTotal + extraTotal !== pricePerNight * sel.qty * (nights || 1) + extraTotal && null}
               </div>
             ))}
+            {nights > 0 && gstAmount > 0 && (
+              <div className="flex justify-between text-[13px] pt-2 border-t border-[var(--border-default)]">
+                <span className="text-[var(--text-secondary)]">GST ({Math.round(gstRate * 100)}%)</span>
+                <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(gstAmount)}</span>
+              </div>
+            )}
+            {nights > 0 && bedAmount > 0 && (
+              <div className={`flex justify-between text-[13px] ${gstAmount > 0 ? "" : "pt-2 border-t border-[var(--border-default)]"}`}>
+                <span className="text-[var(--text-secondary)]">Bed Tax ({Math.round(bedRate * 100)}%)</span>
+                <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(bedAmount)}</span>
+              </div>
+            )}
             {nights > 0 && (
-              <div className="flex justify-between text-[15px] font-bold pt-2 border-t border-[var(--border-default)]">
+              <div className={`flex justify-between text-[15px] font-bold pt-2 ${hasAnyTax ? "" : "border-t border-[var(--border-default)]"}`}>
                 <span className="text-[var(--text-primary)]">Total</span>
                 <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(grandTotal)}</span>
               </div>
