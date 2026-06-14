@@ -63,8 +63,12 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
     const extraRate = room?.extraOccupancyCharge ?? 0;
     return s + li.pricePerNight * li.qty * nights + extraRate * extraPeople * nights;
   }, 0);
-  const taxAmount = Math.round(subtotal * (hotel.taxRate ?? 0));
-  const grandTotal = subtotal + taxAmount;
+  const gstRate = hotel.taxRate ?? 0;
+  const bedRate = hotel.bedTaxRate ?? 0;
+  const gstAmount = Math.round(subtotal * gstRate);
+  const bedAmount = Math.round(subtotal * bedRate);
+  const grandTotal = subtotal + gstAmount + bedAmount;
+  const hasAnyTax = gstAmount > 0 || bedAmount > 0;
 
   const [form, setForm] = useState({
     firstName: "",
@@ -289,16 +293,24 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
 
             {/* Totals */}
             <div className="space-y-2">
-              {taxAmount > 0 ? (
+              {hasAnyTax ? (
                 <>
                   <div className="flex justify-between text-[13px]">
                     <span className="text-[var(--text-secondary)]">Subtotal</span>
                     <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(subtotal)}</span>
                   </div>
-                  <div className="flex justify-between text-[13px]">
-                    <span className="text-[var(--text-secondary)]">Taxes ({Math.round((hotel.taxRate ?? 0) * 100)}%)</span>
-                    <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(taxAmount)}</span>
-                  </div>
+                  {gstAmount > 0 && (
+                    <div className="flex justify-between text-[13px]">
+                      <span className="text-[var(--text-secondary)]">GST ({Math.round(gstRate * 100)}%)</span>
+                      <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(gstAmount)}</span>
+                    </div>
+                  )}
+                  {bedAmount > 0 && (
+                    <div className="flex justify-between text-[13px]">
+                      <span className="text-[var(--text-secondary)]">Bed Tax ({Math.round(bedRate * 100)}%)</span>
+                      <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(bedAmount)}</span>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="flex justify-between text-[13px] text-[var(--success)]">
