@@ -180,7 +180,9 @@ export function HotelBookingSidebar({ hotel }: { hotel: Hotel }) {
   });
 
   const perNightTotal = lineItems.reduce((s, li) => s + li.pricePerNight * li.sel.qty, 0);
-  const grandTotal = lineItems.reduce((s, li) => s + li.roomTotal + li.extraTotal, 0);
+  const subtotal = lineItems.reduce((s, li) => s + li.roomTotal + li.extraTotal, 0);
+  const taxAmount = Math.round(subtotal * (hotel.taxRate ?? 0));
+  const grandTotal = subtotal + taxAmount;
 
   // Starting price shown in header
   const minRoomPrice = hotel.rooms.length > 0 ? Math.min(...hotel.rooms.map((r) => r.price)) : 0;
@@ -321,8 +323,14 @@ export function HotelBookingSidebar({ hotel }: { hotel: Hotel }) {
                 {roomTotal + extraTotal !== pricePerNight * sel.qty * (nights || 1) + extraTotal && null}
               </div>
             ))}
+            {nights > 0 && taxAmount > 0 && (
+              <div className="flex justify-between text-[13px] pt-2 border-t border-[var(--border-default)]">
+                <span className="text-[var(--text-secondary)]">Taxes ({Math.round((hotel.taxRate ?? 0) * 100)}%)</span>
+                <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(taxAmount)}</span>
+              </div>
+            )}
             {nights > 0 && (
-              <div className="flex justify-between text-[15px] font-bold pt-2 border-t border-[var(--border-default)]">
+              <div className={`flex justify-between text-[15px] font-bold pt-2 ${taxAmount > 0 ? "" : "border-t border-[var(--border-default)]"}`}>
                 <span className="text-[var(--text-primary)]">Total</span>
                 <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(grandTotal)}</span>
               </div>

@@ -63,6 +63,8 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
     const extraRate = room?.extraOccupancyCharge ?? 0;
     return s + li.pricePerNight * li.qty * nights + extraRate * extraPeople * nights;
   }, 0);
+  const taxAmount = Math.round(subtotal * (hotel.taxRate ?? 0));
+  const grandTotal = subtotal + taxAmount;
 
   const [form, setForm] = useState({
     firstName: "",
@@ -92,7 +94,7 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
       adults: totalAdults,
       children: totalChildren,
       nights,
-      totalAmount: subtotal,
+      totalAmount: grandTotal,
       contact: {
         name: form.firstName.trim(),
         email: form.email,
@@ -287,13 +289,26 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
 
             {/* Totals */}
             <div className="space-y-2">
-              <div className="flex justify-between text-[13px] text-[var(--success)]">
-                <span>Taxes & fees</span>
-                <span>Included</span>
-              </div>
+              {taxAmount > 0 ? (
+                <>
+                  <div className="flex justify-between text-[13px]">
+                    <span className="text-[var(--text-secondary)]">Subtotal</span>
+                    <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-[13px]">
+                    <span className="text-[var(--text-secondary)]">Taxes ({Math.round((hotel.taxRate ?? 0) * 100)}%)</span>
+                    <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(taxAmount)}</span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex justify-between text-[13px] text-[var(--success)]">
+                  <span>Taxes & fees</span>
+                  <span>Included</span>
+                </div>
+              )}
               <div className="flex justify-between text-[15px] font-bold">
                 <span className="text-[var(--text-primary)]">Total</span>
-                <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(subtotal)}</span>
+                <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(grandTotal)}</span>
               </div>
             </div>
           </div>

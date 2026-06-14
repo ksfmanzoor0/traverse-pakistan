@@ -55,6 +55,7 @@ export interface Hotel {
   reviewCount: number;
   pricePerNight: number;        // entry price (lowest room, lowest season) for listing cards
   margin: number;               // per-hotel markup applied to corporate/base rates → display price
+  taxRate?: number;             // sales/bed tax as decimal (e.g. 0.16 for 16%). Applied at sidebar/checkout, not baked into room.price. Absent → 0.
   guestFavourite?: boolean;
   seasons?: HotelSeasonDefinition[];
   taxNote?: string;             // e.g. "No GST — Gilgit-Baltistan tax-free zone"
