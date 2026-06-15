@@ -154,7 +154,7 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
         className="sticky top-0 z-50 bg-[var(--bg-primary)]/95 backdrop-blur-md"
         style={{ boxShadow: "0 1px 0 var(--border-default)" }}
       >
-        <nav className="mx-auto max-w-[1400px] flex items-center md:grid md:grid-cols-[1fr_auto_1fr] md:items-start min-h-[64px] sm:min-h-[76px] px-4 sm:px-8 lg:px-16">
+        <nav className="relative mx-auto max-w-[1400px] flex items-center justify-between min-h-[64px] sm:min-h-[76px] px-4 sm:px-8 lg:px-16">
           {/* Logo — CSS-driven so there's no flash on dark-mode reload */}
           <div className="shrink-0 h-[64px] sm:h-[76px] flex items-center">
             <Link href="/" onClick={closeAll}>
@@ -181,9 +181,16 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
             </Link>
           </div>
 
-          {/* Desktop search bar — hidden on mobile and home page */}
-          <div className="hidden md:flex justify-center py-3 min-h-[76px] w-[850px]">
-            {showDesktopSearch && <NavSearchBar destinations={destinations} />}
+          {/* Desktop search bar — Airbnb style: logo pinned left, actions pinned
+              right (justify-between), search absolutely centered to the viewport
+              so neither side can push it off-centre. pointer-events-none lets
+              clicks fall through the empty track to logo/actions beneath. */}
+          <div className="hidden md:flex absolute inset-y-0 left-1/2 -translate-x-1/2 w-[720px] items-center justify-center pointer-events-none">
+            {showDesktopSearch && (
+              <div className="pointer-events-auto w-full flex justify-center">
+                <NavSearchBar destinations={destinations} />
+              </div>
+            )}
           </div>
 
           {/* Right actions */}
