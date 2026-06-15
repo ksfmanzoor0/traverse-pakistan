@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, LayoutGroup } from "framer-motion";
+import { MobileSearchFields } from "@/components/search/MobileSearchFields";
 import { cn, getWhatsAppUrl } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { createQuoteRequest } from "@/services/quote.service";
@@ -244,7 +245,8 @@ export function CustomiseTourForm({ destinations = [] }: { destinations?: Destin
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      {/* ── Search-bar pill: destination · dates · guests ── */}
+      {/* ── Search: desktop pill (md+) ── */}
+      <div className="hidden md:block">
       <LayoutGroup id="customise-tour">
         <div ref={widgetRef} className="relative">
           <div
@@ -376,6 +378,23 @@ export function CustomiseTourForm({ destinations = [] }: { destinations?: Destin
           </AnimatePresence>
         </div>
       </LayoutGroup>
+      </div>
+
+      {/* ── Search: mobile vertical stack — reuses the exact site mobile search ── */}
+      <div className="md:hidden">
+        <MobileSearchFields
+          destinations={destinations}
+          rangeDates
+          selectedDest={selectedDest}
+          onSelectedDestChange={setSelectedDest}
+          startDate={startDate}
+          endDate={endDate}
+          onStartDateChange={setStartDate}
+          onEndDateChange={setEndDate}
+          travelers={travelers}
+          onTravelersChange={setTravelers}
+        />
+      </div>
 
       {/* ── Budget ── */}
       <div>
