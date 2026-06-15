@@ -2,11 +2,17 @@
 
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import type { CreateQuoteRequestInput, QuoteRequestSummary } from "@/types/quote";
+import type { CreateQuoteRequestInput } from "@/types/quote";
 
+// NOTE: we deliberately do NOT chain `.select()` here. A returning select
+// triggers the RLS SELECT policy on the new row, which is owner-only
+// (auth.uid() = user_id). Logged-out visitors (user_id null) can't read their
+// own row back, so RETURNING fails with "new row violates row-level security
+// policy". Inserting without a representation skips RETURNING entirely; the
+// insert WITH CHECK policy still allows it. Callers only need success/failure.
 export async function createQuoteRequest(
   input: CreateQuoteRequestInput
-): Promise<QuoteRequestSummary> {
+): Promise<void> {
   if (!isSupabaseConfigured) {
     throw new Error("Quote requests unavailable. Please use WhatsApp.");
   }
@@ -15,7 +21,7 @@ export async function createQuoteRequest(
   const { data: sessionData } = await supabase.auth.getSession();
   const userId = sessionData.session?.user.id ?? null;
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("quote_requests")
     .insert({
       user_id: userId,
@@ -33,10 +39,7 @@ export async function createQuoteRequest(
       contact_email: input.contact.email,
       contact_phone: input.contact.phone,
       notes: input.notes ?? null,
-    })
-    .select("id, created_at")
-    .single();
+    });
 
   if (error) throw new Error(error.message);
-  return { id: data.id, createdAt: data.created_at };
 }
