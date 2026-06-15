@@ -17,7 +17,7 @@ import {
 
 type ActiveField = "dest" | "dates" | "who" | null;
 
-const BUDGETS = ["Budget", "Comfort", "Premium", "Luxury"] as const;
+const BUDGETS = ["Budget", "Deluxe", "Premium", "Luxury"] as const;
 const INTERESTS = [
   "Trekking & Hiking",
   "Family Friendly",
@@ -227,7 +227,7 @@ export function CustomiseTourForm({ destinations = [] }: { destinations?: Destin
       <LayoutGroup id="customise-tour">
         <div ref={widgetRef} className="relative">
           <div
-            className="bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-full)] h-[72px] grid grid-cols-[1fr_1px_1fr_1px_1fr]"
+            className="bg-[var(--bg-subtle)] [[data-theme=dark]_&]:bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-[var(--radius-full)] h-[72px] grid grid-cols-[1fr_1px_1fr_1px_1fr]"
             style={{ boxShadow: "var(--shadow-lg)" }}
           >
             <DestinationField
