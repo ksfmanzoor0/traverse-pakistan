@@ -185,6 +185,27 @@ export function CustomiseTourForm({ destinations = [] }: { destinations?: Destin
         contact: { name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim() },
         notes: composedNotes() || undefined,
       });
+
+      // Best-effort team notification — never blocks the success state.
+      void fetch("/api/quote/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requestType: "custom",
+          displayName: selectedDestName ? `Custom tour — ${selectedDestName}` : "Custom tour — Pakistan",
+          tier: budget,
+          preferredStartDate: startDate ? toISODate(startDate) : null,
+          preferredEndDate: endDate ? toISODate(endDate) : null,
+          adults: travelers.adults,
+          children: travelers.children,
+          rooms: 1,
+          destinationName: selectedDestName ?? null,
+          interests,
+          contact: { name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim() },
+          notes: composedNotes() || null,
+        }),
+      }).catch(() => { /* notification is best-effort */ });
+
       setSubmitted(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not submit request");
