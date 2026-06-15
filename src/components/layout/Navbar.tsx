@@ -19,6 +19,7 @@ const NAV_LINKS = [
   { label: "Custom Tours", href: "/packages" },
   { label: "Group Tours", href: "/grouptours" },
   { label: "Hotels", href: "/hotels" },
+  { label: "Plan My Trip", href: "/customise-tour" },
 ];
 
 const LISTING_PATHS = ["/packages", "/hotels", "/grouptours"] as const;
@@ -188,6 +189,13 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
           {/* Right actions */}
           <div className="ml-auto flex items-center md:justify-end gap-1 h-[64px] sm:h-[76px]">
             <ThemeToggle />
+            <Link
+              href="/customise-tour"
+              className="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-sm)] text-[13px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] transition-colors"
+            >
+              <Icon name="compass" size="xs" />
+              Plan My Trip
+            </Link>
             <Link
               href="/bookings/find"
               className="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-sm)] text-[13px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] transition-colors"

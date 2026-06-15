@@ -951,7 +951,7 @@ export function SearchWidget({
 }
 
 /* ── Sub-components ── */
-function FieldButton({ label, value, placeholder, active, onClick, onClear, className, noActiveBg }: {
+export function FieldButton({ label, value, placeholder, active, onClick, onClear, className, noActiveBg }: {
   label: string; value?: string; placeholder: string; active: boolean; onClick: () => void; onClear?: () => void; className?: string; noActiveBg?: boolean;
 }) {
   return (
@@ -991,7 +991,7 @@ function FieldButton({ label, value, placeholder, active, onClick, onClear, clas
   );
 }
 
-function DropdownPanel({ children, className, centerX = false }: { children: React.ReactNode; className?: string; centerX?: boolean }) {
+export function DropdownPanel({ children, className, centerX = false }: { children: React.ReactNode; className?: string; centerX?: boolean }) {
   const x = centerX ? "-50%" : 0;
   return (
     <motion.div
@@ -1009,7 +1009,7 @@ function DropdownPanel({ children, className, centerX = false }: { children: Rea
   );
 }
 
-function StepperButton({ children, onClick, disabled }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; }) {
+export function StepperButton({ children, onClick, disabled }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; }) {
   return (
     <button type="button" onClick={onClick} disabled={disabled}
       className={cn(
@@ -1023,7 +1023,7 @@ function StepperButton({ children, onClick, disabled }: { children: React.ReactN
   );
 }
 
-function DestinationField({ value, active, destSearch, onDestSearchChange, onActivate, onClear, className }: {
+export function DestinationField({ value, active, destSearch, onDestSearchChange, onActivate, onClear, className }: {
   value?: string; active: boolean; destSearch: string;
   onDestSearchChange: (v: string) => void; onActivate: () => void; onClear?: () => void; className?: string;
 }) {
@@ -1079,7 +1079,7 @@ function DestinationField({ value, active, destSearch, onDestSearchChange, onAct
   );
 }
 
-function Divider({ className, faded }: { className?: string; faded?: boolean }) {
+export function Divider({ className, faded }: { className?: string; faded?: boolean }) {
   return (
     <div className={cn(
       "w-px h-6 bg-[var(--border-default)]/60 shrink-0 self-center transition-opacity duration-200",
