@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
+import { AnimatePresence, LayoutGroup } from "framer-motion";
 import { cn, getWhatsAppUrl } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { createQuoteRequest } from "@/services/quote.service";
