@@ -485,7 +485,7 @@ export function CustomiseTourForm({ destinations = [] }: { destinations?: Destin
         <button
           type="submit"
           disabled={!isValid || submitting}
-          className="flex-1 h-12 bg-[var(--primary)] text-[var(--text-inverse)] text-[14px] font-bold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+          className="h-12 sm:flex-1 bg-[var(--primary)] text-[var(--text-inverse)] text-[14px] font-bold rounded-[var(--radius-sm)] hover:bg-[var(--primary-hover)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
         >
           {submitting ? "Sending…" : "Send my request"}
         </button>
