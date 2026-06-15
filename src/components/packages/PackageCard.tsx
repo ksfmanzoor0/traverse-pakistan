@@ -132,10 +132,12 @@ export function PackageCard({ pkg, variant = "carousel", className }: PackageCar
       </div>
       </Link>
       <div className="absolute top-3.5 right-3.5 z-10 flex items-center gap-1.5">
-        <span className="px-2 py-1 bg-black/40 backdrop-blur-md text-[var(--on-dark)] text-[10px] font-bold rounded-full border border-[var(--on-dark-border)] uppercase tracking-wide">
+        {/* Tier pills hidden on mobile — narrow cards collide with the top-left
+            badge; the price footer already shows deluxe + luxury. Shown sm+. */}
+        <span className="hidden sm:inline-flex items-center px-2 py-1 bg-black/40 backdrop-blur-md text-[var(--on-dark)] text-[10px] font-bold rounded-full border border-[var(--on-dark-border)] uppercase tracking-wide">
           Deluxe
         </span>
-        <span className="px-2 py-1 bg-[var(--primary)]/80 backdrop-blur-md text-[var(--on-dark)] text-[10px] font-bold rounded-full uppercase tracking-wide">
+        <span className="hidden sm:inline-flex items-center px-2 py-1 bg-[var(--primary)]/80 backdrop-blur-md text-[var(--on-dark)] text-[10px] font-bold rounded-full uppercase tracking-wide">
           Luxury
         </span>
         <WishlistButton itemType="package" itemSlug={pkg.slug} />
