@@ -226,7 +226,10 @@ export function CustomiseTourForm({ destinations = [] }: { destinations?: Destin
       {/* ── Search-bar pill: destination · dates · guests ── */}
       <LayoutGroup id="customise-tour">
         <div ref={widgetRef} className="relative">
-          <div className="bg-[var(--bg-subtle)] rounded-[var(--radius-full)] h-[66px] grid grid-cols-[1fr_1px_1fr_1px_1fr]">
+          <div
+            className="bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-full)] h-[72px] grid grid-cols-[1fr_1px_1fr_1px_1fr]"
+            style={{ boxShadow: "var(--shadow-lg)" }}
+          >
             <DestinationField
               value={selectedDestName}
               active={activeField === "dest"}
@@ -355,7 +358,7 @@ export function CustomiseTourForm({ destinations = [] }: { destinations?: Destin
 
       {/* ── Budget ── */}
       <div>
-        <label className={labelCls}>Budget per person</label>
+        <label className={labelCls}>Tier</label>
         <div className="flex flex-wrap gap-2">
           {BUDGETS.map((b) => {
             const active = budget === b;
@@ -406,16 +409,16 @@ export function CustomiseTourForm({ destinations = [] }: { destinations?: Destin
       {/* ── Contact ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="sm:col-span-2">
-          <label className={labelCls}>Full name</label>
+          <label className={labelCls}>Full name <span className="text-[var(--error)]">*</span></label>
           <input required className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Your name" />
         </div>
         <div>
-          <label className={labelCls}>Email</label>
-          <input required type="email" className={inputCls} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@example.com" />
+          <label className={labelCls}>Email <span className="text-[var(--error)]">*</span></label>
+          <input required type="email" inputMode="email" className={inputCls} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@example.com" />
         </div>
         <div>
-          <label className={labelCls}>Phone / WhatsApp</label>
-          <input required type="tel" className={inputCls} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+92 300 0000000" />
+          <label className={labelCls}>Phone / WhatsApp <span className="text-[var(--error)]">*</span></label>
+          <input required type="tel" inputMode="tel" className={inputCls} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+92 300 0000000" />
         </div>
       </div>
 

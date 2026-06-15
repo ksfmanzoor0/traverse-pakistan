@@ -58,7 +58,7 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
     const rest = pathname.slice(p.length + 1);
     return !rest.includes("/") || rest.endsWith("/checkout");
   });
-  const showDesktopSearch = !isHome;
+  const showDesktopSearch = !isHome && pathname !== "/customise-tour";
 
   const detailCategory = pathname.startsWith("/hotels") ? "Hotels"
     : pathname.startsWith("/grouptours") ? "Group Tours"
@@ -191,14 +191,14 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
             <ThemeToggle />
             <Link
               href="/customise-tour"
-              className="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-sm)] text-[13px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] transition-colors"
+              className="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-sm)] text-[13px] font-semibold whitespace-nowrap text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] transition-colors"
             >
               <Icon name="compass" size="xs" />
               Plan My Trip
             </Link>
             <Link
               href="/bookings/find"
-              className="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-sm)] text-[13px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] transition-colors"
+              className="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-sm)] text-[13px] font-semibold whitespace-nowrap text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] transition-colors"
             >
               <Icon name="bookmark" size="xs" />
               My Bookings

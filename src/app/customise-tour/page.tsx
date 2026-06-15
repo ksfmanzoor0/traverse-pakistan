@@ -40,7 +40,7 @@ export default async function CustomiseTourPage() {
       </div>
 
       <Container>
-        <div className="max-w-[820px] mx-auto pt-8 sm:pt-12">
+        <div className="max-w-[960px] mx-auto pt-8 sm:pt-12">
           <CustomiseTourForm destinations={destinationOptions} />
         </div>
       </Container>
