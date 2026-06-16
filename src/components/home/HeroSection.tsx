@@ -52,7 +52,7 @@ export function HeroSection({ destinations = [] }: { destinations?: DestinationO
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-[540px] px-5 sm:px-8 pt-6 pb-24">
         <h1
-          className="text-[var(--on-dark)] leading-[1.05] tracking-[-0.03em] font-extrabold text-center max-w-3xl"
+          className="text-[var(--on-dark)] leading-[1.05] tracking-[-0.015em] font-semibold text-center max-w-3xl"
           style={{
             fontSize: "clamp(1.75rem, 1.5rem + 3vw, 3.5rem)",
             textShadow: "0 2px 16px rgba(0,0,0,0.3)",

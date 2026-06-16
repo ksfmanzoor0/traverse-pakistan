@@ -71,7 +71,7 @@ export function VideoStories() {
               The Journey Awaits
             </span>
             <h2
-              className="text-[var(--on-dark)] font-bold tracking-[-0.03em] leading-tight"
+              className="text-[var(--on-dark)] font-semibold tracking-[-0.015em] leading-tight"
               style={{ fontSize: "var(--text-4xl)" }}
             >
               Stories from the Road
