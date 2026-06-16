@@ -180,7 +180,7 @@ export function NavSearchBar({ destinations = [] }: { destinations?: Destination
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.28, ease: [0.32, 0.72, 0, 1] } }}
                 transition={EASE_OUT}
-                className="flex items-center h-16 w-full max-w-[680px] border border-[var(--border-default)] rounded-full bg-[var(--bg-primary)] hover:shadow-md cursor-pointer pl-5 pr-2"
+                className="flex items-center h-[66px] w-full max-w-[680px] border border-[var(--border-default)] rounded-full bg-[var(--bg-primary)] hover:shadow-md cursor-pointer pl-5 pr-2"
                 style={{ boxShadow: "var(--shadow-sm)" }}
               >
                 <span className="flex-[2] flex flex-col items-start justify-center text-left px-2 min-w-0">
