@@ -72,7 +72,7 @@ export function VideoStories() {
             </span>
             <h2
               className="text-[var(--on-dark)] font-semibold tracking-[-0.015em] leading-tight"
-              style={{ fontSize: "var(--text-4xl)" }}
+              style={{ fontSize: "clamp(1.375rem, 1.2rem + 1vw, 2.25rem)" }}
             >
               Stories from the Road
             </h2>
