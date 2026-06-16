@@ -28,7 +28,7 @@ export default async function CustomiseTourPage() {
         <Container>
           <Breadcrumb items={[{ label: "Plan My Trip" }]} />
           <div className="mt-2 sm:mt-4 max-w-[680px]">
-            <h1 className="text-[26px] sm:text-[42px] font-bold text-[var(--text-primary)] tracking-[-0.025em] leading-[1.15]">
+            <h1 className="text-[22px] sm:text-[42px] font-semibold text-[var(--text-primary)] tracking-[-0.015em] leading-[1.15]">
               Plan your perfect trip
             </h1>
             <p className="mt-1.5 text-[15px] sm:text-lg text-[var(--text-secondary)]">
