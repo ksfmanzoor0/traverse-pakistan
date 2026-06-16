@@ -27,7 +27,7 @@ export default async function PackagesPage() {
         <Container>
           <Breadcrumb items={[{ label: "Packages" }]} />
           <div className="mt-2 sm:mt-4">
-            <h1 className="text-[22px] sm:text-[42px] font-semibold text-[var(--text-primary)] tracking-[-0.015em] leading-[1.15]">
+            <h1 className="text-[22px] sm:text-[42px] font-semibold sm:font-bold text-[var(--text-primary)] tracking-[-0.015em] sm:tracking-[-0.025em] leading-[1.15]">
               Design Your Dream Journey
             </h1>
             <p className="mt-1.5 text-[15px] sm:text-lg text-[var(--text-secondary)]">

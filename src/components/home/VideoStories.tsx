@@ -70,10 +70,7 @@ export function VideoStories() {
             <span className="inline-block text-[11px] font-bold uppercase tracking-[0.15em] text-[var(--primary-muted)] mb-3">
               The Journey Awaits
             </span>
-            <h2
-              className="text-[var(--on-dark)] font-semibold tracking-[-0.015em] leading-tight"
-              style={{ fontSize: "clamp(1.375rem, 1.2rem + 1vw, 2.25rem)" }}
-            >
+            <h2 className="text-[22px] sm:text-[length:var(--text-4xl)] text-[var(--on-dark)] font-semibold sm:font-bold tracking-[-0.015em] sm:tracking-[-0.03em] leading-tight">
               Stories from the Road
             </h2>
             <p className="mt-3 text-[var(--on-dark-tertiary)] max-w-md mx-auto" style={{ fontSize: "var(--text-lg)" }}>

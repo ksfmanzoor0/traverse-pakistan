@@ -149,10 +149,7 @@ export function GoogleReviews() {
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8 mb-10">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--primary-muted)] mb-2">Reviews</p>
-            <h2
-              className="font-semibold text-[var(--on-dark)] tracking-[-0.015em] leading-tight"
-              style={{ fontSize: "clamp(1.375rem, 1.2rem + 1vw, 2.25rem)" }}
-            >
+            <h2 className="text-[22px] sm:text-[32px] font-semibold sm:font-bold text-[var(--on-dark)] tracking-[-0.015em] sm:tracking-tight leading-tight">
               What our travellers say
             </h2>
             <p className="mt-1 text-[14px] text-[var(--on-dark-secondary)]">
