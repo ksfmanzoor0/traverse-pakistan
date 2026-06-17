@@ -82,6 +82,27 @@ const HOTEL_SELECT = `
 
 // ── Mapper ────────────────────────────────────────────────────────────────────
 
+// Today's MM-DD against a season period (from/to are MM-DD after the slice below).
+function periodCoversToday(from: string, to: string, mmdd: string): boolean {
+  return from <= to ? mmdd >= from && mmdd <= to : mmdd >= from || mmdd <= to;
+}
+
+// Lowest room price for today's active season; falls back to global min(room.price)
+// when no season period matches (e.g. closed/single-rate hotels).
+function entryPriceForToday(rooms: HotelRoom[], seasons: HotelSeasonDefinition[]): number | null {
+  if (rooms.length === 0) return null;
+  const now = new Date();
+  const mmdd = `${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const activeLabel = seasons.find((s) => s.periods.some((p) => periodCoversToday(p.from, p.to, mmdd)))?.label;
+  if (activeLabel) {
+    const seasonal = rooms
+      .map((r) => r.prices?.find((p) => p.season === activeLabel)?.price)
+      .filter((p): p is number => typeof p === "number");
+    if (seasonal.length > 0) return Math.min(...seasonal);
+  }
+  return Math.min(...rooms.map((r) => r.price));
+}
+
 function toHotel(raw: RawHotel): Hotel {
   const rooms: HotelRoom[] = [...(raw.hotel_rooms ?? [])]
     .sort((a, b) => a.sort_order - b.sort_order)
@@ -136,7 +157,7 @@ function toHotel(raw: RawHotel): Hotel {
     images: [raw.image],
     rating: Number(raw.rating),
     reviewCount: raw.review_count,
-    pricePerNight: raw.price_per_night,
+    pricePerNight: entryPriceForToday(rooms, seasons) ?? raw.price_per_night,
     margin: Number(raw.margin),
     taxRate: Number(raw.tax_rate ?? 0),
     bedTaxRate: Number(raw.bed_tax_rate ?? 0),
