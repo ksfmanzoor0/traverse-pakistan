@@ -26,6 +26,7 @@ export interface HotelRoom {
   name: string;
   beds: string;
   price: number;                    // lowest display price — used on listing cards & legacy hotels
+  singlePrice?: number;             // flat single-occupancy display rate (pre-tax). Used when 1 adult/0 children per room; falls back to price. The matching single_operator_price stays DB-only (reconciliation — never sent to client).
   prices?: SeasonalPrice[];         // seasonal base prices; applyHotelMargin applied at display time
   capacity?: RoomCapacity;          // per-room occupancy limits; falls back to sidebar defaults if absent
   extraOccupancyCharge?: number;    // per extra person per night beyond standard occupancy (2 guests)
