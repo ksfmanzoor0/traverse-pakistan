@@ -23,23 +23,26 @@ interface LineItem {
   adults: number;
   children: number;
   pricePerNight: number;
+  isSingle: boolean;
+  singleSaving: number;   // per-stay saving vs the double rate (informational)
 }
 
 /** Parses repeated ?r=roomName|qty|adults|children params */
-function parseLineItems(searchParams: URLSearchParams, hotel: Hotel): LineItem[] {
+function parseLineItems(searchParams: URLSearchParams, hotel: Hotel, nights: number): LineItem[] {
   return searchParams.getAll("r").flatMap((raw) => {
     const parts = raw.split("|");
     if (parts.length < 4) return [];
     const [roomName, qtyStr, adultsStr, childrenStr] = parts;
     const room = hotel.rooms.find((r) => r.name === roomName);
     if (!room) return [];
-    return [{
-      roomName,
-      qty: Math.max(1, Number(qtyStr)),
-      adults: Math.max(0, Number(adultsStr)),
-      children: Math.max(0, Number(childrenStr)),
-      pricePerNight: room.price,
-    }];
+    const qty = Math.max(1, Number(qtyStr));
+    const adults = Math.max(0, Number(adultsStr));
+    const children = Math.max(0, Number(childrenStr));
+    // Single occupancy = exactly 1 adult per room, no children, and the room offers a single rate.
+    const isSingle = adults === qty && children === 0 && room.singlePrice != null;
+    const pricePerNight = isSingle ? room.singlePrice! : room.price;
+    const singleSaving = isSingle ? (room.price - room.singlePrice!) * qty * nights : 0;
+    return [{ roomName, qty, adults, children, pricePerNight, isSingle, singleSaving }];
   });
 }
 
@@ -52,7 +55,7 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
   const infant   = searchParams.get("infant") === "1";
   const nights   = checkin && checkout ? diffDays(checkin, checkout) : 1;
 
-  const lineItems = parseLineItems(searchParams, hotel);
+  const lineItems = parseLineItems(searchParams, hotel, nights);
   const totalAdults   = lineItems.reduce((s, li) => s + li.adults, 0);
   const totalChildren = lineItems.reduce((s, li) => s + li.children, 0);
   const totalRooms    = lineItems.reduce((s, li) => s + li.qty, 0);
@@ -279,6 +282,11 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
                       </span>
                       <span className="font-semibold text-[var(--text-primary)] tabular-nums">{formatPrice(lineTotal)}</span>
                     </div>
+                    {li.isSingle && li.singleSaving > 0 && (
+                      <p className="text-[11px] text-[var(--success)] mt-0.5">
+                        Single occupancy rate · save {formatPrice(li.singleSaving)}
+                      </p>
+                    )}
                     {extraPeople > 0 && extraRate > 0 && (
                       <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
                         +{extraPeople} extra guest{extraPeople > 1 ? "s" : ""} · {formatPrice(extraRate)}/night each

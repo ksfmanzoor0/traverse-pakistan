@@ -15,6 +15,7 @@ type RawRoom = {
   name: string;
   beds: string;
   price: number;
+  single_price: number | null;
   available: number;
   extra_occupancy_charge: number | null;
   capacity_adults: number;
@@ -72,7 +73,7 @@ const HOTEL_SELECT = `
   rating, review_count, price_per_night, margin, tax_rate, bed_tax_rate, guest_favourite, check_in, check_out,
   tax_note, description, amenities, highlights, policies,
   hotel_rooms (
-    id, name, beds, price, available, extra_occupancy_charge,
+    id, name, beds, price, single_price, available, extra_occupancy_charge,
     capacity_adults, capacity_children, capacity_infants, max_occupancy, sort_order,
     hotel_room_prices ( price, hotel_seasons ( label ) )
   ),
@@ -115,6 +116,7 @@ function toHotel(raw: RawHotel): Hotel {
         name: r.name,
         beds: r.beds,
         price: r.price,
+        ...(r.single_price != null && { singlePrice: r.single_price }),
         available: r.available,
         ...(r.extra_occupancy_charge != null && { extraOccupancyCharge: r.extra_occupancy_charge }),
         ...(prices.length > 0 && { prices }),

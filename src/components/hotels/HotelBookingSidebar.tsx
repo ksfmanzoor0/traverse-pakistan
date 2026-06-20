@@ -171,12 +171,16 @@ export function HotelBookingSidebar({ hotel }: { hotel: Hotel }) {
 
   // Per-room line items
   const lineItems = [...selections.values()].map((sel) => {
-    const pricePerNight = getRoomPrice(sel.room, seasonLabel);
+    const basePrice = getRoomPrice(sel.room, seasonLabel);
+    // Single occupancy = exactly 1 adult per room, no children, and the room offers a single rate.
+    const isSingle = sel.adults === sel.qty && sel.children === 0 && sel.room.singlePrice != null;
+    const pricePerNight = isSingle ? sel.room.singlePrice! : basePrice;
+    const singleSaving = isSingle ? (basePrice - sel.room.singlePrice!) * sel.qty * (nights || 1) : 0;
     const extraPeople = Math.max(0, sel.adults + sel.children - 2 * sel.qty);
     const extraRate = sel.room.extraOccupancyCharge ?? 0;
     const roomTotal = pricePerNight * sel.qty * (nights || 1);
     const extraTotal = extraRate * extraPeople * (nights || 1);
-    return { sel, pricePerNight, extraPeople, extraRate, roomTotal, extraTotal };
+    return { sel, pricePerNight, isSingle, singleSaving, extraPeople, extraRate, roomTotal, extraTotal };
   });
 
   const perNightTotal = lineItems.reduce((s, li) => s + li.pricePerNight * li.sel.qty, 0);
@@ -308,7 +312,7 @@ export function HotelBookingSidebar({ hotel }: { hotel: Hotel }) {
         {/* Price breakdown */}
         {hasSelections && (
           <div className="mb-4 space-y-2 pt-4 border-t border-[var(--border-default)]">
-            {lineItems.map(({ sel, pricePerNight, extraPeople, extraRate, roomTotal, extraTotal }) => (
+            {lineItems.map(({ sel, pricePerNight, isSingle, singleSaving, extraPeople, extraRate, roomTotal, extraTotal }) => (
               <div key={sel.room.name}>
                 <div className="flex justify-between text-[13px]">
                   <span className="text-[var(--text-secondary)]">
@@ -316,6 +320,11 @@ export function HotelBookingSidebar({ hotel }: { hotel: Hotel }) {
                   </span>
                   <span className="text-[var(--text-primary)] font-medium tabular-nums">{formatPrice(pricePerNight * sel.qty * (nights || 1))}</span>
                 </div>
+                {isSingle && singleSaving > 0 && (
+                  <p className="text-[11px] text-[var(--success)] mt-0.5">
+                    Single occupancy rate · save {formatPrice(singleSaving)}
+                  </p>
+                )}
                 {extraPeople > 0 && extraRate > 0 && (
                   <div className="flex justify-between text-[12px] mt-0.5">
                     <span className="text-[var(--text-tertiary)]">
