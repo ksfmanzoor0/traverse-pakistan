@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
-import { getSupabaseAnon } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/server";
 import type { Hotel, HotelRoom, HotelSeasonDefinition, HotelReview, SeasonalPrice } from "@/types/hotel";
 
 // ── Raw Supabase row shapes ───────────────────────────────────────────────────
@@ -154,7 +154,10 @@ function toHotel(raw: RawHotel): Hotel {
 
 const _fetchAllHotels = unstable_cache(
   async (): Promise<Hotel[]> => {
-    const supabase = getSupabaseAnon();
+    // Service-role read: hotel catalog tables have RLS enabled with no anon
+    // policies (deny-all), so cost columns (operator_price, margin) are not
+    // readable via the public anon key. Reads here are server-only.
+    const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("hotels")
       .select(HOTEL_SELECT)
@@ -169,7 +172,7 @@ const _fetchAllHotels = unstable_cache(
 export const getAllHotels = cache(_fetchAllHotels);
 
 export const getHotelBySlug = cache(async (slug: string): Promise<Hotel | null> => {
-  const supabase = getSupabaseAnon();
+  const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("hotels")
     .select(HOTEL_SELECT)
