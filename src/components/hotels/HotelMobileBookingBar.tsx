@@ -160,7 +160,9 @@ export function HotelMobileBookingBar({ hotel }: { hotel: Hotel }) {
   }, [hasSelections]);
 
   const nights = checkIn && checkOut ? diffDays(checkIn, checkOut) : 0;
-  const seasonLabel = checkIn && hotel.seasons ? getSeasonLabel(checkIn, hotel.seasons) : null;
+  // No date picked yet → price for today's season so line items match the room
+  // cards and the "from" header (which also default to today).
+  const seasonLabel = hotel.seasons ? getSeasonLabel(checkIn ?? new Date(), hotel.seasons) : null;
 
   const lineItems = [...selections.values()].map((sel) => {
     const basePrice = getRoomPrice(sel.room, seasonLabel);
