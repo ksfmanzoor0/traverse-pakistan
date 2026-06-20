@@ -7,7 +7,7 @@ import { formatPrice } from "@/lib/utils";
 import { createHotelBooking } from "@/services/booking.service";
 import { Icon } from "@/components/ui/Icon";
 import { InlineAlert } from "@/components/ui/InlineAlert";
-import type { Hotel } from "@/types/hotel";
+import type { Hotel, HotelRoom, HotelSeasonDefinition } from "@/types/hotel";
 
 function fmt(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
@@ -15,6 +15,40 @@ function fmt(dateStr: string) {
 
 function diffDays(a: string, b: string) {
   return Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86400000);
+}
+
+// Season-aware pricing — mirrors the sidebar so the charged total matches what was shown.
+function getSeasonLabel(date: Date, seasons: HotelSeasonDefinition[]): string | null {
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mmdd = `${mm}-${dd}`;
+  for (const season of seasons) {
+    for (const period of season.periods) {
+      if (period.from > period.to) {
+        if (mmdd >= period.from || mmdd <= period.to) return season.label;
+      } else {
+        if (mmdd >= period.from && mmdd <= period.to) return season.label;
+      }
+    }
+  }
+  return null;
+}
+
+function getRoomPrice(room: HotelRoom, seasonLabel: string | null): number {
+  if (room.prices && seasonLabel) {
+    const match = room.prices.find((p) => p.season === seasonLabel);
+    if (match) return match.price;
+  }
+  return room.price;
+}
+
+// Single-occupancy rate for the active season: seasonal single → flat single → none.
+function getSingleRate(room: HotelRoom, seasonLabel: string | null): number | null {
+  if (room.prices && seasonLabel) {
+    const match = room.prices.find((p) => p.season === seasonLabel);
+    if (match?.singlePrice != null) return match.singlePrice;
+  }
+  return room.singlePrice ?? null;
 }
 
 interface LineItem {
@@ -28,7 +62,7 @@ interface LineItem {
 }
 
 /** Parses repeated ?r=roomName|qty|adults|children params */
-function parseLineItems(searchParams: URLSearchParams, hotel: Hotel, nights: number): LineItem[] {
+function parseLineItems(searchParams: URLSearchParams, hotel: Hotel, nights: number, seasonLabel: string | null): LineItem[] {
   return searchParams.getAll("r").flatMap((raw) => {
     const parts = raw.split("|");
     if (parts.length < 4) return [];
@@ -38,10 +72,12 @@ function parseLineItems(searchParams: URLSearchParams, hotel: Hotel, nights: num
     const qty = Math.max(1, Number(qtyStr));
     const adults = Math.max(0, Number(adultsStr));
     const children = Math.max(0, Number(childrenStr));
+    const basePrice = getRoomPrice(room, seasonLabel);
+    const singleRate = getSingleRate(room, seasonLabel);
     // Single occupancy = exactly 1 adult per room, no children, and the room offers a single rate.
-    const isSingle = adults === qty && children === 0 && room.singlePrice != null;
-    const pricePerNight = isSingle ? room.singlePrice! : room.price;
-    const singleSaving = isSingle ? (room.price - room.singlePrice!) * qty * nights : 0;
+    const isSingle = adults === qty && children === 0 && singleRate != null;
+    const pricePerNight = isSingle ? singleRate! : basePrice;
+    const singleSaving = isSingle ? (basePrice - singleRate!) * qty * nights : 0;
     return [{ roomName, qty, adults, children, pricePerNight, isSingle, singleSaving }];
   });
 }
@@ -55,7 +91,9 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
   const infant   = searchParams.get("infant") === "1";
   const nights   = checkin && checkout ? diffDays(checkin, checkout) : 1;
 
-  const lineItems = parseLineItems(searchParams, hotel, nights);
+  // Season is keyed off check-in, matching the sidebar — keeps the charged total in sync with what was shown.
+  const seasonLabel = checkin && hotel.seasons ? getSeasonLabel(new Date(checkin), hotel.seasons) : null;
+  const lineItems = parseLineItems(searchParams, hotel, nights, seasonLabel);
   const totalAdults   = lineItems.reduce((s, li) => s + li.adults, 0);
   const totalChildren = lineItems.reduce((s, li) => s + li.children, 0);
   const totalRooms    = lineItems.reduce((s, li) => s + li.qty, 0);

@@ -34,6 +34,15 @@ function getRoomPrice(room: HotelRoom, seasonLabel: string | null): number {
   return room.price;
 }
 
+// Single-occupancy rate for the active season: seasonal single → flat single → none.
+function getSingleRate(room: HotelRoom, seasonLabel: string | null): number | null {
+  if (room.prices && seasonLabel) {
+    const match = room.prices.find((p) => p.season === seasonLabel);
+    if (match?.singlePrice != null) return match.singlePrice;
+  }
+  return room.singlePrice ?? null;
+}
+
 function startOfDay(d: Date) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
 function isSameDay(a: Date, b: Date) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
 function isBefore(a: Date, b: Date) { return startOfDay(a) < startOfDay(b); }
@@ -155,10 +164,11 @@ export function HotelMobileBookingBar({ hotel }: { hotel: Hotel }) {
 
   const lineItems = [...selections.values()].map((sel) => {
     const basePrice = getRoomPrice(sel.room, seasonLabel);
+    const singleRate = getSingleRate(sel.room, seasonLabel);
     // Single occupancy = exactly 1 adult per room, no children, and the room offers a single rate.
-    const isSingle = sel.adults === sel.qty && sel.children === 0 && sel.room.singlePrice != null;
-    const pricePerNight = isSingle ? sel.room.singlePrice! : basePrice;
-    const singleSaving = isSingle ? (basePrice - sel.room.singlePrice!) * sel.qty * (nights || 1) : 0;
+    const isSingle = sel.adults === sel.qty && sel.children === 0 && singleRate != null;
+    const pricePerNight = isSingle ? singleRate! : basePrice;
+    const singleSaving = isSingle ? (basePrice - singleRate!) * sel.qty * (nights || 1) : 0;
     const extraPeople = Math.max(0, sel.adults + sel.children - 2 * sel.qty);
     const extraRate = sel.room.extraOccupancyCharge ?? 0;
     const roomTotal = pricePerNight * sel.qty * (nights || 1);
@@ -174,7 +184,8 @@ export function HotelMobileBookingBar({ hotel }: { hotel: Hotel }) {
   const bedAmount = Math.round(subtotal * bedRate);
   const grandTotal = subtotal + gstAmount + bedAmount;
   const hasAnyTax = gstAmount > 0 || bedAmount > 0;
-  const minRoomPrice = hotel.rooms.length > 0 ? Math.min(...hotel.rooms.map((r) => r.price)) : 0;
+  // "from" = lowest room rate for the current season (entryPriceForToday), never the absolute floor.
+  const minRoomPrice = hotel.pricePerNight;
 
   const selectionParams = [...selections.values()]
     .map((sel) => `r=${encodeURIComponent(`${sel.room.name}|${sel.qty}|${sel.adults}|${sel.children}`)}`)

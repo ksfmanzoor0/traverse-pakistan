@@ -7,6 +7,7 @@ import type { Hotel, HotelRoom, HotelSeasonDefinition, HotelReview, SeasonalPric
 
 type RawRoomPrice = {
   price: number;
+  single_price: number | null;
   hotel_seasons: { label: string } | null;
 };
 
@@ -75,7 +76,7 @@ const HOTEL_SELECT = `
   hotel_rooms (
     id, name, beds, price, single_price, available, extra_occupancy_charge,
     capacity_adults, capacity_children, capacity_infants, max_occupancy, sort_order,
-    hotel_room_prices ( price, hotel_seasons ( label ) )
+    hotel_room_prices ( price, single_price, hotel_seasons ( label ) )
   ),
   hotel_seasons ( label, sort_order, hotel_season_periods ( from_date, to_date ) ),
   hotel_reviews ( reviewer_name, initial, date, rating, body )
@@ -110,7 +111,11 @@ function toHotel(raw: RawHotel): Hotel {
     .map((r) => {
       const prices: SeasonalPrice[] = (r.hotel_room_prices ?? [])
         .filter((p) => p.hotel_seasons != null)
-        .map((p) => ({ season: p.hotel_seasons!.label, price: p.price }));
+        .map((p) => ({
+          season: p.hotel_seasons!.label,
+          price: p.price,
+          ...(p.single_price != null && { singlePrice: p.single_price }),
+        }));
 
       return {
         name: r.name,

@@ -34,6 +34,15 @@ function getRoomPrice(room: HotelRoom, seasonLabel: string | null): number {
   return room.price;
 }
 
+// Single-occupancy rate for the active season: seasonal single → flat single → none.
+function getSingleRate(room: HotelRoom, seasonLabel: string | null): number | null {
+  if (room.prices && seasonLabel) {
+    const match = room.prices.find((p) => p.season === seasonLabel);
+    if (match?.singlePrice != null) return match.singlePrice;
+  }
+  return room.singlePrice ?? null;
+}
+
 const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 const MONTHS = [
   "January","February","March","April","May","June",
@@ -172,10 +181,11 @@ export function HotelBookingSidebar({ hotel }: { hotel: Hotel }) {
   // Per-room line items
   const lineItems = [...selections.values()].map((sel) => {
     const basePrice = getRoomPrice(sel.room, seasonLabel);
+    const singleRate = getSingleRate(sel.room, seasonLabel);
     // Single occupancy = exactly 1 adult per room, no children, and the room offers a single rate.
-    const isSingle = sel.adults === sel.qty && sel.children === 0 && sel.room.singlePrice != null;
-    const pricePerNight = isSingle ? sel.room.singlePrice! : basePrice;
-    const singleSaving = isSingle ? (basePrice - sel.room.singlePrice!) * sel.qty * (nights || 1) : 0;
+    const isSingle = sel.adults === sel.qty && sel.children === 0 && singleRate != null;
+    const pricePerNight = isSingle ? singleRate! : basePrice;
+    const singleSaving = isSingle ? (basePrice - singleRate!) * sel.qty * (nights || 1) : 0;
     const extraPeople = Math.max(0, sel.adults + sel.children - 2 * sel.qty);
     const extraRate = sel.room.extraOccupancyCharge ?? 0;
     const roomTotal = pricePerNight * sel.qty * (nights || 1);
@@ -192,8 +202,9 @@ export function HotelBookingSidebar({ hotel }: { hotel: Hotel }) {
   const grandTotal = subtotal + gstAmount + bedAmount;
   const hasAnyTax = gstAmount > 0 || bedAmount > 0;
 
-  // Starting price shown in header
-  const minRoomPrice = hotel.rooms.length > 0 ? Math.min(...hotel.rooms.map((r) => r.price)) : 0;
+  // "from" header = lowest room rate for the CURRENT season (entryPriceForToday),
+  // not the absolute floor — so it never misrepresents what today's rate actually is.
+  const minRoomPrice = hotel.pricePerNight;
 
   // Checkout URL — encode each selection as roomName|qty|adults|children
   const selectionParams = [...selections.values()]

@@ -1,8 +1,9 @@
 export type HotelTier = "standard" | "deluxe" | "premium" | "luxury";
 
 export interface SeasonalPrice {
-  season: string;   // matches HotelSeasonDefinition.label
-  price: number;    // display price (base + 20% margin)
+  season: string;       // matches HotelSeasonDefinition.label
+  price: number;        // display price (base + 20% margin)
+  singlePrice?: number; // seasonal single-occupancy display rate; overrides HotelRoom.singlePrice for this season. Falls back to HotelRoom.singlePrice, then price.
 }
 
 export interface HotelSeasonPeriod {
