@@ -176,7 +176,9 @@ export function HotelBookingSidebar({ hotel }: { hotel: Hotel }) {
   function nextMonth() { if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1); } else setCalMonth(m => m + 1); }
 
   const nights = checkIn && checkOut ? diffDays(checkIn, checkOut) : 0;
-  const seasonLabel = hotel.seasons && checkIn ? getSeasonLabel(checkIn, hotel.seasons) : null;
+  // No date picked yet → price for today's season so line items match the room
+  // cards and the "from" header (which also default to today).
+  const seasonLabel = hotel.seasons ? getSeasonLabel(checkIn ?? new Date(), hotel.seasons) : null;
 
   // Per-room line items
   const lineItems = [...selections.values()].map((sel) => {
