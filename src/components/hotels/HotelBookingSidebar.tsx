@@ -202,8 +202,9 @@ export function HotelBookingSidebar({ hotel }: { hotel: Hotel }) {
   const grandTotal = subtotal + gstAmount + bedAmount;
   const hasAnyTax = gstAmount > 0 || bedAmount > 0;
 
-  // Starting price shown in header
-  const minRoomPrice = hotel.rooms.length > 0 ? Math.min(...hotel.rooms.map((r) => r.price)) : 0;
+  // "from" header = lowest room rate for the CURRENT season (entryPriceForToday),
+  // not the absolute floor — so it never misrepresents what today's rate actually is.
+  const minRoomPrice = hotel.pricePerNight;
 
   // Checkout URL — encode each selection as roomName|qty|adults|children
   const selectionParams = [...selections.values()]

@@ -67,7 +67,9 @@ interface RoomCardProps {
 function RoomCard({ room, roomIndex, roomImagesMap, seasons, activeIndex, onActivate }: RoomCardProps) {
   const { selections, setQty, setAdults, setChildren, setInfant, checkIn } = useHotelRoom();
 
-  const seasonLabel = checkIn && seasons.length > 0 ? getSeasonLabel(checkIn, seasons) : null;
+  // No date picked yet → show the current season's rate so cards match the "from" header.
+  // Once a check-in is chosen, price for that date instead.
+  const seasonLabel = seasons.length > 0 ? getSeasonLabel(checkIn ?? new Date(), seasons) : null;
   const displayPrice = getSeasonalPrice(room, seasonLabel);
   const sel = selections.get(room.name);
   const qty = sel?.qty ?? 0;

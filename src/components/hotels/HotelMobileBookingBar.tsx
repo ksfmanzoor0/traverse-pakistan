@@ -184,7 +184,8 @@ export function HotelMobileBookingBar({ hotel }: { hotel: Hotel }) {
   const bedAmount = Math.round(subtotal * bedRate);
   const grandTotal = subtotal + gstAmount + bedAmount;
   const hasAnyTax = gstAmount > 0 || bedAmount > 0;
-  const minRoomPrice = hotel.rooms.length > 0 ? Math.min(...hotel.rooms.map((r) => r.price)) : 0;
+  // "from" = lowest room rate for the current season (entryPriceForToday), never the absolute floor.
+  const minRoomPrice = hotel.pricePerNight;
 
   const selectionParams = [...selections.values()]
     .map((sel) => `r=${encodeURIComponent(`${sel.room.name}|${sel.qty}|${sel.adults}|${sel.children}`)}`)
