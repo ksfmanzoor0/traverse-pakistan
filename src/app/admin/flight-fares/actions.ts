@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/admin/guard";
 import {
   upsertManualOverride,
   deleteManualOverride,
+  updateScraperConfig,
   type ManualOverridePayload,
 } from "@/services/flight-fares.service";
 
@@ -57,6 +58,39 @@ export async function saveManualOverride(formData: FormData): Promise<ActionResu
 
   try {
     await upsertManualOverride(payload, admin.email ?? null);
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  }
+
+  revalidatePath("/admin/flight-fares");
+  return { ok: true };
+}
+
+export async function saveScraperConfig(formData: FormData): Promise<ActionResult> {
+  const admin = await requireAdmin();
+
+  const email = trimOrNull(formData.get("email"));
+  const password = formData.get("password");
+  const scrapeEnabledRaw = formData.get("scrapeEnabled");
+
+  if (email === null) {
+    return { ok: false, error: "Email is required" };
+  }
+  if (typeof email === "string" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { ok: false, error: "Email looks invalid" };
+  }
+
+  const passwordStr = typeof password === "string" && password.length > 0 ? password : undefined;
+
+  try {
+    await updateScraperConfig(
+      {
+        email,
+        password: passwordStr,
+        scrapeEnabled: scrapeEnabledRaw === "on" || scrapeEnabledRaw === "true",
+      },
+      admin.email ?? null,
+    );
   } catch (err) {
     return { ok: false, error: (err as Error).message };
   }

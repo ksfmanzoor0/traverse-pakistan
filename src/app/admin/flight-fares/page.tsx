@@ -1,9 +1,10 @@
 import { requireAdmin } from "@/lib/admin/guard";
-import { listFlightFares, getScrapeStatus } from "@/services/flight-fares.service";
+import { listFlightFares, getScrapeStatus, getScraperConfig } from "@/services/flight-fares.service";
 import type { FlightRouteRow } from "@/types/flight";
 import { FlightFaresFilters } from "@/components/admin/flight-fares/FlightFaresFilters";
 import { FlightFaresTable } from "@/components/admin/flight-fares/FlightFaresTable";
 import { ManualFareForm } from "@/components/admin/flight-fares/ManualFareForm";
+import { ScraperConfigPanel } from "@/components/admin/flight-fares/ScraperConfigPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +46,7 @@ export default async function FlightFaresPage({
   const source =
     params.source === "manual" || params.source === "aeroglobe" ? (params.source as "manual" | "aeroglobe") : undefined;
 
-  const [fares, status] = await Promise.all([
+  const [fares, status, scraperConfig] = await Promise.all([
     listFlightFares({
       origin: params.origin?.toUpperCase() || undefined,
       destination: params.destination?.toUpperCase() || undefined,
@@ -57,6 +58,7 @@ export default async function FlightFaresPage({
       limit: 500,
     }),
     getScrapeStatus(),
+    getScraperConfig(),
   ]);
 
   const latestPerKey = pickLatestPerKey(fares);
@@ -99,6 +101,14 @@ export default async function FlightFaresPage({
           </div>
         </div>
       </div>
+
+      <ScraperConfigPanel
+        initialEmail={scraperConfig.email}
+        hasPassword={scraperConfig.hasPassword}
+        scrapeEnabled={scraperConfig.scrapeEnabled}
+        updatedAt={scraperConfig.updatedAt}
+        updatedBy={scraperConfig.updatedBy}
+      />
 
       <FlightFaresFilters initial={params} />
 

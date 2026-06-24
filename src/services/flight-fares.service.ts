@@ -132,6 +132,63 @@ export interface ScrapeStatus {
   manualRows: number;
 }
 
+export interface ScraperConfig {
+  email: string;
+  hasPassword: boolean;          // never return the password itself to the client
+  scrapeEnabled: boolean;
+  updatedAt: string | null;
+  updatedBy: string | null;
+}
+
+export async function getScraperConfig(): Promise<ScraperConfig> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("flight_scraper_config")
+    .select("aeroglobe_email, aeroglobe_password, scrape_enabled, updated_at, updated_by")
+    .eq("id", "default")
+    .maybeSingle();
+  if (error) throw new Error(`getScraperConfig: ${error.message}`);
+  const row = (data ?? {}) as {
+    aeroglobe_email?: string | null;
+    aeroglobe_password?: string | null;
+    scrape_enabled?: boolean | null;
+    updated_at?: string | null;
+    updated_by?: string | null;
+  };
+  return {
+    email: row.aeroglobe_email ?? "",
+    hasPassword: typeof row.aeroglobe_password === "string" && row.aeroglobe_password.length > 0,
+    scrapeEnabled: row.scrape_enabled ?? true,
+    updatedAt: row.updated_at ?? null,
+    updatedBy: row.updated_by ?? null,
+  };
+}
+
+export interface ScraperConfigUpdate {
+  email?: string;
+  password?: string;              // optional — only updated when provided
+  scrapeEnabled?: boolean;
+}
+
+export async function updateScraperConfig(update: ScraperConfigUpdate, updatedBy: string | null): Promise<ScraperConfig> {
+  const supabase = getSupabaseAdmin();
+  const patch: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+    updated_by: updatedBy,
+  };
+  if (typeof update.email === "string") patch.aeroglobe_email = update.email.trim() || null;
+  if (typeof update.password === "string" && update.password.length > 0) {
+    patch.aeroglobe_password = update.password;
+  }
+  if (typeof update.scrapeEnabled === "boolean") patch.scrape_enabled = update.scrapeEnabled;
+
+  const { error } = await supabase
+    .from("flight_scraper_config")
+    .upsert({ id: "default", ...patch }, { onConflict: "id" });
+  if (error) throw new Error(`updateScraperConfig: ${error.message}`);
+  return getScraperConfig();
+}
+
 export async function getScrapeStatus(): Promise<ScrapeStatus> {
   const supabase = getSupabaseAdmin();
   const { data: latest } = await supabase
