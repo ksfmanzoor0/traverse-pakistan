@@ -10,6 +10,7 @@ const NAV = [
   { href: "/admin/bookings", label: "Bookings" },
   { href: "/admin/departures", label: "Departures" },
   { href: "/admin/reviews", label: "Reviews" },
+  { href: "/admin/flight-fares", label: "Flight Fares" },
   { href: "/admin/revalidate", label: "Cache" },
 ];
 

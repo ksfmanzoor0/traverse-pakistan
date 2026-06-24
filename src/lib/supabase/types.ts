@@ -504,6 +504,18 @@ export type Database = {
         Update: Record<string, unknown>;
         Relationships: [];
       };
+      flight_routes: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      flight_scraper_config: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
     };
     Views: Record<never, never>;
     Functions: {
