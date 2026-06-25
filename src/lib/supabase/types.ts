@@ -218,14 +218,7 @@ export type PackageRow = {
   exclusions: string[];
   know_before_you_go: string[];
   pricing: unknown;
-  has_flight: boolean;
-  flight_legs: Array<{
-    from: string;
-    to: string;
-    routeType: "ONEWAY" | "RETURN";
-    day: number | "last";
-    skipIfDeparture?: string[];
-  }> | null;
+  starting_cities: string[];
   meta_title: string | null;
   meta_description: string | null;
   created_at: string | null;
@@ -244,6 +237,28 @@ export type PackageItineraryDayRow = {
   driving_time: string | null;
   overnight: string | null;
   city_only: string[] | null;
+};
+
+export type PackageAddonRow = {
+  id: string;
+  package_slug: string;
+  type: "flight" | "bus";
+  label: string;
+  applies_to_departures: string[];
+  group_key: string | null;
+  is_required: boolean;
+  priority: number;
+  config: {
+    legs?: Array<{
+      from: string;
+      to: string;
+      routeType: "ONEWAY" | "RETURN";
+      day: number | "last";
+    }>;
+    [k: string]: unknown;
+  };
+  created_at: string | null;
+  updated_at: string | null;
 };
 
 export type CreateBookingArgs = {
@@ -355,6 +370,12 @@ export type Database = {
         Row: PackageItineraryDayRow;
         Insert: Omit<PackageItineraryDayRow, "id"> & Partial<Pick<PackageItineraryDayRow, "id">>;
         Update: Partial<PackageItineraryDayRow>;
+        Relationships: [];
+      };
+      package_addons: {
+        Row: PackageAddonRow;
+        Insert: Omit<PackageAddonRow, "id" | "created_at" | "updated_at"> & Partial<Pick<PackageAddonRow, "id" | "created_at" | "updated_at">>;
+        Update: Partial<PackageAddonRow>;
         Relationships: [];
       };
       booking_otps: {
