@@ -196,8 +196,16 @@ export async function allocateHotelForNight(args: {
       const override = activeSeason
         ? r.hotel_room_prices.find((p) => p.season_id === activeSeason.id)
         : null;
-      const singleOp = override?.single_price ?? r.single_price ?? null;
-      if (singleOp === null) return null;
+      const extraCharge = r.extra_occupancy_charge ?? 0;
+      // Prefer explicit single_price. If missing, derive from `price` (2-pax
+      // display rate by convention): single = price - extra_charge. This
+      // keeps the additive formula consistent — cost(k) = single + (k-1)×extra.
+      const priceVal = override?.price ?? r.price ?? null;
+      const singleOp =
+        override?.single_price ??
+        r.single_price ??
+        (priceVal !== null ? Math.max(0, priceVal - extraCharge) : null);
+      if (singleOp === null || singleOp <= 0) return null;
       const maxOcc = r.max_occupancy ?? r.capacity_adults ?? 2;
       const available = r.available ?? 99;
       return {
@@ -206,7 +214,7 @@ export async function allocateHotelForNight(args: {
         maxOccupancy: Math.max(1, maxOcc),
         available: Math.max(0, available),
         singleOp,
-        extraCharge: r.extra_occupancy_charge ?? 0,
+        extraCharge,
       } as RoomCandidate;
     })
     .filter((c): c is RoomCandidate => c !== null && c.available > 0);

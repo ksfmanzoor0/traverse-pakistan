@@ -863,119 +863,12 @@ export function CostCalculator({
         )
       )}
 
-      {/* Customer quote */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <section
-          className="rounded-lg p-5 space-y-3 lg:col-span-1"
-          style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
-        >
-          <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>
-            Customer inputs
-          </h2>
-
-          <LabelledInput label="Number of people" type="number" value={user.people} onChange={(v) => updateUser("people", num(v))} />
-
-          <label className="block text-sm">
-            <span style={{ color: "var(--text-secondary)" }}>Hotel tier</span>
-            <select
-              className="mt-1 w-full rounded px-2 py-2"
-              style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
-              value={user.hotelType}
-              onChange={(e) => updateUser("hotelType", e.target.value as keyof typeof INITIAL_HOTELS)}
-            >
-              {Object.keys(hotelCategories)
-                .filter((c) => c !== "premium")
-                .map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-            </select>
-          </label>
-
-          <LabelledInput label="Requested rooms" type="number" value={user.requestedRooms} onChange={(v) => updateUser("requestedRooms", num(v))} />
-
-          <label className="block text-sm">
-            <span style={{ color: "var(--text-secondary)" }}>Main transport</span>
-            <select
-              className="mt-1 w-full rounded px-2 py-2"
-              style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
-              value={user.selectedTransport}
-              onChange={(e) => updateUser("selectedTransport", e.target.value as TransportName)}
-            >
-              {customerTransportOptions.map((n) => (
-                <option key={n} value={n}>{n}</option>
-              ))}
-            </select>
-          </label>
-
-          <div
-            className="rounded-md p-3 space-y-2"
-            style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)" }}
-          >
-            <div className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Extra vehicles</div>
-            <div className="grid grid-cols-[1fr_70px_auto] gap-2">
-              <select
-                className="rounded px-2 py-1.5 text-sm"
-                style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
-                value={user.extraTransportType}
-                onChange={(e) => updateUser("extraTransportType", e.target.value as TransportName)}
-              >
-                {customerTransportOptions.map((n) => (
-                  <option key={n} value={n}>{n}</option>
-                ))}
-              </select>
-              <input
-                type="number"
-                min={1}
-                className="rounded px-2 py-1.5 text-sm"
-                style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
-                value={user.extraTransportQty}
-                onChange={(e) => updateUser("extraTransportQty", num(e.target.value))}
-              />
-              <button
-                type="button"
-                className="rounded px-3 py-1.5 text-sm"
-                style={{ background: "var(--accent-primary)", color: "var(--on-dark)" }}
-                onClick={addExtra}
-              >
-                Add
-              </button>
-            </div>
-            {Object.entries(user.extraTransports).filter(([, c]) => (c || 0) > 0).map(([name, count]) => (
-              <div key={name} className="flex items-center justify-between text-sm rounded px-2 py-1.5"
-                   style={{ background: "var(--bg-primary)" }}>
-                <span style={{ color: "var(--text-primary)" }}>{count} × {name}</span>
-                <button type="button" className="text-xs" style={{ color: "var(--accent-danger)" }}
-                        onClick={() => removeExtra(name as TransportName)}>Remove</button>
-              </div>
-            ))}
-          </div>
-
-          <button
-            type="button"
-            className="w-full rounded px-3 py-2 text-sm"
-            style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
-            onClick={() =>
-              setUser((p) => ({
-                ...p,
-                selectedTransport: getDefaultTransport(num(p.people)),
-                manualTransport: false,
-                extraTransportManual: false,
-                extraTransports: getAutoExtras(num(p.people), getDefaultTransport(num(p.people)), false),
-              }))
-            }
-          >
-            Reset to auto transport
-          </button>
-
-          <Checkbox label="Add guide" checked={user.addGuide} onChange={(c) => updateUser("addGuide", c)} />
-          {trip.flightRequired && (
-            <Checkbox label="Include flights" checked={user.includeFlights} onChange={(c) => updateUser("includeFlights", c)} />
-          )}
-        </section>
-
+      {/* Customer quote — Customer Inputs panel removed; all inputs come from
+          the Skardu picker. Math runs on whatever was last Applied. */}
+      <div className="grid gap-6 lg:grid-cols-1">
         {/* Result */}
         <section
-          className="rounded-lg p-5 space-y-4 lg:col-span-2"
+          className="rounded-lg p-5 space-y-4 lg:col-span-1"
           style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
         >
           <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>Quote</h2>
