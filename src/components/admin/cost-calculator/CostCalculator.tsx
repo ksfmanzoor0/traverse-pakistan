@@ -369,11 +369,9 @@ export function CostCalculator({ skarduPackages = [] }: { skarduPackages?: Packa
     const flightCost = trip.flightRequired && user.includeFlights ? num(trip.flightCostPerPerson) * people : 0;
 
     const transportCost = rentCost + fuelCost + jeepCost;
-    // Guide is a pass-through: not margined, added flat at the end.
-    const marginedSubtotal = transportCost + hotelCost + flightCost;
-    const profit = marginedSubtotal * (profitPct / 100);
-    const subtotal = marginedSubtotal + guideCost;  // for display
-    const total = marginedSubtotal + profit + guideCost;
+    const subtotal = transportCost + hotelCost + guideCost + flightCost;
+    const profit = subtotal * (profitPct / 100);
+    const total = subtotal + profit;
     const perPerson = total / people;
 
     return {
@@ -893,9 +891,8 @@ export function CostCalculator({ skarduPackages = [] }: { skarduPackages?: Packa
           </div>
 
           <Breakdown title="Final">
-            <Line label="Transport + hotel + flight" value={pkr(calc.transportCost + calc.hotelCost + calc.flightCost)} />
-            <Line label={`Profit ${trip.profitPercentage}% (excl. guide)`} value={pkr(calc.profit)} />
-            <Line label="Guide (pass-through, no margin)" value={pkr(calc.guideCost)} />
+            <Line label="Subtotal" value={pkr(calc.subtotal)} />
+            <Line label={`Profit ${trip.profitPercentage}%`} value={pkr(calc.profit)} />
             <Line label="Grand total" value={pkr(calc.total)} bold />
           </Breakdown>
         </section>
