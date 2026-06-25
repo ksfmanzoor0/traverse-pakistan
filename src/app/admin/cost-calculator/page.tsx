@@ -1,7 +1,41 @@
 import { requireAdmin } from "@/lib/admin/guard";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { listVehicleTypes, getEngineConfig } from "@/services/vehicle.service";
-import { CostCalculator, type PackagePickerEntry, type HotelTierSummary } from "@/components/admin/cost-calculator/CostCalculator";
+import { CostCalculator, type PackagePickerEntry, type HotelTierSummary, type PackageLinkedHotel } from "@/components/admin/cost-calculator/CostCalculator";
+
+async function loadAllPackageLinkedHotels(): Promise<PackageLinkedHotel[]> {
+  const supabase = getSupabaseAdmin();
+  const { data: dayRows, error: dayErr } = await supabase
+    .from("package_itinerary_days")
+    .select("hotel_deluxe, hotel_luxury");
+  if (dayErr) throw new Error(`loadAllPackageLinkedHotels days: ${dayErr.message}`);
+  const slots = new Map<string, Set<"deluxe" | "luxury">>();
+  for (const r of (dayRows ?? []) as Array<{ hotel_deluxe: string | null; hotel_luxury: string | null }>) {
+    if (r.hotel_deluxe) {
+      const s = slots.get(r.hotel_deluxe) ?? new Set();
+      s.add("deluxe"); slots.set(r.hotel_deluxe, s);
+    }
+    if (r.hotel_luxury) {
+      const s = slots.get(r.hotel_luxury) ?? new Set();
+      s.add("luxury"); slots.set(r.hotel_luxury, s);
+    }
+  }
+  if (slots.size === 0) return [];
+  const { data: hotels, error } = await supabase
+    .from("hotels")
+    .select("slug, name, tier, price_per_night")
+    .in("slug", Array.from(slots.keys()));
+  if (error) throw new Error(`loadAllPackageLinkedHotels hotels: ${error.message}`);
+  return ((hotels ?? []) as Array<{ slug: string; name: string; tier: string; price_per_night: number | null }>)
+    .map((h) => ({
+      slug: h.slug,
+      name: h.name,
+      tier: h.tier,
+      pricePerNight: h.price_per_night ?? 0,
+      usedInSlots: Array.from(slots.get(h.slug) ?? []),
+    }))
+    .sort((a, b) => a.tier.localeCompare(b.tier) || a.name.localeCompare(b.name));
+}
 
 async function loadHotelTierSummaries(): Promise<HotelTierSummary[]> {
   const supabase = getSupabaseAdmin();
@@ -74,11 +108,12 @@ async function loadSkarduPackages(): Promise<PackagePickerEntry[]> {
 
 export default async function CostCalculatorPage() {
   await requireAdmin();
-  const [skarduPackages, vehicles, engineConfig, hotelTiers] = await Promise.all([
+  const [skarduPackages, vehicles, engineConfig, hotelTiers, allHotels] = await Promise.all([
     loadSkarduPackages(),
     listVehicleTypes(),
     getEngineConfig(),
     loadHotelTierSummaries(),
+    loadAllPackageLinkedHotels(),
   ]);
 
   return (
@@ -100,6 +135,7 @@ export default async function CostCalculatorPage() {
         vehicles={vehicles}
         engineConfig={engineConfig}
         hotelTiers={hotelTiers}
+        allHotels={allHotels}
       />
     </div>
   );

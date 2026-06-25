@@ -241,16 +241,26 @@ export interface HotelTierSummary {
   maxPrice: number;
 }
 
+export interface PackageLinkedHotel {
+  slug: string;
+  name: string;
+  tier: string;
+  pricePerNight: number;
+  usedInSlots: ("deluxe" | "luxury")[];
+}
+
 export function CostCalculator({
   skarduPackages = [],
   vehicles = [],
   engineConfig,
   hotelTiers = [],
+  allHotels = [],
 }: {
   skarduPackages?: PackagePickerEntry[];
   vehicles?: VehicleEntry[];
   engineConfig?: EngineConfigEntry;
   hotelTiers?: HotelTierSummary[];
+  allHotels?: PackageLinkedHotel[];
 }) {
   const [picker, setPicker] = useState({
     slug: skarduPackages[0]?.slug ?? "",
@@ -722,8 +732,12 @@ export function CostCalculator({
           <LabelledInput label="Fuel / litre" type="number" value={trip.fuelPricePerLitre} onChange={(v) => updateTrip("fuelPricePerLitre", num(v))} />
           <LabelledInput label="Profit %" type="number" value={trip.profitPercentage} onChange={(v) => updateTrip("profitPercentage", num(v))} />
           <LabelledInput label="Guide / day" type="number" value={trip.guidePerDay} onChange={(v) => updateTrip("guidePerDay", num(v))} />
-          <LabelledInput label="Jeep / jeep" type="number" value={trip.jeepCostPerJeep} onChange={(v) => updateTrip("jeepCostPerJeep", num(v))} />
-          <LabelledInput label="Jeep capacity" type="number" value={trip.jeepCapacity} onChange={(v) => updateTrip("jeepCapacity", num(v))} />
+          {trip.jeepRequired && (
+            <>
+              <LabelledInput label="Jeep / jeep" type="number" value={trip.jeepCostPerJeep} onChange={(v) => updateTrip("jeepCostPerJeep", num(v))} />
+              <LabelledInput label="Jeep capacity" type="number" value={trip.jeepCapacity} onChange={(v) => updateTrip("jeepCapacity", num(v))} />
+            </>
+          )}
           <LabelledInput label="Flight / person" type="number" value={trip.flightCostPerPerson} onChange={(v) => updateTrip("flightCostPerPerson", num(v))} />
           <Checkbox label="Flight option available" checked={trip.flightRequired} onChange={(c) => updateTrip("flightRequired", c)} />
           <Checkbox label="Allow NCP Prado rate (auto on for KDU/GIL packages)" checked={trip.allowPradoNCP} onChange={(c) => updateTrip("allowPradoNCP", c)} />
@@ -782,7 +796,7 @@ export function CostCalculator({
           })}
         </section>
       ) : (
-        hotelTiers.length > 0 && (
+        allHotels.length > 0 && (
           <section
             className="rounded-lg p-5 space-y-3"
             style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
@@ -790,38 +804,45 @@ export function CostCalculator({
             <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>
               Hotel categories{" "}
               <span style={{ color: "var(--text-tertiary)", fontWeight: 400 }}>
-                (global averages — pick a package above for its specific hotels)
+                (all package-linked hotels — pick a package above to filter)
               </span>
             </h2>
-            <div
-              className="grid gap-2 text-xs px-2 pb-1"
-              style={{ gridTemplateColumns: "120px 80px 120px 200px", color: "var(--text-tertiary)" }}
-            >
-              <div>Category</div>
-              <div>Hotels</div>
-              <div>Avg / night</div>
-              <div>Range</div>
-            </div>
-            {hotelTiers.map((t) => (
-              <div
-                key={t.tier}
-                className="grid gap-2 rounded-md p-2 text-sm items-center"
-                style={{
-                  gridTemplateColumns: "120px 80px 120px 200px",
-                  background: "var(--bg-elevated)",
-                  border: "1px solid var(--border-default)",
-                }}
-              >
-                <div className="font-medium capitalize" style={{ color: "var(--text-primary)" }}>{t.tier}</div>
-                <div style={{ color: "var(--text-secondary)" }}>{t.hotels}</div>
-                <div style={{ color: "var(--text-primary)" }}>
-                  {t.avgPrice > 0 ? `PKR ${t.avgPrice.toLocaleString()}` : "—"}
+            {(["deluxe", "premium", "luxury"] as const).map((tierKey) => {
+              const hotelsAtTier = allHotels.filter((h) => h.tier === tierKey);
+              const greyed = tierKey === "premium" && hotelsAtTier.length === 0;
+              return (
+                <div key={tierKey} className="space-y-1.5" style={{ opacity: greyed ? 0.5 : 1 }}>
+                  <div className="text-sm font-semibold capitalize" style={{ color: "var(--text-primary)" }}>
+                    {tierKey} <span className="ml-1 text-xs" style={{ color: "var(--text-tertiary)" }}>({hotelsAtTier.length})</span>
+                    {greyed && (
+                      <span className="ml-2 text-xs" style={{ color: "var(--text-tertiary)" }}>(no hotels)</span>
+                    )}
+                  </div>
+                  {hotelsAtTier.map((h) => (
+                    <div
+                      key={h.slug}
+                      className="grid gap-2 rounded-md p-2 text-sm items-center"
+                      style={{
+                        gridTemplateColumns: "1fr 160px 160px",
+                        background: "var(--bg-elevated)",
+                        border: "1px solid var(--border-default)",
+                      }}
+                    >
+                      <div style={{ color: "var(--text-primary)" }}>
+                        {h.name}
+                        <span className="ml-2 text-xs" style={{ color: "var(--text-tertiary)" }}>{h.slug}</span>
+                      </div>
+                      <div style={{ color: "var(--text-secondary)" }}>
+                        {h.pricePerNight > 0 ? `PKR ${h.pricePerNight.toLocaleString()}/night` : "—"}
+                      </div>
+                      <div className="text-xs" style={{ color: "var(--text-tertiary)" }}>
+                        used as: {h.usedInSlots.join(" + ") || "—"}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div style={{ color: "var(--text-tertiary)" }}>
-                  {t.minPrice > 0 ? `${t.minPrice.toLocaleString()} – ${t.maxPrice.toLocaleString()}` : "—"}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </section>
         )
       )}
