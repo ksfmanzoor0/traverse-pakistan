@@ -2,6 +2,41 @@
 
 import { useMemo, useState } from "react";
 
+export interface PackagePickerEntry {
+  slug: string;
+  name: string;
+  duration: number;
+  startingCities: string[];
+}
+
+type HomeCity = "ISB" | "LHE" | "KHI";
+
+interface QuoteResponse {
+  slug: string;
+  name: string;
+  duration: number;
+  nights: number;
+  startingCities: string[];
+  allowPradoNCP: boolean;
+  flightRequired: boolean;
+  flightCostPerPerson: number;
+  flightBreakdown: Array<{
+    from: string;
+    to: string;
+    date: string;
+    perPerson: number;
+    source: string;
+    carriers: { airline: string; fare: number }[];
+  }>;
+  homeInStartingCities: boolean;
+}
+
+function defaultStartDate(): string {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + 30);
+  return d.toISOString().slice(0, 10);
+}
+
 type TransportName = "Corolla" | "BRV" | "Hiace Grand Cabin" | "Coaster" | "Prado" | "PradoNCP";
 
 interface TransportType {
@@ -160,7 +195,16 @@ interface UserInput {
   extraTransportManual: boolean;
 }
 
-export function CostCalculator() {
+export function CostCalculator({ skarduPackages = [] }: { skarduPackages?: PackagePickerEntry[] }) {
+  const [picker, setPicker] = useState({
+    slug: skarduPackages[0]?.slug ?? "",
+    home: "ISB" as HomeCity,
+    startDate: defaultStartDate(),
+  });
+  const [pickerLoading, setPickerLoading] = useState(false);
+  const [pickerError, setPickerError] = useState<string | null>(null);
+  const [lastQuote, setLastQuote] = useState<QuoteResponse | null>(null);
+
   const [trip, setTrip] = useState<TripConfig>({
     tripName: "Hunza Valley Tour",
     totalDistanceKm: 1800,
@@ -341,8 +385,134 @@ export function CostCalculator() {
     };
   }, [trip, transportTypes, hotelCategories, user]);
 
+  async function applyPicker() {
+    if (!picker.slug) return;
+    setPickerLoading(true);
+    setPickerError(null);
+    try {
+      const qs = new URLSearchParams({
+        slug: picker.slug,
+        home: picker.home,
+        startDate: picker.startDate,
+      });
+      const res = await fetch(`/api/admin/cost-calculator/quote?${qs.toString()}`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(body.error ?? "Failed to fetch quote");
+      }
+      const q = (await res.json()) as QuoteResponse;
+      setLastQuote(q);
+      setTrip((p) => ({
+        ...p,
+        tripName: q.name,
+        numberOfDays: q.duration,
+        numberOfNights: q.nights,
+        flightRequired: q.flightRequired,
+        flightCostPerPerson: q.flightCostPerPerson,
+        allowPradoNCP: q.allowPradoNCP,
+      }));
+      setUser((p) => ({ ...p, includeFlights: q.flightRequired }));
+    } catch (err) {
+      setPickerError((err as Error).message);
+    } finally {
+      setPickerLoading(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
+      {/* Skardu package picker */}
+      {skarduPackages.length > 0 && (
+        <section
+          className="rounded-lg p-5 space-y-3"
+          style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
+        >
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>
+              Auto-fill from Skardu package
+            </h2>
+            <span className="text-xs" style={{ color: "var(--text-tertiary)" }}>
+              {skarduPackages.length} fly-in packages · KDU-starting · PradoNCP rate auto-on
+            </span>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr_auto]">
+            <label className="block text-sm">
+              <span style={{ color: "var(--text-secondary)" }}>Package</span>
+              <select
+                className="mt-1 w-full rounded px-2 py-2 text-sm"
+                style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+                value={picker.slug}
+                onChange={(e) => setPicker((p) => ({ ...p, slug: e.target.value }))}
+              >
+                {skarduPackages.map((p) => (
+                  <option key={p.slug} value={p.slug}>{p.name} ({p.duration}d)</option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm">
+              <span style={{ color: "var(--text-secondary)" }}>Home city</span>
+              <select
+                className="mt-1 w-full rounded px-2 py-2 text-sm"
+                style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+                value={picker.home}
+                onChange={(e) => setPicker((p) => ({ ...p, home: e.target.value as HomeCity }))}
+              >
+                {(["ISB", "LHE", "KHI"] as HomeCity[]).map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm">
+              <span style={{ color: "var(--text-secondary)" }}>Trip start</span>
+              <input
+                type="date"
+                className="mt-1 w-full rounded px-2 py-2 text-sm"
+                style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+                value={picker.startDate}
+                onChange={(e) => setPicker((p) => ({ ...p, startDate: e.target.value }))}
+              />
+            </label>
+            <button
+              type="button"
+              className="mt-5 rounded px-3 py-2 text-sm self-start"
+              style={{ background: "var(--accent-primary)", color: "var(--on-dark)" }}
+              onClick={applyPicker}
+              disabled={pickerLoading}
+            >
+              {pickerLoading ? "Loading…" : "Apply"}
+            </button>
+          </div>
+          {pickerError && (
+            <div className="text-sm" style={{ color: "var(--accent-danger)" }}>{pickerError}</div>
+          )}
+          {lastQuote && (
+            <div
+              className="rounded-md p-3 text-xs space-y-1"
+              style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)" }}
+            >
+              <div style={{ color: "var(--text-tertiary)" }}>
+                Flight cost loaded · {lastQuote.duration} days · home in starting:{" "}
+                {String(lastQuote.homeInStartingCities)}
+              </div>
+              {lastQuote.flightBreakdown.length === 0 ? (
+                <div style={{ color: "var(--text-tertiary)" }}>No flight legs.</div>
+              ) : (
+                lastQuote.flightBreakdown.map((l, i) => (
+                  <div key={i} className="flex justify-between" style={{ color: "var(--text-secondary)" }}>
+                    <span>{l.from}→{l.to} ({l.date}) · {l.source} {l.carriers.map((c) => c.airline).join(",")}</span>
+                    <span>PKR {l.perPerson.toLocaleString()}</span>
+                  </div>
+                ))
+              )}
+              <div className="flex justify-between pt-1" style={{ borderTop: "1px solid var(--border-default)", color: "var(--text-primary)", fontWeight: 600 }}>
+                <span>Per person flight</span>
+                <span>PKR {lastQuote.flightCostPerPerson.toLocaleString()}</span>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
       {/* Trip config */}
       <section
         className="rounded-lg p-5 space-y-4"
