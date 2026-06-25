@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/admin/guard";
 import { listVehicleTypes, getEngineConfig } from "@/services/vehicle.service";
 import { saveVehicleAction, saveEngineConfigAction } from "./actions";
+import { SaveButton } from "./SaveButton";
 
 export const dynamic = "force-dynamic";
 
@@ -114,12 +115,7 @@ export default async function VehiclesAdminPage() {
               {v.isNcp ? "yes" : "—"}
             </div>
             <div className="flex justify-end">
-              <button
-                type="submit"
-                className="rounded px-4 py-1.5 text-sm font-medium bg-emerald-700 text-white hover:bg-emerald-800"
-              >
-                Save
-              </button>
+              <SaveButton />
             </div>
           </form>
         ))}
@@ -157,12 +153,8 @@ function ConfigField({
           }}
         />
       </label>
-      <button
-        type="submit"
-        className="rounded px-4 py-2 text-sm font-medium h-[38px] bg-emerald-700 text-white hover:bg-emerald-800"
-      >
-        Save
-      </button>
+      <SaveButton />
+
     </form>
   );
 }
