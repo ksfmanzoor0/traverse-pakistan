@@ -5,7 +5,6 @@ import { FlightFaresFilters } from "@/components/admin/flight-fares/FlightFaresF
 import { FlightFaresTable } from "@/components/admin/flight-fares/FlightFaresTable";
 import { ManualFareForm } from "@/components/admin/flight-fares/ManualFareForm";
 import { ScraperConfigPanel } from "@/components/admin/flight-fares/ScraperConfigPanel";
-import { PackageFlightPreview } from "@/components/admin/flight-fares/PackageFlightPreview";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +18,6 @@ type SearchParams = {
   source?: string;
   from?: string;
   to?: string;
-  preview_date?: string;
 };
 
 function formatRelative(iso: string | null): string {
@@ -117,8 +115,6 @@ export default async function FlightFaresPage({
       <ManualFareForm />
 
       <FlightFaresTable rows={latestPerKey} totalShown={latestPerKey.length} totalLoaded={fares.length} />
-
-      <PackageFlightPreview departureDate={params.preview_date} />
     </div>
   );
 }
