@@ -226,14 +226,24 @@ export interface EngineConfigEntry {
   guidePerDay: number;
 }
 
+export interface HotelTierSummary {
+  tier: string;       // 'deluxe' | 'premium' | 'luxury'
+  hotels: number;
+  avgPrice: number;
+  minPrice: number;
+  maxPrice: number;
+}
+
 export function CostCalculator({
   skarduPackages = [],
   vehicles = [],
   engineConfig,
+  hotelTiers = [],
 }: {
   skarduPackages?: PackagePickerEntry[];
   vehicles?: VehicleEntry[];
   engineConfig?: EngineConfigEntry;
+  hotelTiers?: HotelTierSummary[];
 }) {
   const [picker, setPicker] = useState({
     slug: skarduPackages[0]?.slug ?? "",
@@ -686,6 +696,57 @@ export function CostCalculator({
       </section>
 
 
+      {/* Hotel categories — read-only reference pulled from hotels table */}
+      {hotelTiers.length > 0 && (
+        <section
+          className="rounded-lg p-5 space-y-3"
+          style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
+        >
+          <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>
+            Hotel categories <span style={{ color: "var(--text-tertiary)", fontWeight: 400 }}>(live from hotels table)</span>
+          </h2>
+          <div
+            className="grid gap-2 text-xs px-2 pb-1"
+            style={{ gridTemplateColumns: "120px 80px 120px 200px", color: "var(--text-tertiary)" }}
+          >
+            <div>Category</div>
+            <div>Hotels</div>
+            <div>Avg / night</div>
+            <div>Range</div>
+          </div>
+          {hotelTiers.map((t) => {
+            const greyed = t.tier === "premium";
+            return (
+              <div
+                key={t.tier}
+                className="grid gap-2 rounded-md p-2 text-sm items-center"
+                style={{
+                  gridTemplateColumns: "120px 80px 120px 200px",
+                  background: "var(--bg-elevated)",
+                  border: "1px solid var(--border-default)",
+                  opacity: greyed ? 0.5 : 1,
+                }}
+                title={greyed ? "Premium not yet wired to any package itinerary" : undefined}
+              >
+                <div className="font-medium capitalize" style={{ color: "var(--text-primary)" }}>
+                  {t.tier}
+                  {greyed && (
+                    <span className="ml-1 text-xs" style={{ color: "var(--text-tertiary)" }}>(disabled)</span>
+                  )}
+                </div>
+                <div style={{ color: "var(--text-secondary)" }}>{t.hotels}</div>
+                <div style={{ color: "var(--text-primary)" }}>
+                  {t.avgPrice > 0 ? `PKR ${t.avgPrice.toLocaleString()}` : "—"}
+                </div>
+                <div style={{ color: "var(--text-tertiary)" }}>
+                  {t.minPrice > 0 ? `${t.minPrice.toLocaleString()} – ${t.maxPrice.toLocaleString()}` : "—"}
+                </div>
+              </div>
+            );
+          })}
+        </section>
+      )}
+
       {/* Customer quote */}
       <div className="grid gap-6 lg:grid-cols-3">
         <section
@@ -706,9 +767,11 @@ export function CostCalculator({
               value={user.hotelType}
               onChange={(e) => updateUser("hotelType", e.target.value as keyof typeof INITIAL_HOTELS)}
             >
-              {Object.keys(hotelCategories).map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
+              {Object.keys(hotelCategories)
+                .filter((c) => c !== "premium")
+                .map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
             </select>
           </label>
 

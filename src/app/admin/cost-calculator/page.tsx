@@ -1,7 +1,39 @@
 import { requireAdmin } from "@/lib/admin/guard";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { listVehicleTypes, getEngineConfig } from "@/services/vehicle.service";
-import { CostCalculator, type PackagePickerEntry } from "@/components/admin/cost-calculator/CostCalculator";
+import { CostCalculator, type PackagePickerEntry, type HotelTierSummary } from "@/components/admin/cost-calculator/CostCalculator";
+
+async function loadHotelTierSummaries(): Promise<HotelTierSummary[]> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("hotels")
+    .select("tier, price_per_night");
+  if (error) throw new Error(`loadHotelTierSummaries: ${error.message}`);
+  const rows = ((data ?? []) as Array<{ tier: string; price_per_night: number | null }>)
+    .filter((r) => r.price_per_night && r.price_per_night > 0);
+  const byTier = new Map<string, number[]>();
+  for (const r of rows) {
+    const arr = byTier.get(r.tier) ?? [];
+    arr.push(r.price_per_night!);
+    byTier.set(r.tier, arr);
+  }
+  const out: HotelTierSummary[] = [];
+  for (const tier of ["deluxe", "premium", "luxury"]) {
+    const arr = byTier.get(tier) ?? [];
+    if (arr.length === 0) {
+      out.push({ tier, hotels: 0, avgPrice: 0, minPrice: 0, maxPrice: 0 });
+    } else {
+      out.push({
+        tier,
+        hotels: arr.length,
+        avgPrice: Math.round(arr.reduce((a, b) => a + b, 0) / arr.length),
+        minPrice: Math.min(...arr),
+        maxPrice: Math.max(...arr),
+      });
+    }
+  }
+  return out;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -28,10 +60,11 @@ async function loadSkarduPackages(): Promise<PackagePickerEntry[]> {
 
 export default async function CostCalculatorPage() {
   await requireAdmin();
-  const [skarduPackages, vehicles, engineConfig] = await Promise.all([
+  const [skarduPackages, vehicles, engineConfig, hotelTiers] = await Promise.all([
     loadSkarduPackages(),
     listVehicleTypes(),
     getEngineConfig(),
+    loadHotelTierSummaries(),
   ]);
 
   return (
@@ -52,6 +85,7 @@ export default async function CostCalculatorPage() {
         skarduPackages={skarduPackages}
         vehicles={vehicles}
         engineConfig={engineConfig}
+        hotelTiers={hotelTiers}
       />
     </div>
   );
