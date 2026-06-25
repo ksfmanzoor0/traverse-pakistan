@@ -219,6 +219,8 @@ export type PackageRow = {
   know_before_you_go: string[];
   pricing: unknown;
   starting_cities: string[];
+  major_stops: string[];
+  total_distance_km: number | null;
   meta_title: string | null;
   meta_description: string | null;
   created_at: string | null;
@@ -543,6 +545,12 @@ export type Database = {
         Row: Record<string, unknown>;
         Insert: Record<string, unknown>;
         Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      location_distances: {
+        Row: { from_code: string; to_code: string; km: number };
+        Insert: { from_code: string; to_code: string; km: number };
+        Update: Partial<{ from_code: string; to_code: string; km: number }>;
         Relationships: [];
       };
     };

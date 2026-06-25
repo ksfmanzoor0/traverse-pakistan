@@ -33,15 +33,29 @@ export async function GET(req: Request) {
   const supabase = getSupabaseAdmin();
   const { data: pkg, error } = await supabase
     .from("packages")
-    .select("slug, name, duration, starting_cities")
+    .select("slug, name, duration, starting_cities, total_distance_km")
     .eq("slug", slug)
     .maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!pkg) return NextResponse.json({ error: "Package not found" }, { status: 404 });
 
-  const row = pkg as { slug: string; name: string; duration: number; starting_cities: string[] };
+  const row = pkg as {
+    slug: string;
+    name: string;
+    duration: number;
+    starting_cities: string[];
+    total_distance_km: number | null;
+  };
   const startingCities = row.starting_cities ?? [];
   const allowPradoNCP = startingCities.includes("KDU") || startingCities.includes("GIL");
+
+  // LHE extension applies when the canonical vehicle starts in ISB and the
+  // traveler picks Lahore — vehicle drives ISB↔LHE extra both ways. Skardu
+  // fly-in (KDU) and KHI-canonical packages do not get the extension.
+  const LHE_EXTENSION_KM = 800;
+  const baseDistance = row.total_distance_km ?? 0;
+  const extensionKm = startingCities.includes("ISB") && home === "LHE" ? LHE_EXTENSION_KM : 0;
+  const totalDistanceKm = baseDistance + extensionKm;
 
   const [flightQuote, hotelQuote] = await Promise.all([
     quotePackageAddons({ packageSlug: slug, homeCity: home, startDate }),
@@ -57,6 +71,9 @@ export async function GET(req: Request) {
     allowPradoNCP,
     tier,
     people,
+    totalDistanceKm,
+    baseDistanceKm: baseDistance,
+    extensionKm,
     flightRequired: !flightQuote?.homeInStartingCities && (flightQuote?.addons.length ?? 0) > 0,
     flightCostPerPerson: flightQuote?.addonCostPerPerson ?? 0,
     flightBreakdown:

@@ -20,6 +20,9 @@ interface QuoteResponse {
   allowPradoNCP: boolean;
   tier: "deluxe" | "luxury";
   people: number;
+  totalDistanceKm: number;
+  baseDistanceKm: number;
+  extensionKm: number;
   flightRequired: boolean;
   flightCostPerPerson: number;
   flightBreakdown: Array<{
@@ -433,6 +436,7 @@ export function CostCalculator({ skarduPackages = [] }: { skarduPackages?: Packa
         tripName: q.name,
         numberOfDays: q.duration,
         numberOfNights: q.nights,
+        totalDistanceKm: q.totalDistanceKm,
         flightRequired: q.flightRequired,
         flightCostPerPerson: q.flightCostPerPerson,
         allowPradoNCP: q.allowPradoNCP,
@@ -561,6 +565,30 @@ export function CostCalculator({ skarduPackages = [] }: { skarduPackages?: Packa
               <div className="flex justify-between pt-1" style={{ borderTop: "1px solid var(--border-default)", color: "var(--text-primary)", fontWeight: 600 }}>
                 <span>Per person flight</span>
                 <span>PKR {lastQuote.flightCostPerPerson.toLocaleString()}</span>
+              </div>
+            </div>
+          )}
+          {lastQuote && (
+            <div
+              className="rounded-md p-3 text-xs space-y-1"
+              style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)" }}
+            >
+              <div style={{ color: "var(--text-tertiary)" }}>
+                Vehicle distance loaded for {lastQuote.duration} days
+              </div>
+              <div className="flex justify-between" style={{ color: "var(--text-secondary)" }}>
+                <span>Package base distance</span>
+                <span>{lastQuote.baseDistanceKm.toLocaleString()} km</span>
+              </div>
+              {lastQuote.extensionKm > 0 && (
+                <div className="flex justify-between" style={{ color: "var(--text-secondary)" }}>
+                  <span>LHE extension (ISB↔LHE round-trip)</span>
+                  <span>+{lastQuote.extensionKm.toLocaleString()} km</span>
+                </div>
+              )}
+              <div className="flex justify-between pt-1" style={{ borderTop: "1px solid var(--border-default)", color: "var(--text-primary)", fontWeight: 600 }}>
+                <span>Total distance for engine</span>
+                <span>{lastQuote.totalDistanceKm.toLocaleString()} km</span>
               </div>
             </div>
           )}
