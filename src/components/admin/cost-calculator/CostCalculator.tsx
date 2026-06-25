@@ -280,8 +280,16 @@ export function CostCalculator({
   });
 
   const [transportTypes] = useState(() => buildTransportFromVehicles(vehicles));
+  // Show all vehicles (including NCP variants) so operator can pick the exact
+  // one. NCP variants are auto-selected for KDU/GIL packages.
   const customerTransportOptions = useMemo(
-    () => vehicles.filter((v) => !v.isNcp).map((v) => v.displayName),
+    () => vehicles.map((v) => v.displayName),
+    [vehicles],
+  );
+
+  /** Vehicle display name marked as NCP for KDU/GIL eligibility, if any. */
+  const ncpPradoName = useMemo(
+    () => vehicles.find((v) => v.isNcp && v.ncpPairCode === "prado")?.displayName ?? "Prado",
     [vehicles],
   );
 
@@ -503,9 +511,9 @@ export function CostCalculator({
         includeFlights: q.flightRequired,
         people: q.people,
         hotelType: q.tier === "luxury" ? "luxury" : q.tier === "premium" ? "premium" : "deluxe",
-        // Skardu/Gilgit (NCP-eligible) packages default to Prado so the engine
-        // applies the NCP rate automatically. Otherwise auto-pick from group size.
-        selectedTransport: q.allowPradoNCP ? "Prado" : (getDefaultTransport(q.people) as TransportName),
+        // Skardu/Gilgit (NCP-eligible) packages default to the Prado NCP
+        // variant explicitly so the operator sees it in the dropdown.
+        selectedTransport: q.allowPradoNCP ? (ncpPradoName as TransportName) : (getDefaultTransport(q.people) as TransportName),
         manualTransport: false,
         extraTransports: q.allowPradoNCP ? {} : getAutoExtras(q.people, getDefaultTransport(q.people), false),
       }));
