@@ -74,13 +74,14 @@ interface HotelCategory {
   extraPersonCostPerNight: number;
 }
 
+// km/L reduced by 3 from highway-rated to reflect mountain/loaded conditions.
 const INITIAL_TRANSPORT: Record<TransportName, TransportType> = {
-  Corolla: { avgKmPerLitre: 10, maxPeople: 3, rentPerDay: 9000 },
-  BRV: { avgKmPerLitre: 10, maxPeople: 4, rentPerDay: 10000 },
-  "Hiace Grand Cabin": { avgKmPerLitre: 5, maxPeople: 11, rentPerDay: 22000 },
-  Coaster: { avgKmPerLitre: 4, maxPeople: 21, rentPerDay: 18000 },
-  Prado: { avgKmPerLitre: 4.5, maxPeople: 4, rentPerDay: 22000 },
-  PradoNCP: { avgKmPerLitre: 4.5, maxPeople: 4, rentPerDay: 26000 },
+  Corolla: { avgKmPerLitre: 7, maxPeople: 3, rentPerDay: 9000 },
+  BRV: { avgKmPerLitre: 7, maxPeople: 4, rentPerDay: 10000 },
+  "Hiace Grand Cabin": { avgKmPerLitre: 2, maxPeople: 11, rentPerDay: 22000 },
+  Coaster: { avgKmPerLitre: 1, maxPeople: 21, rentPerDay: 18000 },
+  Prado: { avgKmPerLitre: 1.5, maxPeople: 4, rentPerDay: 22000 },
+  PradoNCP: { avgKmPerLitre: 1.5, maxPeople: 4, rentPerDay: 26000 },
 };
 
 const CUSTOMER_TRANSPORT_OPTIONS: TransportName[] = [
