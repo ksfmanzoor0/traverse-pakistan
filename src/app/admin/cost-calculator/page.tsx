@@ -1,6 +1,6 @@
 import { requireAdmin } from "@/lib/admin/guard";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { listVehicleTypes } from "@/services/vehicle.service";
+import { listVehicleTypes, getEngineConfig } from "@/services/vehicle.service";
 import { CostCalculator, type PackagePickerEntry } from "@/components/admin/cost-calculator/CostCalculator";
 
 export const dynamic = "force-dynamic";
@@ -28,9 +28,10 @@ async function loadSkarduPackages(): Promise<PackagePickerEntry[]> {
 
 export default async function CostCalculatorPage() {
   await requireAdmin();
-  const [skarduPackages, vehicles] = await Promise.all([
+  const [skarduPackages, vehicles, engineConfig] = await Promise.all([
     loadSkarduPackages(),
     listVehicleTypes(),
+    getEngineConfig(),
   ]);
 
   return (
@@ -47,7 +48,11 @@ export default async function CostCalculatorPage() {
         </p>
       </div>
 
-      <CostCalculator skarduPackages={skarduPackages} vehicles={vehicles} />
+      <CostCalculator
+        skarduPackages={skarduPackages}
+        vehicles={vehicles}
+        engineConfig={engineConfig}
+      />
     </div>
   );
 }

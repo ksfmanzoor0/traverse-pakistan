@@ -218,12 +218,22 @@ interface UserInput {
   extraTransportManual: boolean;
 }
 
+export interface EngineConfigEntry {
+  fuelPricePerLitre: number;
+  profitPercentage: number;
+  packageBufferKm: number;
+  lheExtensionKm: number;
+  guidePerDay: number;
+}
+
 export function CostCalculator({
   skarduPackages = [],
   vehicles = [],
+  engineConfig,
 }: {
   skarduPackages?: PackagePickerEntry[];
   vehicles?: VehicleEntry[];
+  engineConfig?: EngineConfigEntry;
 }) {
   const [picker, setPicker] = useState({
     slug: skarduPackages[0]?.slug ?? "",
@@ -241,9 +251,9 @@ export function CostCalculator({
     totalDistanceKm: 1800,
     numberOfDays: 6,
     numberOfNights: 5,
-    fuelPricePerLitre: 285,
-    profitPercentage: 20,
-    guidePerDay: 5000,
+    fuelPricePerLitre: engineConfig?.fuelPricePerLitre ?? 285,
+    profitPercentage: engineConfig?.profitPercentage ?? 20,
+    guidePerDay: engineConfig?.guidePerDay ?? 5000,
     jeepCostPerJeep: 18000,
     jeepCapacity: 6,
     flightCostPerPerson: 0,

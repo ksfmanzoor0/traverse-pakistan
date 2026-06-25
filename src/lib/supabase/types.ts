@@ -553,6 +553,33 @@ export type Database = {
         Update: Partial<{ from_code: string; to_code: string; km: number }>;
         Relationships: [];
       };
+      engine_config: {
+        Row: {
+          id: string;
+          fuel_price_per_litre: number;
+          profit_percentage: number;
+          package_buffer_km: number;
+          lhe_extension_km: number;
+          guide_per_day: number;
+          updated_at: string | null;
+          updated_by: string | null;
+        };
+        Insert: { id?: string } & Partial<{
+          fuel_price_per_litre: number;
+          profit_percentage: number;
+          package_buffer_km: number;
+          lhe_extension_km: number;
+          guide_per_day: number;
+        }>;
+        Update: Partial<{
+          fuel_price_per_litre: number;
+          profit_percentage: number;
+          package_buffer_km: number;
+          lhe_extension_km: number;
+          guide_per_day: number;
+        }>;
+        Relationships: [];
+      };
       vehicle_types: {
         Row: {
           id: string;
