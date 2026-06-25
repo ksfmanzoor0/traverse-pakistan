@@ -441,8 +441,10 @@ export function CostCalculator({
     const extraCost = useRealHotel ? 0 : placeholderExtraCost;
     const hotelCost = useRealHotel ? (lastQuote?.hotelTotalCost ?? 0) : placeholderHotelCost;
 
-    const guideCost = user.addGuide ? num(trip.guidePerDay) * days : 0;
-    const flightCost = trip.flightRequired && user.includeFlights ? num(trip.flightCostPerPerson) * people : 0;
+    // Guide and flight no longer behind toggles — always included when the
+    // trip declares them. Picker drives all of these on Apply.
+    const guideCost = num(trip.guidePerDay) * days;
+    const flightCost = trip.flightRequired ? num(trip.flightCostPerPerson) * people : 0;
 
     const transportCost = rentCost + fuelCost + jeepCost;
     const subtotal = transportCost + hotelCost + guideCost + flightCost;
@@ -481,7 +483,7 @@ export function CostCalculator({
         totalCapacity < people ? `Selected transport capacity is short for ${people} people.` : "",
       mattressWarning: extraPeople > 0 ? `${extraPeople} extra person(s) on mattress.` : "",
       flightWarning:
-        trip.flightRequired && user.includeFlights
+        trip.flightRequired
           ? "Flight cost is not final and may change with airline availability."
           : "",
       actualMain,

@@ -26,8 +26,17 @@ interface RoomCandidate {
   name: string;
   maxOccupancy: number;
   available: number;        // inventory cap (room count)
-  singleOp: number;         // single occupancy operator cost
-  extraCharge: number;      // per extra person operator cost
+  singlePrice: number;      // 1-pax rate (falls back to doublePrice when not set)
+  doublePrice: number;      // 2-pax rate — the canonical room rate
+  extraCharge: number;      // per person above 2
+}
+
+/** cost for k people in this room: single rate for 1, double for 2,
+ *  double + (k-2)*extra for 3+. */
+function costForPeople(room: RoomCandidate, k: number): number {
+  if (k <= 0) return 0;
+  if (k === 1) return room.singlePrice;
+  return room.doublePrice + Math.max(0, k - 2) * room.extraCharge;
 }
 
 /** MM-DD interval check; handles year-wrap like 11-01 → 03-31. */
@@ -120,8 +129,8 @@ function allocate(rooms: RoomCandidate[], people: number): AllocatedRoom[] | nul
   if (people <= 0) return [];
   if (rooms.length === 0) return null;
 
-  // Sort cheap-per-person first to bias enumeration
-  const sorted = [...rooms].sort((a, b) => a.singleOp - b.singleOp);
+  // Sort cheap-per-room first to bias enumeration
+  const sorted = [...rooms].sort((a, b) => a.doublePrice - b.doublePrice);
 
   const maxCounts = sorted.map((r) =>
     Math.min(r.available, Math.ceil(people / Math.max(1, r.maxOccupancy))),
@@ -148,13 +157,13 @@ function allocate(rooms: RoomCandidate[], people: number): AllocatedRoom[] | nul
       for (const s of slots) {
         if (remaining <= 0) break;
         const inThisRoom = Math.min(s.room.maxOccupancy, remaining);
-        const roomCost = s.room.singleOp + Math.max(0, inThisRoom - 1) * s.room.extraCharge;
+        const roomCost = costForPeople(s.room, inThisRoom);
         allocation.push({
           roomId: s.room.id,
           name: s.room.name,
           peopleInRoom: inThisRoom,
           maxOccupancy: s.room.maxOccupancy,
-          singlePrice: s.room.singleOp,
+          singlePrice: s.room.singlePrice,
           extraOccupancyCharge: s.room.extraCharge,
           costForRoom: roomCost,
         });
@@ -197,15 +206,12 @@ export async function allocateHotelForNight(args: {
         ? r.hotel_room_prices.find((p) => p.season_id === activeSeason.id)
         : null;
       const extraCharge = r.extra_occupancy_charge ?? 0;
-      // Prefer explicit single_price. If missing, derive from `price` (2-pax
-      // display rate by convention): single = price - extra_charge. This
-      // keeps the additive formula consistent — cost(k) = single + (k-1)×extra.
-      const priceVal = override?.price ?? r.price ?? null;
-      const singleOp =
-        override?.single_price ??
-        r.single_price ??
-        (priceVal !== null ? Math.max(0, priceVal - extraCharge) : null);
-      if (singleOp === null || singleOp <= 0) return null;
+      // `price` = 2-pax room rate (display, season-overridden if available).
+      // 1 person pays the same as 2 unless explicit single_price exists.
+      const doublePrice = override?.price ?? r.price ?? null;
+      if (doublePrice === null || doublePrice <= 0) return null;
+      const explicitSingle = override?.single_price ?? r.single_price ?? null;
+      const singlePrice = explicitSingle ?? doublePrice;
       const maxOcc = r.max_occupancy ?? r.capacity_adults ?? 2;
       const available = r.available ?? 99;
       return {
@@ -213,7 +219,8 @@ export async function allocateHotelForNight(args: {
         name: r.name,
         maxOccupancy: Math.max(1, maxOcc),
         available: Math.max(0, available),
-        singleOp,
+        singlePrice,
+        doublePrice,
         extraCharge,
       } as RoomCandidate;
     })
