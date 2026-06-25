@@ -7,18 +7,19 @@ export interface FlightLeg {
   from: string;             // "{departure}" or fixed airport code
   to: string;
   routeType: FlightRouteType;
+  day: number | "last";     // 1-indexed; "last" resolves to package duration
+  skipIfDeparture?: string[]; // departure cities for which this leg is omitted
 }
 
 export interface ResolvedLeg {
   from: string;
   to: string;
   routeType: FlightRouteType;
-  departDate: string;
+  departDate: string | null;
   perPerson: number;
-  source: "manual" | "averaged" | "single" | "unresolved";
+  source: "manual" | "averaged" | "single" | "unresolved" | "skipped";
   carriers: { airline: string; fare: number; scrapedAt: string }[];
   manualOverride?: { airline: string; fare: number; notes: string | null };
-  /** Reason the leg is unresolved — only set when source = "unresolved". */
   unresolvedReason?: string;
 }
 
@@ -36,17 +37,16 @@ export interface FlightCostResult {
  * across whichever of these carriers have data for the date.
  */
 const ELIGIBLE_CARRIERS: Record<string, FlightAirline[]> = {
-  "ISB-KDU": ["PIA", "AirBlue", "AirSial"],
-  "KDU-ISB": ["PIA", "AirBlue", "AirSial"],
-  "LHE-KDU": ["PIA", "AirBlue"],
-  "KDU-LHE": ["PIA", "AirBlue"],
-  "KHI-KDU": ["PIA"],
-  "KDU-KHI": ["PIA"],
+  "ISB-KDU": ["PIA", "AirBlue", "AirSial"],  "KDU-ISB": ["PIA", "AirBlue", "AirSial"],
+  "LHE-KDU": ["PIA", "AirBlue"],              "KDU-LHE": ["PIA", "AirBlue"],
+  "KHI-KDU": ["PIA"],                          "KDU-KHI": ["PIA"],
+  // Trunk routes for Gwadar/Ormara flight add-ons from non-KHI cities
+  "ISB-KHI": ["PIA", "AirBlue", "AirSial"],  "KHI-ISB": ["PIA", "AirBlue", "AirSial"],
+  "LHE-KHI": ["PIA", "AirBlue", "AirSial"],  "KHI-LHE": ["PIA", "AirBlue", "AirSial"],
 };
 
 /** Date window (in days) around the requested departure to consider matching fares.
- *  Set to 21 to bridge the gap between the scraper's +30 and +60 day horizons —
- *  any trip date up to halfway between the two will find a fare on either side. */
+ *  Set to 21 to bridge the gap between the scraper's +30 and +60 day horizons. */
 const FARE_DATE_WINDOW_DAYS = 21;
 
 function addDays(iso: string, days: number): string {
@@ -57,6 +57,11 @@ function addDays(iso: string, days: number): string {
 
 function substituteDeparture(token: string, departure: DepartureCity): string {
   return token === "{departure}" ? departure : token;
+}
+
+function legDate(leg: FlightLeg, departureDate: string, duration: number): string {
+  if (leg.day === "last") return addDays(departureDate, Math.max(0, duration - 1));
+  return addDays(departureDate, Math.max(0, leg.day - 1));
 }
 
 interface FareCandidate {
@@ -128,8 +133,6 @@ function resolveSingleLeg(
     };
   }
 
-  // For each eligible carrier, pick cheapest fare across the date window
-  // (closest-date tie-breaker: prefer fare on the exact target date).
   const byCarrier = new Map<string, FareCandidate>();
   for (const c of candidates) {
     if (!eligible.includes(c.airline as FlightAirline)) continue;
@@ -166,7 +169,7 @@ function resolveSingleLeg(
 export interface ResolveFlightCostArgs {
   packageSlug: string;
   departureCity: DepartureCity;
-  departureDate: string;     // YYYY-MM-DD — first day of the trip
+  departureDate: string;
 }
 
 export async function resolveFlightCostForPackage(
@@ -175,35 +178,49 @@ export async function resolveFlightCostForPackage(
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("packages")
-    .select("slug, duration, flight_legs")
+    .select("slug, duration, has_flight, flight_legs")
     .eq("slug", args.packageSlug)
     .maybeSingle();
   if (error) throw new Error(`resolveFlightCostForPackage: ${error.message}`);
   if (!data) return null;
 
-  const pkg = data as { slug: string; duration: number; flight_legs: FlightLeg[] | null };
-  const legs = Array.isArray(pkg.flight_legs) ? pkg.flight_legs : [];
-  const returnDay = addDays(args.departureDate, Math.max(0, pkg.duration - 1));
+  const pkg = data as { slug: string; duration: number; has_flight: boolean; flight_legs: FlightLeg[] | null };
+  if (!pkg.has_flight) {
+    return {
+      packageSlug: args.packageSlug,
+      departureCity: args.departureCity,
+      departureDate: args.departureDate,
+      perPerson: 0,
+      legs: [],
+      unresolvedLegs: [],
+    };
+  }
 
+  const legs = Array.isArray(pkg.flight_legs) ? pkg.flight_legs : [];
   const resolved: ResolvedLeg[] = [];
-  for (let i = 0; i < legs.length; i += 1) {
-    const leg = legs[i];
+
+  for (const leg of legs) {
+    if (leg.skipIfDeparture?.includes(args.departureCity)) {
+      resolved.push({
+        from: substituteDeparture(leg.from, args.departureCity),
+        to: substituteDeparture(leg.to, args.departureCity),
+        routeType: leg.routeType,
+        departDate: null,
+        perPerson: 0,
+        source: "skipped",
+        carriers: [],
+      });
+      continue;
+    }
+
     const from = substituteDeparture(leg.from, args.departureCity);
     const to = substituteDeparture(leg.to, args.departureCity);
-    // Outbound leg (KDU as destination) → trip start.
-    // Inbound leg (KDU as origin) → trip end.
-    const targetDate = to === "KDU" ? args.departureDate : returnDay;
+    const targetDate = legDate(leg, args.departureDate, pkg.duration);
     const pair = `${from}-${to}`;
 
     const candidates = await fetchLegCandidates(from, to, leg.routeType, targetDate);
     const r = resolveSingleLeg(candidates, pair, targetDate);
-    resolved.push({
-      from,
-      to,
-      routeType: leg.routeType,
-      departDate: targetDate,
-      ...r,
-    });
+    resolved.push({ from, to, routeType: leg.routeType, departDate: targetDate, ...r });
   }
 
   const perPerson = resolved.reduce((s, l) => s + l.perPerson, 0);
@@ -219,9 +236,6 @@ export async function resolveFlightCostForPackage(
   };
 }
 
-/**
- * List all packages that declare flight legs. Used by the admin preview panel.
- */
 export interface FlightInclusivePackage {
   slug: string;
   name: string;
@@ -234,7 +248,8 @@ export async function listFlightInclusivePackages(): Promise<FlightInclusivePack
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("packages")
-    .select("slug, name, duration, destination_slug, flight_legs")
+    .select("slug, name, duration, destination_slug, has_flight, flight_legs")
+    .eq("has_flight", true)
     .order("slug");
   if (error) throw new Error(`listFlightInclusivePackages: ${error.message}`);
   return ((data ?? []) as Array<{
@@ -242,14 +257,13 @@ export async function listFlightInclusivePackages(): Promise<FlightInclusivePack
     name: string;
     duration: number;
     destination_slug: string;
+    has_flight: boolean;
     flight_legs: FlightLeg[] | null;
-  }>)
-    .filter((r) => Array.isArray(r.flight_legs) && r.flight_legs.length > 0)
-    .map((r) => ({
-      slug: r.slug,
-      name: r.name,
-      duration: r.duration,
-      destinationSlug: r.destination_slug,
-      flightLegs: r.flight_legs!,
-    }));
+  }>).map((r) => ({
+    slug: r.slug,
+    name: r.name,
+    duration: r.duration,
+    destinationSlug: r.destination_slug,
+    flightLegs: r.flight_legs ?? [],
+  }));
 }

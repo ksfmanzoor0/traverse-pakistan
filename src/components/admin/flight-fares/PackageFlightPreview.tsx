@@ -22,6 +22,8 @@ function legBadge(leg: ResolvedLeg): { label: string; color: string } {
       return { label: leg.carriers[0]?.airline ?? "single", color: "var(--text-tertiary)" };
     case "unresolved":
       return { label: "no data", color: "var(--accent-danger)" };
+    case "skipped":
+      return { label: "n/a", color: "var(--text-tertiary)" };
   }
 }
 
@@ -45,7 +47,10 @@ function ResolvedRow({ result }: { result: FlightCostResult }) {
           return (
             <div key={i} className="flex items-center justify-between gap-2">
               <span style={{ color: "var(--text-secondary)" }}>
-                {leg.from}→{leg.to} <span style={{ color: "var(--text-tertiary)" }}>({leg.departDate})</span>
+                {leg.from}→{leg.to}{" "}
+                <span style={{ color: "var(--text-tertiary)" }}>
+                  ({leg.departDate ?? "—"})
+                </span>
               </span>
               <span className="flex items-center gap-2">
                 <span

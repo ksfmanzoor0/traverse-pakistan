@@ -218,7 +218,14 @@ export type PackageRow = {
   exclusions: string[];
   know_before_you_go: string[];
   pricing: unknown;
-  flight_legs: Array<{ from: string; to: string; routeType: "ONEWAY" | "RETURN" }> | null;
+  has_flight: boolean;
+  flight_legs: Array<{
+    from: string;
+    to: string;
+    routeType: "ONEWAY" | "RETURN";
+    day: number | "last";
+    skipIfDeparture?: string[];
+  }> | null;
   meta_title: string | null;
   meta_description: string | null;
   created_at: string | null;
