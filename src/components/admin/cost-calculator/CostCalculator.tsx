@@ -18,7 +18,7 @@ interface QuoteResponse {
   nights: number;
   startingCities: string[];
   allowPradoNCP: boolean;
-  tier: "deluxe" | "luxury";
+  tier: "deluxe" | "premium" | "luxury";
   people: number;
   totalDistanceKm: number;
   baseDistanceKm: number;
@@ -77,32 +77,30 @@ interface HotelCategory {
   extraPersonCostPerNight: number;
 }
 
-// km/L reduced by 3 from highway-rated to reflect mountain/loaded conditions.
-const INITIAL_TRANSPORT: Record<TransportName, TransportType> = {
-  Corolla: { avgKmPerLitre: 7, maxPeople: 3, rentPerDay: 9000 },
-  BRV: { avgKmPerLitre: 7, maxPeople: 4, rentPerDay: 10000 },
-  "Hiace Grand Cabin": { avgKmPerLitre: 2, maxPeople: 11, rentPerDay: 22000 },
-  Coaster: { avgKmPerLitre: 1, maxPeople: 21, rentPerDay: 18000 },
-  Prado: { avgKmPerLitre: 1.5, maxPeople: 4, rentPerDay: 22000 },
-  PradoNCP: { avgKmPerLitre: 1.5, maxPeople: 4, rentPerDay: 26000 },
-};
+export interface VehicleEntry {
+  id: string;
+  code: string;
+  displayName: string;
+  kmPerLitre: number;
+  maxPeople: number;
+  rentPerDay: number;
+  isNcp: boolean;
+  ncpPairCode: string | null;
+}
 
-const CUSTOMER_TRANSPORT_OPTIONS: TransportName[] = [
-  "Corolla",
-  "BRV",
-  "Hiace Grand Cabin",
-  "Coaster",
-  "Prado",
-];
+function buildTransportFromVehicles(vehicles: VehicleEntry[]): Record<string, TransportType> {
+  const out: Record<string, TransportType> = {};
+  for (const v of vehicles) {
+    out[v.displayName] = {
+      avgKmPerLitre: v.kmPerLitre,
+      maxPeople: v.maxPeople,
+      rentPerDay: v.rentPerDay,
+    };
+  }
+  return out;
+}
 
 const INITIAL_HOTELS: Record<string, HotelCategory> = {
-  standard: {
-    hotelName: "Standard Hotel",
-    roomRatePerNight: 6000,
-    includedPeoplePerRoom: 2,
-    maxPeoplePerRoom: 4,
-    extraPersonCostPerNight: 3000,
-  },
   deluxe: {
     hotelName: "Deluxe Hotel",
     roomRatePerNight: 8000,
@@ -220,12 +218,18 @@ interface UserInput {
   extraTransportManual: boolean;
 }
 
-export function CostCalculator({ skarduPackages = [] }: { skarduPackages?: PackagePickerEntry[] }) {
+export function CostCalculator({
+  skarduPackages = [],
+  vehicles = [],
+}: {
+  skarduPackages?: PackagePickerEntry[];
+  vehicles?: VehicleEntry[];
+}) {
   const [picker, setPicker] = useState({
     slug: skarduPackages[0]?.slug ?? "",
     home: "ISB" as HomeCity,
     startDate: defaultStartDate(),
-    tier: "deluxe" as "deluxe" | "luxury",
+    tier: "deluxe" as "deluxe" | "premium" | "luxury",
     people: 2,
   });
   const [pickerLoading, setPickerLoading] = useState(false);
@@ -248,12 +252,16 @@ export function CostCalculator({ skarduPackages = [] }: { skarduPackages?: Packa
     allowPradoNCP: false,
   });
 
-  const [transportTypes, setTransportTypes] = useState(INITIAL_TRANSPORT);
+  const [transportTypes] = useState(() => buildTransportFromVehicles(vehicles));
+  const customerTransportOptions = useMemo(
+    () => vehicles.filter((v) => !v.isNcp).map((v) => v.displayName),
+    [vehicles],
+  );
   const [hotelCategories, setHotelCategories] = useState(INITIAL_HOTELS);
 
   const [user, setUser] = useState<UserInput>({
     people: 4,
-    hotelType: "standard",
+    hotelType: "deluxe",
     requestedRooms: 1,
     addGuide: false,
     includeFlights: false,
@@ -361,9 +369,15 @@ export function CostCalculator({ skarduPackages = [] }: { skarduPackages?: Packa
     const finalRooms = Math.max(num(user.requestedRooms), minRooms);
     const includedTotal = finalRooms * incRoom;
     const extraPeople = Math.max(0, people - includedTotal);
-    const roomBase = finalRooms * hotel.roomRatePerNight * nights;
-    const extraCost = extraPeople * hotel.extraPersonCostPerNight * nights;
-    const hotelCost = roomBase + extraCost;
+    const placeholderRoomBase = finalRooms * hotel.roomRatePerNight * nights;
+    const placeholderExtraCost = extraPeople * hotel.extraPersonCostPerNight * nights;
+    const placeholderHotelCost = placeholderRoomBase + placeholderExtraCost;
+
+    // When a real package is picked, override placeholder with knapsack total.
+    const useRealHotel = lastQuote !== null && lastQuote.hotelNights.length > 0;
+    const roomBase = useRealHotel ? 0 : placeholderRoomBase;
+    const extraCost = useRealHotel ? 0 : placeholderExtraCost;
+    const hotelCost = useRealHotel ? (lastQuote?.hotelTotalCost ?? 0) : placeholderHotelCost;
 
     const guideCost = user.addGuide ? num(trip.guidePerDay) * days : 0;
     const flightCost = trip.flightRequired && user.includeFlights ? num(trip.flightCostPerPerson) * people : 0;
@@ -410,7 +424,7 @@ export function CostCalculator({ skarduPackages = [] }: { skarduPackages?: Packa
           : "",
       actualMain,
     };
-  }, [trip, transportTypes, hotelCategories, user]);
+  }, [trip, transportTypes, hotelCategories, user, lastQuote]);
 
   async function applyPicker() {
     if (!picker.slug) return;
@@ -445,7 +459,7 @@ export function CostCalculator({ skarduPackages = [] }: { skarduPackages?: Packa
         ...p,
         includeFlights: q.flightRequired,
         people: q.people,
-        hotelType: q.tier === "luxury" ? "luxury" : "deluxe",
+        hotelType: q.tier === "luxury" ? "luxury" : q.tier === "premium" ? "premium" : "deluxe",
       }));
     } catch (err) {
       setPickerError((err as Error).message);
@@ -503,9 +517,10 @@ export function CostCalculator({ skarduPackages = [] }: { skarduPackages?: Packa
                 className="mt-1 w-full rounded px-2 py-2 text-sm"
                 style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
                 value={picker.tier}
-                onChange={(e) => setPicker((p) => ({ ...p, tier: e.target.value as "deluxe" | "luxury" }))}
+                onChange={(e) => setPicker((p) => ({ ...p, tier: e.target.value as "deluxe" | "premium" | "luxury" }))}
               >
                 <option value="deluxe">Deluxe</option>
+                <option value="premium">Premium</option>
                 <option value="luxury">Luxury</option>
               </select>
             </label>
@@ -658,43 +673,6 @@ export function CostCalculator({ skarduPackages = [] }: { skarduPackages?: Packa
         </div>
       </section>
 
-      {/* Transport types */}
-      <section
-        className="rounded-lg p-5 space-y-3"
-        style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
-      >
-        <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>
-          Transport types
-        </h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr style={{ color: "var(--text-tertiary)" }}>
-                <th className="text-left p-2">Vehicle</th>
-                <th className="text-left p-2">km/L</th>
-                <th className="text-left p-2">Max people</th>
-                <th className="text-left p-2">Rent / day</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(Object.entries(transportTypes) as [TransportName, TransportType][]).map(([name, t]) => (
-                <tr key={name} style={{ borderTop: "1px solid var(--border-default)" }}>
-                  <td className="p-2 font-medium" style={{ color: "var(--text-primary)" }}>{name}</td>
-                  <td className="p-2">
-                    <CellInput value={t.avgKmPerLitre} onChange={(v) => setTransportTypes((p) => ({ ...p, [name]: { ...p[name], avgKmPerLitre: num(v) } }))} />
-                  </td>
-                  <td className="p-2">
-                    <CellInput value={t.maxPeople} onChange={(v) => setTransportTypes((p) => ({ ...p, [name]: { ...p[name], maxPeople: num(v) } }))} />
-                  </td>
-                  <td className="p-2">
-                    <CellInput value={t.rentPerDay} onChange={(v) => setTransportTypes((p) => ({ ...p, [name]: { ...p[name], rentPerDay: num(v) } }))} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
 
       {/* Hotel categories (placeholder; later wired to hotels table) */}
       <section
@@ -778,7 +756,7 @@ export function CostCalculator({ skarduPackages = [] }: { skarduPackages?: Packa
               value={user.selectedTransport}
               onChange={(e) => updateUser("selectedTransport", e.target.value as TransportName)}
             >
-              {CUSTOMER_TRANSPORT_OPTIONS.map((n) => (
+              {customerTransportOptions.map((n) => (
                 <option key={n} value={n}>{n}</option>
               ))}
             </select>
@@ -796,7 +774,7 @@ export function CostCalculator({ skarduPackages = [] }: { skarduPackages?: Packa
                 value={user.extraTransportType}
                 onChange={(e) => updateUser("extraTransportType", e.target.value as TransportName)}
               >
-                {CUSTOMER_TRANSPORT_OPTIONS.map((n) => (
+                {customerTransportOptions.map((n) => (
                   <option key={n} value={n}>{n}</option>
                 ))}
               </select>

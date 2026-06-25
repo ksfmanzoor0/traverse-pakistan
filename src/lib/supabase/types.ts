@@ -553,6 +553,46 @@ export type Database = {
         Update: Partial<{ from_code: string; to_code: string; km: number }>;
         Relationships: [];
       };
+      vehicle_types: {
+        Row: {
+          id: string;
+          code: string;
+          display_name: string;
+          km_per_litre: number;
+          max_people: number;
+          rent_per_day: number;
+          is_ncp: boolean;
+          ncp_pair_code: string | null;
+          sort_order: number;
+          is_active: boolean;
+          updated_at: string | null;
+        };
+        Insert: Omit<{
+          id: string;
+          code: string;
+          display_name: string;
+          km_per_litre: number;
+          max_people: number;
+          rent_per_day: number;
+          is_ncp: boolean;
+          ncp_pair_code: string | null;
+          sort_order: number;
+          is_active: boolean;
+          updated_at: string | null;
+        }, "id" | "updated_at"> & Partial<Pick<{ id: string; updated_at: string | null }, "id" | "updated_at">>;
+        Update: Partial<{
+          code: string;
+          display_name: string;
+          km_per_litre: number;
+          max_people: number;
+          rent_per_day: number;
+          is_ncp: boolean;
+          ncp_pair_code: string | null;
+          sort_order: number;
+          is_active: boolean;
+        }>;
+        Relationships: [];
+      };
     };
     Views: Record<never, never>;
     Functions: {

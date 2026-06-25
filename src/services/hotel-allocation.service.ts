@@ -229,7 +229,7 @@ export async function allocateHotelForNight(args: {
 /** Sum hotel cost across all nights of a package's itinerary at the given tier. */
 export interface PackageHotelQuote {
   packageSlug: string;
-  tier: "deluxe" | "luxury";
+  tier: "deluxe" | "premium" | "luxury";
   people: number;
   startDate: string;
   totalCost: number;
@@ -250,7 +250,7 @@ function addDays(iso: string, days: number): string {
 
 export async function quotePackageHotels(args: {
   packageSlug: string;
-  tier: "deluxe" | "luxury";
+  tier: "deluxe" | "premium" | "luxury";
   people: number;
   startDate: string;
 }): Promise<PackageHotelQuote | null> {
@@ -269,6 +269,20 @@ export async function quotePackageHotels(args: {
     .eq("package_slug", args.packageSlug)
     .order("day_number");
   if (daysErr) throw new Error(`quotePackageHotels days: ${daysErr.message}`);
+
+  // Premium tier doesn't have a column on package_itinerary_days yet — falls
+  // back to no allocation with a warning, so the engine returns 0 cleanly.
+  if (args.tier === "premium") {
+    return {
+      packageSlug: args.packageSlug,
+      tier: "premium",
+      people: args.people,
+      startDate: args.startDate,
+      totalCost: 0,
+      nights: [],
+      warnings: ["Premium hotels are not configured for this package."],
+    };
+  }
 
   const tierKey = args.tier === "deluxe" ? "hotel_deluxe" : "hotel_luxury";
   const rows = (days ?? []) as Array<{ day_number: number; hotel_deluxe: string | null; hotel_luxury: string | null }>;

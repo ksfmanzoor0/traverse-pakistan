@@ -13,6 +13,7 @@ const NAV = [
   { href: "/admin/flight-fares", label: "Flight Fares" },
   { href: "/admin/package-flights", label: "Package Flights" },
   { href: "/admin/cost-calculator", label: "Cost Calculator" },
+  { href: "/admin/vehicles", label: "Vehicles" },
   { href: "/admin/revalidate", label: "Cache" },
 ];
 

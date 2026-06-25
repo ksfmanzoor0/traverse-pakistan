@@ -27,7 +27,8 @@ export async function GET(req: Request) {
     );
   }
 
-  const tier: "deluxe" | "luxury" = tierRaw === "luxury" ? "luxury" : "deluxe";
+  const tier: "deluxe" | "premium" | "luxury" =
+    tierRaw === "luxury" ? "luxury" : tierRaw === "premium" ? "premium" : "deluxe";
   const people = Math.max(1, Number(peopleRaw) || 2);
 
   const supabase = getSupabaseAdmin();

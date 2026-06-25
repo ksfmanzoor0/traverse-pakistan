@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/admin/guard";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { listVehicleTypes } from "@/services/vehicle.service";
 import { CostCalculator, type PackagePickerEntry } from "@/components/admin/cost-calculator/CostCalculator";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +28,10 @@ async function loadSkarduPackages(): Promise<PackagePickerEntry[]> {
 
 export default async function CostCalculatorPage() {
   await requireAdmin();
-  const skarduPackages = await loadSkarduPackages();
+  const [skarduPackages, vehicles] = await Promise.all([
+    loadSkarduPackages(),
+    listVehicleTypes(),
+  ]);
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6">
@@ -36,12 +40,14 @@ export default async function CostCalculatorPage() {
           Cost Calculator
         </h1>
         <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-          Quote builder — transport, hotel, guide, flight. Skardu fly-in packages wired to the
-          flight resolver. Hotel still uses placeholder categories (knapsack next).
+          Quote builder — transport, hotel, guide, flight. Vehicle rates managed on{" "}
+          <a href="/admin/vehicles" style={{ color: "var(--accent-primary)", textDecoration: "underline" }}>
+            /admin/vehicles
+          </a>.
         </p>
       </div>
 
-      <CostCalculator skarduPackages={skarduPackages} />
+      <CostCalculator skarduPackages={skarduPackages} vehicles={vehicles} />
     </div>
   );
 }
