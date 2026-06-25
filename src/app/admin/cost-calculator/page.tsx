@@ -5,10 +5,24 @@ import { CostCalculator, type PackagePickerEntry, type HotelTierSummary } from "
 
 async function loadHotelTierSummaries(): Promise<HotelTierSummary[]> {
   const supabase = getSupabaseAdmin();
+
+  // Only hotels actually referenced by a package itinerary day.
+  const { data: dayRows, error: dayErr } = await supabase
+    .from("package_itinerary_days")
+    .select("hotel_deluxe, hotel_luxury");
+  if (dayErr) throw new Error(`loadHotelTierSummaries days: ${dayErr.message}`);
+  const linkedSlugs = new Set<string>();
+  for (const r of (dayRows ?? []) as Array<{ hotel_deluxe: string | null; hotel_luxury: string | null }>) {
+    if (r.hotel_deluxe) linkedSlugs.add(r.hotel_deluxe);
+    if (r.hotel_luxury) linkedSlugs.add(r.hotel_luxury);
+  }
+  if (linkedSlugs.size === 0) return [];
+
   const { data, error } = await supabase
     .from("hotels")
-    .select("tier, price_per_night");
-  if (error) throw new Error(`loadHotelTierSummaries: ${error.message}`);
+    .select("tier, price_per_night, slug")
+    .in("slug", Array.from(linkedSlugs));
+  if (error) throw new Error(`loadHotelTierSummaries hotels: ${error.message}`);
   const rows = ((data ?? []) as Array<{ tier: string; price_per_night: number | null }>)
     .filter((r) => r.price_per_night && r.price_per_night > 0);
   const byTier = new Map<string, number[]>();
