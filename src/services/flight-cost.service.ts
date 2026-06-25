@@ -44,8 +44,10 @@ const ELIGIBLE_CARRIERS: Record<string, FlightAirline[]> = {
   "KDU-KHI": ["PIA"],
 };
 
-/** Date window (in days) around the requested departure to consider matching fares. */
-const FARE_DATE_WINDOW_DAYS = 7;
+/** Date window (in days) around the requested departure to consider matching fares.
+ *  Set to 21 to bridge the gap between the scraper's +30 and +60 day horizons —
+ *  any trip date up to halfway between the two will find a fare on either side. */
+const FARE_DATE_WINDOW_DAYS = 21;
 
 function addDays(iso: string, days: number): string {
   const d = new Date(`${iso}T00:00:00Z`);
