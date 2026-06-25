@@ -4,6 +4,54 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { quotePackageAddons, type HomeCity } from "@/services/addon-cost.service";
 import { quotePackageHotels } from "@/services/hotel-allocation.service";
 
+interface PackageHotelTier {
+  slug: string;
+  name: string;
+  tier: string;
+  pricePerNight: number;
+  usedInSlots: ("deluxe" | "luxury")[];   // slot positions (a hotel can be used as both)
+}
+
+async function loadPackageHotelTiers(packageSlug: string): Promise<PackageHotelTier[]> {
+  const supabase = getSupabaseAdmin();
+  const { data: days, error: daysErr } = await supabase
+    .from("package_itinerary_days")
+    .select("hotel_deluxe, hotel_luxury")
+    .eq("package_slug", packageSlug);
+  if (daysErr) throw new Error(`loadPackageHotelTiers days: ${daysErr.message}`);
+
+  const slotsBySlug = new Map<string, Set<"deluxe" | "luxury">>();
+  for (const r of (days ?? []) as Array<{ hotel_deluxe: string | null; hotel_luxury: string | null }>) {
+    if (r.hotel_deluxe) {
+      const s = slotsBySlug.get(r.hotel_deluxe) ?? new Set();
+      s.add("deluxe");
+      slotsBySlug.set(r.hotel_deluxe, s);
+    }
+    if (r.hotel_luxury) {
+      const s = slotsBySlug.get(r.hotel_luxury) ?? new Set();
+      s.add("luxury");
+      slotsBySlug.set(r.hotel_luxury, s);
+    }
+  }
+  if (slotsBySlug.size === 0) return [];
+
+  const { data: hotels, error: hotelsErr } = await supabase
+    .from("hotels")
+    .select("slug, name, tier, price_per_night")
+    .in("slug", Array.from(slotsBySlug.keys()));
+  if (hotelsErr) throw new Error(`loadPackageHotelTiers hotels: ${hotelsErr.message}`);
+
+  return ((hotels ?? []) as Array<{ slug: string; name: string; tier: string; price_per_night: number | null }>)
+    .map((h) => ({
+      slug: h.slug,
+      name: h.name,
+      tier: h.tier,
+      pricePerNight: h.price_per_night ?? 0,
+      usedInSlots: Array.from(slotsBySlug.get(h.slug) ?? []),
+    }))
+    .sort((a, b) => a.tier.localeCompare(b.tier) || a.name.localeCompare(b.name));
+}
+
 const HOME_CITIES: HomeCity[] = ["ISB", "LHE", "KHI"];
 
 function isHome(v: string | null): v is HomeCity {
@@ -58,9 +106,10 @@ export async function GET(req: Request) {
   const extensionKm = startingCities.includes("ISB") && home === "LHE" ? LHE_EXTENSION_KM : 0;
   const totalDistanceKm = baseDistance + extensionKm;
 
-  const [flightQuote, hotelQuote] = await Promise.all([
+  const [flightQuote, hotelQuote, hotelsForBothTiers] = await Promise.all([
     quotePackageAddons({ packageSlug: slug, homeCity: home, startDate }),
     quotePackageHotels({ packageSlug: slug, tier, people, startDate }),
+    loadPackageHotelTiers(slug),
   ]);
 
   return NextResponse.json({
@@ -101,5 +150,6 @@ export async function GET(req: Request) {
         totalCost: n.allocation?.totalCost ?? 0,
       })) ?? [],
     hotelWarnings: hotelQuote?.warnings ?? [],
+    hotelsInPackage: hotelsForBothTiers,
   });
 }

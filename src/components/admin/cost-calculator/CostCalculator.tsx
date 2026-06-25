@@ -53,6 +53,13 @@ interface QuoteResponse {
     totalCost: number;
   }>;
   hotelWarnings: string[];
+  hotelsInPackage: Array<{
+    slug: string;
+    name: string;
+    tier: string;
+    pricePerNight: number;
+    usedInSlots: ("deluxe" | "luxury")[];
+  }>;
 }
 
 function defaultStartDate(): string {
@@ -696,27 +703,77 @@ export function CostCalculator({
       </section>
 
 
-      {/* Hotel categories — read-only reference pulled from hotels table */}
-      {hotelTiers.length > 0 && (
+      {/* Hotel categories — when a package is picked, show its hotels grouped by tier */}
+      {lastQuote && lastQuote.hotelsInPackage.length > 0 ? (
         <section
           className="rounded-lg p-5 space-y-3"
           style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
         >
           <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>
-            Hotel categories <span style={{ color: "var(--text-tertiary)", fontWeight: 400 }}>(live from hotels table)</span>
+            Hotel categories{" "}
+            <span style={{ color: "var(--text-tertiary)", fontWeight: 400 }}>
+              (hotels in {lastQuote.name})
+            </span>
           </h2>
-          <div
-            className="grid gap-2 text-xs px-2 pb-1"
-            style={{ gridTemplateColumns: "120px 80px 120px 200px", color: "var(--text-tertiary)" }}
-          >
-            <div>Category</div>
-            <div>Hotels</div>
-            <div>Avg / night</div>
-            <div>Range</div>
-          </div>
-          {hotelTiers.map((t) => {
-            const greyed = t.tier === "premium";
+          {(["deluxe", "premium", "luxury"] as const).map((tierKey) => {
+            const hotelsAtTier = lastQuote.hotelsInPackage.filter((h) => h.tier === tierKey);
+            const greyed = tierKey === "premium" && hotelsAtTier.length === 0;
             return (
+              <div key={tierKey} className="space-y-1.5" style={{ opacity: greyed ? 0.5 : 1 }}>
+                <div className="text-sm font-semibold capitalize" style={{ color: "var(--text-primary)" }}>
+                  {tierKey}
+                  {greyed && (
+                    <span className="ml-2 text-xs" style={{ color: "var(--text-tertiary)" }}>(no hotels in this package)</span>
+                  )}
+                </div>
+                {hotelsAtTier.length === 0 ? null : hotelsAtTier.map((h) => (
+                  <div
+                    key={h.slug}
+                    className="grid gap-2 rounded-md p-2 text-sm items-center"
+                    style={{
+                      gridTemplateColumns: "1fr 140px 180px",
+                      background: "var(--bg-elevated)",
+                      border: "1px solid var(--border-default)",
+                    }}
+                  >
+                    <div style={{ color: "var(--text-primary)" }}>
+                      {h.name}
+                      <span className="ml-2 text-xs" style={{ color: "var(--text-tertiary)" }}>{h.slug}</span>
+                    </div>
+                    <div style={{ color: "var(--text-secondary)" }}>
+                      {h.pricePerNight > 0 ? `PKR ${h.pricePerNight.toLocaleString()}/night` : "—"}
+                    </div>
+                    <div className="text-xs" style={{ color: "var(--text-tertiary)" }}>
+                      used as: {h.usedInSlots.join(" + ") || "—"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </section>
+      ) : (
+        hotelTiers.length > 0 && (
+          <section
+            className="rounded-lg p-5 space-y-3"
+            style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
+          >
+            <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>
+              Hotel categories{" "}
+              <span style={{ color: "var(--text-tertiary)", fontWeight: 400 }}>
+                (global averages — pick a package above for its specific hotels)
+              </span>
+            </h2>
+            <div
+              className="grid gap-2 text-xs px-2 pb-1"
+              style={{ gridTemplateColumns: "120px 80px 120px 200px", color: "var(--text-tertiary)" }}
+            >
+              <div>Category</div>
+              <div>Hotels</div>
+              <div>Avg / night</div>
+              <div>Range</div>
+            </div>
+            {hotelTiers.map((t) => (
               <div
                 key={t.tier}
                 className="grid gap-2 rounded-md p-2 text-sm items-center"
@@ -724,16 +781,9 @@ export function CostCalculator({
                   gridTemplateColumns: "120px 80px 120px 200px",
                   background: "var(--bg-elevated)",
                   border: "1px solid var(--border-default)",
-                  opacity: greyed ? 0.5 : 1,
                 }}
-                title={greyed ? "Premium not yet wired to any package itinerary" : undefined}
               >
-                <div className="font-medium capitalize" style={{ color: "var(--text-primary)" }}>
-                  {t.tier}
-                  {greyed && (
-                    <span className="ml-1 text-xs" style={{ color: "var(--text-tertiary)" }}>(disabled)</span>
-                  )}
-                </div>
+                <div className="font-medium capitalize" style={{ color: "var(--text-primary)" }}>{t.tier}</div>
                 <div style={{ color: "var(--text-secondary)" }}>{t.hotels}</div>
                 <div style={{ color: "var(--text-primary)" }}>
                   {t.avgPrice > 0 ? `PKR ${t.avgPrice.toLocaleString()}` : "—"}
@@ -742,9 +792,9 @@ export function CostCalculator({
                   {t.minPrice > 0 ? `${t.minPrice.toLocaleString()} – ${t.maxPrice.toLocaleString()}` : "—"}
                 </div>
               </div>
-            );
-          })}
-        </section>
+            ))}
+          </section>
+        )
       )}
 
       {/* Customer quote */}
