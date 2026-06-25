@@ -1,0 +1,706 @@
+"use client";
+
+import { useMemo, useState } from "react";
+
+type TransportName = "Corolla" | "BRV" | "Hiace Grand Cabin" | "Coaster" | "Prado" | "PradoNCP";
+
+interface TransportType {
+  avgKmPerLitre: number;
+  maxPeople: number;     // comfort capacity = treated as max
+  rentPerDay: number;
+}
+
+interface HotelCategory {
+  hotelName: string;
+  roomRatePerNight: number;
+  includedPeoplePerRoom: number;
+  maxPeoplePerRoom: number;
+  extraPersonCostPerNight: number;
+}
+
+const INITIAL_TRANSPORT: Record<TransportName, TransportType> = {
+  Corolla: { avgKmPerLitre: 10, maxPeople: 3, rentPerDay: 9000 },
+  BRV: { avgKmPerLitre: 10, maxPeople: 4, rentPerDay: 10000 },
+  "Hiace Grand Cabin": { avgKmPerLitre: 5, maxPeople: 11, rentPerDay: 22000 },
+  Coaster: { avgKmPerLitre: 4, maxPeople: 21, rentPerDay: 18000 },
+  Prado: { avgKmPerLitre: 4.5, maxPeople: 4, rentPerDay: 22000 },
+  PradoNCP: { avgKmPerLitre: 4.5, maxPeople: 4, rentPerDay: 26000 },
+};
+
+const CUSTOMER_TRANSPORT_OPTIONS: TransportName[] = [
+  "Corolla",
+  "BRV",
+  "Hiace Grand Cabin",
+  "Coaster",
+  "Prado",
+];
+
+const INITIAL_HOTELS: Record<string, HotelCategory> = {
+  standard: {
+    hotelName: "Standard Hotel",
+    roomRatePerNight: 6000,
+    includedPeoplePerRoom: 2,
+    maxPeoplePerRoom: 4,
+    extraPersonCostPerNight: 3000,
+  },
+  deluxe: {
+    hotelName: "Deluxe Hotel",
+    roomRatePerNight: 8000,
+    includedPeoplePerRoom: 2,
+    maxPeoplePerRoom: 4,
+    extraPersonCostPerNight: 2000,
+  },
+  premium: {
+    hotelName: "Premium Hotel",
+    roomRatePerNight: 12000,
+    includedPeoplePerRoom: 2,
+    maxPeoplePerRoom: 4,
+    extraPersonCostPerNight: 4000,
+  },
+  luxury: {
+    hotelName: "Luxury Hotel",
+    roomRatePerNight: 18000,
+    includedPeoplePerRoom: 2,
+    maxPeoplePerRoom: 4,
+    extraPersonCostPerNight: 5000,
+  },
+};
+
+function num(v: unknown): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function pkr(v: number): string {
+  return new Intl.NumberFormat("en-PK", {
+    style: "currency",
+    currency: "PKR",
+    maximumFractionDigits: 0,
+  }).format(v || 0);
+}
+
+function getDefaultTransport(people: number): TransportName {
+  if (people <= 3) return "Corolla";
+  if (people <= 4) return "BRV";
+  if (people <= 11) return "Hiace Grand Cabin";
+  return "Coaster";
+}
+
+function getAutoExtras(
+  people: number,
+  main: TransportName,
+  keepSameType: boolean,
+): Partial<Record<TransportName, number>> {
+  const caps: Record<TransportName, number> = {
+    Corolla: 3,
+    BRV: 4,
+    "Hiace Grand Cabin": 11,
+    Coaster: 21,
+    Prado: 4,
+    PradoNCP: 4,
+  };
+  const extras: Partial<Record<TransportName, number>> = {};
+  const mainCap = caps[main] || 0;
+  if (people <= mainCap) return extras;
+
+  if (keepSameType) {
+    const displayName = main === "PradoNCP" ? "Prado" : main;
+    const totalRequired = Math.ceil(people / mainCap);
+    extras[displayName as TransportName] = Math.max(0, totalRequired - 1);
+    return extras;
+  }
+
+  let remaining = people - mainCap;
+  const order: { name: TransportName; cap: number }[] = [
+    { name: "Corolla", cap: 3 },
+    { name: "BRV", cap: 4 },
+    { name: "Hiace Grand Cabin", cap: 11 },
+    { name: "Coaster", cap: 21 },
+  ];
+  while (remaining > 0) {
+    const fit = order.find((o) => remaining <= o.cap);
+    if (fit) {
+      extras[fit.name] = (extras[fit.name] || 0) + 1;
+      remaining = 0;
+    } else {
+      extras.Coaster = (extras.Coaster || 0) + 1;
+      remaining -= 21;
+    }
+  }
+  return extras;
+}
+
+interface TripConfig {
+  tripName: string;
+  totalDistanceKm: number;
+  numberOfDays: number;
+  numberOfNights: number;
+  fuelPricePerLitre: number;
+  profitPercentage: number;
+  guidePerDay: number;
+  jeepCostPerJeep: number;
+  jeepCapacity: number;
+  flightCostPerPerson: number;
+  flightRequired: boolean;
+  jeepRequired: boolean;
+  allowPradoNCP: boolean;
+}
+
+interface UserInput {
+  people: number;
+  hotelType: keyof typeof INITIAL_HOTELS;
+  requestedRooms: number;
+  addGuide: boolean;
+  includeFlights: boolean;
+  selectedTransport: TransportName;
+  manualTransport: boolean;
+  extraTransports: Partial<Record<TransportName, number>>;
+  extraTransportType: TransportName;
+  extraTransportQty: number;
+  extraTransportManual: boolean;
+}
+
+export function CostCalculator() {
+  const [trip, setTrip] = useState<TripConfig>({
+    tripName: "Hunza Valley Tour",
+    totalDistanceKm: 1800,
+    numberOfDays: 6,
+    numberOfNights: 5,
+    fuelPricePerLitre: 285,
+    profitPercentage: 20,
+    guidePerDay: 5000,
+    jeepCostPerJeep: 18000,
+    jeepCapacity: 6,
+    flightCostPerPerson: 0,
+    flightRequired: false,
+    jeepRequired: true,
+    allowPradoNCP: false,
+  });
+
+  const [transportTypes, setTransportTypes] = useState(INITIAL_TRANSPORT);
+  const [hotelCategories, setHotelCategories] = useState(INITIAL_HOTELS);
+
+  const [user, setUser] = useState<UserInput>({
+    people: 4,
+    hotelType: "standard",
+    requestedRooms: 1,
+    addGuide: false,
+    includeFlights: false,
+    selectedTransport: "Corolla",
+    manualTransport: false,
+    extraTransports: {},
+    extraTransportType: "Corolla",
+    extraTransportQty: 1,
+    extraTransportManual: false,
+  });
+
+  const updateTrip = <K extends keyof TripConfig>(field: K, value: TripConfig[K]) =>
+    setTrip((p) => ({ ...p, [field]: value }));
+
+  const updateUser = <K extends keyof UserInput>(field: K, value: UserInput[K]) => {
+    setUser((prev) => {
+      const next = { ...prev, [field]: value } as UserInput;
+      if (field === "people") {
+        const people = num(value);
+        const auto = getDefaultTransport(people);
+        if (!prev.manualTransport) next.selectedTransport = auto;
+        if (!prev.extraTransportManual) {
+          next.extraTransports = getAutoExtras(
+            people,
+            prev.manualTransport ? prev.selectedTransport : auto,
+            prev.manualTransport,
+          );
+        }
+      }
+      if (field === "selectedTransport") {
+        next.manualTransport = true;
+        if (!prev.extraTransportManual) {
+          next.extraTransports = getAutoExtras(num(prev.people), value as TransportName, true);
+        }
+      }
+      return next;
+    });
+  };
+
+  const addExtra = () =>
+    setUser((p) => ({
+      ...p,
+      extraTransportManual: true,
+      extraTransports: {
+        ...p.extraTransports,
+        [p.extraTransportType]: (p.extraTransports[p.extraTransportType] || 0) + Math.max(1, num(p.extraTransportQty)),
+      },
+      extraTransportQty: 1,
+    }));
+
+  const removeExtra = (name: TransportName) =>
+    setUser((p) => {
+      const next = { ...p.extraTransports };
+      delete next[name];
+      return { ...p, extraTransports: next };
+    });
+
+  const calc = useMemo(() => {
+    const people = Math.max(1, num(user.people));
+    const days = Math.max(1, num(trip.numberOfDays));
+    const nights = Math.max(1, num(trip.numberOfNights));
+    const distance = Math.max(0, num(trip.totalDistanceKm));
+    const fuelPrice = Math.max(0, num(trip.fuelPricePerLitre));
+    const profitPct = Math.max(0, num(trip.profitPercentage));
+
+    const actualMain: TransportName =
+      user.selectedTransport === "Prado" && trip.allowPradoNCP ? "PradoNCP" : user.selectedTransport;
+
+    const counts: Partial<Record<TransportName, number>> = { [actualMain]: 1 };
+    Object.entries(user.extraTransports).forEach(([name, count]) => {
+      const actualName = (name === "Prado" && trip.allowPradoNCP ? "PradoNCP" : name) as TransportName;
+      counts[actualName] = (counts[actualName] || 0) + Math.max(0, num(count));
+    });
+
+    const totalCapacity = Object.entries(counts).reduce(
+      (s, [name, c]) => s + (transportTypes[name as TransportName]?.maxPeople || 0) * (c || 0),
+      0,
+    );
+
+    const totalFuelLitres = Object.entries(counts).reduce((s, [name, c]) => {
+      const t = transportTypes[name as TransportName];
+      if (!t?.avgKmPerLitre) return s;
+      return s + (distance / t.avgKmPerLitre) * (c || 0);
+    }, 0);
+
+    const fuelCost = totalFuelLitres * fuelPrice;
+
+    const rentCost = Object.entries(counts).reduce((s, [name, c]) => {
+      const t = transportTypes[name as TransportName];
+      return s + (t?.rentPerDay || 0) * days * (c || 0);
+    }, 0);
+
+    const transportSummary = Object.entries(counts)
+      .filter(([, c]) => (c || 0) > 0)
+      .map(([name, c]) => `${c} × ${name === "PradoNCP" ? "Prado" : name}`)
+      .join(" + ");
+
+    const requiredJeeps = trip.jeepRequired ? Math.ceil(people / Math.max(1, num(trip.jeepCapacity))) : 0;
+    const jeepCost = requiredJeeps * num(trip.jeepCostPerJeep);
+
+    const hotel = hotelCategories[user.hotelType];
+    const maxRoom = Math.max(1, hotel.maxPeoplePerRoom);
+    const incRoom = Math.max(1, hotel.includedPeoplePerRoom);
+    const minRooms = Math.ceil(people / maxRoom);
+    const finalRooms = Math.max(num(user.requestedRooms), minRooms);
+    const includedTotal = finalRooms * incRoom;
+    const extraPeople = Math.max(0, people - includedTotal);
+    const roomBase = finalRooms * hotel.roomRatePerNight * nights;
+    const extraCost = extraPeople * hotel.extraPersonCostPerNight * nights;
+    const hotelCost = roomBase + extraCost;
+
+    const guideCost = user.addGuide ? num(trip.guidePerDay) * days : 0;
+    const flightCost = trip.flightRequired && user.includeFlights ? num(trip.flightCostPerPerson) * people : 0;
+
+    const transportCost = rentCost + fuelCost + jeepCost;
+    const subtotal = transportCost + hotelCost + guideCost + flightCost;
+    const profit = subtotal * (profitPct / 100);
+    const total = subtotal + profit;
+    const perPerson = total / people;
+
+    return {
+      people,
+      transportSummary,
+      counts,
+      totalCapacity,
+      totalFuelLitres,
+      fuelCost,
+      rentCost,
+      requiredJeeps,
+      jeepCost,
+      transportCost,
+      minRooms,
+      finalRooms,
+      extraPeople,
+      roomBase,
+      extraCost,
+      hotelCost,
+      guideCost,
+      flightCost,
+      subtotal,
+      profit,
+      total,
+      perPerson,
+      roomWarning:
+        num(user.requestedRooms) < minRooms
+          ? `Requested rooms not enough. Auto-bumped to ${minRooms}.`
+          : "",
+      transportWarning:
+        totalCapacity < people ? `Selected transport capacity is short for ${people} people.` : "",
+      mattressWarning: extraPeople > 0 ? `${extraPeople} extra person(s) on mattress.` : "",
+      flightWarning:
+        trip.flightRequired && user.includeFlights
+          ? "Flight cost is not final and may change with airline availability."
+          : "",
+      actualMain,
+    };
+  }, [trip, transportTypes, hotelCategories, user]);
+
+  return (
+    <div className="space-y-6">
+      {/* Trip config */}
+      <section
+        className="rounded-lg p-5 space-y-4"
+        style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
+      >
+        <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>
+          Trip configuration
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <LabelledInput label="Trip name" value={trip.tripName} onChange={(v) => updateTrip("tripName", v)} />
+          <LabelledInput label="Distance (km)" type="number" value={trip.totalDistanceKm} onChange={(v) => updateTrip("totalDistanceKm", num(v))} />
+          <LabelledInput label="Days" type="number" value={trip.numberOfDays} onChange={(v) => updateTrip("numberOfDays", num(v))} />
+          <LabelledInput label="Nights" type="number" value={trip.numberOfNights} onChange={(v) => updateTrip("numberOfNights", num(v))} />
+          <LabelledInput label="Fuel / litre" type="number" value={trip.fuelPricePerLitre} onChange={(v) => updateTrip("fuelPricePerLitre", num(v))} />
+          <LabelledInput label="Profit %" type="number" value={trip.profitPercentage} onChange={(v) => updateTrip("profitPercentage", num(v))} />
+          <LabelledInput label="Guide / day" type="number" value={trip.guidePerDay} onChange={(v) => updateTrip("guidePerDay", num(v))} />
+          <LabelledInput label="Jeep / jeep" type="number" value={trip.jeepCostPerJeep} onChange={(v) => updateTrip("jeepCostPerJeep", num(v))} />
+          <LabelledInput label="Jeep capacity" type="number" value={trip.jeepCapacity} onChange={(v) => updateTrip("jeepCapacity", num(v))} />
+          <LabelledInput label="Flight / person" type="number" value={trip.flightCostPerPerson} onChange={(v) => updateTrip("flightCostPerPerson", num(v))} />
+          <Checkbox label="Flight option available" checked={trip.flightRequired} onChange={(c) => updateTrip("flightRequired", c)} />
+          <Checkbox label="Allow NCP Prado rate (auto on for KDU/GIL packages)" checked={trip.allowPradoNCP} onChange={(c) => updateTrip("allowPradoNCP", c)} />
+          <Checkbox label="Jeep required" checked={trip.jeepRequired} onChange={(c) => updateTrip("jeepRequired", c)} />
+        </div>
+      </section>
+
+      {/* Transport types */}
+      <section
+        className="rounded-lg p-5 space-y-3"
+        style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
+      >
+        <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>
+          Transport types
+        </h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ color: "var(--text-tertiary)" }}>
+                <th className="text-left p-2">Vehicle</th>
+                <th className="text-left p-2">km/L</th>
+                <th className="text-left p-2">Max people</th>
+                <th className="text-left p-2">Rent / day</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(Object.entries(transportTypes) as [TransportName, TransportType][]).map(([name, t]) => (
+                <tr key={name} style={{ borderTop: "1px solid var(--border-default)" }}>
+                  <td className="p-2 font-medium" style={{ color: "var(--text-primary)" }}>{name}</td>
+                  <td className="p-2">
+                    <CellInput value={t.avgKmPerLitre} onChange={(v) => setTransportTypes((p) => ({ ...p, [name]: { ...p[name], avgKmPerLitre: num(v) } }))} />
+                  </td>
+                  <td className="p-2">
+                    <CellInput value={t.maxPeople} onChange={(v) => setTransportTypes((p) => ({ ...p, [name]: { ...p[name], maxPeople: num(v) } }))} />
+                  </td>
+                  <td className="p-2">
+                    <CellInput value={t.rentPerDay} onChange={(v) => setTransportTypes((p) => ({ ...p, [name]: { ...p[name], rentPerDay: num(v) } }))} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Hotel categories (placeholder; later wired to hotels table) */}
+      <section
+        className="rounded-lg p-5 space-y-3"
+        style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
+      >
+        <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>
+          Hotel categories <span style={{ color: "var(--text-tertiary)", fontWeight: 400 }}>(placeholder — will pull from hotels table)</span>
+        </h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ color: "var(--text-tertiary)" }}>
+                <th className="text-left p-2">Category</th>
+                <th className="text-left p-2">Name</th>
+                <th className="text-left p-2">Room rate / night</th>
+                <th className="text-left p-2">Included / room</th>
+                <th className="text-left p-2">Max / room</th>
+                <th className="text-left p-2">Extra person / night</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(hotelCategories).map(([cat, h]) => (
+                <tr key={cat} style={{ borderTop: "1px solid var(--border-default)" }}>
+                  <td className="p-2 font-medium capitalize" style={{ color: "var(--text-primary)" }}>{cat}</td>
+                  <td className="p-2">
+                    <CellInput type="text" value={h.hotelName} onChange={(v) => setHotelCategories((p) => ({ ...p, [cat]: { ...p[cat], hotelName: String(v) } }))} />
+                  </td>
+                  <td className="p-2">
+                    <CellInput value={h.roomRatePerNight} onChange={(v) => setHotelCategories((p) => ({ ...p, [cat]: { ...p[cat], roomRatePerNight: num(v) } }))} />
+                  </td>
+                  <td className="p-2">
+                    <CellInput value={h.includedPeoplePerRoom} onChange={(v) => setHotelCategories((p) => ({ ...p, [cat]: { ...p[cat], includedPeoplePerRoom: num(v) } }))} />
+                  </td>
+                  <td className="p-2">
+                    <CellInput value={h.maxPeoplePerRoom} onChange={(v) => setHotelCategories((p) => ({ ...p, [cat]: { ...p[cat], maxPeoplePerRoom: num(v) } }))} />
+                  </td>
+                  <td className="p-2">
+                    <CellInput value={h.extraPersonCostPerNight} onChange={(v) => setHotelCategories((p) => ({ ...p, [cat]: { ...p[cat], extraPersonCostPerNight: num(v) } }))} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Customer quote */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <section
+          className="rounded-lg p-5 space-y-3 lg:col-span-1"
+          style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
+        >
+          <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>
+            Customer inputs
+          </h2>
+
+          <LabelledInput label="Number of people" type="number" value={user.people} onChange={(v) => updateUser("people", num(v))} />
+
+          <label className="block text-sm">
+            <span style={{ color: "var(--text-secondary)" }}>Hotel tier</span>
+            <select
+              className="mt-1 w-full rounded px-2 py-2"
+              style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+              value={user.hotelType}
+              onChange={(e) => updateUser("hotelType", e.target.value as keyof typeof INITIAL_HOTELS)}
+            >
+              {Object.keys(hotelCategories).map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </label>
+
+          <LabelledInput label="Requested rooms" type="number" value={user.requestedRooms} onChange={(v) => updateUser("requestedRooms", num(v))} />
+
+          <label className="block text-sm">
+            <span style={{ color: "var(--text-secondary)" }}>Main transport</span>
+            <select
+              className="mt-1 w-full rounded px-2 py-2"
+              style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+              value={user.selectedTransport}
+              onChange={(e) => updateUser("selectedTransport", e.target.value as TransportName)}
+            >
+              {CUSTOMER_TRANSPORT_OPTIONS.map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          </label>
+
+          <div
+            className="rounded-md p-3 space-y-2"
+            style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)" }}
+          >
+            <div className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Extra vehicles</div>
+            <div className="grid grid-cols-[1fr_70px_auto] gap-2">
+              <select
+                className="rounded px-2 py-1.5 text-sm"
+                style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+                value={user.extraTransportType}
+                onChange={(e) => updateUser("extraTransportType", e.target.value as TransportName)}
+              >
+                {CUSTOMER_TRANSPORT_OPTIONS.map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+              <input
+                type="number"
+                min={1}
+                className="rounded px-2 py-1.5 text-sm"
+                style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+                value={user.extraTransportQty}
+                onChange={(e) => updateUser("extraTransportQty", num(e.target.value))}
+              />
+              <button
+                type="button"
+                className="rounded px-3 py-1.5 text-sm"
+                style={{ background: "var(--accent-primary)", color: "var(--on-dark)" }}
+                onClick={addExtra}
+              >
+                Add
+              </button>
+            </div>
+            {Object.entries(user.extraTransports).filter(([, c]) => (c || 0) > 0).map(([name, count]) => (
+              <div key={name} className="flex items-center justify-between text-sm rounded px-2 py-1.5"
+                   style={{ background: "var(--bg-primary)" }}>
+                <span style={{ color: "var(--text-primary)" }}>{count} × {name}</span>
+                <button type="button" className="text-xs" style={{ color: "var(--accent-danger)" }}
+                        onClick={() => removeExtra(name as TransportName)}>Remove</button>
+              </div>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            className="w-full rounded px-3 py-2 text-sm"
+            style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+            onClick={() =>
+              setUser((p) => ({
+                ...p,
+                selectedTransport: getDefaultTransport(num(p.people)),
+                manualTransport: false,
+                extraTransportManual: false,
+                extraTransports: getAutoExtras(num(p.people), getDefaultTransport(num(p.people)), false),
+              }))
+            }
+          >
+            Reset to auto transport
+          </button>
+
+          <Checkbox label="Add guide" checked={user.addGuide} onChange={(c) => updateUser("addGuide", c)} />
+          {trip.flightRequired && (
+            <Checkbox label="Include flights" checked={user.includeFlights} onChange={(c) => updateUser("includeFlights", c)} />
+          )}
+        </section>
+
+        {/* Result */}
+        <section
+          className="rounded-lg p-5 space-y-4 lg:col-span-2"
+          style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
+        >
+          <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>Quote</h2>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <ResultCard label="Total" value={pkr(calc.total)} primary />
+            <ResultCard label="Per person" value={pkr(calc.perPerson)} primary />
+            <ResultCard label="Vehicles" value={calc.transportSummary || "—"} />
+          </div>
+
+          {calc.roomWarning && <Warning text={calc.roomWarning} />}
+          {calc.transportWarning && <Warning text={calc.transportWarning} />}
+          {calc.mattressWarning && <Warning text={calc.mattressWarning} />}
+          {calc.flightWarning && <Warning text={calc.flightWarning} />}
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <Breakdown title="Transport">
+              <Line label="Rent" value={pkr(calc.rentCost)} />
+              <Line label="Fuel (litres)" value={`${calc.totalFuelLitres.toFixed(1)} L`} />
+              <Line label="Fuel cost" value={pkr(calc.fuelCost)} />
+              <Line label="Jeeps" value={`${calc.requiredJeeps}`} />
+              <Line label="Jeep cost" value={pkr(calc.jeepCost)} />
+              <Line label="Main vehicle (costed)" value={calc.actualMain === "PradoNCP" ? "Prado (NCP rate)" : calc.actualMain} />
+              <Line label="Transport total" value={pkr(calc.transportCost)} bold />
+            </Breakdown>
+
+            <Breakdown title="Hotel + guide + flight">
+              <Line label="Rooms" value={`${calc.finalRooms} (min ${calc.minRooms})`} />
+              <Line label="Extra people charged" value={`${calc.extraPeople}`} />
+              <Line label="Room base" value={pkr(calc.roomBase)} />
+              <Line label="Extra person" value={pkr(calc.extraCost)} />
+              <Line label="Hotel total" value={pkr(calc.hotelCost)} bold />
+              <Line label="Guide" value={pkr(calc.guideCost)} />
+              <Line label="Flight" value={pkr(calc.flightCost)} />
+            </Breakdown>
+          </div>
+
+          <Breakdown title="Final">
+            <Line label="Subtotal" value={pkr(calc.subtotal)} />
+            <Line label={`Profit ${trip.profitPercentage}%`} value={pkr(calc.profit)} />
+            <Line label="Grand total" value={pkr(calc.total)} bold />
+          </Breakdown>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+// ---- subcomponents ----
+
+function LabelledInput({
+  label,
+  value,
+  onChange,
+  type = "text",
+}: {
+  label: string;
+  value: string | number;
+  onChange: (v: string) => void;
+  type?: "text" | "number";
+}) {
+  return (
+    <label className="block text-sm">
+      <span style={{ color: "var(--text-secondary)" }}>{label}</span>
+      <input
+        type={type}
+        className="mt-1 w-full rounded px-2 py-2 text-sm"
+        style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </label>
+  );
+}
+
+function CellInput({ value, onChange, type = "number" }: { value: string | number; onChange: (v: string) => void; type?: "text" | "number" }) {
+  return (
+    <input
+      type={type}
+      className="w-full rounded px-2 py-1.5 text-sm"
+      style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    />
+  );
+}
+
+function Checkbox({ label, checked, onChange }: { label: string; checked: boolean; onChange: (c: boolean) => void }) {
+  return (
+    <label
+      className="flex items-center gap-2 rounded px-3 py-2 text-sm cursor-pointer"
+      style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+    >
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      {label}
+    </label>
+  );
+}
+
+function ResultCard({ label, value, primary = false }: { label: string; value: string; primary?: boolean }) {
+  return (
+    <div
+      className="rounded-md p-3"
+      style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)" }}
+    >
+      <div className="text-xs" style={{ color: "var(--text-tertiary)" }}>{label}</div>
+      <div className={primary ? "mt-1 text-xl font-bold" : "mt-1 text-base font-semibold"} style={{ color: "var(--text-primary)" }}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function Warning({ text }: { text: string }) {
+  return (
+    <div className="rounded-md px-3 py-2 text-sm" style={{ background: "var(--accent-warning-bg, rgba(255,180,0,.1))", color: "var(--accent-warning)", border: "1px solid var(--accent-warning)" }}>
+      {text}
+    </div>
+  );
+}
+
+function Breakdown({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-md p-3" style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)" }}>
+      <div className="text-sm font-semibold mb-2" style={{ color: "var(--text-primary)" }}>{title}</div>
+      <div className="space-y-1.5">{children}</div>
+    </div>
+  );
+}
+
+function Line({ label, value, bold = false }: { label: string; value: string; bold?: boolean }) {
+  return (
+    <div
+      className={`flex justify-between gap-3 text-sm ${bold ? "pt-1.5 font-semibold" : ""}`}
+      style={bold ? { borderTop: "1px solid var(--border-default)" } : undefined}
+    >
+      <span style={{ color: "var(--text-secondary)" }}>{label}</span>
+      <span style={{ color: "var(--text-primary)" }}>{value}</span>
+    </div>
+  );
+}

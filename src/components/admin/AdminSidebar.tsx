@@ -12,6 +12,7 @@ const NAV = [
   { href: "/admin/reviews", label: "Reviews" },
   { href: "/admin/flight-fares", label: "Flight Fares" },
   { href: "/admin/package-flights", label: "Package Flights" },
+  { href: "/admin/cost-calculator", label: "Cost Calculator" },
   { href: "/admin/revalidate", label: "Cache" },
 ];
 
