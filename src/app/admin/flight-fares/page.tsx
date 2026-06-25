@@ -120,6 +120,26 @@ export default async function FlightFaresPage({
 }
 
 /**
+ * Routes pinned to the top of the table, in display order. Anything not in
+ * this list sorts alphabetically after these.
+ */
+const PRIORITY_ROUTES = [
+  "ISB-KDU",
+  "LHE-KDU",
+  "KHI-KDU",
+  "ISB-GIL",
+  "KHI-ISB",
+  "KHI-LHE",
+  "ISB-KHI",
+  "LHE-KHI",
+];
+
+function routePriority(origin: string, destination: string): number {
+  const idx = PRIORITY_ROUTES.indexOf(`${origin}-${destination}`);
+  return idx === -1 ? PRIORITY_ROUTES.length : idx;
+}
+
+/**
  * Collapse to one row per (origin, destination, airline, route_type, depart_date, return_date)
  * picking `source='manual'` first (override), otherwise the freshest scraped row.
  */
@@ -137,6 +157,9 @@ function pickLatestPerKey(rows: FlightRouteRow[]): FlightRouteRow[] {
     else if (r.source === prior.source && r.scrapedAt > prior.scrapedAt) byKey.set(key, r);
   }
   return Array.from(byKey.values()).sort((a, b) => {
+    const pa = routePriority(a.origin, a.destination);
+    const pb = routePriority(b.origin, b.destination);
+    if (pa !== pb) return pa - pb;
     if (a.departDate !== b.departDate) return a.departDate.localeCompare(b.departDate);
     return `${a.origin}-${a.destination}`.localeCompare(`${b.origin}-${b.destination}`);
   });
