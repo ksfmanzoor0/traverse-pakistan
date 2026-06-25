@@ -530,7 +530,9 @@ export function CostCalculator({
                 onChange={(e) => setPicker((p) => ({ ...p, tier: e.target.value as "deluxe" | "premium" | "luxury" }))}
               >
                 <option value="deluxe">Deluxe</option>
-                <option value="premium">Premium</option>
+                <option value="premium" disabled>
+                  Premium (not yet on any package)
+                </option>
                 <option value="luxury">Luxury</option>
               </select>
             </label>
@@ -683,52 +685,6 @@ export function CostCalculator({
         </div>
       </section>
 
-
-      {/* Hotel categories (placeholder; later wired to hotels table) */}
-      <section
-        className="rounded-lg p-5 space-y-3"
-        style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
-      >
-        <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>
-          Hotel categories <span style={{ color: "var(--text-tertiary)", fontWeight: 400 }}>(placeholder — will pull from hotels table)</span>
-        </h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr style={{ color: "var(--text-tertiary)" }}>
-                <th className="text-left p-2">Category</th>
-                <th className="text-left p-2">Name</th>
-                <th className="text-left p-2">Room rate / night</th>
-                <th className="text-left p-2">Included / room</th>
-                <th className="text-left p-2">Max / room</th>
-                <th className="text-left p-2">Extra person / night</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(hotelCategories).map(([cat, h]) => (
-                <tr key={cat} style={{ borderTop: "1px solid var(--border-default)" }}>
-                  <td className="p-2 font-medium capitalize" style={{ color: "var(--text-primary)" }}>{cat}</td>
-                  <td className="p-2">
-                    <CellInput type="text" value={h.hotelName} onChange={(v) => setHotelCategories((p) => ({ ...p, [cat]: { ...p[cat], hotelName: String(v) } }))} />
-                  </td>
-                  <td className="p-2">
-                    <CellInput value={h.roomRatePerNight} onChange={(v) => setHotelCategories((p) => ({ ...p, [cat]: { ...p[cat], roomRatePerNight: num(v) } }))} />
-                  </td>
-                  <td className="p-2">
-                    <CellInput value={h.includedPeoplePerRoom} onChange={(v) => setHotelCategories((p) => ({ ...p, [cat]: { ...p[cat], includedPeoplePerRoom: num(v) } }))} />
-                  </td>
-                  <td className="p-2">
-                    <CellInput value={h.maxPeoplePerRoom} onChange={(v) => setHotelCategories((p) => ({ ...p, [cat]: { ...p[cat], maxPeoplePerRoom: num(v) } }))} />
-                  </td>
-                  <td className="p-2">
-                    <CellInput value={h.extraPersonCostPerNight} onChange={(v) => setHotelCategories((p) => ({ ...p, [cat]: { ...p[cat], extraPersonCostPerNight: num(v) } }))} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
 
       {/* Customer quote */}
       <div className="grid gap-6 lg:grid-cols-3">
