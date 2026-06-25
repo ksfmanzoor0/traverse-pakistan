@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin/guard";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { quotePackageAddons, type HomeCity } from "@/services/addon-cost.service";
+import { quotePackageHotels } from "@/services/hotel-allocation.service";
 
 const HOME_CITIES: HomeCity[] = ["ISB", "LHE", "KHI"];
 
@@ -16,6 +17,8 @@ export async function GET(req: Request) {
   const slug = url.searchParams.get("slug");
   const home = url.searchParams.get("home");
   const startDate = url.searchParams.get("startDate");
+  const tierRaw = url.searchParams.get("tier");
+  const peopleRaw = url.searchParams.get("people");
 
   if (!slug || !isHome(home) || !startDate) {
     return NextResponse.json(
@@ -23,6 +26,9 @@ export async function GET(req: Request) {
       { status: 400 },
     );
   }
+
+  const tier: "deluxe" | "luxury" = tierRaw === "luxury" ? "luxury" : "deluxe";
+  const people = Math.max(1, Number(peopleRaw) || 2);
 
   const supabase = getSupabaseAdmin();
   const { data: pkg, error } = await supabase
@@ -37,7 +43,10 @@ export async function GET(req: Request) {
   const startingCities = row.starting_cities ?? [];
   const allowPradoNCP = startingCities.includes("KDU") || startingCities.includes("GIL");
 
-  const quote = await quotePackageAddons({ packageSlug: slug, homeCity: home, startDate });
+  const [flightQuote, hotelQuote] = await Promise.all([
+    quotePackageAddons({ packageSlug: slug, homeCity: home, startDate }),
+    quotePackageHotels({ packageSlug: slug, tier, people, startDate }),
+  ]);
 
   return NextResponse.json({
     slug: row.slug,
@@ -46,10 +55,12 @@ export async function GET(req: Request) {
     nights: Math.max(1, row.duration - 1),
     startingCities,
     allowPradoNCP,
-    flightRequired: !quote?.homeInStartingCities && (quote?.addons.length ?? 0) > 0,
-    flightCostPerPerson: quote?.addonCostPerPerson ?? 0,
+    tier,
+    people,
+    flightRequired: !flightQuote?.homeInStartingCities && (flightQuote?.addons.length ?? 0) > 0,
+    flightCostPerPerson: flightQuote?.addonCostPerPerson ?? 0,
     flightBreakdown:
-      quote?.addons.flatMap((a) =>
+      flightQuote?.addons.flatMap((a) =>
         (a.flightLegs ?? []).map((l) => ({
           from: l.from,
           to: l.to,
@@ -59,6 +70,18 @@ export async function GET(req: Request) {
           carriers: l.carriers,
         })),
       ) ?? [],
-    homeInStartingCities: quote?.homeInStartingCities ?? false,
+    homeInStartingCities: flightQuote?.homeInStartingCities ?? false,
+    hotelTotalCost: hotelQuote?.totalCost ?? 0,
+    hotelNights:
+      hotelQuote?.nights.map((n) => ({
+        dayNumber: n.dayNumber,
+        date: n.date,
+        hotelSlug: n.hotelSlug,
+        hotelName: n.allocation?.hotelName ?? null,
+        seasonLabel: n.allocation?.seasonLabel ?? null,
+        rooms: n.allocation?.rooms ?? [],
+        totalCost: n.allocation?.totalCost ?? 0,
+      })) ?? [],
+    hotelWarnings: hotelQuote?.warnings ?? [],
   });
 }

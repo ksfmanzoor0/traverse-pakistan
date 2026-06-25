@@ -18,6 +18,8 @@ interface QuoteResponse {
   nights: number;
   startingCities: string[];
   allowPradoNCP: boolean;
+  tier: "deluxe" | "luxury";
+  people: number;
   flightRequired: boolean;
   flightCostPerPerson: number;
   flightBreakdown: Array<{
@@ -29,6 +31,25 @@ interface QuoteResponse {
     carriers: { airline: string; fare: number }[];
   }>;
   homeInStartingCities: boolean;
+  hotelTotalCost: number;
+  hotelNights: Array<{
+    dayNumber: number;
+    date: string;
+    hotelSlug: string | null;
+    hotelName: string | null;
+    seasonLabel: string | null;
+    rooms: Array<{
+      roomId: string;
+      name: string;
+      peopleInRoom: number;
+      maxOccupancy: number;
+      singlePrice: number;
+      extraOccupancyCharge: number;
+      costForRoom: number;
+    }>;
+    totalCost: number;
+  }>;
+  hotelWarnings: string[];
 }
 
 function defaultStartDate(): string {
@@ -200,6 +221,8 @@ export function CostCalculator({ skarduPackages = [] }: { skarduPackages?: Packa
     slug: skarduPackages[0]?.slug ?? "",
     home: "ISB" as HomeCity,
     startDate: defaultStartDate(),
+    tier: "deluxe" as "deluxe" | "luxury",
+    people: 2,
   });
   const [pickerLoading, setPickerLoading] = useState(false);
   const [pickerError, setPickerError] = useState<string | null>(null);
@@ -394,6 +417,8 @@ export function CostCalculator({ skarduPackages = [] }: { skarduPackages?: Packa
         slug: picker.slug,
         home: picker.home,
         startDate: picker.startDate,
+        tier: picker.tier,
+        people: String(picker.people),
       });
       const res = await fetch(`/api/admin/cost-calculator/quote?${qs.toString()}`);
       if (!res.ok) {
@@ -411,7 +436,12 @@ export function CostCalculator({ skarduPackages = [] }: { skarduPackages?: Packa
         flightCostPerPerson: q.flightCostPerPerson,
         allowPradoNCP: q.allowPradoNCP,
       }));
-      setUser((p) => ({ ...p, includeFlights: q.flightRequired }));
+      setUser((p) => ({
+        ...p,
+        includeFlights: q.flightRequired,
+        people: q.people,
+        hotelType: q.tier === "luxury" ? "luxury" : "deluxe",
+      }));
     } catch (err) {
       setPickerError((err as Error).message);
     } finally {
@@ -435,8 +465,8 @@ export function CostCalculator({ skarduPackages = [] }: { skarduPackages?: Packa
               {skarduPackages.length} fly-in packages · KDU-starting · PradoNCP rate auto-on
             </span>
           </div>
-          <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr_auto]">
-            <label className="block text-sm">
+          <div className="grid gap-3 sm:grid-cols-6">
+            <label className="block text-sm sm:col-span-2">
               <span style={{ color: "var(--text-secondary)" }}>Package</span>
               <select
                 className="mt-1 w-full rounded px-2 py-2 text-sm"
@@ -450,7 +480,7 @@ export function CostCalculator({ skarduPackages = [] }: { skarduPackages?: Packa
               </select>
             </label>
             <label className="block text-sm">
-              <span style={{ color: "var(--text-secondary)" }}>Home city</span>
+              <span style={{ color: "var(--text-secondary)" }}>Home</span>
               <select
                 className="mt-1 w-full rounded px-2 py-2 text-sm"
                 style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
@@ -463,7 +493,30 @@ export function CostCalculator({ skarduPackages = [] }: { skarduPackages?: Packa
               </select>
             </label>
             <label className="block text-sm">
-              <span style={{ color: "var(--text-secondary)" }}>Trip start</span>
+              <span style={{ color: "var(--text-secondary)" }}>Tier</span>
+              <select
+                className="mt-1 w-full rounded px-2 py-2 text-sm"
+                style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+                value={picker.tier}
+                onChange={(e) => setPicker((p) => ({ ...p, tier: e.target.value as "deluxe" | "luxury" }))}
+              >
+                <option value="deluxe">Deluxe</option>
+                <option value="luxury">Luxury</option>
+              </select>
+            </label>
+            <label className="block text-sm">
+              <span style={{ color: "var(--text-secondary)" }}>People</span>
+              <input
+                type="number"
+                min={1}
+                className="mt-1 w-full rounded px-2 py-2 text-sm"
+                style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+                value={picker.people}
+                onChange={(e) => setPicker((p) => ({ ...p, people: Math.max(1, num(e.target.value)) }))}
+              />
+            </label>
+            <label className="block text-sm">
+              <span style={{ color: "var(--text-secondary)" }}>Start date</span>
               <input
                 type="date"
                 className="mt-1 w-full rounded px-2 py-2 text-sm"
@@ -474,7 +527,7 @@ export function CostCalculator({ skarduPackages = [] }: { skarduPackages?: Packa
             </label>
             <button
               type="button"
-              className="mt-5 rounded px-3 py-2 text-sm self-start"
+              className="mt-5 rounded px-3 py-2 text-sm self-start sm:col-span-6"
               style={{ background: "var(--accent-primary)", color: "var(--on-dark)" }}
               onClick={applyPicker}
               disabled={pickerLoading}
@@ -508,6 +561,44 @@ export function CostCalculator({ skarduPackages = [] }: { skarduPackages?: Packa
                 <span>Per person flight</span>
                 <span>PKR {lastQuote.flightCostPerPerson.toLocaleString()}</span>
               </div>
+            </div>
+          )}
+          {lastQuote && lastQuote.hotelNights.length > 0 && (
+            <div
+              className="rounded-md p-3 text-xs space-y-1"
+              style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)" }}
+            >
+              <div style={{ color: "var(--text-tertiary)" }}>
+                Hotel allocation · {lastQuote.tier} tier · {lastQuote.people} people
+              </div>
+              {lastQuote.hotelNights.map((n) => (
+                <div key={n.dayNumber} className="space-y-0.5">
+                  <div className="flex justify-between" style={{ color: "var(--text-secondary)" }}>
+                    <span>
+                      Day {n.dayNumber} · {n.date} · {n.hotelName ?? "—"}{" "}
+                      {n.seasonLabel ? <span style={{ color: "var(--text-tertiary)" }}>({n.seasonLabel})</span> : null}
+                    </span>
+                    <span>PKR {n.totalCost.toLocaleString()}</span>
+                  </div>
+                  {n.rooms.map((r, i) => (
+                    <div key={i} className="pl-3 flex justify-between" style={{ color: "var(--text-tertiary)" }}>
+                      <span>
+                        {r.name} · {r.peopleInRoom}/{r.maxOccupancy} ppl
+                      </span>
+                      <span>PKR {r.costForRoom.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+              <div className="flex justify-between pt-1" style={{ borderTop: "1px solid var(--border-default)", color: "var(--text-primary)", fontWeight: 600 }}>
+                <span>Hotel total ({lastQuote.hotelNights.length} nights)</span>
+                <span>PKR {lastQuote.hotelTotalCost.toLocaleString()}</span>
+              </div>
+              {lastQuote.hotelWarnings.length > 0 && (
+                <div className="text-xs" style={{ color: "var(--accent-danger)" }}>
+                  {lastQuote.hotelWarnings.join(" · ")}
+                </div>
+              )}
             </div>
           )}
         </section>
