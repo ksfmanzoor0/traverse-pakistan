@@ -271,6 +271,7 @@ export function CostCalculator({
   });
   const [pickerLoading, setPickerLoading] = useState(false);
   const [pickerError, setPickerError] = useState<string | null>(null);
+  const [appliedMessage, setAppliedMessage] = useState<string | null>(null);
   const [lastQuote, setLastQuote] = useState<QuoteResponse | null>(null);
 
   const [trip, setTrip] = useState<TripConfig>({
@@ -527,6 +528,14 @@ export function CostCalculator({
         manualTransport: false,
         extraTransports: q.allowPradoNCP ? {} : getAutoExtras(q.people, getDefaultTransport(q.people), false),
       }));
+      const parts: string[] = [];
+      parts.push(`${q.duration} days / ${q.nights} nights`);
+      parts.push(`${q.totalDistanceKm.toLocaleString()} km`);
+      if (q.flightCostPerPerson > 0) parts.push(`flight PKR ${q.flightCostPerPerson.toLocaleString()}/person`);
+      if (q.hotelTotalCost > 0) parts.push(`hotel PKR ${q.hotelTotalCost.toLocaleString()} total`);
+      if (q.allowPradoNCP) parts.push(`NCP rate on`);
+      setAppliedMessage(`Applied "${q.name}" — ${parts.join(" · ")}. Configuration & quote below updated.`);
+      setTimeout(() => setAppliedMessage(null), 8000);
     } catch (err) {
       setPickerError((err as Error).message);
     } finally {
@@ -615,16 +624,23 @@ export function CostCalculator({
             </label>
             <button
               type="button"
-              className="mt-5 rounded px-3 py-2 text-sm self-start sm:col-span-6"
-              style={{ background: "var(--accent-primary)", color: "var(--on-dark)" }}
+              className="mt-5 rounded px-4 py-2.5 text-sm font-semibold self-start sm:col-span-6 bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-60"
               onClick={applyPicker}
               disabled={pickerLoading}
             >
-              {pickerLoading ? "Loading…" : "Apply"}
+              {pickerLoading ? "Loading…" : "Apply selection — auto-fill trip config below"}
             </button>
           </div>
           {pickerError && (
             <div className="text-sm" style={{ color: "var(--accent-danger)" }}>{pickerError}</div>
+          )}
+          {appliedMessage && (
+            <div
+              className="text-sm rounded-md px-3 py-2 bg-emerald-50 border border-emerald-300"
+              style={{ color: "#065f46" }}
+            >
+              ✓ {appliedMessage}
+            </div>
           )}
           {lastQuote && (
             <div
