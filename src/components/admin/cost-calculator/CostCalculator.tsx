@@ -284,6 +284,23 @@ export function CostCalculator({
     () => vehicles.filter((v) => !v.isNcp).map((v) => v.displayName),
     [vehicles],
   );
+
+  /** Look up the NCP variant of a given display name. */
+  const ncpDisplayName = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const v of vehicles) {
+      if (v.isNcp && v.ncpPairCode) {
+        const base = vehicles.find((b) => b.code === v.ncpPairCode);
+        if (base) map[base.displayName] = v.displayName;
+      }
+    }
+    return map;
+  }, [vehicles]);
+
+  function maybeSwapNcp(displayName: string, allow: boolean): string {
+    if (!allow) return displayName;
+    return ncpDisplayName[displayName] ?? displayName;
+  }
   const [hotelCategories, setHotelCategories] = useState(INITIAL_HOTELS);
 
   const [user, setUser] = useState<UserInput>({
@@ -354,12 +371,11 @@ export function CostCalculator({
     const fuelPrice = Math.max(0, num(trip.fuelPricePerLitre));
     const profitPct = Math.max(0, num(trip.profitPercentage));
 
-    const actualMain: TransportName =
-      user.selectedTransport === "Prado" && trip.allowPradoNCP ? "PradoNCP" : user.selectedTransport;
+    const actualMain: TransportName = maybeSwapNcp(user.selectedTransport, trip.allowPradoNCP) as TransportName;
 
     const counts: Partial<Record<TransportName, number>> = { [actualMain]: 1 };
     Object.entries(user.extraTransports).forEach(([name, count]) => {
-      const actualName = (name === "Prado" && trip.allowPradoNCP ? "PradoNCP" : name) as TransportName;
+      const actualName = maybeSwapNcp(name, trip.allowPradoNCP) as TransportName;
       counts[actualName] = (counts[actualName] || 0) + Math.max(0, num(count));
     });
 
@@ -383,7 +399,7 @@ export function CostCalculator({
 
     const transportSummary = Object.entries(counts)
       .filter(([, c]) => (c || 0) > 0)
-      .map(([name, c]) => `${c} × ${name === "PradoNCP" ? "Prado" : name}`)
+      .map(([name, c]) => `${c} × ${name}`)
       .join(" + ");
 
     const requiredJeeps = trip.jeepRequired ? Math.ceil(people / Math.max(1, num(trip.jeepCapacity))) : 0;
@@ -487,6 +503,11 @@ export function CostCalculator({
         includeFlights: q.flightRequired,
         people: q.people,
         hotelType: q.tier === "luxury" ? "luxury" : q.tier === "premium" ? "premium" : "deluxe",
+        // Skardu/Gilgit (NCP-eligible) packages default to Prado so the engine
+        // applies the NCP rate automatically. Otherwise auto-pick from group size.
+        selectedTransport: q.allowPradoNCP ? "Prado" : (getDefaultTransport(q.people) as TransportName),
+        manualTransport: false,
+        extraTransports: q.allowPradoNCP ? {} : getAutoExtras(q.people, getDefaultTransport(q.people), false),
       }));
     } catch (err) {
       setPickerError((err as Error).message);
@@ -932,7 +953,7 @@ export function CostCalculator({
               <Line label="Fuel cost" value={pkr(calc.fuelCost)} />
               <Line label="Jeeps" value={`${calc.requiredJeeps}`} />
               <Line label="Jeep cost" value={pkr(calc.jeepCost)} />
-              <Line label="Main vehicle (costed)" value={calc.actualMain === "PradoNCP" ? "Prado (NCP rate)" : calc.actualMain} />
+              <Line label="Main vehicle (costed)" value={calc.actualMain} />
               <Line label="Transport total" value={pkr(calc.transportCost)} bold />
             </Breakdown>
 
