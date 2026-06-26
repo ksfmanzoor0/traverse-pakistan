@@ -14,6 +14,11 @@ function toIsoDate(d: Date | null) {
   return `${y}-${m}-${day}`;
 }
 
+// In-session quote cache. Toggling tier/pax/city back and forth no longer
+// re-hits the API — last value wins until the user reloads or closes the tab.
+// Keyed by the full quote tuple so a stale entry can't bleed across packages.
+const quoteSessionCache = new Map<string, { total: number; perPerson: number }>();
+
 /* ─── Calendar helpers ─────────────────────────────────────────────────────── */
 
 const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
@@ -215,18 +220,63 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
     else setCalMonth(m => m + 1);
   }
 
-  // Price — 3 persons per room max; extra rooms beyond default incur single supplement
+  // Engine-driven price. Falls back to the static `pricing[city] × adults`
+  // table while the quote is loading or if the engine endpoint errors so the
+  // sidebar never shows zero.
   const nights = pkg.duration - 1;
   const defaultRooms = Math.ceil(adults / 3);
   const extraRooms = Math.max(0, rooms - defaultRooms);
   const singleSupp = pricing.singleSupplement ?? 0;
-  const pricePerPerson =
+  const staticPerPerson =
     (departureCity === "lahore" && pricing.lahore) ? pricing.lahore :
     (departureCity === "karachi" && pricing.karachi) ? pricing.karachi :
     (pricing.islamabad ?? pricing.lahore ?? pricing.karachi ?? 0);
-  const baseTotal = pricePerPerson * adults;
-  const roomSurcharge = extraRooms * singleSupp;
-  const totalPrice = baseTotal + roomSurcharge;
+  const staticTotal = staticPerPerson * adults + extraRooms * singleSupp;
+
+  const HOME_FROM_CITY: Record<DepartureCityOption, "ISB" | "LHE" | "KHI"> = {
+    islamabad: "ISB",
+    lahore: "LHE",
+    karachi: "KHI",
+  };
+  const [engineQuote, setEngineQuote] = useState<{ total: number; perPerson: number } | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+
+  useEffect(() => {
+    const home = HOME_FROM_CITY[departureCity];
+    const startDate = toIsoDate(checkIn) ?? toIsoDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))!;
+    const cacheKey = `${pkg.slug}|${home}|${selectedTier}|${adults}|${startDate}`;
+    const cached = quoteSessionCache.get(cacheKey);
+    if (cached) {
+      setEngineQuote(cached);
+      setQuoteLoading(false);
+      return;
+    }
+    // 200ms debounce so rapid +/- clicks coalesce into a single request.
+    const controller = new AbortController();
+    setQuoteLoading(true);
+    const t = window.setTimeout(() => {
+      const params = new URLSearchParams({ home, tier: selectedTier, pax: String(adults), startDate });
+      fetch(`/api/packages/${pkg.slug}/quote?${params.toString()}`, { signal: controller.signal })
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+        .then((j: { total: number; perPerson: number }) => {
+          quoteSessionCache.set(cacheKey, { total: j.total, perPerson: j.perPerson });
+          setEngineQuote({ total: j.total, perPerson: j.perPerson });
+        })
+        .catch((err) => {
+          if ((err as Error).name === "AbortError") return;
+          setEngineQuote(null);
+        })
+        .finally(() => setQuoteLoading(false));
+    }, 200);
+    return () => {
+      window.clearTimeout(t);
+      controller.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pkg.slug, departureCity, selectedTier, adults, checkIn]);
+
+  const pricePerPerson = engineQuote?.perPerson ?? staticPerPerson;
+  const totalPrice = engineQuote?.total ?? staticTotal;
 
   const dateLabel = checkIn && checkOut
     ? `${formatDateShort(checkIn)} → ${formatDateShort(checkOut)}`
@@ -288,10 +338,12 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
         <div className="flex items-baseline gap-2 flex-wrap">
           <span className="text-2xl font-bold text-[var(--text-primary)] tabular-nums">{formatPrice(totalPrice)}</span>
           <span className="text-[14px] text-[var(--text-tertiary)]">total</span>
+          {quoteLoading && (
+            <span className="text-[11px] text-[var(--text-tertiary)] animate-pulse" aria-live="polite">recalculating…</span>
+          )}
         </div>
         <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
           {formatPrice(pricePerPerson)} × {adults} person{adults > 1 ? "s" : ""}
-          {roomSurcharge > 0 && ` + ${formatPrice(roomSurcharge)} room supplement`}
         </p>
 
 
@@ -363,7 +415,7 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
               <p className="text-[13px] font-semibold text-[var(--text-primary)]">Rooms</p>
               <p className="text-[11px] text-[var(--text-tertiary)]">
                 {rooms > defaultRooms
-                  ? `+${formatPrice(roomSurcharge)} supplement`
+                  ? "Extra room — price recalculated above"
                   : "Up to 3 per room — no extra charge"}
               </p>
             </div>
@@ -419,14 +471,8 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
         <div className="mb-4 space-y-1.5">
           <div className="flex justify-between text-[13px]">
             <span className="text-[var(--text-secondary)]">{formatPrice(pricePerPerson)} × {adults} person{adults > 1 ? "s" : ""}</span>
-            <span className="text-[var(--text-primary)] font-medium tabular-nums">{formatPrice(baseTotal)}</span>
+            <span className="text-[var(--text-primary)] font-medium tabular-nums">{formatPrice(totalPrice)}</span>
           </div>
-          {roomSurcharge > 0 && (
-            <div className="flex justify-between text-[13px]">
-              <span className="text-[var(--text-secondary)]">{extraRooms} extra room{extraRooms > 1 ? "s" : ""} supplement</span>
-              <span className="text-[var(--text-primary)] font-medium tabular-nums">+{formatPrice(roomSurcharge)}</span>
-            </div>
-          )}
           <div className="flex justify-between text-[15px] font-bold pt-2 border-t border-[var(--border-default)]">
             <span className="text-[var(--text-primary)]">Total</span>
             <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(totalPrice)}</span>
