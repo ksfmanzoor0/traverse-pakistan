@@ -281,6 +281,8 @@ export function CostCalculator({
   const [homeOverride, setHomeOverride] = useState<Record<HomeCity, { kind: "total" | "perPerson"; value: number } | null>>({ ISB: null, LHE: null, KHI: null });
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  // Rounding step applied to displayed + saved per-person prices.
+  const [roundStep, setRoundStep] = useState<500 | 1000>(1000);
 
   const [trip, setTrip] = useState<TripConfig>({
     tripName: "Hunza Valley Tour",
@@ -805,6 +807,7 @@ export function CostCalculator({
           const nonFlightSubtotal = calc.subtotal - calc.flightCost;
           const profitMul = 1 + (Math.max(0, num(trip.profitPercentage)) / 100);
 
+          const roundTo = (v: number) => Math.round(v / roundStep) * roundStep;
           const homes: HomeCity[] = ["ISB", "LHE", "KHI"];
           const homeRows = homes.map((home) => {
             const flightPP = homeFlights?.[home]?.perPerson ?? 0;
@@ -812,15 +815,21 @@ export function CostCalculator({
             const flightLine = flightRequiredHome ? flightPP * people : 0;
             const computedTotal = (nonFlightSubtotal + flightLine) * profitMul;
             const ov = homeOverride[home];
-            const displayTotal =
-              ov?.kind === "total" ? ov.value : ov?.kind === "perPerson" ? ov.value * people : computedTotal;
+            // Override is taken as-given; engine values get rounded to step.
+            const displayPerPerson =
+              ov?.kind === "perPerson"
+                ? ov.value
+                : ov?.kind === "total"
+                  ? ov.value / people
+                  : roundTo(computedTotal / people);
+            const displayTotal = displayPerPerson * people;
             return {
               home,
               flightPP,
               flightRequiredHome,
               computedTotal,
               displayTotal,
-              displayPerPerson: displayTotal / people,
+              displayPerPerson,
               override: ov,
             };
           });
@@ -890,6 +899,33 @@ export function CostCalculator({
 
               {lastQuote && (
                 <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-xs" style={{ color: "var(--text-tertiary)" }}>
+                    <span>Round prices to nearest:</span>
+                    <button
+                      type="button"
+                      className="rounded px-2 py-0.5"
+                      style={
+                        roundStep === 500
+                          ? { background: "var(--bg-elevated)", border: "1px solid var(--accent-primary, #047857)", color: "var(--text-primary)", fontWeight: 600 }
+                          : { background: "var(--bg-primary)", border: "1px solid var(--border-default)", color: "var(--text-secondary)" }
+                      }
+                      onClick={() => setRoundStep(500)}
+                    >
+                      PKR 500
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded px-2 py-0.5"
+                      style={
+                        roundStep === 1000
+                          ? { background: "var(--bg-elevated)", border: "1px solid var(--accent-primary, #047857)", color: "var(--text-primary)", fontWeight: 600 }
+                          : { background: "var(--bg-primary)", border: "1px solid var(--border-default)", color: "var(--text-secondary)" }
+                      }
+                      onClick={() => setRoundStep(1000)}
+                    >
+                      PKR 1,000
+                    </button>
+                  </div>
                   <button
                     type="button"
                     className="w-full rounded-md px-4 py-3 text-sm font-semibold bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-60"
