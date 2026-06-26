@@ -277,6 +277,8 @@ export function CostCalculator({
   const [lastQuote, setLastQuote] = useState<QuoteResponse | null>(null);
   // Manual override on the final Total / Per person cards. Cleared on Apply.
   const [override, setOverride] = useState<{ kind: "total" | "perPerson"; value: number } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
   const [trip, setTrip] = useState<TripConfig>({
     tripName: "Hunza Valley Tour",
@@ -500,6 +502,7 @@ export function CostCalculator({
     setPickerLoading(true);
     setPickerError(null);
     setOverride(null);
+    setSaveMessage(null);
     try {
       const qs = new URLSearchParams({
         slug: picker.slug,
@@ -818,6 +821,58 @@ export function CostCalculator({
                 <div className="text-xs rounded-md px-3 py-2 bg-amber-50 border border-amber-300" style={{ color: "#7c2d12" }}>
                   Manual override active — engine computed PKR {computedTotal.toLocaleString()} total / PKR {Math.round(computedTotal / people).toLocaleString()} per person.{" "}
                   <button type="button" className="underline" onClick={() => setOverride(null)}>Reset to engine value</button>
+                </div>
+              )}
+              {lastQuote && (
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    className="w-full rounded-md px-4 py-3 text-sm font-semibold bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-60"
+                    disabled={saving}
+                    onClick={async () => {
+                      if (!lastQuote) return;
+                      setSaving(true);
+                      setSaveMessage(null);
+                      try {
+                        const res = await fetch("/api/admin/cost-calculator/save-price", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            slug: lastQuote.slug,
+                            home: picker.home,
+                            tier: picker.tier,
+                            perPerson: Math.round(displayPerPerson),
+                          }),
+                        });
+                        const json = await res.json();
+                        if (!res.ok) throw new Error(json.error ?? "Save failed");
+                        setSaveMessage({
+                          kind: "ok",
+                          text: `Saved PKR ${json.value.toLocaleString()} to ${lastQuote.slug}.${picker.tier}.${json.city}`,
+                        });
+                      } catch (err) {
+                        setSaveMessage({ kind: "err", text: (err as Error).message });
+                      } finally {
+                        setSaving(false);
+                      }
+                    }}
+                  >
+                    {saving
+                      ? "Saving…"
+                      : `Update DB: ${lastQuote.slug} · ${picker.tier} · ${picker.home} → PKR ${Math.round(displayPerPerson).toLocaleString()} / person`}
+                  </button>
+                  {saveMessage && (
+                    <div
+                      className="text-sm rounded-md px-3 py-2"
+                      style={
+                        saveMessage.kind === "ok"
+                          ? { background: "#ecfdf5", border: "1px solid #6ee7b7", color: "#065f46" }
+                          : { background: "#fef2f2", border: "1px solid #fca5a5", color: "#991b1b" }
+                      }
+                    >
+                      {saveMessage.kind === "ok" ? "✓ " : "✗ "}{saveMessage.text}
+                    </div>
+                  )}
                 </div>
               )}
             </>
