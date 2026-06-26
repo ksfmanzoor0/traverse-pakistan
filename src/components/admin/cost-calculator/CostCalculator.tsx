@@ -933,47 +933,90 @@ export function CostCalculator({
                       PKR 1,000
                     </button>
                   </div>
-                  <button
-                    type="button"
-                    className="w-full rounded-md px-4 py-3 text-sm font-semibold bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-60"
-                    disabled={saving || !allHaveFlight}
-                    onClick={async () => {
-                      if (!lastQuote) return;
-                      setSaving(true);
-                      setSaveMessage(null);
-                      try {
-                        const prices = Object.fromEntries(
-                          homeRows.map((r) => [r.home, Math.round(r.displayPerPerson)]),
-                        ) as Record<HomeCity, number>;
-                        const res = await fetch("/api/admin/cost-calculator/save-price", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            slug: lastQuote.slug,
-                            tier: picker.tier,
-                            prices,
-                          }),
-                        });
-                        const json = await res.json();
-                        if (!res.ok) throw new Error(json.error ?? "Save failed");
-                        const summary = (json.updated as Array<{ city: string; value: number }>)
-                          .map((u) => `${u.city} PKR ${u.value.toLocaleString()}`)
-                          .join(" · ");
-                        setSaveMessage({
-                          kind: "ok",
-                          text: `Saved to ${lastQuote.slug}.${picker.tier} → ${summary}`,
-                        });
-                      } catch (err) {
-                        setSaveMessage({ kind: "err", text: (err as Error).message });
-                      } finally {
-                        setSaving(false);
-                      }
-                    }}
-                  >
-                    {saving
-                      ? "Saving…"
-                      : `Update DB · ${lastQuote.slug} · ${picker.tier} → ISB ${pkr(homeRows[0].displayPerPerson)}, LHE ${pkr(homeRows[1].displayPerPerson)}, KHI ${pkr(homeRows[2].displayPerPerson)} per person`}
-                  </button>
+                  <div className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+                    Pinned overrides win over the engine&apos;s 12h auto-snapshot on listings,
+                    cards, and the sidebar first paint. Clear an override to resume engine pricing.
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className="flex-1 rounded-md px-4 py-3 text-sm font-semibold bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-60"
+                      disabled={saving || !allHaveFlight}
+                      onClick={async () => {
+                        if (!lastQuote) return;
+                        setSaving(true);
+                        setSaveMessage(null);
+                        try {
+                          const prices = Object.fromEntries(
+                            homeRows.map((r) => [r.home, Math.round(r.displayPerPerson)]),
+                          ) as Record<HomeCity, number>;
+                          const res = await fetch("/api/admin/cost-calculator/save-price", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              slug: lastQuote.slug,
+                              tier: picker.tier,
+                              prices,
+                            }),
+                          });
+                          const json = await res.json();
+                          if (!res.ok) throw new Error(json.error ?? "Save failed");
+                          const summary = (json.updated as Array<{ city: string; value: number }>)
+                            .map((u) => `${u.city} PKR ${u.value.toLocaleString()}`)
+                            .join(" · ");
+                          setSaveMessage({
+                            kind: "ok",
+                            text: `Pinned override for ${lastQuote.slug}.${picker.tier} → ${summary}`,
+                          });
+                        } catch (err) {
+                          setSaveMessage({ kind: "err", text: (err as Error).message });
+                        } finally {
+                          setSaving(false);
+                        }
+                      }}
+                    >
+                      {saving
+                        ? "Saving…"
+                        : `Pin override · ${picker.tier} → ISB ${pkr(homeRows[0].displayPerPerson)} · LHE ${pkr(homeRows[1].displayPerPerson)} · KHI ${pkr(homeRows[2].displayPerPerson)}`}
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-md px-4 py-3 text-sm font-semibold disabled:opacity-60"
+                      style={{
+                        background: "var(--bg-elevated)",
+                        border: "1px solid var(--border-default)",
+                        color: "var(--text-secondary)",
+                      }}
+                      disabled={saving}
+                      onClick={async () => {
+                        if (!lastQuote) return;
+                        setSaving(true);
+                        setSaveMessage(null);
+                        try {
+                          const res = await fetch("/api/admin/cost-calculator/save-price", {
+                            method: "DELETE",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              slug: lastQuote.slug,
+                              tier: picker.tier,
+                            }),
+                          });
+                          const json = await res.json();
+                          if (!res.ok) throw new Error(json.error ?? "Clear failed");
+                          setSaveMessage({
+                            kind: "ok",
+                            text: `Cleared override on ${lastQuote.slug}.${picker.tier} — engine snapshot now applies.`,
+                          });
+                        } catch (err) {
+                          setSaveMessage({ kind: "err", text: (err as Error).message });
+                        } finally {
+                          setSaving(false);
+                        }
+                      }}
+                    >
+                      Clear override
+                    </button>
+                  </div>
                   {saveMessage && (
                     <div
                       className="text-sm rounded-md px-3 py-2"

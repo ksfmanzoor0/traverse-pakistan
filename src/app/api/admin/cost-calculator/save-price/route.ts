@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/admin/guard";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
@@ -18,6 +19,12 @@ function isTier(v: string): v is Tier {
   return v === "deluxe" || v === "luxury" || v === "premium";
 }
 
+/**
+ * POST writes operator overrides into `packages.pricing_override`. The engine
+ * snapshot in `packages.pricing` is left alone — the cron job manages that.
+ * Per-leaf override wins over snapshot in the public read path (see
+ * `mergePricing` in package.service.ts).
+ */
 export async function POST(req: Request) {
   await requireAdmin();
   const body = await req.json().catch(() => null) as {
@@ -25,6 +32,7 @@ export async function POST(req: Request) {
     home?: string;
     tier?: string;
     perPerson?: number;
+    prices?: Partial<Record<Home, number>>;
   } | null;
 
   if (!body || !body.slug || !body.tier) {
@@ -32,8 +40,7 @@ export async function POST(req: Request) {
   }
   if (!isTier(body.tier)) return NextResponse.json({ error: "tier must be deluxe|luxury|premium" }, { status: 400 });
 
-  // Accept either single { home, perPerson } or batch { prices: { ISB?, LHE?, KHI? } }.
-  const batch = (body as unknown as { prices?: Partial<Record<Home, number>> }).prices ?? null;
+  const batch = body.prices ?? null;
   let updates: Array<{ home: Home; value: number }>;
   if (batch) {
     updates = (Object.entries(batch) as [Home, number][])
@@ -56,27 +63,31 @@ export async function POST(req: Request) {
   const supabase = getSupabaseAdmin();
   const { data: pkg, error: readErr } = await supabase
     .from("packages")
-    .select("pricing")
+    .select("pricing_override")
     .eq("slug", body.slug)
     .maybeSingle();
   if (readErr) return NextResponse.json({ error: readErr.message }, { status: 500 });
   if (!pkg) return NextResponse.json({ error: "Package not found" }, { status: 404 });
 
-  const pricing = (pkg.pricing as Record<string, Record<string, number | null>> | null) ?? {};
+  const override = (pkg.pricing_override as Record<string, Record<string, number | null>> | null) ?? {};
   const previousByCity: Record<string, number | null> = {};
-  const tierBlock = { ...(pricing[body.tier] ?? {}) };
+  const tierBlock = { ...(override[body.tier] ?? {}) };
   for (const { home, value } of updates) {
     const cityKey = HOME_TO_PRICING_KEY[home];
     previousByCity[cityKey] = (tierBlock[cityKey] as number | null | undefined) ?? null;
     tierBlock[cityKey] = value;
   }
-  pricing[body.tier] = tierBlock;
+  override[body.tier] = tierBlock;
 
   const { error: writeErr } = await supabase
     .from("packages")
-    .update({ pricing })
+    .update({ pricing_override: override })
     .eq("slug", body.slug);
   if (writeErr) return NextResponse.json({ error: writeErr.message }, { status: 500 });
+
+  // Listings + first-paint sidebar read `pricing_override` — flush so the
+  // pinned price shows up immediately instead of waiting for the 24h TTL.
+  revalidateTag("packages", {});
 
   return NextResponse.json({
     slug: body.slug,
@@ -84,4 +95,68 @@ export async function POST(req: Request) {
     updated: updates.map((u) => ({ city: HOME_TO_PRICING_KEY[u.home], value: u.value })),
     previous: previousByCity,
   });
+}
+
+/**
+ * DELETE clears one or more leaves from `pricing_override`. Caller can pass
+ * either a specific `home` or `prices: { ISB, LHE, KHI }` array (values
+ * ignored — keys are what get cleared). Empty body clears the whole tier.
+ */
+export async function DELETE(req: Request) {
+  await requireAdmin();
+  const body = await req.json().catch(() => null) as {
+    slug?: string;
+    tier?: string;
+    home?: string;
+    homes?: Home[];
+  } | null;
+
+  if (!body || !body.slug || !body.tier) {
+    return NextResponse.json({ error: "Required: slug, tier (optional: home or homes[])" }, { status: 400 });
+  }
+  if (!isTier(body.tier)) return NextResponse.json({ error: "tier must be deluxe|luxury|premium" }, { status: 400 });
+
+  const homesToClear: Home[] | null = body.homes
+    ? body.homes.filter(isHome)
+    : body.home
+      ? (isHome(body.home) ? [body.home] : [])
+      : null; // null = clear entire tier
+
+  const supabase = getSupabaseAdmin();
+  const { data: pkg, error: readErr } = await supabase
+    .from("packages")
+    .select("pricing_override")
+    .eq("slug", body.slug)
+    .maybeSingle();
+  if (readErr) return NextResponse.json({ error: readErr.message }, { status: 500 });
+  if (!pkg) return NextResponse.json({ error: "Package not found" }, { status: 404 });
+
+  const override = (pkg.pricing_override as Record<string, Record<string, number | null>> | null) ?? {};
+  const tierBlock = { ...(override[body.tier] ?? {}) };
+  const cleared: string[] = [];
+
+  if (homesToClear === null) {
+    cleared.push(...Object.keys(tierBlock));
+    delete override[body.tier];
+  } else {
+    for (const home of homesToClear) {
+      const cityKey = HOME_TO_PRICING_KEY[home];
+      if (cityKey in tierBlock) {
+        delete tierBlock[cityKey];
+        cleared.push(cityKey);
+      }
+    }
+    if (Object.keys(tierBlock).length === 0) delete override[body.tier];
+    else override[body.tier] = tierBlock;
+  }
+
+  const { error: writeErr } = await supabase
+    .from("packages")
+    .update({ pricing_override: override })
+    .eq("slug", body.slug);
+  if (writeErr) return NextResponse.json({ error: writeErr.message }, { status: 500 });
+
+  revalidateTag("packages", {});
+
+  return NextResponse.json({ slug: body.slug, tier: body.tier, cleared });
 }
