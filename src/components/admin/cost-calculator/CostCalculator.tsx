@@ -275,6 +275,8 @@ export function CostCalculator({
   const [pickerError, setPickerError] = useState<string | null>(null);
   const [appliedMessage, setAppliedMessage] = useState<string | null>(null);
   const [lastQuote, setLastQuote] = useState<QuoteResponse | null>(null);
+  // Manual override on the final Total / Per person cards. Cleared on Apply.
+  const [override, setOverride] = useState<{ kind: "total" | "perPerson"; value: number } | null>(null);
 
   const [trip, setTrip] = useState<TripConfig>({
     tripName: "Hunza Valley Tour",
@@ -497,6 +499,7 @@ export function CostCalculator({
     if (!picker.slug) return;
     setPickerLoading(true);
     setPickerError(null);
+    setOverride(null);
     try {
       const qs = new URLSearchParams({
         slug: picker.slug,
@@ -769,6 +772,91 @@ export function CostCalculator({
         </div>
       </section>
 
+      {/* Customer quote — moved above Hotel categories so operator sees the
+          number first, then drills into hotel breakdown. Total/Per person are
+          overridable; override clears on the next Apply. */}
+      <section
+        className="rounded-lg p-5 space-y-4"
+        style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
+      >
+        <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>Quote</h2>
+
+        {(() => {
+          const computedTotal = calc.total;
+          const people = Math.max(1, calc.people);
+          const displayTotal =
+            override?.kind === "total"
+              ? override.value
+              : override?.kind === "perPerson"
+                ? override.value * people
+                : computedTotal;
+          const displayPerPerson = displayTotal / people;
+          return (
+            <>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <EditableResultCard
+                  label="Total"
+                  value={displayTotal}
+                  computed={computedTotal}
+                  isOverridden={override?.kind === "total"}
+                  format={pkr}
+                  onSave={(v) => setOverride({ kind: "total", value: v })}
+                  onReset={() => setOverride(null)}
+                />
+                <EditableResultCard
+                  label="Per person"
+                  value={displayPerPerson}
+                  computed={computedTotal / people}
+                  isOverridden={override?.kind === "perPerson"}
+                  format={pkr}
+                  onSave={(v) => setOverride({ kind: "perPerson", value: v })}
+                  onReset={() => setOverride(null)}
+                />
+                <ResultCard label="Vehicles" value={calc.transportSummary || "—"} />
+              </div>
+              {override && (
+                <div className="text-xs rounded-md px-3 py-2 bg-amber-50 border border-amber-300" style={{ color: "#7c2d12" }}>
+                  Manual override active — engine computed PKR {computedTotal.toLocaleString()} total / PKR {Math.round(computedTotal / people).toLocaleString()} per person.{" "}
+                  <button type="button" className="underline" onClick={() => setOverride(null)}>Reset to engine value</button>
+                </div>
+              )}
+            </>
+          );
+        })()}
+
+        {calc.roomWarning && <Warning text={calc.roomWarning} />}
+        {calc.transportWarning && <Warning text={calc.transportWarning} />}
+        {calc.mattressWarning && <Warning text={calc.mattressWarning} />}
+        {calc.flightWarning && <Warning text={calc.flightWarning} />}
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <Breakdown title="Transport">
+            <Line label="Rent" value={pkr(calc.rentCost)} />
+            <Line label="Fuel (litres)" value={`${calc.totalFuelLitres.toFixed(1)} L`} />
+            <Line label="Fuel cost" value={pkr(calc.fuelCost)} />
+            <Line label="Jeeps" value={`${calc.requiredJeeps}`} />
+            <Line label="Jeep cost" value={pkr(calc.jeepCost)} />
+            <Line label="Main vehicle (costed)" value={calc.actualMain} />
+            <Line label="Transport total" value={pkr(calc.transportCost)} bold />
+          </Breakdown>
+
+          <Breakdown title="Hotel + guide + flight">
+            <Line label="Rooms" value={`${calc.finalRooms} (min ${calc.minRooms})`} />
+            <Line label="Extra people charged" value={`${calc.extraPeople}`} />
+            <Line label="Room base" value={pkr(calc.roomBase)} />
+            <Line label="Extra person" value={pkr(calc.extraCost)} />
+            <Line label="Hotel total" value={pkr(calc.hotelCost)} bold />
+            <Line label="Guide" value={pkr(calc.guideCost)} />
+            <Line label="Flight" value={pkr(calc.flightCost)} />
+          </Breakdown>
+        </div>
+
+        <Breakdown title="Final">
+          <Line label="Subtotal" value={pkr(calc.subtotal)} />
+          <Line label={`Profit ${trip.profitPercentage}%`} value={pkr(calc.profit)} />
+          <Line label="Grand total" value={pkr(calc.total)} bold />
+        </Breakdown>
+      </section>
 
       {/* Hotel categories — when a package is picked, show its hotels grouped by tier */}
       {lastQuote && lastQuote.hotelsInPackage.length > 0 ? (
@@ -871,56 +959,116 @@ export function CostCalculator({
         )
       )}
 
-      {/* Customer quote — Customer Inputs panel removed; all inputs come from
-          the Skardu picker. Math runs on whatever was last Applied. */}
-      <div className="grid gap-6 lg:grid-cols-1">
-        {/* Result */}
-        <section
-          className="rounded-lg p-5 space-y-4 lg:col-span-1"
-          style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
-        >
-          <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>Quote</h2>
+    </div>
+  );
+}
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <ResultCard label="Total" value={pkr(calc.total)} primary />
-            <ResultCard label="Per person" value={pkr(calc.perPerson)} primary />
-            <ResultCard label="Vehicles" value={calc.transportSummary || "—"} />
+function EditableResultCard({
+  label,
+  value,
+  computed,
+  isOverridden,
+  format,
+  onSave,
+  onReset,
+}: {
+  label: string;
+  value: number;
+  computed: number;
+  isOverridden: boolean;
+  format: (v: number) => string;
+  onSave: (v: number) => void;
+  onReset: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<string>(String(Math.round(value)));
+  return (
+    <div
+      className="rounded-md p-3"
+      style={{
+        background: "var(--bg-elevated)",
+        border: isOverridden ? "1px solid var(--accent-warning, #d97706)" : "1px solid var(--border-default)",
+      }}
+    >
+      <div className="flex items-baseline justify-between gap-2">
+        <div className="text-xs" style={{ color: "var(--text-tertiary)" }}>
+          {label}
+          {isOverridden && <span className="ml-1" style={{ color: "var(--accent-warning, #d97706)" }}>(overridden)</span>}
+        </div>
+        {!editing ? (
+          <div className="flex gap-1.5">
+            <button
+              type="button"
+              className="text-xs rounded px-2 py-0.5 bg-emerald-700 text-white hover:bg-emerald-800"
+              onClick={() => {
+                setDraft(String(Math.round(value)));
+                setEditing(true);
+              }}
+            >
+              Override
+            </button>
+            {isOverridden && (
+              <button
+                type="button"
+                className="text-xs rounded px-2 py-0.5"
+                style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)", color: "var(--text-secondary)" }}
+                onClick={onReset}
+              >
+                Reset
+              </button>
+            )}
           </div>
-
-          {calc.roomWarning && <Warning text={calc.roomWarning} />}
-          {calc.transportWarning && <Warning text={calc.transportWarning} />}
-          {calc.mattressWarning && <Warning text={calc.mattressWarning} />}
-          {calc.flightWarning && <Warning text={calc.flightWarning} />}
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <Breakdown title="Transport">
-              <Line label="Rent" value={pkr(calc.rentCost)} />
-              <Line label="Fuel (litres)" value={`${calc.totalFuelLitres.toFixed(1)} L`} />
-              <Line label="Fuel cost" value={pkr(calc.fuelCost)} />
-              <Line label="Jeeps" value={`${calc.requiredJeeps}`} />
-              <Line label="Jeep cost" value={pkr(calc.jeepCost)} />
-              <Line label="Main vehicle (costed)" value={calc.actualMain} />
-              <Line label="Transport total" value={pkr(calc.transportCost)} bold />
-            </Breakdown>
-
-            <Breakdown title="Hotel + guide + flight">
-              <Line label="Rooms" value={`${calc.finalRooms} (min ${calc.minRooms})`} />
-              <Line label="Extra people charged" value={`${calc.extraPeople}`} />
-              <Line label="Room base" value={pkr(calc.roomBase)} />
-              <Line label="Extra person" value={pkr(calc.extraCost)} />
-              <Line label="Hotel total" value={pkr(calc.hotelCost)} bold />
-              <Line label="Guide" value={pkr(calc.guideCost)} />
-              <Line label="Flight" value={pkr(calc.flightCost)} />
-            </Breakdown>
-          </div>
-
-          <Breakdown title="Final">
-            <Line label="Subtotal" value={pkr(calc.subtotal)} />
-            <Line label={`Profit ${trip.profitPercentage}%`} value={pkr(calc.profit)} />
-            <Line label="Grand total" value={pkr(calc.total)} bold />
-          </Breakdown>
-        </section>
+        ) : null}
       </div>
+      {editing ? (
+        <div className="mt-1 flex items-center gap-2">
+          <input
+            type="number"
+            className="flex-1 rounded px-2 py-1.5 text-base font-semibold"
+            style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+            value={draft}
+            autoFocus
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                const n = Number(draft);
+                if (Number.isFinite(n) && n > 0) onSave(n);
+                setEditing(false);
+              } else if (e.key === "Escape") {
+                setEditing(false);
+              }
+            }}
+          />
+          <button
+            type="button"
+            className="text-xs rounded px-2 py-1 bg-emerald-700 text-white hover:bg-emerald-800"
+            onClick={() => {
+              const n = Number(draft);
+              if (Number.isFinite(n) && n > 0) onSave(n);
+              setEditing(false);
+            }}
+          >
+            Apply
+          </button>
+          <button
+            type="button"
+            className="text-xs rounded px-2 py-1"
+            style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)", color: "var(--text-secondary)" }}
+            onClick={() => setEditing(false)}
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <div className="mt-1 text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+          {format(value)}
+          {isOverridden && (
+            <span className="ml-2 text-xs font-normal" style={{ color: "var(--text-tertiary)", textDecoration: "line-through" }}>
+              {format(computed)}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
