@@ -275,8 +275,10 @@ export function CostCalculator({
   const [pickerError, setPickerError] = useState<string | null>(null);
   const [appliedMessage, setAppliedMessage] = useState<string | null>(null);
   const [lastQuote, setLastQuote] = useState<QuoteResponse | null>(null);
-  // Manual override on the final Total / Per person cards. Cleared on Apply.
-  const [override, setOverride] = useState<{ kind: "total" | "perPerson"; value: number } | null>(null);
+  // Per-home flight cost loaded on Apply so we can show all three home cities at once.
+  const [homeFlights, setHomeFlights] = useState<Record<HomeCity, { perPerson: number; required: boolean }> | null>(null);
+  // Per-home manual override on the Total / Per person cards. Cleared on Apply.
+  const [homeOverride, setHomeOverride] = useState<Record<HomeCity, { kind: "total" | "perPerson"; value: number } | null>>({ ISB: null, LHE: null, KHI: null });
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
@@ -501,23 +503,34 @@ export function CostCalculator({
     if (!picker.slug) return;
     setPickerLoading(true);
     setPickerError(null);
-    setOverride(null);
+    setHomeOverride({ ISB: null, LHE: null, KHI: null });
     setSaveMessage(null);
     try {
-      const qs = new URLSearchParams({
-        slug: picker.slug,
-        home: picker.home,
-        startDate: picker.startDate,
-        tier: picker.tier,
-        people: String(picker.people),
-      });
-      const res = await fetch(`/api/admin/cost-calculator/quote?${qs.toString()}`);
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({ error: res.statusText }));
-        throw new Error(body.error ?? "Failed to fetch quote");
-      }
-      const q = (await res.json()) as QuoteResponse;
+      // Fetch all three home cities in parallel so we can show ISB/LHE/KHI
+      // totals side-by-side. picker.home drives the detail breakdown panels.
+      const fetchOne = async (home: HomeCity): Promise<QuoteResponse> => {
+        const qs = new URLSearchParams({
+          slug: picker.slug,
+          home,
+          startDate: picker.startDate,
+          tier: picker.tier,
+          people: String(picker.people),
+        });
+        const r = await fetch(`/api/admin/cost-calculator/quote?${qs.toString()}`);
+        if (!r.ok) {
+          const body = await r.json().catch(() => ({ error: r.statusText }));
+          throw new Error(body.error ?? `Failed to fetch quote for ${home}`);
+        }
+        return (await r.json()) as QuoteResponse;
+      };
+      const [qIsb, qLhe, qKhi] = await Promise.all([fetchOne("ISB"), fetchOne("LHE"), fetchOne("KHI")]);
+      const q = picker.home === "LHE" ? qLhe : picker.home === "KHI" ? qKhi : qIsb;
       setLastQuote(q);
+      setHomeFlights({
+        ISB: { perPerson: qIsb.flightCostPerPerson, required: qIsb.flightRequired },
+        LHE: { perPerson: qLhe.flightCostPerPerson, required: qLhe.flightRequired },
+        KHI: { perPerson: qKhi.flightCostPerPerson, required: qKhi.flightRequired },
+      });
       setTrip((p) => ({
         ...p,
         tripName: q.name,
@@ -785,70 +798,127 @@ export function CostCalculator({
         <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>Quote</h2>
 
         {(() => {
-          const computedTotal = calc.total;
           const people = Math.max(1, calc.people);
-          const displayTotal =
-            override?.kind === "total"
-              ? override.value
-              : override?.kind === "perPerson"
-                ? override.value * people
-                : computedTotal;
-          const displayPerPerson = displayTotal / people;
+          // Engine subtotal *without* flight — shared across all three home cards.
+          // calc.flightCost was computed for picker.home; back it out before
+          // adding per-home flight in the loop below.
+          const nonFlightSubtotal = calc.subtotal - calc.flightCost;
+          const profitMul = 1 + (Math.max(0, num(trip.profitPercentage)) / 100);
+
+          const homes: HomeCity[] = ["ISB", "LHE", "KHI"];
+          const homeRows = homes.map((home) => {
+            const flightPP = homeFlights?.[home]?.perPerson ?? 0;
+            const flightRequiredHome = homeFlights?.[home]?.required ?? trip.flightRequired;
+            const flightLine = flightRequiredHome ? flightPP * people : 0;
+            const computedTotal = (nonFlightSubtotal + flightLine) * profitMul;
+            const ov = homeOverride[home];
+            const displayTotal =
+              ov?.kind === "total" ? ov.value : ov?.kind === "perPerson" ? ov.value * people : computedTotal;
+            return {
+              home,
+              flightPP,
+              flightRequiredHome,
+              computedTotal,
+              displayTotal,
+              displayPerPerson: displayTotal / people,
+              override: ov,
+            };
+          });
+
+          const anyOverride = homes.some((h) => homeOverride[h] !== null);
+          const allHaveFlight = homes.every((h) => (homeFlights?.[h]?.perPerson ?? 0) > 0);
+
           return (
             <>
               <div className="grid gap-3 sm:grid-cols-3">
-                <EditableResultCard
-                  label="Total"
-                  value={displayTotal}
-                  computed={computedTotal}
-                  isOverridden={override?.kind === "total"}
-                  format={pkr}
-                  onSave={(v) => setOverride({ kind: "total", value: v })}
-                  onReset={() => setOverride(null)}
-                />
-                <EditableResultCard
-                  label="Per person"
-                  value={displayPerPerson}
-                  computed={computedTotal / people}
-                  isOverridden={override?.kind === "perPerson"}
-                  format={pkr}
-                  onSave={(v) => setOverride({ kind: "perPerson", value: v })}
-                  onReset={() => setOverride(null)}
-                />
-                <ResultCard label="Vehicles" value={calc.transportSummary || "—"} />
+                {homeRows.map((r) => (
+                  <div
+                    key={r.home}
+                    className="rounded-md p-3 space-y-2"
+                    style={{
+                      background: "var(--bg-elevated)",
+                      border: r.override ? "1px solid var(--accent-warning, #d97706)" : "1px solid var(--border-default)",
+                    }}
+                  >
+                    <div className="flex items-baseline justify-between">
+                      <div className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                        {r.home}
+                        {r.override && (
+                          <span className="ml-1 text-xs font-normal" style={{ color: "var(--accent-warning, #d97706)" }}>
+                            (overridden)
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs" style={{ color: "var(--text-tertiary)" }}>
+                        flight {pkr(r.flightPP)}/pp
+                      </div>
+                    </div>
+                    <EditableResultCard
+                      label="Total"
+                      value={r.displayTotal}
+                      computed={r.computedTotal}
+                      isOverridden={r.override?.kind === "total"}
+                      format={pkr}
+                      onSave={(v) => setHomeOverride((p) => ({ ...p, [r.home]: { kind: "total", value: v } }))}
+                      onReset={() => setHomeOverride((p) => ({ ...p, [r.home]: null }))}
+                    />
+                    <EditableResultCard
+                      label="Per person"
+                      value={r.displayPerPerson}
+                      computed={r.computedTotal / people}
+                      isOverridden={r.override?.kind === "perPerson"}
+                      format={pkr}
+                      onSave={(v) => setHomeOverride((p) => ({ ...p, [r.home]: { kind: "perPerson", value: v } }))}
+                      onReset={() => setHomeOverride((p) => ({ ...p, [r.home]: null }))}
+                    />
+                  </div>
+                ))}
               </div>
-              {override && (
+
+              {anyOverride && (
                 <div className="text-xs rounded-md px-3 py-2 bg-amber-50 border border-amber-300" style={{ color: "#7c2d12" }}>
-                  Manual override active — engine computed PKR {computedTotal.toLocaleString()} total / PKR {Math.round(computedTotal / people).toLocaleString()} per person.{" "}
-                  <button type="button" className="underline" onClick={() => setOverride(null)}>Reset to engine value</button>
+                  Manual override active on one or more cities — engine values are shown crossed-out.{" "}
+                  <button
+                    type="button"
+                    className="underline"
+                    onClick={() => setHomeOverride({ ISB: null, LHE: null, KHI: null })}
+                  >
+                    Reset all to engine value
+                  </button>
                 </div>
               )}
+
               {lastQuote && (
                 <div className="space-y-2">
                   <button
                     type="button"
                     className="w-full rounded-md px-4 py-3 text-sm font-semibold bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-60"
-                    disabled={saving}
+                    disabled={saving || !allHaveFlight}
                     onClick={async () => {
                       if (!lastQuote) return;
                       setSaving(true);
                       setSaveMessage(null);
                       try {
+                        const prices = Object.fromEntries(
+                          homeRows.map((r) => [r.home, Math.round(r.displayPerPerson)]),
+                        ) as Record<HomeCity, number>;
                         const res = await fetch("/api/admin/cost-calculator/save-price", {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({
                             slug: lastQuote.slug,
-                            home: picker.home,
                             tier: picker.tier,
-                            perPerson: Math.round(displayPerPerson),
+                            prices,
                           }),
                         });
                         const json = await res.json();
                         if (!res.ok) throw new Error(json.error ?? "Save failed");
+                        const summary = (json.updated as Array<{ city: string; value: number }>)
+                          .map((u) => `${u.city} PKR ${u.value.toLocaleString()}`)
+                          .join(" · ");
                         setSaveMessage({
                           kind: "ok",
-                          text: `Saved PKR ${json.value.toLocaleString()} to ${lastQuote.slug}.${picker.tier}.${json.city}`,
+                          text: `Saved to ${lastQuote.slug}.${picker.tier} → ${summary}`,
                         });
                       } catch (err) {
                         setSaveMessage({ kind: "err", text: (err as Error).message });
@@ -859,7 +929,7 @@ export function CostCalculator({
                   >
                     {saving
                       ? "Saving…"
-                      : `Update DB: ${lastQuote.slug} · ${picker.tier} · ${picker.home} → PKR ${Math.round(displayPerPerson).toLocaleString()} / person`}
+                      : `Update DB · ${lastQuote.slug} · ${picker.tier} → ISB ${pkr(homeRows[0].displayPerPerson)}, LHE ${pkr(homeRows[1].displayPerPerson)}, KHI ${pkr(homeRows[2].displayPerPerson)} per person`}
                   </button>
                   {saveMessage && (
                     <div
@@ -875,6 +945,10 @@ export function CostCalculator({
                   )}
                 </div>
               )}
+
+              <div className="text-xs" style={{ color: "var(--text-tertiary)" }}>
+                Vehicles: {calc.transportSummary || "—"}
+              </div>
             </>
           );
         })()}
