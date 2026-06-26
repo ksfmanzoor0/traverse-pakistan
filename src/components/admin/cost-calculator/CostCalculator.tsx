@@ -544,16 +544,23 @@ export function CostCalculator({
         flightCostPerPerson: q.flightCostPerPerson,
         allowPradoNCP: q.allowPradoNCP,
       }));
+      // Extras must be keyed by BASE vehicle name ("Prado", "Corolla", …);
+      // maybeSwapNcp() in the calc swaps them to NCP variants at cost time when
+      // allowPradoNCP is on. Passing the NCP display name ("Prado (NCP)") into
+      // getAutoExtras would miss the hard-coded cap table and produce NaN.
+      const mainBase: TransportName = q.allowPradoNCP ? "Prado" : (getDefaultTransport(q.people) as TransportName);
       setUser((p) => ({
         ...p,
         includeFlights: q.flightRequired,
         people: q.people,
         hotelType: q.tier === "luxury" ? "luxury" : q.tier === "premium" ? "premium" : "deluxe",
-        // Skardu/Gilgit (NCP-eligible) packages default to the Prado NCP
-        // variant explicitly so the operator sees it in the dropdown.
-        selectedTransport: q.allowPradoNCP ? (ncpPradoName as TransportName) : (getDefaultTransport(q.people) as TransportName),
+        // Skardu/Gilgit (NCP-eligible) packages display the Prado NCP variant
+        // pre-selected; for everyone else, the auto-picked default vehicle.
+        selectedTransport: q.allowPradoNCP ? (ncpPradoName as TransportName) : mainBase,
         manualTransport: false,
-        extraTransports: q.allowPradoNCP ? {} : getAutoExtras(q.people, getDefaultTransport(q.people), false),
+        // keepSameType=allowPradoNCP so 5+ ppl on a KDU/GIL package gets a 2nd
+        // Prado (auto-swapped to Prado NCP), not a mismatched extra vehicle.
+        extraTransports: getAutoExtras(q.people, mainBase, q.allowPradoNCP),
       }));
       const parts: string[] = [];
       parts.push(`${q.duration} days / ${q.nights} nights`);
