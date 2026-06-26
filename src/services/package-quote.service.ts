@@ -90,7 +90,29 @@ async function computeQuote(args: {
 
   const startingCities = pkg.starting_cities ?? [];
   const ncpEligible = startingCities.includes("KDU") || startingCities.includes("GIL");
-  const baseDistance = pkg.total_distance_km ?? 0;
+  // Refuse to price when drive distance is missing or non-positive. Either
+  // case collapses the fuel line to zero and silently under-prices the trip,
+  // which the cron would then snapshot over the previous price. Marking it
+  // unresolved tells repriceAllPackages to leave packages.pricing untouched.
+  if (
+    pkg.total_distance_km === null
+    || pkg.total_distance_km === undefined
+    || pkg.total_distance_km <= 0
+  ) {
+    return {
+      slug: pkg.slug,
+      duration: pkg.duration,
+      nights: Math.max(1, pkg.duration - 1),
+      tier: args.tier,
+      pax: Math.max(1, Math.floor(args.pax)),
+      home: args.home,
+      startDate: args.startDate,
+      total: 0,
+      perPerson: 0,
+      unresolved: [`Package ${pkg.slug} has no positive total_distance_km — engine cannot compute transport cost.`],
+    };
+  }
+  const baseDistance = pkg.total_distance_km;
   const extensionKm = startingCities.includes("ISB") && args.home === "LHE" ? LHE_EXTENSION_KM : 0;
   const totalDistanceKm = baseDistance + extensionKm;
   const pax = Math.max(1, Math.floor(args.pax));
