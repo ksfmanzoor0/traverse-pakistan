@@ -203,6 +203,8 @@ interface TripConfig {
   fuelPricePerLitre: number;
   profitPercentage: number;
   guidePerDay: number;
+  guideRequired: boolean;
+  guideDays: number;
   jeepCostPerJeep: number;
   jeepCapacity: number;
   flightCostPerPerson: number;
@@ -282,11 +284,13 @@ export function CostCalculator({
     fuelPricePerLitre: engineConfig?.fuelPricePerLitre ?? 285,
     profitPercentage: engineConfig?.profitPercentage ?? 20,
     guidePerDay: engineConfig?.guidePerDay ?? 5000,
+    guideRequired: false,
+    guideDays: 6,
     jeepCostPerJeep: 18000,
     jeepCapacity: 6,
     flightCostPerPerson: 0,
     flightRequired: false,
-    jeepRequired: true,
+    jeepRequired: false,
     allowPradoNCP: false,
   });
 
@@ -441,9 +445,8 @@ export function CostCalculator({
     const extraCost = useRealHotel ? 0 : placeholderExtraCost;
     const hotelCost = useRealHotel ? (lastQuote?.hotelTotalCost ?? 0) : placeholderHotelCost;
 
-    // Guide and flight no longer behind toggles — always included when the
-    // trip declares them. Picker drives all of these on Apply.
-    const guideCost = num(trip.guidePerDay) * days;
+    const guideDaysClamped = Math.max(0, Math.min(num(trip.guideDays), days));
+    const guideCost = trip.guideRequired ? num(trip.guidePerDay) * guideDaysClamped : 0;
     const flightCost = trip.flightRequired ? num(trip.flightCostPerPerson) * people : 0;
 
     const transportCost = rentCost + fuelCost + jeepCost;
@@ -514,6 +517,7 @@ export function CostCalculator({
         tripName: q.name,
         numberOfDays: q.duration,
         numberOfNights: q.nights,
+        guideDays: q.duration,
         totalDistanceKm: q.totalDistanceKm,
         flightRequired: q.flightRequired,
         flightCostPerPerson: q.flightCostPerPerson,
@@ -750,6 +754,8 @@ export function CostCalculator({
           <LabelledInput label="Fuel / litre" type="number" value={trip.fuelPricePerLitre} onChange={(v) => updateTrip("fuelPricePerLitre", num(v))} />
           <LabelledInput label="Profit %" type="number" value={trip.profitPercentage} onChange={(v) => updateTrip("profitPercentage", num(v))} />
           <LabelledInput label="Guide / day" type="number" value={trip.guidePerDay} onChange={(v) => updateTrip("guidePerDay", num(v))} />
+          <LabelledInput label="Guide days" type="number" value={trip.guideDays} onChange={(v) => updateTrip("guideDays", num(v))} />
+          <Checkbox label="Guide required" checked={trip.guideRequired} onChange={(c) => updateTrip("guideRequired", c)} />
           {trip.jeepRequired && (
             <>
               <LabelledInput label="Jeep / jeep" type="number" value={trip.jeepCostPerJeep} onChange={(v) => updateTrip("jeepCostPerJeep", num(v))} />
