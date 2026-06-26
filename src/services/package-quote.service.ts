@@ -147,8 +147,11 @@ async function computeQuote(args: {
   }
 
   const subtotal = transportCost + hotelCost + flightCost;
-  const total = Math.round(subtotal * (1 + engineConfig.profitPercentage / 100));
-  const perPerson = Math.round(total / pax / 1000) * 1000;
+  const rawTotal = subtotal * (1 + engineConfig.profitPercentage / 100);
+  // Round per-person to nearest 1k, then derive the total from it so the
+  // displayed total = perPerson × pax exactly (no odd 396,666-style endings).
+  const perPerson = Math.round(rawTotal / pax / 1000) * 1000;
+  const total = perPerson * pax;
 
   return {
     slug: pkg.slug,
