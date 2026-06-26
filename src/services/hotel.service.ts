@@ -24,6 +24,7 @@ type RawRoom = {
   capacity_infants: number;
   max_occupancy: number | null;
   sort_order: number;
+  is_active: boolean | null;
   hotel_room_prices: RawRoomPrice[];
 };
 
@@ -76,6 +77,7 @@ const HOTEL_SELECT = `
   hotel_rooms (
     id, name, beds, price, single_price, available, extra_occupancy_charge,
     capacity_adults, capacity_children, capacity_infants, max_occupancy, sort_order,
+    is_active,
     hotel_room_prices ( price, single_price, hotel_seasons ( label ) )
   ),
   hotel_seasons ( label, sort_order, hotel_season_periods ( from_date, to_date ) ),
@@ -107,6 +109,7 @@ function entryPriceForToday(rooms: HotelRoom[], seasons: HotelSeasonDefinition[]
 
 function toHotel(raw: RawHotel): Hotel {
   const rooms: HotelRoom[] = [...(raw.hotel_rooms ?? [])]
+    .filter((r) => r.is_active !== false)
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((r) => {
       const prices: SeasonalPrice[] = (r.hotel_room_prices ?? [])
