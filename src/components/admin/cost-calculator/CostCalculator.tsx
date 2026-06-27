@@ -955,11 +955,11 @@ export function CostCalculator({
                   className="text-xs rounded px-2 py-1 border"
                   style={{ borderColor: "var(--border-default)", color: "var(--text-primary)" }}
                 >
-                  + Add leg
+                  + Add jeep ride
                 </button>
               </div>
               {engineInputs.jeepLegs.length === 0 && (
-                <div className="text-xs" style={{ color: "var(--text-tertiary)" }}>No jeep legs configured.</div>
+                <div className="text-xs" style={{ color: "var(--text-tertiary)" }}>No jeep legs configured. Click &ldquo;Add jeep ride&rdquo; — type any route name or pick a known one.</div>
               )}
               <datalist id="known-jeep-leg-names">
                 {KNOWN_JEEP_LEGS.map((l) => <option key={l.name} value={l.name} />)}
@@ -967,10 +967,11 @@ export function CostCalculator({
               {engineInputs.jeepLegs.map((leg, i) => (
                 <div key={i} className="grid gap-2 grid-cols-12 items-end">
                   <label className="col-span-6 text-xs">
-                    <span style={{ color: "var(--text-tertiary)" }}>Name (type or pick known)</span>
+                    <span style={{ color: "var(--text-tertiary)" }}>Name (type custom or pick known)</span>
                     <input
                       type="text"
                       list="known-jeep-leg-names"
+                      placeholder="e.g. Saiful Malook · or type a new route name"
                       className="mt-1 w-full rounded px-2 py-2 text-sm"
                       style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
                       value={leg.name}
