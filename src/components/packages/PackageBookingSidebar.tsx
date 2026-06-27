@@ -14,6 +14,12 @@ function toIsoDate(d: Date | null) {
   return `${y}-${m}-${day}`;
 }
 
+// In-session result cache. Toggling tier/pax/city/rooms back and forth
+// avoids a re-fetch — last value wins until the tab is reloaded. The
+// request-token guard in the sidebar effect ensures that even if a stale
+// in-flight response lands after a cache hit, it can't overwrite state.
+const quoteSessionCache = new Map<string, { total: number; perPerson: number; rooms: number }>();
+
 /* ─── Calendar helpers ─────────────────────────────────────────────────────── */
 
 const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
@@ -254,6 +260,15 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
     const home = HOME_FROM_CITY[departureCity];
     const startDate = toIsoDate(checkIn) ?? toIsoDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))!;
     const mySeq = ++requestSeqRef.current;
+    const roomsKey = rooms === null ? "auto" : String(rooms);
+    const cacheKey = `${pkg.slug}|${home}|${selectedTier}|${adults}|${startDate}|${roomsKey}`;
+    const cached = quoteSessionCache.get(cacheKey);
+    if (cached) {
+      setEngineQuote({ total: cached.total, perPerson: cached.perPerson });
+      if (rooms === null && cached.rooms > 0) setNaturalRooms(cached.rooms);
+      setQuoteLoading(false);
+      return;
+    }
     const controller = new AbortController();
     setQuoteLoading(true);
     // 200ms debounce so rapid +/- clicks coalesce into a single request.
@@ -268,8 +283,9 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
             setEngineQuote(null);
             return;
           }
-          setEngineQuote({ total: j.total, perPerson: j.perPerson });
           const engineRooms = Number.isFinite(j.rooms) && j.rooms > 0 ? j.rooms : 1;
+          quoteSessionCache.set(cacheKey, { total: j.total, perPerson: j.perPerson, rooms: engineRooms });
+          setEngineQuote({ total: j.total, perPerson: j.perPerson });
           if (rooms === null) setNaturalRooms(engineRooms);
         })
         .catch((err) => {
