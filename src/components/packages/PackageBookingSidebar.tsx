@@ -17,7 +17,7 @@ function toIsoDate(d: Date | null) {
 // In-session quote cache. Toggling tier/pax/city back and forth no longer
 // re-hits the API — last value wins until the user reloads or closes the tab.
 // Keyed by the full quote tuple so a stale entry can't bleed across packages.
-const quoteSessionCache = new Map<string, { total: number; perPerson: number }>();
+const quoteSessionCache = new Map<string, { total: number; perPerson: number; rooms: number }>();
 
 /* ─── Calendar helpers ─────────────────────────────────────────────────────── */
 
@@ -254,7 +254,10 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
     const cacheKey = `${pkg.slug}|${home}|${selectedTier}|${adults}|${startDate}|${roomsKey}`;
     const cached = quoteSessionCache.get(cacheKey);
     if (cached) {
-      setEngineQuote(cached);
+      setEngineQuote({ total: cached.total, perPerson: cached.perPerson });
+      // Restore the floor from cache when we're in auto mode so bouncing
+      // adults 12 ↔ 11 doesn't leave naturalRooms stuck at a stale value.
+      if (rooms === null && cached.rooms > 0) setNaturalRooms(cached.rooms);
       setQuoteLoading(false);
       return;
     }
@@ -275,10 +278,11 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
             setEngineQuote(null);
             return;
           }
-          quoteSessionCache.set(cacheKey, { total: j.total, perPerson: j.perPerson });
+          const engineRooms = Number.isFinite(j.rooms) && j.rooms > 0 ? j.rooms : 1;
+          quoteSessionCache.set(cacheKey, { total: j.total, perPerson: j.perPerson, rooms: engineRooms });
           setEngineQuote({ total: j.total, perPerson: j.perPerson });
-          if (rooms === null && Number.isFinite(j.rooms) && j.rooms > 0) {
-            setNaturalRooms(j.rooms);
+          if (rooms === null) {
+            setNaturalRooms(engineRooms);
           }
         })
         .catch((err) => {
@@ -294,13 +298,14 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pkg.slug, departureCity, selectedTier, adults, checkIn, rooms]);
 
-  // Whenever the engine's natural pick changes (pax/tier change), clear any
-  // explicit override and drop the floor back to 1 so a stale in-flight
-  // response from the previous combo can't pin the - button at a value
-  // higher than the new pax count.
+  // On adults/tier/slug change, clear any explicit rooms override so the
+  // engine's natural pick wins again. We deliberately don't reset
+  // naturalRooms here — keeping the previous value avoids the visible
+  // 1-then-jumps-to-3 flicker while the new fetch is in flight, and the
+  // safeNaturalRooms = min(naturalRooms, adults) clamp at render time
+  // already prevents a stale higher value from blocking the - button.
   useEffect(() => {
     setRooms(null);
-    setNaturalRooms(1);
   }, [adults, selectedTier, pkg.slug]);
 
   const pricePerPerson = engineQuote?.perPerson ?? staticPerPerson;
