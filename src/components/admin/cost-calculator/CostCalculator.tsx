@@ -850,7 +850,7 @@ export function CostCalculator({
                 </div>
               ))}
               <div className="flex justify-between pt-1" style={{ borderTop: "1px solid var(--border-default)", color: "var(--text-primary)", fontWeight: 600 }}>
-                <span>Hotel total ({lastQuote.hotelNights.length} nights)</span>
+                <span>Hotel total ({lastQuote.hotelNights.filter((n) => n.hotelSlug && n.totalCost > 0).length} nights)</span>
                 <span>PKR {lastQuote.hotelTotalCost.toLocaleString()}</span>
               </div>
               {lastQuote.hotelWarnings.length > 0 && (
