@@ -126,12 +126,19 @@ async function loadHotelForAllocation(slug: string): Promise<{
 }
 
 /** Try every combination of room counts that fits N people, returning cheapest.
- *  Practical search bound: each room type c_i ∈ [0, ceil(N/maxOcc_i)] clipped by available. */
-function allocate(rooms: RoomCandidate[], people: number): AllocatedRoom[] | null {
+ *  Practical search bound: each room type c_i ∈ [0, ceil(N/maxOcc_i)] clipped by available.
+ *  If `forceRoomCount` is set, only combinations whose total room count equals it
+ *  are considered, and the greedy fill seeds every room with one person before
+ *  packing the remainder — so e.g. (4 pax, 3 rooms) becomes 2+1+1 instead of 4+0+0. */
+function allocate(
+  rooms: RoomCandidate[],
+  people: number,
+  forceRoomCount?: number,
+): AllocatedRoom[] | null {
   if (people <= 0) return [];
   if (rooms.length === 0) return null;
+  if (forceRoomCount !== undefined && forceRoomCount > people) return null;
 
-  // Sort cheap-per-room first to bias enumeration
   const sorted = [...rooms].sort((a, b) => a.doublePrice - b.doublePrice);
 
   const maxCounts = sorted.map((r) =>
@@ -143,36 +150,59 @@ function allocate(rooms: RoomCandidate[], people: number): AllocatedRoom[] | nul
 
   function recurse(idx: number, counts: number[]): void {
     if (idx === sorted.length) {
+      const totalRooms = counts.reduce((s, c) => s + c, 0);
+      if (forceRoomCount !== undefined && totalRooms !== forceRoomCount) return;
       const totalCapacity = counts.reduce((s, c, i) => s + c * sorted[i].maxOccupancy, 0);
       if (totalCapacity < people) return;
 
-      // Greedy: pack densely into largest rooms first.
-      const slots: { room: RoomCandidate }[] = [];
+      // Materialize slots in expensive-rooms-last order; we pack the largest
+      // rooms with extra occupants before the cheaper smaller ones.
+      const slots: { room: RoomCandidate; people: number }[] = [];
       counts.forEach((c, i) => {
-        for (let k = 0; k < c; k += 1) slots.push({ room: sorted[i] });
+        for (let k = 0; k < c; k += 1) slots.push({ room: sorted[i], people: 0 });
       });
       slots.sort((a, b) => b.room.maxOccupancy - a.room.maxOccupancy);
 
-      const allocation: AllocatedRoom[] = [];
       let remaining = people;
+      if (forceRoomCount !== undefined) {
+        // Seed each room with one person, then distribute the rest densely
+        // into largest rooms (limited to maxOccupancy − 1 extras each).
+        for (const s of slots) {
+          if (remaining <= 0) break;
+          s.people = 1;
+          remaining -= 1;
+        }
+        for (const s of slots) {
+          if (remaining <= 0) break;
+          const room: number = Math.min(s.room.maxOccupancy - s.people, remaining);
+          s.people += room;
+          remaining -= room;
+        }
+      } else {
+        for (const s of slots) {
+          if (remaining <= 0) break;
+          s.people = Math.min(s.room.maxOccupancy, remaining);
+          remaining -= s.people;
+        }
+      }
+      if (remaining > 0) return;
+
+      const allocation: AllocatedRoom[] = [];
       let cost = 0;
       for (const s of slots) {
-        if (remaining <= 0) break;
-        const inThisRoom = Math.min(s.room.maxOccupancy, remaining);
-        const roomCost = costForPeople(s.room, inThisRoom);
+        if (s.people === 0) continue;
+        const roomCost = costForPeople(s.room, s.people);
         allocation.push({
           roomId: s.room.id,
           name: s.room.name,
-          peopleInRoom: inThisRoom,
+          peopleInRoom: s.people,
           maxOccupancy: s.room.maxOccupancy,
           singlePrice: s.room.singlePrice,
           extraOccupancyCharge: s.room.extraCharge,
           costForRoom: roomCost,
         });
         cost += roomCost;
-        remaining -= inThisRoom;
       }
-      if (remaining > 0) return;
       if (!result.best || cost < result.best.cost) result.best = { allocation, cost };
       return;
     }
@@ -192,6 +222,7 @@ export async function allocateHotelForNight(args: {
   date: string;            // YYYY-MM-DD
   people: number;
   tier?: "deluxe" | "luxury" | "premium";
+  rooms?: number;          // if provided, force allocation to exactly this many rooms
 }): Promise<HotelAllocation | null> {
   const hotel = await loadHotelForAllocation(args.hotelSlug);
   if (!hotel) return null;
@@ -233,7 +264,7 @@ export async function allocateHotelForNight(args: {
     })
     .filter((c): c is RoomCandidate => c !== null && c.available > 0);
 
-  const allocation = allocate(candidates, args.people);
+  const allocation = allocate(candidates, args.people, args.rooms);
   const totalCost = (allocation ?? []).reduce((s, r) => s + r.costForRoom, 0);
 
   return {
@@ -275,6 +306,7 @@ export async function quotePackageHotels(args: {
   tier: "deluxe" | "premium" | "luxury";
   people: number;
   startDate: string;
+  rooms?: number;
 }): Promise<PackageHotelQuote | null> {
   const supabase = getSupabaseAdmin();
   const { data: pkg, error: pkgErr } = await supabase
@@ -315,7 +347,7 @@ export async function quotePackageHotels(args: {
     rows.map(async (r) => {
       const slug = r[tierKey] as string | null;
       const date = addDays(args.startDate, r.day_number - 1);
-      const allocation = slug ? await allocateHotelForNight({ hotelSlug: slug, date, people: args.people, tier: args.tier }) : null;
+      const allocation = slug ? await allocateHotelForNight({ hotelSlug: slug, date, people: args.people, tier: args.tier, rooms: args.rooms }) : null;
       return { dayNumber: r.day_number, date, hotelSlug: slug, allocation };
     }),
   );

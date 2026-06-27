@@ -42,9 +42,14 @@ export async function GET(
     return NextResponse.json({ error: "startDate must be within the next 12 months" }, { status: 400 });
   }
   const pax = Math.max(1, Math.min(40, Number(paxRaw) || 2));
+  const roomsRaw = url.searchParams.get("rooms");
+  const roomsParsed = roomsRaw === null ? undefined : Math.floor(Number(roomsRaw));
+  const rooms = Number.isFinite(roomsParsed) && (roomsParsed as number) > 0
+    ? Math.min(pax, roomsParsed as number)
+    : undefined;
 
   try {
-    const quote = await quotePackage({ slug, home, tier, pax, startDate });
+    const quote = await quotePackage({ slug, home, tier, pax, startDate, rooms });
     if (!quote) return NextResponse.json({ error: "Package not found" }, { status: 404 });
     // Only ship customer-safe fields — margin / internal breakdown stays server-side.
     return NextResponse.json({
@@ -53,6 +58,7 @@ export async function GET(
       nights: quote.nights,
       tier: quote.tier,
       pax: quote.pax,
+      rooms: quote.rooms,
       home: quote.home,
       startDate: quote.startDate,
       total: quote.total,

@@ -163,9 +163,13 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
     ? new Date(checkIn.getFullYear(), checkIn.getMonth(), checkIn.getDate() + pkg.duration - 1)
     : null;
 
-  // Rooms & travelers
-  const [rooms, setRooms] = useState(1);
+  // Rooms & travelers. `rooms` is null when the user hasn't touched the
+  // counter — the engine's natural allocation is shown. As soon as +/− is
+  // pressed, `rooms` becomes an explicit number sent to the quote endpoint.
+  const [rooms, setRooms] = useState<number | null>(null);
+  const [naturalRooms, setNaturalRooms] = useState(1);
   const [adults, setAdults] = useState(2);
+  const displayRooms = rooms ?? naturalRooms;
 
   const calWrapRef = useRef<HTMLDivElement>(null);
 
@@ -224,8 +228,7 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
   // table while the quote is loading or if the engine endpoint errors so the
   // sidebar never shows zero.
   const nights = pkg.duration - 1;
-  const defaultRooms = Math.ceil(adults / 3);
-  const extraRooms = Math.max(0, rooms - defaultRooms);
+  const extraRooms = Math.max(0, displayRooms - naturalRooms);
   const singleSupp = pricing.singleSupplement ?? 0;
   const staticPerPerson =
     (departureCity === "lahore" && pricing.lahore) ? pricing.lahore :
@@ -244,7 +247,8 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
   useEffect(() => {
     const home = HOME_FROM_CITY[departureCity];
     const startDate = toIsoDate(checkIn) ?? toIsoDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))!;
-    const cacheKey = `${pkg.slug}|${home}|${selectedTier}|${adults}|${startDate}`;
+    const roomsKey = rooms === null ? "auto" : String(rooms);
+    const cacheKey = `${pkg.slug}|${home}|${selectedTier}|${adults}|${startDate}|${roomsKey}`;
     const cached = quoteSessionCache.get(cacheKey);
     if (cached) {
       setEngineQuote(cached);
@@ -256,11 +260,17 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
     setQuoteLoading(true);
     const t = window.setTimeout(() => {
       const params = new URLSearchParams({ home, tier: selectedTier, pax: String(adults), startDate });
+      if (rooms !== null) params.set("rooms", String(rooms));
       fetch(`/api/packages/${pkg.slug}/quote?${params.toString()}`, { signal: controller.signal })
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-        .then((j: { total: number; perPerson: number }) => {
+        .then((j: { total: number; perPerson: number; rooms: number }) => {
           quoteSessionCache.set(cacheKey, { total: j.total, perPerson: j.perPerson });
           setEngineQuote({ total: j.total, perPerson: j.perPerson });
+          // Refresh the floor only when no explicit rooms override was sent —
+          // that response reflects the engine's natural pick.
+          if (rooms === null && Number.isFinite(j.rooms) && j.rooms > 0) {
+            setNaturalRooms(j.rooms);
+          }
         })
         .catch((err) => {
           if ((err as Error).name === "AbortError") return;
@@ -273,7 +283,13 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
       controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pkg.slug, departureCity, selectedTier, adults, checkIn]);
+  }, [pkg.slug, departureCity, selectedTier, adults, checkIn, rooms]);
+
+  // Whenever the engine's natural pick changes (pax/tier change), clear any
+  // explicit override so the user sees the new natural floor.
+  useEffect(() => {
+    setRooms(null);
+  }, [adults, selectedTier, pkg.slug]);
 
   const pricePerPerson = engineQuote?.perPerson ?? staticPerPerson;
   const totalPrice = engineQuote?.total ?? staticTotal;
@@ -287,7 +303,7 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
     `Departure: ${departureCity === "lahore" ? "Lahore" : "Islamabad"}\n` +
     `Tier: ${selectedTier === "deluxe" ? "Deluxe" : "Luxury"}\n` +
     (checkIn && checkOut ? `Dates: ${formatDateShort(checkIn)} – ${formatDateShort(checkOut)} (${nights} nights)\n` : "") +
-    `Adults: ${adults}\nRooms: ${rooms}\nTotal: ${formatPrice(totalPrice)}\n\nPlease confirm availability.`;
+    `Adults: ${adults}\nRooms: ${displayRooms}\nTotal: ${formatPrice(totalPrice)}\n\nPlease confirm availability.`;
 
   return (
     <div className="sticky top-[120px]">
@@ -414,19 +430,28 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
             <div>
               <p className="text-[13px] font-semibold text-[var(--text-primary)]">Rooms</p>
               <p className="text-[11px] text-[var(--text-tertiary)]">
-                {rooms > defaultRooms
+                {displayRooms > naturalRooms
                   ? "Extra room — price recalculated above"
-                  : "Up to 3 per room — no extra charge"}
+                  : `Minimum ${naturalRooms} room${naturalRooms > 1 ? "s" : ""} for ${adults} guest${adults > 1 ? "s" : ""}`}
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <button type="button" onClick={() => setRooms(r => Math.max(1, r - 1))} disabled={rooms <= 1}
-                className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
+              <button
+                type="button"
+                onClick={() => setRooms(() => Math.max(naturalRooms, displayRooms - 1))}
+                disabled={displayRooms <= naturalRooms}
+                title={displayRooms <= naturalRooms ? `Minimum ${naturalRooms} room${naturalRooms > 1 ? "s" : ""} required for ${adults} guest${adults > 1 ? "s" : ""}` : undefined}
+                className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]"
+              >
                 −
               </button>
-              <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{rooms}</span>
-              <button type="button" onClick={() => setRooms(r => Math.min(adults, r + 1))} disabled={rooms >= adults}
-                className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
+              <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{displayRooms}</span>
+              <button
+                type="button"
+                onClick={() => setRooms(() => Math.min(adults, displayRooms + 1))}
+                disabled={displayRooms >= adults}
+                className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]"
+              >
                 +
               </button>
             </div>
@@ -443,22 +468,14 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
             </div>
             <div className="flex items-center gap-3">
               <button type="button"
-                onClick={() => {
-                  const next = Math.max(1, adults - 1);
-                  setAdults(next);
-                  setRooms(r => Math.min(r, Math.ceil(next / 3)));
-                }}
+                onClick={() => setAdults(Math.max(1, adults - 1))}
                 disabled={adults <= 1}
                 className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
                 −
               </button>
               <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{adults}</span>
               <button type="button"
-                onClick={() => {
-                  const next = Math.min(pkg.maxGroupSize, adults + 1);
-                  setAdults(next);
-                  setRooms(r => Math.max(r, Math.ceil(next / 3)));
-                }}
+                onClick={() => setAdults(Math.min(pkg.maxGroupSize, adults + 1))}
                 disabled={adults >= pkg.maxGroupSize}
                 className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
                 +
@@ -481,7 +498,7 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
 
         {/* CTA */}
         <Link
-          href={`/packages/${pkg.slug}/checkout?adults=${adults}&rooms=${rooms}&tier=${selectedTier}&city=${departureCity}`}
+          href={`/packages/${pkg.slug}/checkout?adults=${adults}&rooms=${displayRooms}&tier=${selectedTier}&city=${departureCity}`}
           className="w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-semibold rounded-[var(--radius-sm)] flex items-center justify-center gap-2 hover:bg-[var(--primary-hover)] active:scale-[0.98] transition-all"
         >
           Book Now
