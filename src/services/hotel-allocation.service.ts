@@ -62,6 +62,7 @@ async function loadHotelForAllocation(slug: string): Promise<{
     single_price: number | null;
     price: number | null;
     extra_occupancy_charge: number | null;
+    tier: string | null;
     hotel_room_prices: Array<{
       season_id: string | null;
       single_price: number | null;
@@ -81,7 +82,7 @@ async function loadHotelForAllocation(slug: string): Promise<{
       `id, name,
        hotel_rooms (
          id, name, capacity_adults, max_occupancy, available,
-         single_price, price, extra_occupancy_charge, is_active,
+         single_price, price, extra_occupancy_charge, is_active, tier,
          hotel_room_prices ( season_id, single_price, price )
        ),
        hotel_seasons ( id, label, hotel_season_periods ( from_date, to_date ) )`,
@@ -103,6 +104,7 @@ async function loadHotelForAllocation(slug: string): Promise<{
       price: number | null;
       extra_occupancy_charge: number | null;
       is_active: boolean | null;
+      tier: string | null;
       hotel_room_prices: Array<{
         season_id: string | null;
         single_price: number | null;
@@ -189,6 +191,7 @@ export async function allocateHotelForNight(args: {
   hotelSlug: string;
   date: string;            // YYYY-MM-DD
   people: number;
+  tier?: "deluxe" | "luxury" | "premium";
 }): Promise<HotelAllocation | null> {
   const hotel = await loadHotelForAllocation(args.hotelSlug);
   if (!hotel) return null;
@@ -201,6 +204,10 @@ export async function allocateHotelForNight(args: {
   );
 
   const candidates: RoomCandidate[] = hotel.rooms
+    // Tier filter: rooms tagged with a specific tier are only allocated when
+    // that tier slot is requested. Untagged (tier IS NULL) rooms are always
+    // eligible — preserves existing behavior for hotels we haven't labelled.
+    .filter((r) => !args.tier || r.tier === null || r.tier === args.tier)
     .map((r) => {
       const override = activeSeason
         ? r.hotel_room_prices.find((p) => p.season_id === activeSeason.id)
@@ -308,7 +315,7 @@ export async function quotePackageHotels(args: {
     rows.map(async (r) => {
       const slug = r[tierKey] as string | null;
       const date = addDays(args.startDate, r.day_number - 1);
-      const allocation = slug ? await allocateHotelForNight({ hotelSlug: slug, date, people: args.people }) : null;
+      const allocation = slug ? await allocateHotelForNight({ hotelSlug: slug, date, people: args.people, tier: args.tier }) : null;
       return { dayNumber: r.day_number, date, hotelSlug: slug, allocation };
     }),
   );
