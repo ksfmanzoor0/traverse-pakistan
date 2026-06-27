@@ -301,12 +301,20 @@ function addDays(iso: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+type HomeCity = "ISB" | "LHE" | "KHI";
+const HOME_TO_CITY_ONLY: Record<HomeCity, string> = {
+  ISB: "islamabad",
+  LHE: "lahore",
+  KHI: "karachi",
+};
+
 export async function quotePackageHotels(args: {
   packageSlug: string;
   tier: "deluxe" | "premium" | "luxury";
   people: number;
   startDate: string;
   rooms?: number;
+  homeCity?: HomeCity;
 }): Promise<PackageHotelQuote | null> {
   const supabase = getSupabaseAdmin();
   const { data: pkg, error: pkgErr } = await supabase
@@ -319,7 +327,7 @@ export async function quotePackageHotels(args: {
 
   const { data: days, error: daysErr } = await supabase
     .from("package_itinerary_days")
-    .select("day_number, hotel_deluxe, hotel_luxury")
+    .select("day_number, hotel_deluxe, hotel_luxury, city_only")
     .eq("package_slug", args.packageSlug)
     .order("day_number");
   if (daysErr) throw new Error(`quotePackageHotels days: ${daysErr.message}`);
@@ -339,7 +347,20 @@ export async function quotePackageHotels(args: {
   }
 
   const tierKey = args.tier === "deluxe" ? "hotel_deluxe" : "hotel_luxury";
-  const rows = (days ?? []) as Array<{ day_number: number; hotel_deluxe: string | null; hotel_luxury: string | null }>;
+  const allRows = (days ?? []) as Array<{
+    day_number: number;
+    hotel_deluxe: string | null;
+    hotel_luxury: string | null;
+    city_only: string[] | null;
+  }>;
+  // Itineraries can carry city-specific variants (e.g. day 1 has both an
+  // ISB-via-Babusar row and an LHE-via-KKH row, each tagged via city_only).
+  // Without this filter the engine would sum hotel cost on both rows and
+  // double-count the night. Rows with city_only IS NULL apply to every home.
+  const homeCity = args.homeCity ? HOME_TO_CITY_ONLY[args.homeCity] : null;
+  const rows = allRows.filter((r) =>
+    !r.city_only || r.city_only.length === 0 || (homeCity !== null && r.city_only.includes(homeCity)),
+  );
 
   // Hotel for day N is the overnight after day N. Last day has no hotel (return home).
   // We treat each day with a non-null hotel slug as a night billed on that day.

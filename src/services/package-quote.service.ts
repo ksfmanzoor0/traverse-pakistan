@@ -139,7 +139,7 @@ async function computeQuote(args: {
 
   const [flightQuote, hotelQuote, vehicles, engineConfig] = await Promise.all([
     quotePackageAddons({ packageSlug: args.slug, homeCity: args.home, startDate: args.startDate }),
-    quotePackageHotels({ packageSlug: args.slug, tier: args.tier, people: pax, startDate: args.startDate, rooms: args.rooms }),
+    quotePackageHotels({ packageSlug: args.slug, tier: args.tier, people: pax, startDate: args.startDate, rooms: args.rooms, homeCity: args.home }),
     listVehicleTypes(),
     getEngineConfig(),
   ]);
