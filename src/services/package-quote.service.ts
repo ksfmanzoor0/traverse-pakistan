@@ -12,6 +12,7 @@ export interface PublicPackageQuote {
   nights: number;
   tier: Tier;
   pax: number;
+  rooms: number;        // rooms used in the allocation (the floor the UI clamps to)
   home: HomeCity;
   startDate: string;
   total: number;        // grand total for the whole party, post-margin
@@ -85,6 +86,7 @@ async function computeQuote(args: {
   tier: Tier;
   pax: number;
   startDate: string;
+  rooms?: number;
 }): Promise<PublicPackageQuote | null> {
   const supabase = getSupabaseAdmin();
   const { data: pkgRow, error } = await supabase
@@ -123,6 +125,7 @@ async function computeQuote(args: {
       pax: Math.max(1, Math.floor(args.pax)),
       home: args.home,
       startDate: args.startDate,
+      rooms: 0,
       total: 0,
       perPerson: 0,
       unresolved: [`Package ${pkg.slug} has no positive total_distance_km — engine cannot compute transport cost.`],
@@ -135,10 +138,18 @@ async function computeQuote(args: {
 
   const [flightQuote, hotelQuote, vehicles, engineConfig] = await Promise.all([
     quotePackageAddons({ packageSlug: args.slug, homeCity: args.home, startDate: args.startDate }),
-    quotePackageHotels({ packageSlug: args.slug, tier: args.tier, people: pax, startDate: args.startDate }),
+    quotePackageHotels({ packageSlug: args.slug, tier: args.tier, people: pax, startDate: args.startDate, rooms: args.rooms }),
     listVehicleTypes(),
     getEngineConfig(),
   ]);
+
+  // Room count reported back to the UI: max rooms used on any night becomes the
+  // floor the - button enforces. Per-night allocations can vary if a package
+  // mixes hotels with different room types, so we take the worst case.
+  const allocatedRooms = Math.max(
+    1,
+    ...((hotelQuote?.nights ?? []).map((n) => n.allocation?.rooms.length ?? 0)),
+  );
 
   const luxuryDayTrip = pkg.duration === 1 && args.tier === "luxury";
   const vehiclePlan = planVehicles(vehicles, pax, ncpEligible, luxuryDayTrip);
@@ -178,6 +189,7 @@ async function computeQuote(args: {
     nights: Math.max(1, pkg.duration - 1),
     tier: args.tier,
     pax,
+    rooms: allocatedRooms,
     home: args.home,
     startDate: args.startDate,
     total,
