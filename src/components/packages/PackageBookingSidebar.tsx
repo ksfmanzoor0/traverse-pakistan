@@ -14,11 +14,6 @@ function toIsoDate(d: Date | null) {
   return `${y}-${m}-${day}`;
 }
 
-// In-session quote cache. Toggling tier/pax/city back and forth no longer
-// re-hits the API — last value wins until the user reloads or closes the tab.
-// Keyed by the full quote tuple so a stale entry can't bleed across packages.
-const quoteSessionCache = new Map<string, { total: number; perPerson: number; rooms: number }>();
-
 /* ─── Calendar helpers ─────────────────────────────────────────────────────── */
 
 const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
@@ -246,50 +241,45 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
   };
   const [engineQuote, setEngineQuote] = useState<{ total: number; perPerson: number } | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
+  // Monotonic counter — every effect run captures the value at the time of
+  // dispatch; only the response whose captured token still equals the
+  // current ref value is allowed to write state. Older responses (out-of-
+  // order or post-abort stragglers) are dropped silently. This is the only
+  // mechanism that decides which response "wins"; there is no client-side
+  // result cache, so the displayed price + rooms always reflect the latest
+  // engine call. Server `unstable_cache` covers the repeated-fetch cost.
+  const requestSeqRef = useRef(0);
 
   useEffect(() => {
     const home = HOME_FROM_CITY[departureCity];
     const startDate = toIsoDate(checkIn) ?? toIsoDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))!;
-    const roomsKey = rooms === null ? "auto" : String(rooms);
-    const cacheKey = `${pkg.slug}|${home}|${selectedTier}|${adults}|${startDate}|${roomsKey}`;
-    const cached = quoteSessionCache.get(cacheKey);
-    if (cached) {
-      setEngineQuote({ total: cached.total, perPerson: cached.perPerson });
-      // Restore the floor from cache when we're in auto mode so bouncing
-      // adults 12 ↔ 11 doesn't leave naturalRooms stuck at a stale value.
-      if (rooms === null && cached.rooms > 0) setNaturalRooms(cached.rooms);
-      setQuoteLoading(false);
-      return;
-    }
-    // 200ms debounce so rapid +/- clicks coalesce into a single request.
+    const mySeq = ++requestSeqRef.current;
     const controller = new AbortController();
     setQuoteLoading(true);
+    // 200ms debounce so rapid +/- clicks coalesce into a single request.
     const t = window.setTimeout(() => {
       const params = new URLSearchParams({ home, tier: selectedTier, pax: String(adults), startDate });
       if (rooms !== null) params.set("rooms", String(rooms));
       fetch(`/api/packages/${pkg.slug}/quote?${params.toString()}`, { signal: controller.signal })
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
         .then((j: { total: number; perPerson: number; rooms: number; unresolved?: string[] }) => {
-          // Engine couldn't price this combo (missing flights, infeasible
-          // rooms, etc.). Keep the last good quote on screen and fall back
-          // to the static `pricing[city]` table downstream instead of
-          // flashing PKR 0 at the customer.
+          if (mySeq !== requestSeqRef.current) return;
           if ((j.unresolved && j.unresolved.length > 0) || !(j.perPerson > 0)) {
             setEngineQuote(null);
             return;
           }
-          const engineRooms = Number.isFinite(j.rooms) && j.rooms > 0 ? j.rooms : 1;
-          quoteSessionCache.set(cacheKey, { total: j.total, perPerson: j.perPerson, rooms: engineRooms });
           setEngineQuote({ total: j.total, perPerson: j.perPerson });
-          if (rooms === null) {
-            setNaturalRooms(engineRooms);
-          }
+          const engineRooms = Number.isFinite(j.rooms) && j.rooms > 0 ? j.rooms : 1;
+          if (rooms === null) setNaturalRooms(engineRooms);
         })
         .catch((err) => {
+          if (mySeq !== requestSeqRef.current) return;
           if ((err as Error).name === "AbortError") return;
           setEngineQuote(null);
         })
-        .finally(() => setQuoteLoading(false));
+        .finally(() => {
+          if (mySeq === requestSeqRef.current) setQuoteLoading(false);
+        });
     }, 200);
     return () => {
       window.clearTimeout(t);
