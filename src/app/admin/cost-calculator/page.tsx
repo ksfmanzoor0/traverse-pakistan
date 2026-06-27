@@ -87,10 +87,12 @@ export const dynamic = "force-dynamic";
 
 async function loadSkarduPackages(): Promise<PackagePickerEntry[]> {
   const supabase = getSupabaseAdmin();
+  // Picker now exposes every published package — Skardu fly-in still gets the
+  // NCP-Prado treatment in the engine, road packages run the normal picker.
   const { data, error } = await supabase
     .from("packages")
     .select("slug, name, duration, starting_cities")
-    .contains("starting_cities", ["KDU"])
+    .eq("published", true)
     .order("name");
   if (error) throw new Error(`loadSkarduPackages: ${error.message}`);
   return ((data ?? []) as Array<{
