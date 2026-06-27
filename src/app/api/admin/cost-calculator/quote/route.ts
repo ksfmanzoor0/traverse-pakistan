@@ -108,7 +108,7 @@ export async function GET(req: Request) {
 
   const [flightQuote, hotelQuote, hotelsForBothTiers] = await Promise.all([
     quotePackageAddons({ packageSlug: slug, homeCity: home, startDate }),
-    quotePackageHotels({ packageSlug: slug, tier, people, startDate }),
+    quotePackageHotels({ packageSlug: slug, tier, people, startDate, homeCity: home }),
     loadPackageHotelTiers(slug),
   ]);
 
