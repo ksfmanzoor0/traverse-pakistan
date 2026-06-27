@@ -2,6 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+// Mirrors LHE_EXTENSION_KM in src/services/package-quote.service.ts —
+// extra road km charged when home=LHE on an ISB-starting package.
+const LHE_EXTENSION_KM = 800;
+
 export interface JeepLegEntry {
   name: string;
   costPerJeep: number;
@@ -546,6 +550,15 @@ export function CostCalculator({
     const total = subtotal + profit;
     const perPerson = total / people;
 
+    // Fuel cost per extra kilometre — used by the per-home quote cards to
+    // charge LHE the road extension when ISB is the listed start.
+    const litresPerKm = Object.entries(counts).reduce((s, [name, c]) => {
+      const t = transportTypes[name as TransportName];
+      if (!t?.avgKmPerLitre) return s;
+      return s + ((c || 0) / t.avgKmPerLitre);
+    }, 0);
+    const fuelCostPerKm = litresPerKm * fuelPrice;
+
     return {
       people,
       transportSummary,
@@ -553,6 +566,7 @@ export function CostCalculator({
       totalCapacity,
       totalFuelLitres,
       fuelCost,
+      fuelCostPerKm,
       rentCost,
       requiredJeeps,
       jeepCost,
@@ -1021,12 +1035,18 @@ export function CostCalculator({
           const profitMul = 1 + (Math.max(0, num(trip.profitPercentage)) / 100);
 
           const roundTo = (v: number) => Math.round(v / roundStep) * roundStep;
+          // LHE callers pay extra fuel for the ISB↔LHE round-trip when the
+          // package's starting list includes ISB. Engine + cron apply the
+          // same rule (LHE_EXTENSION_KM in package-quote.service.ts).
+          const startingHasISB = (pickedPackage?.startingCities ?? []).includes("ISB");
+          const lheTransportDelta = startingHasISB ? LHE_EXTENSION_KM * calc.fuelCostPerKm : 0;
           const homes: HomeCity[] = ["ISB", "LHE", "KHI"];
           const homeRows = homes.map((home) => {
             const flightPP = homeFlights?.[home]?.perPerson ?? 0;
             const flightRequiredHome = homeFlights?.[home]?.required ?? trip.flightRequired;
             const flightLine = flightRequiredHome ? flightPP * people : 0;
-            const computedTotal = (nonFlightSubtotal + flightLine) * profitMul;
+            const transportDelta = home === "LHE" ? lheTransportDelta : 0;
+            const computedTotal = (nonFlightSubtotal + flightLine + transportDelta) * profitMul;
             const ov = homeOverride[home];
             // Override is taken as-given; engine values get rounded to step.
             const displayPerPerson =
