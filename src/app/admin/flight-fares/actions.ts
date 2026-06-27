@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/admin/guard";
 import {
   upsertManualOverride,
@@ -8,6 +8,28 @@ import {
   updateScraperConfig,
   type ManualOverridePayload,
 } from "@/services/flight-fares.service";
+import { repriceAllPackages } from "@/services/package-quote.service";
+
+/**
+ * Flight manual overrides are engine inputs — the resolver in addon-cost
+ * picks them over scraped fares with no delay. Without a reprice the engine
+ * snapshot in packages.pricing keeps the old value for up to 24h, and the
+ * sidebar's package-quote cache holds it for up to 1h. Mirroring the
+ * vehicle / engine-config action pattern: full reprice + tag bust after
+ * the override write succeeds. Scraper-config saves don't fire a reprice
+ * because they don't directly mutate flight_routes — that's the scraper's
+ * job on its own schedule.
+ */
+async function repriceAndRevalidate() {
+  try {
+    await repriceAllPackages();
+  } catch (err) {
+    console.error("[admin/flight-fares] repriceAllPackages failed", err);
+  }
+  revalidateTag("packages", {});
+  revalidateTag("package-quote", {});
+  revalidatePath("/admin/flight-fares");
+}
 
 type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -62,7 +84,7 @@ export async function saveManualOverride(formData: FormData): Promise<ActionResu
     return { ok: false, error: (err as Error).message };
   }
 
-  revalidatePath("/admin/flight-fares");
+  await repriceAndRevalidate();
   return { ok: true };
 }
 
@@ -108,6 +130,6 @@ export async function removeManualOverride(formData: FormData): Promise<ActionRe
   } catch (err) {
     return { ok: false, error: (err as Error).message };
   }
-  revalidatePath("/admin/flight-fares");
+  await repriceAndRevalidate();
   return { ok: true };
 }

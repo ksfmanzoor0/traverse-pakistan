@@ -218,6 +218,7 @@ export type PackageRow = {
   exclusions: string[];
   know_before_you_go: string[];
   pricing: unknown;
+  pricing_override: unknown;
   starting_cities: string[];
   major_stops: string[];
   total_distance_km: number | null;

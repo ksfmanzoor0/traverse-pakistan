@@ -90,7 +90,29 @@ async function computeQuote(args: {
 
   const startingCities = pkg.starting_cities ?? [];
   const ncpEligible = startingCities.includes("KDU") || startingCities.includes("GIL");
-  const baseDistance = pkg.total_distance_km ?? 0;
+  // Refuse to price when drive distance is missing or non-positive. Either
+  // case collapses the fuel line to zero and silently under-prices the trip,
+  // which the cron would then snapshot over the previous price. Marking it
+  // unresolved tells repriceAllPackages to leave packages.pricing untouched.
+  if (
+    pkg.total_distance_km === null
+    || pkg.total_distance_km === undefined
+    || pkg.total_distance_km <= 0
+  ) {
+    return {
+      slug: pkg.slug,
+      duration: pkg.duration,
+      nights: Math.max(1, pkg.duration - 1),
+      tier: args.tier,
+      pax: Math.max(1, Math.floor(args.pax)),
+      home: args.home,
+      startDate: args.startDate,
+      total: 0,
+      perPerson: 0,
+      unresolved: [`Package ${pkg.slug} has no positive total_distance_km — engine cannot compute transport cost.`],
+    };
+  }
+  const baseDistance = pkg.total_distance_km;
   const extensionKm = startingCities.includes("ISB") && args.home === "LHE" ? LHE_EXTENSION_KM : 0;
   const totalDistanceKm = baseDistance + extensionKm;
   const pax = Math.max(1, Math.floor(args.pax));
@@ -125,8 +147,11 @@ async function computeQuote(args: {
   }
 
   const subtotal = transportCost + hotelCost + flightCost;
-  const total = Math.round(subtotal * (1 + engineConfig.profitPercentage / 100));
-  const perPerson = Math.round(total / pax / 1000) * 1000;
+  const rawTotal = subtotal * (1 + engineConfig.profitPercentage / 100);
+  // Round per-person to nearest 1k, then derive the total from it so the
+  // displayed total = perPerson × pax exactly (no odd 396,666-style endings).
+  const perPerson = Math.round(rawTotal / pax / 1000) * 1000;
+  const total = perPerson * pax;
 
   return {
     slug: pkg.slug,
@@ -155,3 +180,125 @@ export const quotePackage = unstable_cache(
   ["package-quote-v1"],
   { revalidate: 60 * 60, tags: ["package-quote"] },
 );
+
+// ── Bulk reprice (cron + admin "save engine input" actions share this) ────────
+
+const HOMES_REPRICE: HomeCity[] = ["ISB", "LHE", "KHI"];
+const TIERS_REPRICE: Tier[] = ["deluxe", "luxury"];
+const HOME_TO_PRICING_KEY: Record<HomeCity, "islamabad" | "lahore" | "karachi"> = {
+  ISB: "islamabad",
+  LHE: "lahore",
+  KHI: "karachi",
+};
+const CANONICAL_PAX = 2;
+
+export function canonicalStartDate(): string {
+  // 30 days out — within the flight-scrape coverage window, far enough that
+  // peak-season pricing applies for the bulk of the Pakistani tour calendar.
+  const d = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  return d.toISOString().slice(0, 10);
+}
+
+export interface RepricePackageResult {
+  slug: string;
+  written: number;
+  skipped: Array<{ tier: Tier; home: HomeCity; reason: string }>;
+}
+
+export interface RepriceSummary {
+  startDate: string;
+  processed: number;
+  results: RepricePackageResult[];
+  failures: Array<{ slug: string; error: string }>;
+}
+
+async function repriceOnePackage(slug: string, startDate: string): Promise<RepricePackageResult> {
+  const supabase = getSupabaseAdmin();
+  const { data: pkg, error } = await supabase
+    .from("packages")
+    .select("pricing")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (error) throw new Error(`load ${slug}: ${error.message}`);
+  if (!pkg) throw new Error(`Package ${slug} not found`);
+
+  const current = (pkg.pricing as Record<string, Record<string, number | null>> | null) ?? {};
+  const next: Record<string, Record<string, number | null>> = { ...current };
+  const skipped: RepricePackageResult["skipped"] = [];
+  let written = 0;
+
+  // Quotes for one package fire in parallel (6 combos) — each combo hits
+  // hotels + flights + vehicles independently, so concurrency is safe.
+  const combos = TIERS_REPRICE.flatMap((tier) =>
+    HOMES_REPRICE.map((home) => ({ tier, home })),
+  );
+  const quotes = await Promise.all(
+    combos.map(({ tier, home }) =>
+      computeQuote({ slug, home, tier, pax: CANONICAL_PAX, startDate }).then((q) => ({ tier, home, q })),
+    ),
+  );
+
+  for (const tier of TIERS_REPRICE) {
+    const tierBlock = { ...(next[tier] ?? {}) };
+    for (const home of HOMES_REPRICE) {
+      const entry = quotes.find((x) => x.tier === tier && x.home === home);
+      const quote = entry?.q;
+      if (!quote) {
+        skipped.push({ tier, home, reason: "engine returned null" });
+        continue;
+      }
+      if (quote.unresolved.length > 0) {
+        skipped.push({ tier, home, reason: quote.unresolved.join("; ") });
+        continue;
+      }
+      if (!Number.isFinite(quote.perPerson) || quote.perPerson <= 0) {
+        skipped.push({ tier, home, reason: `non-positive perPerson (${quote.perPerson})` });
+        continue;
+      }
+      tierBlock[HOME_TO_PRICING_KEY[home]] = quote.perPerson;
+      written += 1;
+    }
+    if (Object.keys(tierBlock).length > 0) next[tier] = tierBlock;
+  }
+
+  const { error: writeErr } = await supabase
+    .from("packages")
+    .update({ pricing: next })
+    .eq("slug", slug);
+  if (writeErr) throw new Error(`write ${slug}: ${writeErr.message}`);
+
+  return { slug, written, skipped };
+}
+
+/**
+ * Recompute the engine snapshot for every package. Called by:
+ *   - GET/POST /api/cron/auto-reprice (Vercel daily cron)
+ *   - Admin save actions that mutate engine inputs (vehicles, engine_config)
+ *
+ * Packages are processed with bounded concurrency (5 at a time) so we don't
+ * burst-hit Supabase with all 56 in parallel while still finishing in well
+ * under a minute. Returns a per-package summary the caller can show / log.
+ */
+export async function repriceAllPackages(): Promise<RepriceSummary> {
+  const supabase = getSupabaseAdmin();
+  const { data: pkgs, error } = await supabase.from("packages").select("slug");
+  if (error) throw new Error(`list packages: ${error.message}`);
+
+  const startDate = canonicalStartDate();
+  const slugs = ((pkgs ?? []) as Array<{ slug: string }>).map((p) => p.slug);
+  const results: RepricePackageResult[] = [];
+  const failures: Array<{ slug: string; error: string }> = [];
+
+  const CONCURRENCY = 5;
+  for (let i = 0; i < slugs.length; i += CONCURRENCY) {
+    const batch = slugs.slice(i, i + CONCURRENCY);
+    const settled = await Promise.allSettled(batch.map((s) => repriceOnePackage(s, startDate)));
+    for (let j = 0; j < settled.length; j++) {
+      const r = settled[j];
+      if (r.status === "fulfilled") results.push(r.value);
+      else failures.push({ slug: batch[j], error: (r.reason as Error).message });
+    }
+  }
+
+  return { startDate, processed: results.length, results, failures };
+}

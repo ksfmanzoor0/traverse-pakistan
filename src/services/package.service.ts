@@ -22,6 +22,22 @@ function shuffleGallery(slug: string, images: Package["images"]): Package["image
   return result;
 }
 
+type PricingLeaves = Record<string, Record<string, number | null | undefined>>;
+
+/** Merge engine snapshot (`pricing`) with operator pin (`pricing_override`) per
+ *  leaf. Override wins where set; snapshot fills the rest. Sibling keys like
+ *  `singleSupplement` come from snapshot unless an override carries one too. */
+function mergePricing(snapshot: unknown, override: unknown): unknown {
+  const snap = (snapshot ?? {}) as PricingLeaves;
+  const over = (override ?? {}) as PricingLeaves;
+  const tiers = new Set([...Object.keys(snap), ...Object.keys(over)]);
+  const out: PricingLeaves = {};
+  for (const tier of tiers) {
+    out[tier] = { ...(snap[tier] ?? {}), ...(over[tier] ?? {}) };
+  }
+  return out;
+}
+
 function toPackage(row: PackageRow): Package {
   return {
     id: row.id,
@@ -45,7 +61,7 @@ function toPackage(row: PackageRow): Package {
     inclusions: row.inclusions ?? [],
     exclusions: row.exclusions ?? [],
     knowBeforeYouGo: row.know_before_you_go ?? [],
-    tiers: row.pricing as Package["tiers"],
+    tiers: mergePricing(row.pricing, row.pricing_override) as Package["tiers"],
     metaTitle: row.meta_title ?? row.name,
     metaDescription: row.meta_description ?? "",
   };
