@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { formatPrice } from "@/lib/utils";
@@ -174,7 +174,7 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
   const router = useRouter();
 
   const pricing = pkg.tiers[state.tier];
-  const pricePerPerson =
+  const staticPerPerson =
     state.city === "lahore" && pricing.lahore ? pricing.lahore :
     state.city === "karachi" && pricing.karachi ? pricing.karachi :
     (pricing.islamabad ?? pricing.lahore ?? pricing.karachi ?? 0);
@@ -182,7 +182,47 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
   const defaultRooms = Math.ceil(state.adults / 3);
   const extraRooms = Math.max(0, state.rooms - defaultRooms);
   const roomSurcharge = extraRooms * (pricing.singleSupplement ?? 0);
-  const total = pricePerPerson * state.adults + roomSurcharge;
+  const staticTotal = staticPerPerson * state.adults + roomSurcharge;
+
+  // Engine-driven quote — same endpoint the sidebar uses so checkout shows
+  // the same number quoted at booking time (jeep legs + meals + entries +
+  // LHE extension + min-rooms allocation). Falls back to staticTotal while
+  // loading or if the engine returns an unresolved combo.
+  const [engineQuote, setEngineQuote] = useState<{ total: number; perPerson: number } | null>(null);
+  const requestSeqRef = useRef(0);
+  useEffect(() => {
+    const mySeq = ++requestSeqRef.current;
+    const home = state.city === "lahore" ? "LHE" : state.city === "karachi" ? "KHI" : "ISB";
+    const start = state.startDate ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const startDate = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
+    const params = new URLSearchParams({
+      home,
+      tier: state.tier,
+      pax: String(state.adults),
+      startDate,
+      rooms: String(state.rooms),
+    });
+    const controller = new AbortController();
+    fetch(`/api/packages/${pkg.slug}/quote?${params.toString()}`, { signal: controller.signal })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((j: { total: number; perPerson: number; unresolved?: string[] }) => {
+        if (mySeq !== requestSeqRef.current) return;
+        if ((j.unresolved && j.unresolved.length > 0) || !(j.perPerson > 0)) {
+          setEngineQuote(null);
+          return;
+        }
+        setEngineQuote({ total: j.total, perPerson: j.perPerson });
+      })
+      .catch((err) => {
+        if (mySeq !== requestSeqRef.current) return;
+        if ((err as Error).name === "AbortError") return;
+        setEngineQuote(null);
+      });
+    return () => controller.abort();
+  }, [pkg.slug, state.tier, state.city, state.adults, state.rooms, state.startDate]);
+
+  const pricePerPerson = engineQuote?.perPerson ?? staticPerPerson;
+  const total = engineQuote?.total ?? staticTotal;
 
   const endDate = state.startDate
     ? new Date(state.startDate.getFullYear(), state.startDate.getMonth(), state.startDate.getDate() + pkg.duration - 1)
