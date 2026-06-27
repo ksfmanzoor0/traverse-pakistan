@@ -1,12 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+export interface JeepLegEntry {
+  name: string;
+  costPerJeep: number;
+  capacity: number;
+}
 
 export interface PackagePickerEntry {
   slug: string;
   name: string;
   duration: number;
   startingCities: string[];
+  mealsPerPerson: number;
+  entriesPerPerson: number;
+  jeepLegs: JeepLegEntry[];
 }
 
 type HomeCity = "ISB" | "LHE" | "KHI";
@@ -252,20 +261,20 @@ export interface PackageLinkedHotel {
 }
 
 export function CostCalculator({
-  skarduPackages = [],
+  pickerPackages = [],
   vehicles = [],
   engineConfig,
   hotelTiers = [],
   allHotels = [],
 }: {
-  skarduPackages?: PackagePickerEntry[];
+  pickerPackages?: PackagePickerEntry[];
   vehicles?: VehicleEntry[];
   engineConfig?: EngineConfigEntry;
   hotelTiers?: HotelTierSummary[];
   allHotels?: PackageLinkedHotel[];
 }) {
   const [picker, setPicker] = useState({
-    slug: skarduPackages[0]?.slug ?? "",
+    slug: pickerPackages[0]?.slug ?? "",
     home: "ISB" as HomeCity,
     startDate: defaultStartDate(),
     tier: "deluxe" as "deluxe" | "premium" | "luxury",
@@ -283,6 +292,80 @@ export function CostCalculator({
   const [saveMessage, setSaveMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   // Rounding step applied to displayed + saved per-person prices.
   const [roundStep, setRoundStep] = useState<500 | 1000>(1000);
+
+  // Engine-inputs editor: meals, entries, jeep legs. Syncs from the picked
+  // package on every dropdown change; Save POSTs the patch to the admin route
+  // and triggers a reprice so the engine snapshot picks up the new values.
+  const pickedPackage = pickerPackages.find((p) => p.slug === picker.slug);
+  const [engineInputs, setEngineInputs] = useState<{
+    mealsPerPerson: number;
+    entriesPerPerson: number;
+    jeepLegs: JeepLegEntry[];
+  }>({ mealsPerPerson: 0, entriesPerPerson: 0, jeepLegs: [] });
+  const [engineInputsDirty, setEngineInputsDirty] = useState(false);
+  const [engineSaving, setEngineSaving] = useState(false);
+  const [engineMessage, setEngineMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+
+  useEffect(() => {
+    if (!pickedPackage) return;
+    setEngineInputs({
+      mealsPerPerson: pickedPackage.mealsPerPerson,
+      entriesPerPerson: pickedPackage.entriesPerPerson,
+      jeepLegs: pickedPackage.jeepLegs.map((l) => ({ ...l })),
+    });
+    setEngineInputsDirty(false);
+    setEngineMessage(null);
+  }, [pickedPackage]);
+
+  function updateJeepLeg(idx: number, patch: Partial<JeepLegEntry>) {
+    setEngineInputs((s) => ({
+      ...s,
+      jeepLegs: s.jeepLegs.map((l, i) => (i === idx ? { ...l, ...patch } : l)),
+    }));
+    setEngineInputsDirty(true);
+  }
+
+  function removeJeepLeg(idx: number) {
+    setEngineInputs((s) => ({ ...s, jeepLegs: s.jeepLegs.filter((_, i) => i !== idx) }));
+    setEngineInputsDirty(true);
+  }
+
+  function addJeepLeg() {
+    setEngineInputs((s) => ({
+      ...s,
+      jeepLegs: [...s.jeepLegs, { name: "", costPerJeep: 0, capacity: 5 }],
+    }));
+    setEngineInputsDirty(true);
+  }
+
+  async function saveEngineInputs() {
+    if (!pickedPackage) return;
+    setEngineSaving(true);
+    setEngineMessage(null);
+    try {
+      const res = await fetch("/api/admin/cost-calculator/save-engine-inputs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug: pickedPackage.slug,
+          meals_per_person: engineInputs.mealsPerPerson,
+          entries_per_person: engineInputs.entriesPerPerson,
+          jeep_legs: engineInputs.jeepLegs,
+        }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? `HTTP ${res.status}`);
+      }
+      const body = (await res.json()) as { reprice: { processed: number; failures: number } };
+      setEngineInputsDirty(false);
+      setEngineMessage({ kind: "ok", text: `Saved. Reprice processed ${body.reprice.processed} packages (${body.reprice.failures} failed).` });
+    } catch (err) {
+      setEngineMessage({ kind: "err", text: (err as Error).message });
+    } finally {
+      setEngineSaving(false);
+    }
+  }
 
   const [trip, setTrip] = useState<TripConfig>({
     tripName: "Hunza Valley Tour",
@@ -580,7 +663,7 @@ export function CostCalculator({
   return (
     <div className="space-y-6">
       {/* Package picker */}
-      {skarduPackages.length > 0 && (
+      {pickerPackages.length > 0 && (
         <section
           className="rounded-lg p-5 space-y-3"
           style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
@@ -590,7 +673,7 @@ export function CostCalculator({
               Auto-fill from package
             </h2>
             <span className="text-xs" style={{ color: "var(--text-tertiary)" }}>
-              {skarduPackages.length} published packages
+              {pickerPackages.length} published packages
             </span>
           </div>
           <div className="grid gap-3 sm:grid-cols-6">
@@ -602,7 +685,7 @@ export function CostCalculator({
                 value={picker.slug}
                 onChange={(e) => setPicker((p) => ({ ...p, slug: e.target.value }))}
               >
-                {skarduPackages.map((p) => (
+                {pickerPackages.map((p) => (
                   <option key={p.slug} value={p.slug}>{p.name} ({p.duration}d)</option>
                 ))}
               </select>
@@ -763,6 +846,129 @@ export function CostCalculator({
               )}
             </div>
           )}
+        </section>
+      )}
+
+      {/* Engine inputs editor — meals, entries, jeep legs per package */}
+      {pickedPackage && (
+        <section
+          className="rounded-lg p-5 space-y-3"
+          style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
+        >
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>
+              Engine inputs — {pickedPackage.name}
+            </h2>
+            <span className="text-xs" style={{ color: "var(--text-tertiary)" }}>
+              meals × duration × pax · entries × pax · jeep ceil(pax/cap) × cost
+            </span>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-sm">
+              <span style={{ color: "var(--text-secondary)" }}>Meals / person / day (PKR)</span>
+              <input
+                type="number"
+                min={0}
+                step={100}
+                className="mt-1 w-full rounded px-2 py-2 text-sm"
+                style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+                value={engineInputs.mealsPerPerson}
+                onChange={(e) => { setEngineInputs((s) => ({ ...s, mealsPerPerson: Math.max(0, num(e.target.value)) })); setEngineInputsDirty(true); }}
+              />
+            </label>
+            <label className="block text-sm">
+              <span style={{ color: "var(--text-secondary)" }}>Entries / person (PKR, one-time)</span>
+              <input
+                type="number"
+                min={0}
+                step={100}
+                className="mt-1 w-full rounded px-2 py-2 text-sm"
+                style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+                value={engineInputs.entriesPerPerson}
+                onChange={(e) => { setEngineInputs((s) => ({ ...s, entriesPerPerson: Math.max(0, num(e.target.value)) })); setEngineInputsDirty(true); }}
+              />
+            </label>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>Jeep legs</span>
+              <button
+                type="button"
+                onClick={addJeepLeg}
+                className="text-xs rounded px-2 py-1 border"
+                style={{ borderColor: "var(--border-default)", color: "var(--text-primary)" }}
+              >
+                + Add leg
+              </button>
+            </div>
+            {engineInputs.jeepLegs.length === 0 && (
+              <div className="text-xs" style={{ color: "var(--text-tertiary)" }}>No jeep legs configured.</div>
+            )}
+            {engineInputs.jeepLegs.map((leg, i) => (
+              <div key={i} className="grid gap-2 grid-cols-12 items-end">
+                <label className="col-span-6 text-xs">
+                  <span style={{ color: "var(--text-tertiary)" }}>Name</span>
+                  <input
+                    type="text"
+                    className="mt-1 w-full rounded px-2 py-2 text-sm"
+                    style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+                    value={leg.name}
+                    onChange={(e) => updateJeepLeg(i, { name: e.target.value })}
+                  />
+                </label>
+                <label className="col-span-3 text-xs">
+                  <span style={{ color: "var(--text-tertiary)" }}>Cost / jeep</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={500}
+                    className="mt-1 w-full rounded px-2 py-2 text-sm"
+                    style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+                    value={leg.costPerJeep}
+                    onChange={(e) => updateJeepLeg(i, { costPerJeep: Math.max(0, num(e.target.value)) })}
+                  />
+                </label>
+                <label className="col-span-2 text-xs">
+                  <span style={{ color: "var(--text-tertiary)" }}>Capacity</span>
+                  <input
+                    type="number"
+                    min={1}
+                    className="mt-1 w-full rounded px-2 py-2 text-sm"
+                    style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+                    value={leg.capacity}
+                    onChange={(e) => updateJeepLeg(i, { capacity: Math.max(1, num(e.target.value)) })}
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => removeJeepLeg(i)}
+                  className="col-span-1 text-xs rounded px-2 py-2 border"
+                  style={{ borderColor: "var(--border-default)", color: "var(--accent-danger)" }}
+                  title="Remove leg"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between pt-2" style={{ borderTop: "1px solid var(--border-default)" }}>
+            <button
+              type="button"
+              onClick={saveEngineInputs}
+              disabled={engineSaving || !engineInputsDirty}
+              className="rounded px-4 py-2 text-sm font-semibold bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-50"
+            >
+              {engineSaving ? "Saving & repricing…" : engineInputsDirty ? "Save to package & reprice" : "Saved"}
+            </button>
+            {engineMessage && (
+              <span className="text-xs" style={{ color: engineMessage.kind === "ok" ? "#065f46" : "var(--accent-danger)" }}>
+                {engineMessage.kind === "ok" ? "✓ " : "⚠ "}{engineMessage.text}
+              </span>
+            )}
+          </div>
         </section>
       )}
 

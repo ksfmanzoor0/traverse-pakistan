@@ -85,33 +85,39 @@ async function loadHotelTierSummaries(): Promise<HotelTierSummary[]> {
 
 export const dynamic = "force-dynamic";
 
-async function loadSkarduPackages(): Promise<PackagePickerEntry[]> {
+async function loadPickerPackages(): Promise<PackagePickerEntry[]> {
   const supabase = getSupabaseAdmin();
-  // Picker now exposes every published package — Skardu fly-in still gets the
+  // Picker exposes every published package — Skardu fly-in still gets the
   // NCP-Prado treatment in the engine, road packages run the normal picker.
   const { data, error } = await supabase
     .from("packages")
-    .select("slug, name, duration, starting_cities")
+    .select("slug, name, duration, starting_cities, meals_per_person, entries_per_person, jeep_legs")
     .eq("published", true)
     .order("name");
-  if (error) throw new Error(`loadSkarduPackages: ${error.message}`);
+  if (error) throw new Error(`loadPickerPackages: ${error.message}`);
   return ((data ?? []) as Array<{
     slug: string;
     name: string;
     duration: number;
     starting_cities: string[];
+    meals_per_person: number | null;
+    entries_per_person: number | null;
+    jeep_legs: Array<{ name: string; costPerJeep: number; capacity: number }> | null;
   }>).map((r) => ({
     slug: r.slug,
     name: r.name,
     duration: r.duration,
     startingCities: r.starting_cities ?? [],
+    mealsPerPerson: r.meals_per_person ?? 0,
+    entriesPerPerson: r.entries_per_person ?? 0,
+    jeepLegs: r.jeep_legs ?? [],
   }));
 }
 
 export default async function CostCalculatorPage() {
   await requireAdmin();
-  const [skarduPackages, vehicles, engineConfig, hotelTiers, allHotels] = await Promise.all([
-    loadSkarduPackages(),
+  const [pickerPackages, vehicles, engineConfig, hotelTiers, allHotels] = await Promise.all([
+    loadPickerPackages(),
     listVehicleTypes(),
     getEngineConfig(),
     loadHotelTierSummaries(),
@@ -133,7 +139,7 @@ export default async function CostCalculatorPage() {
       </div>
 
       <CostCalculator
-        skarduPackages={skarduPackages}
+        pickerPackages={pickerPackages}
         vehicles={vehicles}
         engineConfig={engineConfig}
         hotelTiers={hotelTiers}
