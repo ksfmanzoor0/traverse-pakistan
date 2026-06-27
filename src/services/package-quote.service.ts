@@ -91,7 +91,7 @@ async function computeQuote(args: {
   const supabase = getSupabaseAdmin();
   const { data: pkgRow, error } = await supabase
     .from("packages")
-    .select("slug, duration, starting_cities, total_distance_km, meals_per_person, entries_per_person")
+    .select("slug, duration, starting_cities, total_distance_km, meals_per_person, entries_per_person, jeep_legs")
     .eq("slug", args.slug)
     .maybeSingle();
   if (error) throw new Error(`quotePackage: ${error.message}`);
@@ -104,6 +104,7 @@ async function computeQuote(args: {
     total_distance_km: number | null;
     meals_per_person: number | null;
     entries_per_person: number | null;
+    jeep_legs: Array<{ name: string; costPerJeep: number; capacity: number }> | null;
   };
 
   const startingCities = pkg.starting_cities ?? [];
@@ -138,7 +139,7 @@ async function computeQuote(args: {
 
   const [flightQuote, hotelQuote, vehicles, engineConfig] = await Promise.all([
     quotePackageAddons({ packageSlug: args.slug, homeCity: args.home, startDate: args.startDate }),
-    quotePackageHotels({ packageSlug: args.slug, tier: args.tier, people: pax, startDate: args.startDate, rooms: args.rooms }),
+    quotePackageHotels({ packageSlug: args.slug, tier: args.tier, people: pax, startDate: args.startDate, rooms: args.rooms, homeCity: args.home }),
     listVehicleTypes(),
     getEngineConfig(),
   ]);
@@ -176,7 +177,15 @@ async function computeQuote(args: {
 
   const mealsCost = (pkg.meals_per_person ?? 0) * pax * pkg.duration;
   const entriesCost = (pkg.entries_per_person ?? 0) * pax;
-  const subtotal = transportCost + hotelCost + flightCost + mealsCost + entriesCost;
+  // Each jeep leg is a fixed cost per jeep; we replicate jeeps when pax
+  // exceeds capacity. Total is a party-wide line, not a per-person rate,
+  // because the legs are shared transport.
+  const jeepCost = (pkg.jeep_legs ?? []).reduce((sum, leg) => {
+    const cap = Math.max(1, leg.capacity);
+    const jeeps = Math.max(1, Math.ceil(pax / cap));
+    return sum + jeeps * leg.costPerJeep;
+  }, 0);
+  const subtotal = transportCost + hotelCost + flightCost + mealsCost + entriesCost + jeepCost;
   const rawTotal = subtotal * (1 + engineConfig.profitPercentage / 100);
   // Round per-person to nearest 1k, then derive the total from it so the
   // displayed total = perPerson × pax exactly (no odd 396,666-style endings).
