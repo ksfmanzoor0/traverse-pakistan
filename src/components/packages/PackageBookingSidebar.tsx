@@ -263,11 +263,17 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
       if (rooms !== null) params.set("rooms", String(rooms));
       fetch(`/api/packages/${pkg.slug}/quote?${params.toString()}`, { signal: controller.signal })
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-        .then((j: { total: number; perPerson: number; rooms: number }) => {
+        .then((j: { total: number; perPerson: number; rooms: number; unresolved?: string[] }) => {
+          // Engine couldn't price this combo (missing flights, infeasible
+          // rooms, etc.). Keep the last good quote on screen and fall back
+          // to the static `pricing[city]` table downstream instead of
+          // flashing PKR 0 at the customer.
+          if ((j.unresolved && j.unresolved.length > 0) || !(j.perPerson > 0)) {
+            setEngineQuote(null);
+            return;
+          }
           quoteSessionCache.set(cacheKey, { total: j.total, perPerson: j.perPerson });
           setEngineQuote({ total: j.total, perPerson: j.perPerson });
-          // Refresh the floor only when no explicit rooms override was sent —
-          // that response reflects the engine's natural pick.
           if (rooms === null && Number.isFinite(j.rooms) && j.rooms > 0) {
             setNaturalRooms(j.rooms);
           }
