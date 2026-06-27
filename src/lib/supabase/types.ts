@@ -224,6 +224,7 @@ export type PackageRow = {
   total_distance_km: number | null;
   meals_per_person: number;
   entries_per_person: number;
+  jeep_legs: Array<{ name: string; costPerJeep: number; capacity: number }>;
   published: boolean;
   meta_title: string | null;
   meta_description: string | null;
