@@ -169,7 +169,10 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
   const [rooms, setRooms] = useState<number | null>(null);
   const [naturalRooms, setNaturalRooms] = useState(1);
   const [adults, setAdults] = useState(2);
-  const displayRooms = rooms ?? naturalRooms;
+  // Clamp at render time: a stale fetch from a higher-pax click can write
+  // naturalRooms > adults, but the floor can never exceed the party size.
+  const safeNaturalRooms = Math.min(naturalRooms, adults);
+  const displayRooms = Math.min(rooms ?? safeNaturalRooms, adults);
 
   const calWrapRef = useRef<HTMLDivElement>(null);
 
@@ -292,9 +295,12 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
   }, [pkg.slug, departureCity, selectedTier, adults, checkIn, rooms]);
 
   // Whenever the engine's natural pick changes (pax/tier change), clear any
-  // explicit override so the user sees the new natural floor.
+  // explicit override and drop the floor back to 1 so a stale in-flight
+  // response from the previous combo can't pin the - button at a value
+  // higher than the new pax count.
   useEffect(() => {
     setRooms(null);
+    setNaturalRooms(1);
   }, [adults, selectedTier, pkg.slug]);
 
   const pricePerPerson = engineQuote?.perPerson ?? staticPerPerson;
@@ -436,17 +442,17 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
             <div>
               <p className="text-[13px] font-semibold text-[var(--text-primary)]">Rooms</p>
               <p className="text-[11px] text-[var(--text-tertiary)]">
-                {displayRooms > naturalRooms
+                {displayRooms > safeNaturalRooms
                   ? "Extra room — price recalculated above"
-                  : `Minimum ${naturalRooms} room${naturalRooms > 1 ? "s" : ""} for ${adults} guest${adults > 1 ? "s" : ""}`}
+                  : `Minimum ${safeNaturalRooms} room${safeNaturalRooms > 1 ? "s" : ""} for ${adults} guest${adults > 1 ? "s" : ""}`}
               </p>
             </div>
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => setRooms(() => Math.max(naturalRooms, displayRooms - 1))}
-                disabled={displayRooms <= naturalRooms}
-                title={displayRooms <= naturalRooms ? `Minimum ${naturalRooms} room${naturalRooms > 1 ? "s" : ""} required for ${adults} guest${adults > 1 ? "s" : ""}` : undefined}
+                onClick={() => setRooms(() => Math.max(safeNaturalRooms, displayRooms - 1))}
+                disabled={displayRooms <= safeNaturalRooms}
+                title={displayRooms <= safeNaturalRooms ? `Minimum ${safeNaturalRooms} room${safeNaturalRooms > 1 ? "s" : ""} required for ${adults} guest${adults > 1 ? "s" : ""}` : undefined}
                 className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]"
               >
                 −
