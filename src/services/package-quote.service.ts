@@ -36,6 +36,7 @@ function planVehicles(
   vehicles: Awaited<ReturnType<typeof listVehicleTypes>>,
   pax: number,
   ncpEligible: boolean,
+  luxuryDayTrip: boolean,
 ): VehicleAllocation | null {
   if (ncpEligible) {
     const ncp = vehicles.find((v) => v.isNcp && v.ncpPairCode === "prado");
@@ -45,6 +46,19 @@ function planVehicles(
       kmPerLitre: ncp.kmPerLitre,
       rentPerDay: ncp.rentPerDay,
     };
+  }
+  // Luxury tier on a single-day tour rides the non-NCP Prado, replicated by
+  // capacity. Day-trips have no overnight to lift luxury above deluxe, so the
+  // vehicle is the only luxury signal in the price.
+  if (luxuryDayTrip) {
+    const prado = vehicles.find((v) => v.code === "prado" && !v.isNcp);
+    if (prado) {
+      return {
+        count: Math.max(1, Math.ceil(pax / Math.max(1, prado.maxPeople))),
+        kmPerLitre: prado.kmPerLitre,
+        rentPerDay: prado.rentPerDay,
+      };
+    }
   }
   const order = ["corolla", "brv", "hiace", "coaster"];
   for (const code of order) {
@@ -75,7 +89,7 @@ async function computeQuote(args: {
   const supabase = getSupabaseAdmin();
   const { data: pkgRow, error } = await supabase
     .from("packages")
-    .select("slug, duration, starting_cities, total_distance_km")
+    .select("slug, duration, starting_cities, total_distance_km, meals_per_person, entries_per_person")
     .eq("slug", args.slug)
     .maybeSingle();
   if (error) throw new Error(`quotePackage: ${error.message}`);
@@ -86,6 +100,8 @@ async function computeQuote(args: {
     duration: number;
     starting_cities: string[] | null;
     total_distance_km: number | null;
+    meals_per_person: number | null;
+    entries_per_person: number | null;
   };
 
   const startingCities = pkg.starting_cities ?? [];
@@ -124,7 +140,8 @@ async function computeQuote(args: {
     getEngineConfig(),
   ]);
 
-  const vehiclePlan = planVehicles(vehicles, pax, ncpEligible);
+  const luxuryDayTrip = pkg.duration === 1 && args.tier === "luxury";
+  const vehiclePlan = planVehicles(vehicles, pax, ncpEligible, luxuryDayTrip);
   const unresolved: string[] = [];
   if (!vehiclePlan) unresolved.push("Could not allocate a vehicle for the requested party size.");
 
@@ -146,7 +163,9 @@ async function computeQuote(args: {
     unresolved.push("Flight cost could not be resolved for the requested dates.");
   }
 
-  const subtotal = transportCost + hotelCost + flightCost;
+  const mealsCost = (pkg.meals_per_person ?? 0) * pax * pkg.duration;
+  const entriesCost = (pkg.entries_per_person ?? 0) * pax;
+  const subtotal = transportCost + hotelCost + flightCost + mealsCost + entriesCost;
   const rawTotal = subtotal * (1 + engineConfig.profitPercentage / 100);
   // Round per-person to nearest 1k, then derive the total from it so the
   // displayed total = perPerson × pax exactly (no odd 396,666-style endings).

@@ -579,7 +579,7 @@ export function CostCalculator({
 
   return (
     <div className="space-y-6">
-      {/* Skardu package picker */}
+      {/* Package picker */}
       {skarduPackages.length > 0 && (
         <section
           className="rounded-lg p-5 space-y-3"
@@ -587,10 +587,10 @@ export function CostCalculator({
         >
           <div className="flex items-baseline justify-between">
             <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>
-              Auto-fill from Skardu package
+              Auto-fill from package
             </h2>
             <span className="text-xs" style={{ color: "var(--text-tertiary)" }}>
-              {skarduPackages.length} fly-in packages · KDU-starting · PradoNCP rate auto-on
+              {skarduPackages.length} published packages
             </span>
           </div>
           <div className="grid gap-3 sm:grid-cols-6">
