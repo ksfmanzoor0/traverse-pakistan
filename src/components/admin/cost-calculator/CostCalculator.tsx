@@ -6,17 +6,16 @@ import { useEffect, useMemo, useState } from "react";
 // extra road km charged when home=LHE on an ISB-starting package.
 const LHE_EXTENSION_KM = 800;
 
-// Known jeep fares — kept in sync with the memory note `jeep-fare-table`.
-// Selecting a name from the dropdown auto-fills cost + capacity; operator
-// can also type a custom name and set cost/capacity by hand.
-const KNOWN_JEEP_LEGS: ReadonlyArray<{ name: string; costPerJeep: number; capacity: number }> = [
-  { name: "Saiful Malook", costPerJeep: 8000, capacity: 5 },
-  { name: "Paras → Sharan", costPerJeep: 15000, capacity: 5 },
-  { name: "Kiwai → Shogran / Siri Paye", costPerJeep: 15000, capacity: 5 },
-  { name: "Raikot Bridge → Tattu (Fairy Meadows base)", costPerJeep: 24000, capacity: 5 },
-  { name: "Basho Valley", costPerJeep: 24000, capacity: 5 },
-  { name: "Naltar Zero Point", costPerJeep: 12000, capacity: 5 },
-];
+// Known jeep fares — loaded from `known_jeep_legs` table via API. Selecting
+// a name from the dropdown auto-fills cost + capacity; operator can also
+// type a custom name, set cost/capacity by hand, and save it back to the
+// library so it's available next time.
+interface KnownJeepLeg {
+  id?: string;
+  name: string;
+  costPerJeep: number;
+  capacity: number;
+}
 
 export interface JeepLegEntry {
   name: string;
@@ -321,6 +320,40 @@ export function CostCalculator({
   const [engineInputsDirty, setEngineInputsDirty] = useState(false);
   const [engineSaving, setEngineSaving] = useState(false);
   const [engineMessage, setEngineMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const [knownJeepLegs, setKnownJeepLegs] = useState<KnownJeepLeg[]>([]);
+  const [savingLegIdx, setSavingLegIdx] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/known-jeep-legs")
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((body: { legs: KnownJeepLeg[] }) => { if (!cancelled) setKnownJeepLegs(body.legs ?? []); })
+      .catch(() => { if (!cancelled) setKnownJeepLegs([]); });
+    return () => { cancelled = true; };
+  }, []);
+
+  async function saveLegToLibrary(idx: number) {
+    const leg = engineInputs.jeepLegs[idx];
+    if (!leg || !leg.name.trim() || leg.costPerJeep <= 0) return;
+    setSavingLegIdx(idx);
+    try {
+      const res = await fetch("/api/admin/known-jeep-legs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(leg),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const body = (await res.json()) as { leg: KnownJeepLeg };
+      setKnownJeepLegs((prev) => {
+        const others = prev.filter((p) => p.name !== body.leg.name);
+        return [...others, body.leg].sort((a, b) => a.name.localeCompare(b.name));
+      });
+    } catch {
+      // Silent failure — operator can retry.
+    } finally {
+      setSavingLegIdx(null);
+    }
+  }
 
   useEffect(() => {
     if (!pickedPackage) return;
@@ -962,58 +995,74 @@ export function CostCalculator({
                 <div className="text-xs" style={{ color: "var(--text-tertiary)" }}>No jeep legs configured. Click &ldquo;Add jeep ride&rdquo; — type any route name or pick a known one.</div>
               )}
               <datalist id="known-jeep-leg-names">
-                {KNOWN_JEEP_LEGS.map((l) => <option key={l.name} value={l.name} />)}
+                {knownJeepLegs.map((l) => <option key={l.name} value={l.name} />)}
               </datalist>
-              {engineInputs.jeepLegs.map((leg, i) => (
-                <div key={i} className="grid gap-2 grid-cols-12 items-end">
-                  <label className="col-span-6 text-xs">
-                    <span style={{ color: "var(--text-tertiary)" }}>Name (type custom or pick known)</span>
-                    <input
-                      type="text"
-                      list="known-jeep-leg-names"
-                      placeholder="e.g. Saiful Malook · or type a new route name"
-                      className="mt-1 w-full rounded px-2 py-2 text-sm"
-                      style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
-                      value={leg.name}
-                      onChange={(e) => {
-                        const name = e.target.value;
-                        const preset = KNOWN_JEEP_LEGS.find((k) => k.name === name);
-                        // If operator selects a known route, hydrate cost+cap automatically.
-                        updateJeepLeg(i, preset ? { name, costPerJeep: preset.costPerJeep, capacity: preset.capacity } : { name });
-                      }}
-                    />
-                  </label>
-                  <label className="col-span-3 text-xs">
-                    <span style={{ color: "var(--text-tertiary)" }}>Cost / jeep</span>
-                    <input
-                      type="number" min={0} step={500}
-                      className="mt-1 w-full rounded px-2 py-2 text-sm"
-                      style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
-                      value={leg.costPerJeep}
-                      onChange={(e) => updateJeepLeg(i, { costPerJeep: Math.max(0, num(e.target.value)) })}
-                    />
-                  </label>
-                  <label className="col-span-2 text-xs">
-                    <span style={{ color: "var(--text-tertiary)" }}>Capacity</span>
-                    <input
-                      type="number" min={1}
-                      className="mt-1 w-full rounded px-2 py-2 text-sm"
-                      style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
-                      value={leg.capacity}
-                      onChange={(e) => updateJeepLeg(i, { capacity: Math.max(1, num(e.target.value)) })}
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => removeJeepLeg(i)}
-                    className="col-span-1 text-xs rounded px-2 py-2 border"
-                    style={{ borderColor: "var(--border-default)", color: "var(--accent-danger)" }}
-                    title="Remove leg"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
+              {engineInputs.jeepLegs.map((leg, i) => {
+                const knownMatch = knownJeepLegs.find(
+                  (k) => k.name === leg.name && k.costPerJeep === leg.costPerJeep && k.capacity === leg.capacity,
+                );
+                const canSaveToLibrary = leg.name.trim().length > 0 && leg.costPerJeep > 0 && !knownMatch;
+                return (
+                  <div key={i} className="grid gap-2 grid-cols-12 items-end">
+                    <label className="col-span-5 text-xs">
+                      <span style={{ color: "var(--text-tertiary)" }}>Name (type custom or pick known)</span>
+                      <input
+                        type="text"
+                        list="known-jeep-leg-names"
+                        placeholder="e.g. Saiful Malook · or type a new route name"
+                        className="mt-1 w-full rounded px-2 py-2 text-sm"
+                        style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+                        value={leg.name}
+                        onChange={(e) => {
+                          const name = e.target.value;
+                          const preset = knownJeepLegs.find((k) => k.name === name);
+                          // If operator selects a known route, hydrate cost+cap automatically.
+                          updateJeepLeg(i, preset ? { name, costPerJeep: preset.costPerJeep, capacity: preset.capacity } : { name });
+                        }}
+                      />
+                    </label>
+                    <label className="col-span-3 text-xs">
+                      <span style={{ color: "var(--text-tertiary)" }}>Cost / jeep</span>
+                      <input
+                        type="number" min={0} step={500}
+                        className="mt-1 w-full rounded px-2 py-2 text-sm"
+                        style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+                        value={leg.costPerJeep}
+                        onChange={(e) => updateJeepLeg(i, { costPerJeep: Math.max(0, num(e.target.value)) })}
+                      />
+                    </label>
+                    <label className="col-span-2 text-xs">
+                      <span style={{ color: "var(--text-tertiary)" }}>Capacity</span>
+                      <input
+                        type="number" min={1}
+                        className="mt-1 w-full rounded px-2 py-2 text-sm"
+                        style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+                        value={leg.capacity}
+                        onChange={(e) => updateJeepLeg(i, { capacity: Math.max(1, num(e.target.value)) })}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => saveLegToLibrary(i)}
+                      disabled={!canSaveToLibrary || savingLegIdx === i}
+                      className="col-span-1 text-xs rounded px-2 py-2 border disabled:opacity-40"
+                      style={{ borderColor: "var(--border-default)", color: "var(--text-primary)" }}
+                      title={knownMatch ? "Already in library" : canSaveToLibrary ? "Save this route to the library" : "Fill name + cost first"}
+                    >
+                      {savingLegIdx === i ? "…" : knownMatch ? "★" : "☆"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeJeepLeg(i)}
+                      className="col-span-1 text-xs rounded px-2 py-2 border"
+                      style={{ borderColor: "var(--border-default)", color: "var(--accent-danger)" }}
+                      title="Remove leg"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              })}
             </div>
 
             <div className="flex items-center justify-between pt-2">
