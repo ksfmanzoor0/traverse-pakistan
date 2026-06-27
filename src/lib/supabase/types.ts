@@ -222,6 +222,9 @@ export type PackageRow = {
   starting_cities: string[];
   major_stops: string[];
   total_distance_km: number | null;
+  meals_per_person: number;
+  entries_per_person: number;
+  published: boolean;
   meta_title: string | null;
   meta_description: string | null;
   created_at: string | null;

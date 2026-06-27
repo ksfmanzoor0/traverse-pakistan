@@ -93,6 +93,7 @@ const _fetchAllPackages = unstable_cache(
     const { data, error } = await supabase
       .from("packages")
       .select("*")
+      .eq("published", true)
       .order("name");
 
     if (error) throw new Error(`getAllPackages: ${error.message}`);
@@ -156,6 +157,7 @@ export const getFeaturedPackages = cache(async (): Promise<Package[]> => {
   const { data, error } = await supabase
     .from("packages")
     .select("*")
+    .eq("published", true)
     .in("slug", FEATURED_PACKAGE_SLUGS);
 
   if (error) throw new Error(`getFeaturedPackages: ${error.message}`);
@@ -170,6 +172,7 @@ export const getPackagesByDestination = cache(
     const { data, error } = await supabase
       .from("packages")
       .select("*")
+      .eq("published", true)
       .or(`destination_slug.eq.${destinationSlug},related_destination_slugs.cs.{${destinationSlug}}`);
 
     if (error) throw new Error(`getPackagesByDestination: ${error.message}`);
@@ -183,6 +186,7 @@ export const getPackagesByStyle = cache(
     const { data, error } = await supabase
       .from("packages")
       .select("*")
+      .eq("published", true)
       .contains("travel_style_slugs", [styleSlug]);
     if (error) throw new Error(`getPackagesByStyle: ${error.message}`);
     return (data as unknown as PackageRow[]).map(toPackage);
