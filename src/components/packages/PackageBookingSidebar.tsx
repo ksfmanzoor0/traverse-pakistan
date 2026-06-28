@@ -147,9 +147,13 @@ interface PackageBookingSidebarProps {
   onTierChange: (tier: PackageTier) => void;
   departureCity: DepartureCityOption;
   onDepartureCityChange: (city: DepartureCityOption) => void;
+  // Optional reporter — emits the resolved adults/rooms/checkIn upward so a
+  // parent can mirror the picked values (e.g. on a mobile sticky bar) without
+  // owning the inputs.
+  onValuesChange?: (s: { adults: number; rooms: number; checkIn: Date | null }) => void;
 }
 
-export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departureCity, onDepartureCityChange }: PackageBookingSidebarProps) {
+export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departureCity, onDepartureCityChange, onValuesChange }: PackageBookingSidebarProps) {
   const pricing = pkg.tiers[selectedTier];
 
   // Calendar
@@ -174,6 +178,13 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
   // naturalRooms > adults, but the floor can never exceed the party size.
   const safeNaturalRooms = Math.min(naturalRooms, adults);
   const displayRooms = Math.min(rooms ?? safeNaturalRooms, adults);
+
+  // Report resolved adults/rooms/checkIn upward so a parent (e.g. the mobile
+  // sticky bar) can reflect picked values when the sheet is closed. Ref-stable
+  // dispatch — the parent supplies a stable callback or we'd loop.
+  useEffect(() => {
+    onValuesChange?.({ adults, rooms: displayRooms, checkIn });
+  }, [adults, displayRooms, checkIn, onValuesChange]);
 
   const calWrapRef = useRef<HTMLDivElement>(null);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Container } from "@/components/ui/Container";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { Chip } from "@/components/ui/Chip";
@@ -28,6 +28,18 @@ export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages
     pkg.tiers.deluxe.islamabad !== null ? "islamabad" : pkg.tiers.deluxe.lahore !== null ? "lahore" : "karachi"
   );
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+  // Picks emitted from the sidebar (rendered inside the mobile sheet) so the
+  // sticky bar can mirror the chosen adults/rooms/check-in even when closed.
+  const [sheetValues, setSheetValues] = useState<{ adults: number; rooms: number; checkIn: Date | null }>({
+    adults: 2,
+    rooms: 1,
+    checkIn: null,
+  });
+  const handleValuesChange = useCallback((s: { adults: number; rooms: number; checkIn: Date | null }) => {
+    setSheetValues((prev) => (
+      prev.adults === s.adults && prev.rooms === s.rooms && prev.checkIn === s.checkIn ? prev : s
+    ));
+  }, []);
 
   return (
     <div className="pt-0 sm:pt-6 pb-24 sm:pb-8">
@@ -225,12 +237,18 @@ export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages
 
         {/* Mobile sticky bar */}
         <div className="fixed bottom-0 left-0 right-0 lg:hidden z-40 bg-[var(--bg-primary)] border-t border-[var(--border-default)] px-5 py-3 flex items-center justify-between">
-          <div>
-            <span className="text-[11px] uppercase tracking-wider text-[var(--text-tertiary)] mr-1">From</span>
-            <span className="text-lg font-bold text-[var(--text-primary)]">
-              {formatPrice(pkg.tiers[selectedTier][departureCity] ?? pkg.tiers[selectedTier].islamabad ?? pkg.tiers[selectedTier].lahore ?? 0)}
-            </span>
-            <span className="text-[13px] text-[var(--text-tertiary)] ml-1">per person</span>
+          <div className="flex flex-col">
+            <div>
+              <span className="text-[11px] uppercase tracking-wider text-[var(--text-tertiary)] mr-1">From</span>
+              <span className="text-lg font-bold text-[var(--text-primary)]">
+                {formatPrice(pkg.tiers[selectedTier][departureCity] ?? pkg.tiers[selectedTier].islamabad ?? pkg.tiers[selectedTier].lahore ?? 0)}
+              </span>
+              <span className="text-[13px] text-[var(--text-tertiary)] ml-1">per person</span>
+            </div>
+            <div className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
+              {sheetValues.adults} {sheetValues.adults === 1 ? "guest" : "guests"} · {sheetValues.rooms} {sheetValues.rooms === 1 ? "room" : "rooms"}
+              {sheetValues.checkIn && ` · ${sheetValues.checkIn.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
+            </div>
           </div>
           <button
             type="button"
@@ -249,6 +267,7 @@ export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages
           onTierChange={setSelectedTier}
           departureCity={departureCity}
           onDepartureCityChange={setDepartureCity}
+          onValuesChange={handleValuesChange}
         />
 
         {/* Related packages */}

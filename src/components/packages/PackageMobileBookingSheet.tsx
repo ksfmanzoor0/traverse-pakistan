@@ -12,8 +12,14 @@ interface PackageMobileBookingSheetProps {
   onTierChange: (tier: PackageTier) => void;
   departureCity: "islamabad" | "lahore" | "karachi";
   onDepartureCityChange: (city: "islamabad" | "lahore" | "karachi") => void;
+  onValuesChange?: (s: { adults: number; rooms: number; checkIn: Date | null }) => void;
 }
 
+// Sheet stays mounted across open/close cycles — closing only hides the layer
+// via CSS. That way PackageBookingSidebar keeps its internal state (adults,
+// rooms, checkIn, engineQuote) and re-opening the sheet shows the user's
+// previous picks. The sidebar also reports its values via `onValuesChange`
+// so the parent's sticky bar reflects the picks when the sheet is closed.
 export function PackageMobileBookingSheet({
   open,
   onClose,
@@ -22,6 +28,7 @@ export function PackageMobileBookingSheet({
   onTierChange,
   departureCity,
   onDepartureCityChange,
+  onValuesChange,
 }: PackageMobileBookingSheetProps) {
   useEffect(() => {
     if (!open) return;
@@ -37,13 +44,14 @@ export function PackageMobileBookingSheet({
     return () => window.removeEventListener("keydown", handler);
   }, [open, onClose]);
 
-  if (!open) return null;
-
   return (
     <div
-      className="fixed inset-0 z-[90] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center"
+      className={`fixed inset-0 z-[90] bg-black/50 backdrop-blur-sm items-end sm:items-center justify-center transition-opacity duration-200 ${
+        open ? "flex opacity-100" : "hidden opacity-0"
+      }`}
       role="dialog"
       aria-modal="true"
+      aria-hidden={!open}
       aria-label="Book this package"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
@@ -72,6 +80,7 @@ export function PackageMobileBookingSheet({
             onTierChange={onTierChange}
             departureCity={departureCity}
             onDepartureCityChange={onDepartureCityChange}
+            onValuesChange={onValuesChange}
           />
         </div>
       </div>
