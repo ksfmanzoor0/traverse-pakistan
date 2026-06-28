@@ -979,21 +979,34 @@ export function CostCalculator({
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>
-                  Jeep legs {engineInputs.jeepLegs.length > 0 && <span className="text-xs font-normal" style={{ color: "var(--text-tertiary)" }}>· jeep required</span>}
-                </span>
-                <button
-                  type="button"
-                  onClick={addJeepLeg}
-                  className="text-xs rounded px-2 py-1 border"
-                  style={{ borderColor: "var(--border-default)", color: "var(--text-primary)" }}
-                >
-                  + Add jeep ride
-                </button>
+                <label className="text-sm font-semibold flex items-center gap-2 cursor-pointer" style={{ color: "var(--text-secondary)" }}>
+                  <input
+                    type="checkbox"
+                    checked={engineInputs.jeepLegs.length > 0}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        // First-time toggle on: add an empty leg row so operator can start editing.
+                        if (engineInputs.jeepLegs.length === 0) addJeepLeg();
+                      } else {
+                        // Toggle off: clear all legs from the package draft.
+                        setEngineInputs((s) => ({ ...s, jeepLegs: [] }));
+                        setEngineInputsDirty(true);
+                      }
+                    }}
+                  />
+                  Jeep required
+                </label>
+                {engineInputs.jeepLegs.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={addJeepLeg}
+                    className="text-xs rounded px-2 py-1 border"
+                    style={{ borderColor: "var(--border-default)", color: "var(--text-primary)" }}
+                  >
+                    + Add jeep ride
+                  </button>
+                )}
               </div>
-              {engineInputs.jeepLegs.length === 0 && (
-                <div className="text-xs" style={{ color: "var(--text-tertiary)" }}>No jeep legs configured. Click &ldquo;Add jeep ride&rdquo; — type any route name or pick a known one.</div>
-              )}
               <datalist id="known-jeep-leg-names">
                 {knownJeepLegs.map((l) => <option key={l.name} value={l.name} />)}
               </datalist>
