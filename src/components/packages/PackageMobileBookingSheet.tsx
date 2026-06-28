@@ -12,7 +12,14 @@ interface PackageMobileBookingSheetProps {
   onTierChange: (tier: PackageTier) => void;
   departureCity: "islamabad" | "lahore" | "karachi";
   onDepartureCityChange: (city: "islamabad" | "lahore" | "karachi") => void;
-  onValuesChange?: (s: { adults: number; rooms: number; checkIn: Date | null }) => void;
+  onValuesChange?: (s: {
+    adults: number;
+    rooms: number;
+    checkIn: Date | null;
+    pricePerPerson: number;
+    total: number;
+    engineDriven: boolean;
+  }) => void;
 }
 
 // Sheet stays mounted across open/close cycles — closing only hides the layer

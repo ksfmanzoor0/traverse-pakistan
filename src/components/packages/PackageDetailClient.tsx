@@ -29,15 +29,28 @@ export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages
   );
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   // Picks emitted from the sidebar (rendered inside the mobile sheet) so the
-  // sticky bar can mirror the chosen adults/rooms/check-in even when closed.
-  const [sheetValues, setSheetValues] = useState<{ adults: number; rooms: number; checkIn: Date | null }>({
-    adults: 2,
-    rooms: 1,
-    checkIn: null,
-  });
-  const handleValuesChange = useCallback((s: { adults: number; rooms: number; checkIn: Date | null }) => {
+  // sticky bar can mirror the chosen adults/rooms/check-in AND the live price
+  // even when the sheet is closed.
+  const [sheetValues, setSheetValues] = useState<{
+    adults: number;
+    rooms: number;
+    checkIn: Date | null;
+    pricePerPerson: number;
+    total: number;
+    engineDriven: boolean;
+  }>({ adults: 2, rooms: 1, checkIn: null, pricePerPerson: 0, total: 0, engineDriven: false });
+  const handleValuesChange = useCallback((s: {
+    adults: number;
+    rooms: number;
+    checkIn: Date | null;
+    pricePerPerson: number;
+    total: number;
+    engineDriven: boolean;
+  }) => {
     setSheetValues((prev) => (
-      prev.adults === s.adults && prev.rooms === s.rooms && prev.checkIn === s.checkIn ? prev : s
+      prev.adults === s.adults && prev.rooms === s.rooms && prev.checkIn === s.checkIn &&
+      prev.pricePerPerson === s.pricePerPerson && prev.total === s.total && prev.engineDriven === s.engineDriven
+        ? prev : s
     ));
   }, []);
 
@@ -239,9 +252,13 @@ export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages
         <div className="fixed bottom-0 left-0 right-0 lg:hidden z-40 bg-[var(--bg-primary)] border-t border-[var(--border-default)] px-5 py-3 flex items-center justify-between">
           <div className="flex flex-col">
             <div>
-              <span className="text-[11px] uppercase tracking-wider text-[var(--text-tertiary)] mr-1">From</span>
+              {!sheetValues.engineDriven && <span className="text-[11px] uppercase tracking-wider text-[var(--text-tertiary)] mr-1">From</span>}
               <span className="text-lg font-bold text-[var(--text-primary)]">
-                {formatPrice(pkg.tiers[selectedTier][departureCity] ?? pkg.tiers[selectedTier].islamabad ?? pkg.tiers[selectedTier].lahore ?? 0)}
+                {formatPrice(
+                  sheetValues.engineDriven
+                    ? sheetValues.pricePerPerson
+                    : pkg.tiers[selectedTier][departureCity] ?? pkg.tiers[selectedTier].islamabad ?? pkg.tiers[selectedTier].lahore ?? 0
+                )}
               </span>
               <span className="text-[13px] text-[var(--text-tertiary)] ml-1">per person</span>
             </div>

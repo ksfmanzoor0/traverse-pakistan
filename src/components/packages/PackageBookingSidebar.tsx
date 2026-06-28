@@ -147,10 +147,18 @@ interface PackageBookingSidebarProps {
   onTierChange: (tier: PackageTier) => void;
   departureCity: DepartureCityOption;
   onDepartureCityChange: (city: DepartureCityOption) => void;
-  // Optional reporter — emits the resolved adults/rooms/checkIn upward so a
-  // parent can mirror the picked values (e.g. on a mobile sticky bar) without
-  // owning the inputs.
-  onValuesChange?: (s: { adults: number; rooms: number; checkIn: Date | null }) => void;
+  // Optional reporter — emits the resolved booking values + live price
+  // upward so a parent can mirror picks (e.g. on a mobile sticky bar) without
+  // owning the inputs. `engineDriven` is true once an engine quote has
+  // resolved; while false the prices reflect the static tier rate fallback.
+  onValuesChange?: (s: {
+    adults: number;
+    rooms: number;
+    checkIn: Date | null;
+    pricePerPerson: number;
+    total: number;
+    engineDriven: boolean;
+  }) => void;
 }
 
 export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departureCity, onDepartureCityChange, onValuesChange }: PackageBookingSidebarProps) {
@@ -178,13 +186,6 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
   // naturalRooms > adults, but the floor can never exceed the party size.
   const safeNaturalRooms = Math.min(naturalRooms, adults);
   const displayRooms = Math.min(rooms ?? safeNaturalRooms, adults);
-
-  // Report resolved adults/rooms/checkIn upward so a parent (e.g. the mobile
-  // sticky bar) can reflect picked values when the sheet is closed. Ref-stable
-  // dispatch — the parent supplies a stable callback or we'd loop.
-  useEffect(() => {
-    onValuesChange?.({ adults, rooms: displayRooms, checkIn });
-  }, [adults, displayRooms, checkIn, onValuesChange]);
 
   const calWrapRef = useRef<HTMLDivElement>(null);
 
@@ -327,6 +328,19 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
 
   const pricePerPerson = engineQuote?.perPerson ?? staticPerPerson;
   const totalPrice = engineQuote?.total ?? staticTotal;
+
+  // Report resolved values + live price upward so a parent (e.g. the mobile
+  // sticky bar) can mirror picks even when the sheet is closed.
+  useEffect(() => {
+    onValuesChange?.({
+      adults,
+      rooms: displayRooms,
+      checkIn,
+      pricePerPerson,
+      total: totalPrice,
+      engineDriven: engineQuote !== null,
+    });
+  }, [adults, displayRooms, checkIn, pricePerPerson, totalPrice, engineQuote, onValuesChange]);
 
   const dateLabel = checkIn && checkOut
     ? `${formatDateShort(checkIn)} → ${formatDateShort(checkOut)}`
