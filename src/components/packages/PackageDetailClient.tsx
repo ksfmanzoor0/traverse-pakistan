@@ -8,10 +8,10 @@ import { Icon } from "@/components/ui/Icon";
 import { StarRating } from "@/components/ui/StarRating";
 import { MosaicGallery } from "@/components/trip-detail/MosaicGallery";
 import { PackageBookingSidebar } from "@/components/packages/PackageBookingSidebar";
+import { PackageMobileBookingSheet } from "@/components/packages/PackageMobileBookingSheet";
 import { PackageItineraryAccordion } from "@/components/packages/PackageItineraryAccordion";
 import { PackageCard } from "@/components/packages/PackageCard";
 import { formatPrice } from "@/lib/utils";
-import Link from "next/link";
 import type { Package, PackageItinerary, PackageTier } from "@/types/package";
 import type { Hotel } from "@/types/hotel";
 
@@ -27,6 +27,7 @@ export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages
   const [departureCity, setDepartureCity] = useState<"islamabad" | "lahore" | "karachi">(
     pkg.tiers.deluxe.islamabad !== null ? "islamabad" : pkg.tiers.deluxe.lahore !== null ? "lahore" : "karachi"
   );
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
 
   return (
     <div className="pt-0 sm:pt-6 pb-24 sm:pb-8">
@@ -225,18 +226,30 @@ export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages
         {/* Mobile sticky bar */}
         <div className="fixed bottom-0 left-0 right-0 lg:hidden z-40 bg-[var(--bg-primary)] border-t border-[var(--border-default)] px-5 py-3 flex items-center justify-between">
           <div>
+            <span className="text-[11px] uppercase tracking-wider text-[var(--text-tertiary)] mr-1">From</span>
             <span className="text-lg font-bold text-[var(--text-primary)]">
               {formatPrice(pkg.tiers[selectedTier][departureCity] ?? pkg.tiers[selectedTier].islamabad ?? pkg.tiers[selectedTier].lahore ?? 0)}
             </span>
             <span className="text-[13px] text-[var(--text-tertiary)] ml-1">per person</span>
           </div>
-          <Link
-            href={`/packages/${pkg.slug}/checkout?adults=2&rooms=1&tier=${selectedTier}&city=${departureCity}`}
-            className="h-11 px-6 bg-[var(--primary)] text-[var(--text-inverse)] text-[14px] font-semibold rounded-full flex items-center justify-center hover:bg-[var(--primary-hover)] transition-colors"
+          <button
+            type="button"
+            onClick={() => setMobileSheetOpen(true)}
+            className="h-11 px-6 bg-[var(--primary)] text-[var(--text-inverse)] text-[14px] font-semibold rounded-full flex items-center justify-center hover:bg-[var(--primary-hover)] transition-colors cursor-pointer"
           >
             Book Now
-          </Link>
+          </button>
         </div>
+
+        <PackageMobileBookingSheet
+          open={mobileSheetOpen}
+          onClose={() => setMobileSheetOpen(false)}
+          pkg={pkg}
+          selectedTier={selectedTier}
+          onTierChange={setSelectedTier}
+          departureCity={departureCity}
+          onDepartureCityChange={setDepartureCity}
+        />
 
         {/* Related packages */}
         {relatedPackages.length > 0 && (
