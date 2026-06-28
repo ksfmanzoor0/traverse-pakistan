@@ -133,8 +133,6 @@ async function computeQuote(args: {
     };
   }
   const baseDistance = pkg.total_distance_km;
-  const extensionKm = startingCities.includes("ISB") && args.home === "LHE" ? LHE_EXTENSION_KM : 0;
-  const totalDistanceKm = baseDistance + extensionKm;
   const pax = Math.max(1, Math.floor(args.pax));
 
   const [flightQuote, hotelQuote, vehicles, engineConfig] = await Promise.all([
@@ -143,6 +141,16 @@ async function computeQuote(args: {
     listVehicleTypes(),
     getEngineConfig(),
   ]);
+
+  // LHE 800km road extension applies only when LHE drives (not flies). A
+  // required flight addon for LHE means LHE flies to the canonical departure
+  // (e.g. KDU on Skardu fly-ins, KHI on Gwadar) and adding road km would be
+  // a double-charge. `starting_cities` now contains ISB on KDU/KHI-canonical
+  // packages too (search visibility), so the old check
+  // `startingCities.includes("ISB") && args.home === "LHE"` would over-apply.
+  const lheFliesIn = args.home === "LHE" && ((flightQuote?.addons.filter((a) => a.isRequired).length ?? 0) > 0);
+  const extensionKm = !lheFliesIn && startingCities.includes("ISB") && args.home === "LHE" ? LHE_EXTENSION_KM : 0;
+  const totalDistanceKm = baseDistance + extensionKm;
 
   // Room count reported back to the UI: max rooms used on any night becomes the
   // floor the - button enforces. Per-night allocations can vary if a package
