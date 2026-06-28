@@ -203,23 +203,15 @@ export async function quotePackageAddons(args: QuoteArgs): Promise<PackageQuote 
 
   const pkg = pkgRow as { slug: string; duration: number; starting_cities: string[] };
   const startingCities = pkg.starting_cities ?? [];
-  const homeInStartingCities = startingCities.includes(args.homeCity);
 
-  // If the traveler is already in a starting city, no join transport needed.
-  if (homeInStartingCities) {
-    return {
-      packageSlug: args.packageSlug,
-      homeCity: args.homeCity,
-      startDate: args.startDate,
-      duration: pkg.duration,
-      startingCities,
-      homeInStartingCities: true,
-      addonCostPerPerson: 0,
-      addons: [],
-      unresolvedLegs: [],
-    };
-  }
-
+  // Trust the addons table as the source of truth for "does this traveler
+  // need extra transport." We used to bail early when `starting_cities`
+  // contained the home — but that was wrong once we expanded a KDU package's
+  // `starting_cities` to include ISB/LHE/KHI for search visibility. The
+  // canonical "no flight needed" set lives in `package_addons.applies_to_
+  // departures` (e.g. KDU package addon applies to ISB/LHE/KHI but NOT KDU).
+  // `homeInStartingCities` is now derived after addon resolution: true iff
+  // no required addons fire for this home.
   const { data: addonRows, error: addonErr } = await supabase
     .from("package_addons")
     .select("*")
@@ -255,6 +247,9 @@ export async function quotePackageAddons(args: QuoteArgs): Promise<PackageQuote 
   // For each group_key, the engine picks the cheapest required add-on (or
   // first if all optional). Today every group has 1 add-on, so no contest.
   const totalPerPerson = resolved.filter((a) => a.isRequired).reduce((s, a) => s + a.perPerson, 0);
+  // "Local departure" semantics: no required addons fire — traveler doesn't
+  // need any extra transport to reach the package's start point.
+  const noJoinTransport = resolved.filter((a) => a.isRequired).length === 0;
 
   return {
     packageSlug: args.packageSlug,
@@ -262,7 +257,7 @@ export async function quotePackageAddons(args: QuoteArgs): Promise<PackageQuote 
     startDate: args.startDate,
     duration: pkg.duration,
     startingCities,
-    homeInStartingCities: false,
+    homeInStartingCities: noJoinTransport,
     addonCostPerPerson: totalPerPerson,
     addons: resolved,
     unresolvedLegs: unresolved,

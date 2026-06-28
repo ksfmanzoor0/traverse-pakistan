@@ -103,14 +103,18 @@ export async function GET(req: Request) {
   // fly-in (KDU) and KHI-canonical packages do not get the extension.
   const LHE_EXTENSION_KM = 800;
   const baseDistance = row.total_distance_km ?? 0;
-  const extensionKm = startingCities.includes("ISB") && home === "LHE" ? LHE_EXTENSION_KM : 0;
-  const totalDistanceKm = baseDistance + extensionKm;
 
   const [flightQuote, hotelQuote, hotelsForBothTiers] = await Promise.all([
     quotePackageAddons({ packageSlug: slug, homeCity: home, startDate }),
     quotePackageHotels({ packageSlug: slug, tier, people, startDate, homeCity: home }),
     loadPackageHotelTiers(slug),
   ]);
+
+  // LHE road extension only applies when LHE drives. A required flight addon
+  // for LHE means it flies to the canonical departure city — no extra km.
+  const lheFliesIn = home === "LHE" && ((flightQuote?.addons.filter((a) => a.isRequired).length ?? 0) > 0);
+  const extensionKm = !lheFliesIn && startingCities.includes("ISB") && home === "LHE" ? LHE_EXTENSION_KM : 0;
+  const totalDistanceKm = baseDistance + extensionKm;
 
   return NextResponse.json({
     slug: row.slug,
