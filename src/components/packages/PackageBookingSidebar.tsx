@@ -376,13 +376,15 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
           </div>
         </div>
 
-        {/* Departure City */}
-        {(pricing.lahore !== null || pricing.karachi !== null) && (
+        {/* Departure City — show whenever any bookable city exists so the
+            single-origin case still surfaces the city as a label (1-button
+            picker), and multi-city cases get the full selector. */}
+        {(pricing.islamabad != null || pricing.lahore != null || pricing.karachi != null) && (
           <div className="mb-5">
             <label className="text-[12px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)] block mb-2">Starting Location</label>
             <div className={`grid gap-2 ${pricing.karachi ? "grid-cols-3" : "grid-cols-2"}`}>
               {(["islamabad", "lahore", "karachi"] as DepartureCityOption[])
-                .filter((city) => pricing[city] !== null)
+                .filter((city) => pricing[city] != null)
                 .map((city) => (
                   <button key={city} type="button" onClick={() => onDepartureCityChange(city)}
                     className={`h-11 rounded-[var(--radius-sm)] text-[13px] font-semibold border transition-colors cursor-pointer capitalize ${
