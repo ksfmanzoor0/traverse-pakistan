@@ -226,6 +226,9 @@ export type PackageRow = {
   entries_per_person: number;
   jeep_legs: Array<{ name: string; costPerJeep: number; capacity: number }>;
   destination_rank: Record<string, number>;
+  fuel_price_per_litre: number | null;
+  profit_percentage: number | null;
+  guide_per_day: number | null;
   published: boolean;
   meta_title: string | null;
   meta_description: string | null;

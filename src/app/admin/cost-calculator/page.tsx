@@ -92,7 +92,7 @@ async function loadPickerPackages(): Promise<PackagePickerEntry[]> {
   // NCP-Prado treatment in the engine, road packages run the normal picker.
   const { data, error } = await supabase
     .from("packages")
-    .select("slug, name, duration, starting_cities, meals_per_person, entries_per_person, jeep_legs")
+    .select("slug, name, duration, starting_cities, meals_per_person, entries_per_person, jeep_legs, total_distance_km, fuel_price_per_litre, profit_percentage, guide_per_day")
     .eq("published", true)
     .order("name");
   if (error) throw new Error(`loadPickerPackages: ${error.message}`);
@@ -104,6 +104,10 @@ async function loadPickerPackages(): Promise<PackagePickerEntry[]> {
     meals_per_person: number | null;
     entries_per_person: number | null;
     jeep_legs: Array<{ name: string; costPerJeep: number; capacity: number }> | null;
+    total_distance_km: number | null;
+    fuel_price_per_litre: number | null;
+    profit_percentage: number | null;
+    guide_per_day: number | null;
   }>).map((r) => ({
     slug: r.slug,
     name: r.name,
@@ -112,6 +116,10 @@ async function loadPickerPackages(): Promise<PackagePickerEntry[]> {
     mealsPerPerson: r.meals_per_person ?? 0,
     entriesPerPerson: r.entries_per_person ?? 0,
     jeepLegs: r.jeep_legs ?? [],
+    totalDistanceKm: r.total_distance_km,
+    fuelPricePerLitre: r.fuel_price_per_litre,
+    profitPercentage: r.profit_percentage,
+    guidePerDay: r.guide_per_day,
   }));
 }
 

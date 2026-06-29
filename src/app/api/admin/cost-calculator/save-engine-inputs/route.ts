@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/admin/guard";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { repriceAllPackages } from "@/services/package-quote.service";
+import { repricePackageBySlug } from "@/services/package-quote.service";
 
 interface JeepLeg {
   name: string;
@@ -28,13 +28,16 @@ function sanitizeJeepLegs(input: unknown): JeepLeg[] | { error: string } {
 }
 
 /**
- * POST writes engine-input columns (`meals_per_person`, `entries_per_person`,
- * `jeep_legs`) for a single package, busts the listings + sidebar caches,
- * and kicks off a full reprice so `packages.pricing` reflects the new inputs
- * immediately rather than waiting for the next nightly cron run.
+ * POST writes per-package engine inputs (`meals_per_person`, `entries_per_person`,
+ * `jeep_legs`, `total_distance_km`, `fuel_price_per_litre`, `profit_percentage`,
+ * `guide_per_day`) for a single package, then reprices ONLY that package so
+ * `packages.pricing` reflects the new inputs immediately. Per-package overrides
+ * have no cross-package effect, so a full-catalog reprice would be wasted work.
  *
- * Body: { slug, meals_per_person?, entries_per_person?, jeep_legs? }
- * Any field omitted leaves the existing DB value untouched.
+ * Body: { slug, meals_per_person?, entries_per_person?, jeep_legs?,
+ *         total_distance_km?, fuel_price_per_litre?, profit_percentage?, guide_per_day? }
+ * Any omitted field leaves the existing DB value untouched. Pass `null`
+ * explicitly to clear an override back to the global engine_config default.
  */
 export async function POST(req: Request) {
   await requireAdmin();
@@ -43,6 +46,10 @@ export async function POST(req: Request) {
     meals_per_person?: number;
     entries_per_person?: number;
     jeep_legs?: unknown;
+    total_distance_km?: number | null;
+    fuel_price_per_litre?: number | null;
+    profit_percentage?: number | null;
+    guide_per_day?: number | null;
   } | null;
 
   if (!body?.slug) {
@@ -53,6 +60,10 @@ export async function POST(req: Request) {
     meals_per_person?: number;
     entries_per_person?: number;
     jeep_legs?: JeepLeg[];
+    total_distance_km?: number;
+    fuel_price_per_litre?: number | null;
+    profit_percentage?: number | null;
+    guide_per_day?: number | null;
   } = {};
   if (body.meals_per_person !== undefined) {
     const n = Number(body.meals_per_person);
@@ -69,6 +80,25 @@ export async function POST(req: Request) {
     if ("error" in legs) return NextResponse.json({ error: legs.error }, { status: 400 });
     patch.jeep_legs = legs;
   }
+  if (body.total_distance_km !== undefined && body.total_distance_km !== null) {
+    const n = Number(body.total_distance_km);
+    if (!Number.isFinite(n) || n <= 0) return NextResponse.json({ error: "total_distance_km must be > 0" }, { status: 400 });
+    patch.total_distance_km = Math.round(n);
+  }
+  // For the three engine-config-inheritable fields, `null` clears the override
+  // (package falls back to global engine_config); a finite number pins it.
+  for (const [bodyKey, patchKey] of [
+    ["fuel_price_per_litre", "fuel_price_per_litre"],
+    ["profit_percentage", "profit_percentage"],
+    ["guide_per_day", "guide_per_day"],
+  ] as const) {
+    const v = body[bodyKey];
+    if (v === undefined) continue;
+    if (v === null) { patch[patchKey] = null; continue; }
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < 0) return NextResponse.json({ error: `${bodyKey} must be >= 0 or null to inherit global` }, { status: 400 });
+    patch[patchKey] = n;
+  }
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: "No engine inputs supplied" }, { status: 400 });
   }
@@ -80,12 +110,9 @@ export async function POST(req: Request) {
     .eq("slug", body.slug);
   if (writeErr) return NextResponse.json({ error: writeErr.message }, { status: 500 });
 
-  // Reprice so the new inputs flow into `packages.pricing` immediately, then
-  // bust both caches. Repricing the whole catalog is cheap (bounded concurrency)
-  // and keeps engine-driven listings in sync without per-slug plumbing.
-  const summary = await repriceAllPackages();
+  const result = await repricePackageBySlug(body.slug);
   revalidateTag("packages", {});
   revalidateTag("package-quote", {});
 
-  return NextResponse.json({ slug: body.slug, applied: patch, reprice: { processed: summary.processed, failures: summary.failures.length } });
+  return NextResponse.json({ slug: body.slug, applied: patch, reprice: result });
 }

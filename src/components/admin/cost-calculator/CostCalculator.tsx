@@ -32,6 +32,12 @@ export interface PackagePickerEntry {
   mealsPerPerson: number;
   entriesPerPerson: number;
   jeepLegs: JeepLegEntry[];
+  // Per-package columns. `null` for the three inheritable fields means the
+  // package is currently using the global engine_config default.
+  totalDistanceKm: number | null;
+  fuelPricePerLitre: number | null;
+  profitPercentage: number | null;
+  guidePerDay: number | null;
 }
 
 type HomeCity = "ISB" | "LHE" | "KHI";
@@ -363,9 +369,19 @@ export function CostCalculator({
       entriesPerPerson: pickedPackage.entriesPerPerson,
       jeepLegs: pickedPackage.jeepLegs.map((l) => ({ ...l })),
     });
+    // Load per-package engine fields, inheriting global defaults when the
+    // package has no override (null). Reset on every package switch so an
+    // edited value on package A never leaks into package B.
+    setTrip((p) => ({
+      ...p,
+      totalDistanceKm: pickedPackage.totalDistanceKm ?? p.totalDistanceKm,
+      fuelPricePerLitre: pickedPackage.fuelPricePerLitre ?? (engineConfig?.fuelPricePerLitre ?? 285),
+      profitPercentage: pickedPackage.profitPercentage ?? (engineConfig?.profitPercentage ?? 20),
+      guidePerDay: pickedPackage.guidePerDay ?? (engineConfig?.guidePerDay ?? 5000),
+    }));
     setEngineInputsDirty(false);
     setEngineMessage(null);
-  }, [pickedPackage]);
+  }, [pickedPackage, engineConfig]);
 
   function updateJeepLeg(idx: number, patch: Partial<JeepLegEntry>) {
     setEngineInputs((s) => ({
@@ -401,15 +417,19 @@ export function CostCalculator({
           meals_per_person: engineInputs.mealsPerPerson,
           entries_per_person: engineInputs.entriesPerPerson,
           jeep_legs: engineInputs.jeepLegs,
+          total_distance_km: num(trip.totalDistanceKm),
+          fuel_price_per_litre: num(trip.fuelPricePerLitre),
+          profit_percentage: num(trip.profitPercentage),
+          guide_per_day: num(trip.guidePerDay),
         }),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(body.error ?? `HTTP ${res.status}`);
       }
-      const body = (await res.json()) as { reprice: { processed: number; failures: number } };
+      await res.json();
       setEngineInputsDirty(false);
-      setEngineMessage({ kind: "ok", text: `Saved. Reprice processed ${body.reprice.processed} packages (${body.reprice.failures} failed).` });
+      setEngineMessage({ kind: "ok", text: `Saved & repriced ${pickedPackage.slug}.` });
     } catch (err) {
       setEngineMessage({ kind: "err", text: (err as Error).message });
     } finally {
@@ -937,6 +957,20 @@ export function CostCalculator({
         <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>
           Trip configuration
         </h2>
+        {pickedPackage && (
+          <p className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+            Saved per-package. Fuel / Profit % / Guide rate inherit global engine defaults
+            {engineConfig
+              ? ` (${engineConfig.fuelPricePerLitre} · ${engineConfig.profitPercentage}% · ${engineConfig.guidePerDay.toLocaleString()})`
+              : ""}{" "}
+            on first edit; overrides on this package:{" "}
+            {[
+              pickedPackage.fuelPricePerLitre !== null ? "fuel" : null,
+              pickedPackage.profitPercentage !== null ? "profit" : null,
+              pickedPackage.guidePerDay !== null ? "guide" : null,
+            ].filter(Boolean).join(", ") || "none"}.
+          </p>
+        )}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <LabelledInput label="Trip name" value={trip.tripName} onChange={(v) => updateTrip("tripName", v)} />
           <LabelledInput label="Distance (km)" type="number" value={trip.totalDistanceKm} onChange={(v) => updateTrip("totalDistanceKm", num(v))} />
