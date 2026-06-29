@@ -263,7 +263,8 @@ export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages
               <span className="text-[13px] text-[var(--text-tertiary)] ml-1">per person</span>
             </div>
             <div className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
-              {sheetValues.adults} {sheetValues.adults === 1 ? "guest" : "guests"} · {sheetValues.rooms} {sheetValues.rooms === 1 ? "room" : "rooms"}
+              {sheetValues.adults} {sheetValues.adults === 1 ? "guest" : "guests"}
+              {sheetValues.rooms > 0 && ` · ${sheetValues.rooms} ${sheetValues.rooms === 1 ? "room" : "rooms"}`}
               {sheetValues.checkIn && ` · ${sheetValues.checkIn.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
             </div>
           </div>

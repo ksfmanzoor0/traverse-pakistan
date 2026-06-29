@@ -243,7 +243,9 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
   // Engine-driven price. Falls back to the static `pricing[city] × adults`
   // table while the quote is loading or if the engine endpoint errors so the
   // sidebar never shows zero.
-  const nights = pkg.duration - 1;
+  const nights = Math.max(0, pkg.duration - 1);
+  const isDayTrip = nights === 0;
+  const effectiveRooms = isDayTrip ? 0 : displayRooms;
   const extraRooms = Math.max(0, displayRooms - naturalRooms);
   const singleSupp = pricing.singleSupplement ?? 0;
   const staticPerPerson =
@@ -334,13 +336,13 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
   useEffect(() => {
     onValuesChange?.({
       adults,
-      rooms: displayRooms,
+      rooms: effectiveRooms,
       checkIn,
       pricePerPerson,
       total: totalPrice,
       engineDriven: engineQuote !== null,
     });
-  }, [adults, displayRooms, checkIn, pricePerPerson, totalPrice, engineQuote, onValuesChange]);
+  }, [adults, effectiveRooms, checkIn, pricePerPerson, totalPrice, engineQuote, onValuesChange]);
 
   const dateLabel = checkIn && checkOut
     ? `${formatDateShort(checkIn)} → ${formatDateShort(checkOut)}`
@@ -350,8 +352,12 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
     `Hi! I'd like to book the "${pkg.name}" package.\n\n` +
     `Departure: ${departureCity === "lahore" ? "Lahore" : "Islamabad"}\n` +
     `Tier: ${selectedTier === "deluxe" ? "Deluxe" : "Luxury"}\n` +
-    (checkIn && checkOut ? `Dates: ${formatDateShort(checkIn)} – ${formatDateShort(checkOut)} (${nights} nights)\n` : "") +
-    `Adults: ${adults}\nRooms: ${displayRooms}\nTotal: ${formatPrice(totalPrice)}\n\nPlease confirm availability.`;
+    (checkIn && checkOut
+      ? isDayTrip
+        ? `Date: ${formatDateShort(checkIn)} (day trip)\n`
+        : `Dates: ${formatDateShort(checkIn)} – ${formatDateShort(checkOut)} (${nights} nights)\n`
+      : "") +
+    `Adults: ${adults}\n${isDayTrip ? "" : `Rooms: ${displayRooms}\n`}Total: ${formatPrice(totalPrice)}\n\nPlease confirm availability.`;
 
   return (
     <div className="sticky top-[120px]">
@@ -447,7 +453,7 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
 
           {checkIn && checkOut && (
             <p className="mt-1.5 text-[12px] text-[var(--text-tertiary)]">
-              {nights} nights · ends {formatDateShort(checkOut)}
+              {isDayTrip ? "Day trip · returns same day" : `${nights} nights · ends ${formatDateShort(checkOut)}`}
             </p>
           )}
 
@@ -466,7 +472,9 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
                   <button type="button" onClick={clearDate} className="text-[12px] text-[var(--text-tertiary)] underline cursor-pointer hover:text-[var(--text-primary)] transition-colors">
                     Clear date
                   </button>
-                  <span className="text-[12px] font-semibold text-[var(--primary)]">{nights} night{nights !== 1 ? "s" : ""}</span>
+                  <span className="text-[12px] font-semibold text-[var(--primary)]">
+                    {isDayTrip ? "Day trip" : `${nights} night${nights !== 1 ? "s" : ""}`}
+                  </span>
                 </div>
               )}
             </div>
@@ -475,7 +483,8 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
 
         {/* Rooms & Adults */}
         <div className="mb-4 border border-[var(--border-default)] rounded-[var(--radius-sm)] overflow-hidden">
-          {/* Rooms row */}
+          {/* Rooms row — hidden on day trips (no hotel) */}
+          {!isDayTrip && (
           <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-subtle)]">
             <div>
               <p className="text-[13px] font-semibold text-[var(--text-primary)]">Rooms</p>
@@ -506,9 +515,10 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
               </button>
             </div>
           </div>
+          )}
 
           {/* Divider */}
-          <div className="h-px bg-[var(--border-default)]" />
+          {!isDayTrip && <div className="h-px bg-[var(--border-default)]" />}
 
           {/* Adults row */}
           <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-subtle)]">
