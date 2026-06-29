@@ -63,11 +63,28 @@ export async function POST(req: Request) {
   const supabase = getSupabaseAdmin();
   const { data: pkg, error: readErr } = await supabase
     .from("packages")
-    .select("pricing_override")
+    .select("pricing_override, starting_cities")
     .eq("slug", body.slug)
     .maybeSingle();
   if (readErr) return NextResponse.json({ error: readErr.message }, { status: 500 });
   if (!pkg) return NextResponse.json({ error: "Package not found" }, { status: 404 });
+
+  // Filter updates to only cities in `starting_cities`. Pinning a price for
+  // a home the package can't be booked from would re-introduce the phantom
+  // pricing the engine-skip-unreachable-homes guard exists to prevent.
+  // Empty starting_cities (legacy unseeded packages) → allow all (no guard).
+  const startingCities = ((pkg as { starting_cities?: string[] | null }).starting_cities ?? []) as string[];
+  const skipped: Home[] = [];
+  if (startingCities.length > 0) {
+    const allowed = updates.filter((u) => startingCities.includes(u.home));
+    skipped.push(...updates.filter((u) => !startingCities.includes(u.home)).map((u) => u.home));
+    updates = allowed;
+  }
+  if (updates.length === 0) {
+    return NextResponse.json({
+      error: `None of the supplied homes (${skipped.join(", ")}) are in starting_cities (${startingCities.join(", ")}). Override not saved.`,
+    }, { status: 400 });
+  }
 
   const override = (pkg.pricing_override as Record<string, Record<string, number | null>> | null) ?? {};
   const previousByCity: Record<string, number | null> = {};
@@ -94,6 +111,9 @@ export async function POST(req: Request) {
     tier: body.tier,
     updated: updates.map((u) => ({ city: HOME_TO_PRICING_KEY[u.home], value: u.value })),
     previous: previousByCity,
+    ...(skipped.length > 0
+      ? { warning: `Skipped ${skipped.join(", ")} — not in starting_cities (${startingCities.join(", ")})` }
+      : {}),
   });
 }
 
