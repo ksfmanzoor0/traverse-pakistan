@@ -109,6 +109,30 @@ async function computeQuote(args: {
 
   const startingCities = pkg.starting_cities ?? [];
   const ncpEligible = startingCities.includes("KDU") || startingCities.includes("GIL");
+
+  // Refuse to quote when the requested home isn't in starting_cities. This
+  // prevents reprice from writing phantom prices into pricing.tier.home for
+  // home cities the package can't actually be booked from — e.g. an ISB
+  // price on a KHI-only day trip. Existing rows aren't deleted by this
+  // (reprice only writes/overwrites — never deletes keys) — a one-time SQL
+  // cleanup strips current phantoms. See memory engine-skip-unreachable-homes.
+  // Empty starting_cities (legacy unseeded packages) keeps the prior behavior.
+  if (startingCities.length > 0 && !startingCities.includes(args.home)) {
+    return {
+      slug: pkg.slug,
+      duration: pkg.duration,
+      nights: Math.max(1, pkg.duration - 1),
+      tier: args.tier,
+      pax: Math.max(1, Math.floor(args.pax)),
+      home: args.home,
+      startDate: args.startDate,
+      rooms: 0,
+      total: 0,
+      perPerson: 0,
+      unresolved: [`Home ${args.home} not in starting_cities for ${pkg.slug}`],
+    };
+  }
+
   // Refuse to price when drive distance is missing or non-positive. Either
   // case collapses the fuel line to zero and silently under-prices the trip,
   // which the cron would then snapshot over the previous price. Marking it
