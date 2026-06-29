@@ -115,10 +115,10 @@ export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages
                   ))}
                 </div>
               </div>
-              {(() => { const cities = (["islamabad", "lahore", "karachi"] as const).filter(c => pkg.tiers[selectedTier][c] != null); return cities.length > 1; })() && (
+              {(() => { const cities = (["islamabad", "lahore", "karachi"] as const).filter(c => pkg.tiers[selectedTier][c] != null); return cities.length >= 1; })() && (
                 <div>
                   <p className="text-[12px] font-bold uppercase tracking-wider text-[var(--text-secondary)] mb-3">Starting Location</p>
-                  <div className={`grid gap-2 ${(["islamabad", "lahore", "karachi"] as const).filter(c => pkg.tiers[selectedTier][c] != null).length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+                  <div className={`grid gap-2 ${(["islamabad", "lahore", "karachi"] as const).filter(c => pkg.tiers[selectedTier][c] != null).length === 3 ? "grid-cols-3" : (["islamabad", "lahore", "karachi"] as const).filter(c => pkg.tiers[selectedTier][c] != null).length === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
                     {(["islamabad", "lahore", "karachi"] as const)
                       .filter((city) => pkg.tiers[selectedTier][city] != null)
                       .map((city) => (
