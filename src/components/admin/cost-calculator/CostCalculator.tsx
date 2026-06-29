@@ -1123,7 +1123,12 @@ export function CostCalculator({
           // same rule (LHE_EXTENSION_KM in package-quote.service.ts).
           const startingHasISB = (pickedPackage?.startingCities ?? []).includes("ISB");
           const lheTransportDelta = startingHasISB ? LHE_EXTENSION_KM * calc.fuelCostPerKm : 0;
-          const homes: HomeCity[] = ["ISB", "LHE", "KHI"];
+          // Only show home columns the package can actually be booked from.
+          // Empty startingCities (legacy unseeded packages) → show all 3.
+          const allowedHomes = (pickedPackage?.startingCities ?? []) as string[];
+          const homes: HomeCity[] = (["ISB", "LHE", "KHI"] as HomeCity[]).filter(
+            (h) => allowedHomes.length === 0 || allowedHomes.includes(h),
+          );
           const homeRows = homes.map((home) => {
             const flightPP = homeFlights?.[home]?.perPerson ?? 0;
             const flightRequiredHome = homeFlights?.[home]?.required ?? trip.flightRequired;
@@ -1206,7 +1211,11 @@ export function CostCalculator({
                   <button
                     type="button"
                     className="underline"
-                    onClick={() => setHomeOverride({ ISB: null, LHE: null, KHI: null })}
+                    onClick={() => setHomeOverride((p) => {
+                      const next = { ...p };
+                      for (const h of homes) next[h] = null;
+                      return next;
+                    })}
                   >
                     Reset all to engine value
                   </button>
@@ -1287,7 +1296,7 @@ export function CostCalculator({
                     >
                       {saving
                         ? "Saving…"
-                        : `Pin override · ${picker.tier} → ISB ${pkr(homeRows[0].displayPerPerson)} · LHE ${pkr(homeRows[1].displayPerPerson)} · KHI ${pkr(homeRows[2].displayPerPerson)}`}
+                        : `Pin override · ${picker.tier} → ${homeRows.map((r) => `${r.home} ${pkr(r.displayPerPerson)}`).join(" · ")}`}
                     </button>
                     <button
                       type="button"
