@@ -225,6 +225,7 @@ export type PackageRow = {
   meals_per_person: number;
   entries_per_person: number;
   jeep_legs: Array<{ name: string; costPerJeep: number; capacity: number }>;
+  destination_rank: Record<string, number>;
   published: boolean;
   meta_title: string | null;
   meta_description: string | null;
