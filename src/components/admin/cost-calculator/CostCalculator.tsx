@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { JeepLibraryManager } from "./JeepLibraryManager";
 
 // Mirrors LHE_EXTENSION_KM in src/services/package-quote.service.ts —
 // extra road km charged when home=LHE on an ISB-starting package.
@@ -977,6 +978,8 @@ export function CostCalculator({
               />
             </div>
 
+            <JeepLibraryManager legs={knownJeepLegs} onLibraryChange={setKnownJeepLegs} />
+
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-semibold flex items-center gap-2 cursor-pointer" style={{ color: "var(--text-secondary)" }}>
@@ -1210,7 +1213,7 @@ export function CostCalculator({
                 </div>
               )}
 
-              {lastQuote && (
+              {pickedPackage && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-xs" style={{ color: "var(--text-tertiary)" }}>
                     <span>Round prices to nearest:</span>
@@ -1247,9 +1250,9 @@ export function CostCalculator({
                     <button
                       type="button"
                       className="flex-1 rounded-md px-4 py-3 text-sm font-semibold bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-60"
-                      disabled={saving || !allHaveFlight}
+                      disabled={saving || !pickedPackage}
                       onClick={async () => {
-                        if (!lastQuote) return;
+                        if (!pickedPackage) return;
                         setSaving(true);
                         setSaveMessage(null);
                         try {
@@ -1260,7 +1263,7 @@ export function CostCalculator({
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
-                              slug: lastQuote.slug,
+                              slug: pickedPackage.slug,
                               tier: picker.tier,
                               prices,
                             }),
@@ -1272,7 +1275,7 @@ export function CostCalculator({
                             .join(" · ");
                           setSaveMessage({
                             kind: "ok",
-                            text: `Pinned override for ${lastQuote.slug}.${picker.tier} → ${summary}`,
+                            text: `Pinned override for ${pickedPackage.slug}.${picker.tier} → ${summary}`,
                           });
                         } catch (err) {
                           setSaveMessage({ kind: "err", text: (err as Error).message });
@@ -1293,9 +1296,9 @@ export function CostCalculator({
                         border: "1px solid var(--border-default)",
                         color: "var(--text-secondary)",
                       }}
-                      disabled={saving}
+                      disabled={saving || !pickedPackage}
                       onClick={async () => {
-                        if (!lastQuote) return;
+                        if (!pickedPackage) return;
                         setSaving(true);
                         setSaveMessage(null);
                         try {
@@ -1303,7 +1306,7 @@ export function CostCalculator({
                             method: "DELETE",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
-                              slug: lastQuote.slug,
+                              slug: pickedPackage.slug,
                               tier: picker.tier,
                             }),
                           });
@@ -1311,7 +1314,7 @@ export function CostCalculator({
                           if (!res.ok) throw new Error(json.error ?? "Clear failed");
                           setSaveMessage({
                             kind: "ok",
-                            text: `Cleared override on ${lastQuote.slug}.${picker.tier} — engine snapshot now applies.`,
+                            text: `Cleared override on ${pickedPackage.slug}.${picker.tier} — engine snapshot now applies.`,
                           });
                         } catch (err) {
                           setSaveMessage({ kind: "err", text: (err as Error).message });
