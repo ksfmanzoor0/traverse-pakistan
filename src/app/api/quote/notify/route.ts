@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { sendQuoteRequestNotification, type QuoteRequestEmailInput } from "@/lib/email/sendQuoteRequest";
+import { quoteNotifyLimiter, checkRateLimit, clientIp } from "@/lib/ratelimit";
 
 // Best-effort team notification for a new quote / custom-tour request. The
 // quote row is already persisted client-side (RLS-guarded insert); this route
@@ -7,6 +8,8 @@ import { sendQuoteRequestNotification, type QuoteRequestEmailInput } from "@/lib
 // the submitter's success state.
 export async function POST(req: Request) {
   try {
+    const rlHit = await checkRateLimit(quoteNotifyLimiter, clientIp(req));
+    if (rlHit) return rlHit;
     const body = (await req.json()) as Partial<QuoteRequestEmailInput>;
 
     // Minimal guard so the endpoint can't be trivially used to relay arbitrary
