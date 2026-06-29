@@ -1273,9 +1273,10 @@ export function CostCalculator({
                           const summary = (json.updated as Array<{ city: string; value: number }>)
                             .map((u) => `${u.city} PKR ${u.value.toLocaleString()}`)
                             .join(" · ");
+                          const warningSuffix = json.warning ? `  ⚠ ${json.warning}` : "";
                           setSaveMessage({
                             kind: "ok",
-                            text: `Pinned override for ${pickedPackage.slug}.${picker.tier} → ${summary}`,
+                            text: `Pinned override for ${pickedPackage.slug}.${picker.tier} → ${summary}${warningSuffix}`,
                           });
                         } catch (err) {
                           setSaveMessage({ kind: "err", text: (err as Error).message });
