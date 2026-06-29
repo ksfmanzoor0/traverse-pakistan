@@ -2,6 +2,7 @@ import { requireAdmin } from "@/lib/admin/guard";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { listVehicleTypes, getEngineConfig } from "@/services/vehicle.service";
 import { CostCalculator, type PackagePickerEntry, type HotelTierSummary, type PackageLinkedHotel } from "@/components/admin/cost-calculator/CostCalculator";
+import { AdminEngineActions } from "@/components/admin/cost-calculator/AdminEngineActions";
 
 async function loadAllPackageLinkedHotels(): Promise<PackageLinkedHotel[]> {
   const supabase = getSupabaseAdmin();
@@ -126,16 +127,19 @@ export default async function CostCalculatorPage() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
-          Cost Calculator
-        </h1>
-        <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-          Quote builder — transport, hotel, guide, flight. Vehicle rates managed on{" "}
-          <a href="/admin/vehicles" style={{ color: "var(--accent-primary)", textDecoration: "underline" }}>
-            /admin/vehicles
-          </a>.
-        </p>
+      <div className="flex items-start justify-between gap-6 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+            Cost Calculator
+          </h1>
+          <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
+            Quote builder — transport, hotel, guide, flight. Vehicle rates managed on{" "}
+            <a href="/admin/vehicles" style={{ color: "var(--accent-primary)", textDecoration: "underline" }}>
+              /admin/vehicles
+            </a>.
+          </p>
+        </div>
+        <AdminEngineActions />
       </div>
 
       <CostCalculator
