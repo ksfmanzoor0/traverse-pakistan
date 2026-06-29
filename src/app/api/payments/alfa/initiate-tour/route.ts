@@ -3,6 +3,7 @@ import { z } from "zod";
 import { alfaConfig } from "@/lib/alfa/config";
 import { generateAlfaHash } from "@/lib/alfa/hash";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { paymentInitiateLimiter, checkRateLimit, clientIp } from "@/lib/ratelimit";
 
 const Schema = z.object({
   bookingRef: z.string().min(1),
@@ -13,6 +14,8 @@ const INSTALLMENT_DEPOSIT_PCT = 0.2;
 
 export async function POST(req: NextRequest) {
   try {
+    const rlHit = await checkRateLimit(paymentInitiateLimiter, clientIp(req));
+    if (rlHit) return rlHit;
     const raw = await req.json();
     const parsed = Schema.safeParse(raw);
 

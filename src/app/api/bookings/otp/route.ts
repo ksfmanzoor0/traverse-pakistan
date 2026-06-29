@@ -5,6 +5,7 @@ import { getResend, FROM } from "@/lib/email/resend";
 import { otpEmailHtml, otpEmailText } from "@/lib/email/templates/otpEmail";
 import { normalizePhone } from "@/lib/auth/phone";
 import { sendOtpViaWhatsApp, isWhatsAppConfigured } from "@/lib/whatsapp/cloud";
+import { otpSendLimiter, checkRateLimit } from "@/lib/ratelimit";
 
 const sendSchema = z.object({
   identifier: z.string().min(3).max(120),
@@ -42,6 +43,13 @@ export async function POST(req: NextRequest) {
 
   const { identifier, channel } = body.data;
   const { email, phone } = splitIdentifier(identifier);
+
+  // Cap OTP sends per identifier — keyed on the destination address (not the
+  // caller's IP) since OTP-bombing the victim's phone/email is the abuse
+  // shape; attackers rotate IPs cheaply.
+  const rlKey = `${channel}:${(email ?? phone ?? identifier).toLowerCase()}`;
+  const rlHit = await checkRateLimit(otpSendLimiter, rlKey);
+  if (rlHit) return rlHit;
 
   if (channel === "whatsapp" && !isWhatsAppConfigured()) {
     return NextResponse.json(

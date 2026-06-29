@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { alfaConfig } from "@/lib/alfa/config";
 import { generateAlfaHash } from "@/lib/alfa/hash";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { paymentInitiateLimiter, checkRateLimit, clientIp } from "@/lib/ratelimit";
 interface Body {
   bookingRef: string;
 }
 
 export async function POST(req: NextRequest) {
   try {
+    const rlHit = await checkRateLimit(paymentInitiateLimiter, clientIp(req));
+    if (rlHit) return rlHit;
     const body: Body = await req.json();
     const { bookingRef } = body;
 
