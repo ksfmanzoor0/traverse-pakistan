@@ -49,6 +49,7 @@ function toPackage(row: PackageRow): Package {
     route: row.route ?? "",
     destinationSlug: row.destination_slug,
     relatedDestinationSlugs: row.related_destination_slugs ?? [],
+    destinationRank: (row.destination_rank ?? {}) as Record<string, number>,
     regionSlug: row.region_slug,
     rating: Number(row.rating),
     reviewCount: row.review_count,

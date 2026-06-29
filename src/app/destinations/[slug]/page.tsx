@@ -30,6 +30,7 @@ import {
 import { getToursByDestination } from "@/services/tour.service";
 import { getPackagesByDestination } from "@/services/package.service";
 import { getHotelsByDestination } from "@/services/hotel.service";
+import { sortByDestinationRelevance } from "@/lib/packages/sortByDestinationRelevance";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -156,7 +157,7 @@ export default async function DestinationDetailPage({ params }: Props) {
               linkHref="/packages"
             />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {allPkgs.map((pkg) => (
+              {sortByDestinationRelevance(allPkgs, dest.slug).map((pkg) => (
                 <PackageCard key={pkg.id} pkg={pkg} variant="grid" />
               ))}
             </div>
