@@ -91,7 +91,7 @@ async function computeQuote(args: {
   const supabase = getSupabaseAdmin();
   const { data: pkgRow, error } = await supabase
     .from("packages")
-    .select("slug, duration, starting_cities, total_distance_km, meals_per_person, entries_per_person, jeep_legs")
+    .select("slug, duration, starting_cities, total_distance_km, meals_per_person, entries_per_person, jeep_legs, fuel_price_per_litre, profit_percentage, guide_per_day")
     .eq("slug", args.slug)
     .maybeSingle();
   if (error) throw new Error(`quotePackage: ${error.message}`);
@@ -105,6 +105,9 @@ async function computeQuote(args: {
     meals_per_person: number | null;
     entries_per_person: number | null;
     jeep_legs: Array<{ name: string; costPerJeep: number; capacity: number }> | null;
+    fuel_price_per_litre: number | null;
+    profit_percentage: number | null;
+    guide_per_day: number | null;
   };
 
   const startingCities = pkg.starting_cities ?? [];
@@ -189,8 +192,10 @@ async function computeQuote(args: {
   const unresolved: string[] = [];
   if (!vehiclePlan) unresolved.push("Could not allocate a vehicle for the requested party size.");
 
+  const effectiveFuelPrice = pkg.fuel_price_per_litre ?? engineConfig.fuelPricePerLitre;
+  const effectiveProfitPct = pkg.profit_percentage ?? engineConfig.profitPercentage;
   const fuelCost = vehiclePlan
-    ? (totalDistanceKm / Math.max(1, vehiclePlan.kmPerLitre)) * engineConfig.fuelPricePerLitre * vehiclePlan.count
+    ? (totalDistanceKm / Math.max(1, vehiclePlan.kmPerLitre)) * effectiveFuelPrice * vehiclePlan.count
     : 0;
   const rentCost = vehiclePlan ? vehiclePlan.rentPerDay * pkg.duration * vehiclePlan.count : 0;
   const transportCost = fuelCost + rentCost;
@@ -218,7 +223,7 @@ async function computeQuote(args: {
     return sum + jeeps * leg.costPerJeep;
   }, 0);
   const subtotal = transportCost + hotelCost + flightCost + mealsCost + entriesCost + jeepCost;
-  const rawTotal = subtotal * (1 + engineConfig.profitPercentage / 100);
+  const rawTotal = subtotal * (1 + effectiveProfitPct / 100);
   // Round per-person to nearest 1k, then derive the total from it so the
   // displayed total = perPerson × pax exactly (no odd 396,666-style endings).
   const perPerson = Math.round(rawTotal / pax / 1000) * 1000;
@@ -351,6 +356,15 @@ async function repriceOnePackage(slug: string, startDate: string): Promise<Repri
  * burst-hit Supabase with all 56 in parallel while still finishing in well
  * under a minute. Returns a per-package summary the caller can show / log.
  */
+/**
+ * Reprice a single package (used by the calculator's per-package save flow).
+ * Faster + scoped — per-package overrides (fuel/profit/distance/etc.) have no
+ * cross-package effect, so a full-catalog reprice would be wasted work.
+ */
+export async function repricePackageBySlug(slug: string): Promise<RepricePackageResult> {
+  return repriceOnePackage(slug, canonicalStartDate());
+}
+
 export async function repriceAllPackages(): Promise<RepriceSummary> {
   const supabase = getSupabaseAdmin();
   const { data: pkgs, error } = await supabase.from("packages").select("slug");
