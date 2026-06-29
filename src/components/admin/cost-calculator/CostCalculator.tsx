@@ -481,8 +481,10 @@ export function CostCalculator({
     extraTransportManual: false,
   });
 
-  const updateTrip = <K extends keyof TripConfig>(field: K, value: TripConfig[K]) =>
+  const updateTrip = <K extends keyof TripConfig>(field: K, value: TripConfig[K]) => {
     setTrip((p) => ({ ...p, [field]: value }));
+    setEngineInputsDirty(true);
+  };
 
   const updateUser = <K extends keyof UserInput>(field: K, value: UserInput[K]) => {
     setUser((prev) => {
