@@ -543,6 +543,16 @@ export function SearchWidget({
   }, []);
 
   const isDestSearchPrefilled = !!selectedDest && destSearch === (destinations.find((d) => d.slug === selectedDest)?.name ?? "");
+
+  // Typing over a prefilled destination must invalidate the prior selection,
+  // otherwise Search re-submits the stale slug and the page appears "stuck".
+  const handleDestSearchChange = (value: string) => {
+    setDestSearch(value);
+    if (selectedDest) {
+      const prefilled = destinations.find((d) => d.slug === selectedDest)?.name ?? "";
+      if (value !== prefilled) setSelectedDest(null);
+    }
+  };
   const PINNED = ["hunza", "skardu", "chitral", "naran", "kumrat", "lahore"];
   const parentDests = destinations
     .filter((d) => !d.parentSlug)
@@ -614,11 +624,25 @@ export function SearchWidget({
     }
   }
 
+  // Disable Search until the user has committed to *something*. Otherwise the
+  // button silently fires a no-op navigation, which feels broken.
+  const canSearch = !!selectedDest || !!destSearch.trim() || !!startDate;
+
   const handleSearch = () => {
+    // Auto-pick the top filtered destination if the user typed but never
+    // clicked a dropdown option — matches Google-style "Enter on top result".
+    let effectiveDest = selectedDest;
+    if (!effectiveDest && destSearch.trim() && filteredDests.length > 0) {
+      effectiveDest = filteredDests[0].slug;
+      setSelectedDest(effectiveDest);
+      setDestSearch(filteredDests[0].name);
+    }
+
     const params = new URLSearchParams();
-    if (selectedDest) {
-      const dest = destinations.find((d) => d.slug === selectedDest);
-      params.set("destination", dest?.parentSlug ?? selectedDest);
+    if (effectiveDest) {
+      // Keep the exact slug the user picked. Each listing page resolves
+      // sub → parent itself so it can rank exact matches above siblings.
+      params.set("destination", effectiveDest);
     }
     if (startDate) params.set("checkin", startDate.toISOString().split("T")[0]);
     if (endDate) params.set("checkout", endDate.toISOString().split("T")[0]);
@@ -626,9 +650,10 @@ export function SearchWidget({
 
     if (mode === "filter") {
       const tabPath = activeTab === "hotels" ? "/hotels" : activeTab === "grouptours" ? "/grouptours" : "/packages";
-      router.push(`${tabPath}${params.toString() ? `?${params.toString()}` : ""}`);
+      const target = `${tabPath}${params.toString() ? `?${params.toString()}` : ""}`;
+      router.push(target);
       onFilter?.({
-        destination: selectedDest ?? "",
+        destination: effectiveDest ?? "",
         checkin: startDate?.toISOString().split("T")[0] ?? "",
         checkout: endDate?.toISOString().split("T")[0] ?? "",
         guests: String(travelers.adults + travelers.children),
@@ -655,7 +680,14 @@ export function SearchWidget({
           <button
             key={tab.id}
             type="button"
-            onClick={() => { setActiveTab(tab.id); setActiveField("destination"); }}
+            onClick={() => {
+              setActiveTab(tab.id);
+              setActiveField("destination");
+              // Activating destination shows the input bound to destSearch,
+              // which is empty after a prior pick — mirror selectedDest's
+              // name in so the field doesn't look empty after a tab switch.
+              if (selectedDestName && !destSearch) setDestSearch(selectedDestName);
+            }}
             className={cn(
               "px-5 py-2.5 text-[14px] font-semibold rounded-[var(--radius-full)] transition-all duration-200 cursor-pointer",
               activeTab === tab.id
@@ -686,7 +718,7 @@ export function SearchWidget({
           {activeTab === "packages" && (
             <>
               <DestinationField value={selectedDestName} active={activeField === "destination"}
-                destSearch={destSearch} onDestSearchChange={setDestSearch} className={mode === "navigate" ? "w-[295px] shrink-0" : "flex-1"}
+                destSearch={destSearch} onDestSearchChange={handleDestSearchChange} className={mode === "navigate" ? "w-[295px] shrink-0" : "flex-1"}
                 onActivate={() => setActiveField(activeField === "destination" ? null : "destination")}
                 onClear={() => { setSelectedDest(null); setDestSearch(""); setActiveField("destination"); }} />
               <Divider className={mode === "navigate" ? "mx-1" : ""} faded={activeField === "destination" || activeField === "when"} />
@@ -704,9 +736,10 @@ export function SearchWidget({
                   placeholder="Add guests" active={activeField === "travelers"} className="relative z-10 flex-1" noActiveBg
                   onClick={() => setActiveField(activeField === "travelers" ? null : "travelers")}
                   onClear={() => setTravelers({ adults: 0, children: 0, infants: 0 })} />
-                <button type="button" onClick={handleSearch}
+                <button type="button" onClick={handleSearch} disabled={!canSearch}
                   className={cn(
-                    "relative z-10 shrink-0 bg-[var(--primary)] rounded-full flex items-center justify-center text-[var(--text-inverse)] hover:bg-[var(--primary-hover)] active:scale-95 transition-all duration-200 cursor-pointer",
+                    "relative z-10 shrink-0 bg-[var(--primary)] rounded-full flex items-center justify-center text-[var(--text-inverse)] active:scale-95 transition-all duration-200",
+                    canSearch ? "cursor-pointer hover:bg-[var(--primary-hover)]" : "cursor-not-allowed opacity-50",
                     mode === "filter" ? "gap-1.5 px-4 h-12 self-center mr-1.5" : "self-center w-14 h-14 mr-2"
                   )}
                   style={{ boxShadow: "var(--shadow-sm)" }} aria-label="Search">
@@ -723,7 +756,7 @@ export function SearchWidget({
           {activeTab === "grouptours" && (
             <>
               <DestinationField value={selectedDestName} active={activeField === "destination"}
-                destSearch={destSearch} onDestSearchChange={setDestSearch} className={mode === "navigate" ? "w-[295px] shrink-0" : "flex-1"}
+                destSearch={destSearch} onDestSearchChange={handleDestSearchChange} className={mode === "navigate" ? "w-[295px] shrink-0" : "flex-1"}
                 onActivate={() => setActiveField(activeField === "destination" ? null : "destination")}
                 onClear={() => { setSelectedDest(null); setDestSearch(""); setActiveField("destination"); }} />
               <Divider className={mode === "navigate" ? "mx-1" : ""} faded={activeField === "destination" || activeField === "month"} />
@@ -741,9 +774,10 @@ export function SearchWidget({
                   placeholder="Add guests" active={activeField === "groupsize"} className="relative z-10 flex-1" noActiveBg
                   onClick={() => setActiveField(activeField === "groupsize" ? null : "groupsize")}
                   onClear={() => setTravelers({ adults: 0, children: 0, infants: 0 })} />
-                <button type="button" onClick={handleSearch}
+                <button type="button" onClick={handleSearch} disabled={!canSearch}
                   className={cn(
-                    "relative z-10 shrink-0 bg-[var(--primary)] rounded-full flex items-center justify-center text-[var(--text-inverse)] hover:bg-[var(--primary-hover)] active:scale-95 transition-all duration-200 cursor-pointer",
+                    "relative z-10 shrink-0 bg-[var(--primary)] rounded-full flex items-center justify-center text-[var(--text-inverse)] active:scale-95 transition-all duration-200",
+                    canSearch ? "cursor-pointer hover:bg-[var(--primary-hover)]" : "cursor-not-allowed opacity-50",
                     mode === "filter" ? "gap-1.5 px-4 h-12 self-center mr-1.5" : "self-center w-14 h-14 mr-2"
                   )}
                   style={{ boxShadow: "var(--shadow-sm)" }} aria-label="Search">
@@ -760,7 +794,7 @@ export function SearchWidget({
           {activeTab === "hotels" && (
             <>
               <DestinationField value={selectedDestName} active={activeField === "destination"}
-                destSearch={destSearch} onDestSearchChange={setDestSearch} className={mode === "navigate" ? "w-[295px] shrink-0" : "flex-1"}
+                destSearch={destSearch} onDestSearchChange={handleDestSearchChange} className={mode === "navigate" ? "w-[295px] shrink-0" : "flex-1"}
                 onActivate={() => setActiveField(activeField === "destination" ? null : "destination")}
                 onClear={() => { setSelectedDest(null); setDestSearch(""); setActiveField("destination"); }} />
               <Divider className={mode === "navigate" ? "mx-1" : ""} faded={activeField === "destination" || activeField === "checkin" || activeField === "checkout"} />
@@ -778,9 +812,10 @@ export function SearchWidget({
                   placeholder="Add guests" active={activeField === "guests"} className="relative z-10 flex-1" noActiveBg
                   onClick={() => setActiveField(activeField === "guests" ? null : "guests")}
                   onClear={() => setTravelers({ adults: 0, children: 0, infants: 0 })} />
-                <button type="button" onClick={handleSearch}
+                <button type="button" onClick={handleSearch} disabled={!canSearch}
                   className={cn(
-                    "relative z-10 shrink-0 bg-[var(--primary)] rounded-full flex items-center justify-center text-[var(--text-inverse)] hover:bg-[var(--primary-hover)] active:scale-95 transition-all duration-200 cursor-pointer",
+                    "relative z-10 shrink-0 bg-[var(--primary)] rounded-full flex items-center justify-center text-[var(--text-inverse)] active:scale-95 transition-all duration-200",
+                    canSearch ? "cursor-pointer hover:bg-[var(--primary-hover)]" : "cursor-not-allowed opacity-50",
                     mode === "filter" ? "gap-1.5 px-4 h-12 self-center mr-1.5" : "self-center w-14 h-14 mr-2"
                   )}
                   style={{ boxShadow: "var(--shadow-sm)" }} aria-label="Search">
@@ -916,7 +951,7 @@ export function SearchWidget({
 }
 
 /* ── Sub-components ── */
-function FieldButton({ label, value, placeholder, active, onClick, onClear, className, noActiveBg }: {
+export function FieldButton({ label, value, placeholder, active, onClick, onClear, className, noActiveBg }: {
   label: string; value?: string; placeholder: string; active: boolean; onClick: () => void; onClear?: () => void; className?: string; noActiveBg?: boolean;
 }) {
   return (
@@ -956,7 +991,7 @@ function FieldButton({ label, value, placeholder, active, onClick, onClear, clas
   );
 }
 
-function DropdownPanel({ children, className, centerX = false }: { children: React.ReactNode; className?: string; centerX?: boolean }) {
+export function DropdownPanel({ children, className, centerX = false }: { children: React.ReactNode; className?: string; centerX?: boolean }) {
   const x = centerX ? "-50%" : 0;
   return (
     <motion.div
@@ -974,7 +1009,7 @@ function DropdownPanel({ children, className, centerX = false }: { children: Rea
   );
 }
 
-function StepperButton({ children, onClick, disabled }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; }) {
+export function StepperButton({ children, onClick, disabled }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; }) {
   return (
     <button type="button" onClick={onClick} disabled={disabled}
       className={cn(
@@ -988,7 +1023,7 @@ function StepperButton({ children, onClick, disabled }: { children: React.ReactN
   );
 }
 
-function DestinationField({ value, active, destSearch, onDestSearchChange, onActivate, onClear, className }: {
+export function DestinationField({ value, active, destSearch, onDestSearchChange, onActivate, onClear, className }: {
   value?: string; active: boolean; destSearch: string;
   onDestSearchChange: (v: string) => void; onActivate: () => void; onClear?: () => void; className?: string;
 }) {
@@ -1044,7 +1079,7 @@ function DestinationField({ value, active, destSearch, onDestSearchChange, onAct
   );
 }
 
-function Divider({ className, faded }: { className?: string; faded?: boolean }) {
+export function Divider({ className, faded }: { className?: string; faded?: boolean }) {
   return (
     <div className={cn(
       "w-px h-6 bg-[var(--border-default)]/60 shrink-0 self-center transition-opacity duration-200",

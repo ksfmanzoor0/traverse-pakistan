@@ -22,6 +22,22 @@ function shuffleGallery(slug: string, images: Package["images"]): Package["image
   return result;
 }
 
+type PricingLeaves = Record<string, Record<string, number | null | undefined>>;
+
+/** Merge engine snapshot (`pricing`) with operator pin (`pricing_override`) per
+ *  leaf. Override wins where set; snapshot fills the rest. Sibling keys like
+ *  `singleSupplement` come from snapshot unless an override carries one too. */
+function mergePricing(snapshot: unknown, override: unknown): unknown {
+  const snap = (snapshot ?? {}) as PricingLeaves;
+  const over = (override ?? {}) as PricingLeaves;
+  const tiers = new Set([...Object.keys(snap), ...Object.keys(over)]);
+  const out: PricingLeaves = {};
+  for (const tier of tiers) {
+    out[tier] = { ...(snap[tier] ?? {}), ...(over[tier] ?? {}) };
+  }
+  return out;
+}
+
 function toPackage(row: PackageRow): Package {
   return {
     id: row.id,
@@ -33,6 +49,7 @@ function toPackage(row: PackageRow): Package {
     route: row.route ?? "",
     destinationSlug: row.destination_slug,
     relatedDestinationSlugs: row.related_destination_slugs ?? [],
+    destinationRank: (row.destination_rank ?? {}) as Record<string, number>,
     regionSlug: row.region_slug,
     rating: Number(row.rating),
     reviewCount: row.review_count,
@@ -45,7 +62,7 @@ function toPackage(row: PackageRow): Package {
     inclusions: row.inclusions ?? [],
     exclusions: row.exclusions ?? [],
     knowBeforeYouGo: row.know_before_you_go ?? [],
-    tiers: row.pricing as Package["tiers"],
+    tiers: mergePricing(row.pricing, row.pricing_override) as Package["tiers"],
     metaTitle: row.meta_title ?? row.name,
     metaDescription: row.meta_description ?? "",
   };
@@ -77,6 +94,7 @@ const _fetchAllPackages = unstable_cache(
     const { data, error } = await supabase
       .from("packages")
       .select("*")
+      .eq("published", true)
       .order("name");
 
     if (error) throw new Error(`getAllPackages: ${error.message}`);
@@ -140,6 +158,7 @@ export const getFeaturedPackages = cache(async (): Promise<Package[]> => {
   const { data, error } = await supabase
     .from("packages")
     .select("*")
+    .eq("published", true)
     .in("slug", FEATURED_PACKAGE_SLUGS);
 
   if (error) throw new Error(`getFeaturedPackages: ${error.message}`);
@@ -154,6 +173,7 @@ export const getPackagesByDestination = cache(
     const { data, error } = await supabase
       .from("packages")
       .select("*")
+      .eq("published", true)
       .or(`destination_slug.eq.${destinationSlug},related_destination_slugs.cs.{${destinationSlug}}`);
 
     if (error) throw new Error(`getPackagesByDestination: ${error.message}`);
@@ -167,6 +187,7 @@ export const getPackagesByStyle = cache(
     const { data, error } = await supabase
       .from("packages")
       .select("*")
+      .eq("published", true)
       .contains("travel_style_slugs", [styleSlug]);
     if (error) throw new Error(`getPackagesByStyle: ${error.message}`);
     return (data as unknown as PackageRow[]).map(toPackage);

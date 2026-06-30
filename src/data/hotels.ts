@@ -1,6 +1,6 @@
 import type { Hotel } from "@/types/hotel";
 
-const WP = "https://traversepakistan.com/wp-content/uploads";
+const WP = "https://wp.traversepakistan.com/wp-content/uploads";
 const MEDIA = "https://media.traversepakistan.com";
 
 export const hotels: Hotel[] = [
@@ -311,11 +311,11 @@ export const hotels: Hotel[] = [
     location: "Gwadar, Balochistan",
     tier: "deluxe",
     propertyType: "Beach Resort",
-    image: "https://traversepakistan.com/wp-content/uploads/2022/10/18699537_849959348495644_4578745554108039199_o.jpg",
+    image: "https://wp.traversepakistan.com/wp-content/uploads/2022/10/18699537_849959348495644_4578745554108039199_o.jpg",
     images: [
-      "https://traversepakistan.com/wp-content/uploads/2022/10/18699537_849959348495644_4578745554108039199_o.jpg",
-      "https://www.traversepakistan.com/wp-content/uploads/2022/10/11999629_547836285374620_7785839964956315647_o-1.jpg",
-      "https://www.traversepakistan.com/wp-content/uploads/2022/09/DSC_6088.jpg",
+      "https://wp.traversepakistan.com/wp-content/uploads/2022/10/18699537_849959348495644_4578745554108039199_o.jpg",
+      "https://www.wp.traversepakistan.com/wp-content/uploads/2022/10/11999629_547836285374620_7785839964956315647_o-1.jpg",
+      "https://www.wp.traversepakistan.com/wp-content/uploads/2022/09/DSC_6088.jpg",
     ],
     rating: 4.6,
     reviewCount: 34,
@@ -329,8 +329,8 @@ export const hotels: Hotel[] = [
       "In-house restaurant serving fresh Balochi seafood",
     ],
     rooms: [
-      { name: "Standard Room", beds: "1 double bed · Garden view", price: 10000, available: 8, image: "https://www.traversepakistan.com/wp-content/uploads/2022/09/DSC_6088.jpg" },
-      { name: "Sea View Room", beds: "1 king bed · Sea view", price: 14000, available: 4, image: "https://traversepakistan.com/wp-content/uploads/2022/10/18699537_849959348495644_4578745554108039199_o.jpg" },
+      { name: "Standard Room", beds: "1 double bed · Garden view", price: 10000, available: 8, image: "https://www.wp.traversepakistan.com/wp-content/uploads/2022/09/DSC_6088.jpg" },
+      { name: "Sea View Room", beds: "1 king bed · Sea view", price: 14000, available: 4, image: "https://wp.traversepakistan.com/wp-content/uploads/2022/10/18699537_849959348495644_4578745554108039199_o.jpg" },
     ],
     reviews: [
       { name: "Usman Khalid", initial: "UK", date: "January 2026", rating: 5, text: "Perfect location for Gwadar sightseeing. Staff were helpful and the seafood dinner was outstanding. Good value for money." },
@@ -352,12 +352,12 @@ export const hotels: Hotel[] = [
     location: "Gwadar, Balochistan",
     tier: "luxury",
     propertyType: "Luxury Hotel",
-    image: "https://www.traversepakistan.com/wp-content/uploads/2022/10/11999629_547836285374620_7785839964956315647_o-1.jpg",
+    image: "https://www.wp.traversepakistan.com/wp-content/uploads/2022/10/11999629_547836285374620_7785839964956315647_o-1.jpg",
     images: [
-      "https://www.traversepakistan.com/wp-content/uploads/2022/10/11999629_547836285374620_7785839964956315647_o-1.jpg",
-      "https://traversepakistan.com/wp-content/uploads/2022/10/18699537_849959348495644_4578745554108039199_o.jpg",
-      "https://www.traversepakistan.com/wp-content/uploads/2022/09/DSC_2041.jpg",
-      "https://www.traversepakistan.com/wp-content/uploads/2022/09/DSC_6088.jpg",
+      "https://www.wp.traversepakistan.com/wp-content/uploads/2022/10/11999629_547836285374620_7785839964956315647_o-1.jpg",
+      "https://wp.traversepakistan.com/wp-content/uploads/2022/10/18699537_849959348495644_4578745554108039199_o.jpg",
+      "https://www.wp.traversepakistan.com/wp-content/uploads/2022/09/DSC_2041.jpg",
+      "https://www.wp.traversepakistan.com/wp-content/uploads/2022/09/DSC_6088.jpg",
     ],
     rating: 4.8,
     reviewCount: 61,
@@ -371,8 +371,8 @@ export const hotels: Hotel[] = [
       "Swimming pool and gym — rare amenities on the Makran Coast",
     ],
     rooms: [
-      { name: "Deluxe Sea View", beds: "1 king bed · Arabian Sea view", price: 28000, available: 6, image: "https://traversepakistan.com/wp-content/uploads/2022/10/18699537_849959348495644_4578745554108039199_o.jpg" },
-      { name: "Executive Suite", beds: "1 king bed + lounge · Panoramic sea view", price: 42000, available: 2, image: "https://www.traversepakistan.com/wp-content/uploads/2022/10/11999629_547836285374620_7785839964956315647_o-1.jpg" },
+      { name: "Deluxe Sea View", beds: "1 king bed · Arabian Sea view", price: 28000, available: 6, image: "https://wp.traversepakistan.com/wp-content/uploads/2022/10/18699537_849959348495644_4578745554108039199_o.jpg" },
+      { name: "Executive Suite", beds: "1 king bed + lounge · Panoramic sea view", price: 42000, available: 2, image: "https://www.wp.traversepakistan.com/wp-content/uploads/2022/10/11999629_547836285374620_7785839964956315647_o-1.jpg" },
     ],
     reviews: [
       { name: "Farhan Siddiqui", initial: "FS", date: "February 2026", rating: 5, text: "Nothing comes close to PC Gwadar on the Makran Coast. The room view over the Arabian Sea at sunrise was breathtaking. Service was impeccable throughout." },
@@ -394,11 +394,11 @@ export const hotels: Hotel[] = [
     location: "Ormara, Balochistan",
     tier: "deluxe",
     propertyType: "Beach Resort",
-    image: "https://www.traversepakistan.com/wp-content/uploads/2022/09/DSC_6088.jpg",
+    image: "https://www.wp.traversepakistan.com/wp-content/uploads/2022/09/DSC_6088.jpg",
     images: [
-      "https://www.traversepakistan.com/wp-content/uploads/2022/09/DSC_6088.jpg",
-      "https://www.traversepakistan.com/wp-content/uploads/2022/10/DSC_1703.jpg",
-      "https://www.traversepakistan.com/wp-content/uploads/2022/09/DSC_2041.jpg",
+      "https://www.wp.traversepakistan.com/wp-content/uploads/2022/09/DSC_6088.jpg",
+      "https://www.wp.traversepakistan.com/wp-content/uploads/2022/10/DSC_1703.jpg",
+      "https://www.wp.traversepakistan.com/wp-content/uploads/2022/09/DSC_2041.jpg",
     ],
     rating: 4.7,
     reviewCount: 28,
@@ -412,8 +412,8 @@ export const hotels: Hotel[] = [
       "Ideal midway stopover on the Karachi–Gwadar coastal route",
     ],
     rooms: [
-      { name: "Beach Cottage", beds: "1 double bed · Beach view", price: 9000, available: 6, image: "https://www.traversepakistan.com/wp-content/uploads/2022/09/DSC_6088.jpg" },
-      { name: "Family Cottage", beds: "1 double + 2 single beds · Beachfront", price: 13000, available: 3, image: "https://www.traversepakistan.com/wp-content/uploads/2022/10/DSC_1703.jpg" },
+      { name: "Beach Cottage", beds: "1 double bed · Beach view", price: 9000, available: 6, image: "https://www.wp.traversepakistan.com/wp-content/uploads/2022/09/DSC_6088.jpg" },
+      { name: "Family Cottage", beds: "1 double + 2 single beds · Beachfront", price: 13000, available: 3, image: "https://www.wp.traversepakistan.com/wp-content/uploads/2022/10/DSC_1703.jpg" },
     ],
     reviews: [
       { name: "Shahid Mehmood", initial: "SM", date: "November 2025", rating: 5, text: "Fell asleep to the sound of the waves and woke up to the most peaceful sunrise. The bonfire night was magical — highly recommend for groups." },
@@ -435,11 +435,11 @@ export const hotels: Hotel[] = [
     location: "Ormara, Balochistan",
     tier: "luxury",
     propertyType: "Luxury Beach Resort",
-    image: "https://www.traversepakistan.com/wp-content/uploads/2022/10/DSC_1703.jpg",
+    image: "https://www.wp.traversepakistan.com/wp-content/uploads/2022/10/DSC_1703.jpg",
     images: [
-      "https://www.traversepakistan.com/wp-content/uploads/2022/10/DSC_1703.jpg",
-      "https://www.traversepakistan.com/wp-content/uploads/2022/09/DSC_6088.jpg",
-      "https://www.traversepakistan.com/wp-content/uploads/2022/09/DSC_2041.jpg",
+      "https://www.wp.traversepakistan.com/wp-content/uploads/2022/10/DSC_1703.jpg",
+      "https://www.wp.traversepakistan.com/wp-content/uploads/2022/09/DSC_6088.jpg",
+      "https://www.wp.traversepakistan.com/wp-content/uploads/2022/09/DSC_2041.jpg",
     ],
     rating: 4.8,
     reviewCount: 19,
@@ -453,8 +453,8 @@ export const hotels: Hotel[] = [
       "Private beach access with full-service bonfire evenings",
     ],
     rooms: [
-      { name: "Luxury Chalet", beds: "1 king bed · Direct sea view", price: 18000, available: 5, image: "https://www.traversepakistan.com/wp-content/uploads/2022/10/DSC_1703.jpg" },
-      { name: "Premium Beach Suite", beds: "1 king bed + private terrace · Beachfront", price: 26000, available: 2, image: "https://www.traversepakistan.com/wp-content/uploads/2022/09/DSC_6088.jpg" },
+      { name: "Luxury Chalet", beds: "1 king bed · Direct sea view", price: 18000, available: 5, image: "https://www.wp.traversepakistan.com/wp-content/uploads/2022/10/DSC_1703.jpg" },
+      { name: "Premium Beach Suite", beds: "1 king bed + private terrace · Beachfront", price: 26000, available: 2, image: "https://www.wp.traversepakistan.com/wp-content/uploads/2022/09/DSC_6088.jpg" },
     ],
     reviews: [
       { name: "Tariq Anwar", initial: "TA", date: "January 2026", rating: 5, text: "The most luxurious stay on the Makran Coast. Woke up to the sound of waves breaking just outside the chalet door. The grilled fish was exceptional." },
@@ -476,10 +476,10 @@ export const hotels: Hotel[] = [
     location: "Karachi, Sindh",
     tier: "deluxe",
     propertyType: "Boutique Hotel",
-    image: "https://www.traversepakistan.com/wp-content/uploads/2022/09/DSC_2041.jpg",
+    image: "https://www.wp.traversepakistan.com/wp-content/uploads/2022/09/DSC_2041.jpg",
     images: [
-      "https://www.traversepakistan.com/wp-content/uploads/2022/09/DSC_2041.jpg",
-      "https://www.traversepakistan.com/wp-content/uploads/2022/10/DSC_1703.jpg",
+      "https://www.wp.traversepakistan.com/wp-content/uploads/2022/09/DSC_2041.jpg",
+      "https://www.wp.traversepakistan.com/wp-content/uploads/2022/10/DSC_1703.jpg",
     ],
     rating: 4.7,
     reviewCount: 42,
@@ -493,8 +493,8 @@ export const hotels: Hotel[] = [
       "Rooftop café with city views",
     ],
     rooms: [
-      { name: "Standard Room", beds: "1 double bed · City view", price: 9000, available: 8, image: "https://www.traversepakistan.com/wp-content/uploads/2022/09/DSC_2041.jpg" },
-      { name: "Deluxe Room", beds: "1 king bed · City view", price: 12000, available: 4, image: "https://www.traversepakistan.com/wp-content/uploads/2022/10/DSC_1703.jpg" },
+      { name: "Standard Room", beds: "1 double bed · City view", price: 9000, available: 8, image: "https://www.wp.traversepakistan.com/wp-content/uploads/2022/09/DSC_2041.jpg" },
+      { name: "Deluxe Room", beds: "1 king bed · City view", price: 12000, available: 4, image: "https://www.wp.traversepakistan.com/wp-content/uploads/2022/10/DSC_1703.jpg" },
     ],
     reviews: [
       { name: "Kamran Ali", initial: "KA", date: "March 2026", rating: 5, text: "Great value in Karachi. Clean, modern rooms and a friendly team. Rooftop café is a lovely touch for a pre-dawn Makran Coast departure." },
@@ -516,11 +516,11 @@ export const hotels: Hotel[] = [
     location: "Karachi, Sindh",
     tier: "luxury",
     propertyType: "Luxury Hotel",
-    image: "https://www.traversepakistan.com/wp-content/uploads/2022/10/11999629_547836285374620_7785839964956315647_o-1.jpg",
+    image: "https://www.wp.traversepakistan.com/wp-content/uploads/2022/10/11999629_547836285374620_7785839964956315647_o-1.jpg",
     images: [
-      "https://www.traversepakistan.com/wp-content/uploads/2022/10/11999629_547836285374620_7785839964956315647_o-1.jpg",
-      "https://www.traversepakistan.com/wp-content/uploads/2022/09/DSC_2041.jpg",
-      "https://www.traversepakistan.com/wp-content/uploads/2022/10/DSC_1703.jpg",
+      "https://www.wp.traversepakistan.com/wp-content/uploads/2022/10/11999629_547836285374620_7785839964956315647_o-1.jpg",
+      "https://www.wp.traversepakistan.com/wp-content/uploads/2022/09/DSC_2041.jpg",
+      "https://www.wp.traversepakistan.com/wp-content/uploads/2022/10/DSC_1703.jpg",
     ],
     rating: 4.8,
     reviewCount: 55,
@@ -534,8 +534,8 @@ export const hotels: Hotel[] = [
       "Pool and spa — perfect for recovering after long Makran drives",
     ],
     rooms: [
-      { name: "Deluxe Room", beds: "1 king bed · City view", price: 20000, available: 8, image: "https://www.traversepakistan.com/wp-content/uploads/2022/09/DSC_2041.jpg" },
-      { name: "Sea View Suite", beds: "1 king bed + lounge · Arabian Sea view", price: 32000, available: 3, image: "https://www.traversepakistan.com/wp-content/uploads/2022/10/11999629_547836285374620_7785839964956315647_o-1.jpg" },
+      { name: "Deluxe Room", beds: "1 king bed · City view", price: 20000, available: 8, image: "https://www.wp.traversepakistan.com/wp-content/uploads/2022/09/DSC_2041.jpg" },
+      { name: "Sea View Suite", beds: "1 king bed + lounge · Arabian Sea view", price: 32000, available: 3, image: "https://www.wp.traversepakistan.com/wp-content/uploads/2022/10/11999629_547836285374620_7785839964956315647_o-1.jpg" },
     ],
     reviews: [
       { name: "Hassan Mirza", initial: "HM", date: "February 2026", rating: 5, text: "Stayed here before heading to Gwadar and the contrast was stark in the best way. Impeccable rooms, great food and the pool was a perfect pre-trip relaxer." },

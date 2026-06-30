@@ -80,12 +80,15 @@ export type BookingRow = {
   total_amount: number;
   currency: string;
   status: BookingStatus;
+  booking_status: string;
+  refund_status: string | null;
   contact_name: string;
   contact_email: string;
   contact_phone: string;
   notes: string | null;
   created_at: string;
   updated_at: string;
+  confirmation_sent_at: string | null;
 };
 
 export type BookingParticipantRow = {
@@ -215,6 +218,18 @@ export type PackageRow = {
   exclusions: string[];
   know_before_you_go: string[];
   pricing: unknown;
+  pricing_override: unknown;
+  starting_cities: string[];
+  major_stops: string[];
+  total_distance_km: number | null;
+  meals_per_person: number;
+  entries_per_person: number;
+  jeep_legs: Array<{ name: string; costPerJeep: number; capacity: number }>;
+  destination_rank: Record<string, number>;
+  fuel_price_per_litre: number | null;
+  profit_percentage: number | null;
+  guide_per_day: number | null;
+  published: boolean;
   meta_title: string | null;
   meta_description: string | null;
   created_at: string | null;
@@ -233,6 +248,28 @@ export type PackageItineraryDayRow = {
   driving_time: string | null;
   overnight: string | null;
   city_only: string[] | null;
+};
+
+export type PackageAddonRow = {
+  id: string;
+  package_slug: string;
+  type: "flight" | "bus";
+  label: string;
+  applies_to_departures: string[];
+  group_key: string | null;
+  is_required: boolean;
+  priority: number;
+  config: {
+    legs?: Array<{
+      from: string;
+      to: string;
+      routeType: "ONEWAY" | "RETURN";
+      day: number | "last";
+    }>;
+    [k: string]: unknown;
+  };
+  created_at: string | null;
+  updated_at: string | null;
 };
 
 export type CreateBookingArgs = {
@@ -346,6 +383,56 @@ export type Database = {
         Update: Partial<PackageItineraryDayRow>;
         Relationships: [];
       };
+      package_addons: {
+        Row: PackageAddonRow;
+        Insert: Omit<PackageAddonRow, "id" | "created_at" | "updated_at"> & Partial<Pick<PackageAddonRow, "id" | "created_at" | "updated_at">>;
+        Update: Partial<PackageAddonRow>;
+        Relationships: [];
+      };
+      booking_otps: {
+        Row: {
+          id: string;
+          booking_ref: string;
+          code: string;
+          expires_at: string;
+          used: boolean;
+          created_at: string;
+          auth_user_id: string | null;
+          channel: "email" | "whatsapp" | null;
+        };
+        Insert: {
+          booking_ref: string;
+          code: string;
+          expires_at: string;
+          id?: string;
+          used?: boolean;
+          created_at?: string;
+          auth_user_id?: string | null;
+          channel?: "email" | "whatsapp" | null;
+        };
+        Update: Partial<{ booking_ref: string; code: string; expires_at: string; used: boolean; created_at: string; auth_user_id: string | null; channel: "email" | "whatsapp" | null }>;
+        Relationships: [];
+      };
+      auth_otps: {
+        Row: {
+          id: string;
+          email: string;
+          code: string;
+          expires_at: string;
+          used: boolean;
+          created_at: string;
+        };
+        Insert: {
+          email: string;
+          code: string;
+          expires_at: string;
+          id?: string;
+          used?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<{ email: string; code: string; expires_at: string; used: boolean; created_at: string }>;
+        Relationships: [];
+      };
       package_bookings: {
         Row: {
           id: string;
@@ -359,16 +446,29 @@ export type Database = {
           rooms: number;
           total_amount: number;
           currency: string;
+          status: string;
           payment_status: string;
+          booking_status: string;
+          refund_status: string | null;
           contact_name: string;
           contact_email: string;
           contact_phone: string;
           notes: string | null;
           created_at: string;
           updated_at: string;
+          confirmation_sent_at: string | null;
         };
         Insert: Record<string, unknown>;
-        Update: Partial<{ payment_status: string; updated_at: string }>;
+        Update: Partial<{
+          payment_status: string;
+          booking_status: string;
+          refund_status: string | null;
+          status: string;
+          contact_name: string;
+          updated_at: string;
+          user_id: string | null;
+          confirmation_sent_at: string | null;
+        }>;
         Relationships: [];
       };
       hotel_bookings: {
@@ -377,16 +477,16 @@ export type Database = {
           booking_ref: string;
           user_id: string | null;
           hotel_slug: string;
-          room_name: string;
           checkin_date: string | null;
           checkout_date: string | null;
           adults: number;
           children: number;
-          rooms: number;
           nights: number;
           total_amount: number;
           currency: string;
           payment_status: string;
+          booking_status: string;
+          refund_status: string | null;
           contact_name: string;
           contact_email: string;
           contact_phone: string;
@@ -394,9 +494,18 @@ export type Database = {
           notes: string | null;
           created_at: string;
           updated_at: string;
+          confirmation_sent_at: string | null;
         };
         Insert: Record<string, unknown>;
-        Update: Partial<{ payment_status: string; updated_at: string }>;
+        Update: Partial<{
+          payment_status: string;
+          booking_status: string;
+          refund_status: string | null;
+          contact_name: string;
+          updated_at: string;
+          user_id: string | null;
+          confirmation_sent_at: string | null;
+        }>;
         Relationships: [];
       };
       hotels: {
@@ -433,6 +542,91 @@ export type Database = {
         Row: Record<string, unknown>;
         Insert: Record<string, unknown>;
         Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      flight_routes: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      flight_scraper_config: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      location_distances: {
+        Row: { from_code: string; to_code: string; km: number };
+        Insert: { from_code: string; to_code: string; km: number };
+        Update: Partial<{ from_code: string; to_code: string; km: number }>;
+        Relationships: [];
+      };
+      engine_config: {
+        Row: {
+          id: string;
+          fuel_price_per_litre: number;
+          profit_percentage: number;
+          package_buffer_km: number;
+          lhe_extension_km: number;
+          guide_per_day: number;
+          updated_at: string | null;
+          updated_by: string | null;
+        };
+        Insert: { id?: string } & Partial<{
+          fuel_price_per_litre: number;
+          profit_percentage: number;
+          package_buffer_km: number;
+          lhe_extension_km: number;
+          guide_per_day: number;
+        }>;
+        Update: Partial<{
+          fuel_price_per_litre: number;
+          profit_percentage: number;
+          package_buffer_km: number;
+          lhe_extension_km: number;
+          guide_per_day: number;
+        }>;
+        Relationships: [];
+      };
+      vehicle_types: {
+        Row: {
+          id: string;
+          code: string;
+          display_name: string;
+          km_per_litre: number;
+          max_people: number;
+          rent_per_day: number;
+          is_ncp: boolean;
+          ncp_pair_code: string | null;
+          sort_order: number;
+          is_active: boolean;
+          updated_at: string | null;
+        };
+        Insert: Omit<{
+          id: string;
+          code: string;
+          display_name: string;
+          km_per_litre: number;
+          max_people: number;
+          rent_per_day: number;
+          is_ncp: boolean;
+          ncp_pair_code: string | null;
+          sort_order: number;
+          is_active: boolean;
+          updated_at: string | null;
+        }, "id" | "updated_at"> & Partial<Pick<{ id: string; updated_at: string | null }, "id" | "updated_at">>;
+        Update: Partial<{
+          code: string;
+          display_name: string;
+          km_per_litre: number;
+          max_people: number;
+          rent_per_day: number;
+          is_ncp: boolean;
+          ncp_pair_code: string | null;
+          sort_order: number;
+          is_active: boolean;
+        }>;
         Relationships: [];
       };
     };
@@ -475,6 +669,10 @@ export type Database = {
           p_line_items: { roomName: string; qty: number; adults: number; children: number; pricePerNight: number }[];
         };
         Returns: { booking_id: string; booking_ref: string; total_amount: number }[];
+      };
+      find_auth_user_by_contact: {
+        Args: { p_email: string | null; p_phone: string | null };
+        Returns: string | null;
       };
     };
   };

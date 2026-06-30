@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { formatPrice } from "@/lib/utils";
@@ -11,6 +11,7 @@ import { WizardProgress } from "@/components/booking/WizardProgress";
 import { Stepper } from "@/components/booking/Stepper";
 import { TrustStrip } from "@/components/booking/TrustStrip";
 import { ReviewQuoteCard } from "@/components/booking/ReviewQuoteCard";
+import { InlineAlert } from "@/components/ui/InlineAlert";
 
 type DepartureCity = "islamabad" | "lahore" | "karachi";
 
@@ -137,7 +138,6 @@ interface WizardState {
   adults: number;
   rooms: number;
   firstName: string;
-  lastName: string;
   phone: string;
   email: string;
   specialRequests: string;
@@ -150,17 +150,26 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
   const initTier = (searchParams?.get("tier") as "deluxe" | "luxury" | null) ?? "deluxe";
   const defaultCity = pkg.tiers.deluxe.islamabad !== null ? "islamabad" : pkg.tiers.deluxe.lahore !== null ? "lahore" : "karachi";
   const initCity = (searchParams?.get("city") as "islamabad" | "lahore" | "karachi" | null) ?? defaultCity;
+  const initCheckinParam = searchParams?.get("checkin") ?? null;
+  // Parse YYYY-MM-DD as a local date (avoid the UTC drift `new Date("YYYY-MM-DD")`
+  // gives in negative-UTC time zones).
+  const initStartDate: Date | null = (() => {
+    if (!initCheckinParam) return null;
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(initCheckinParam);
+    if (!m) return null;
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    return Number.isNaN(d.getTime()) ? null : d;
+  })();
   const initStep = searchParams?.get("adults") ? 3 : 1;
 
   const [state, setState] = useState<WizardState>({
     step: initStep as 1 | 2 | 3 | 4,
     tier: initTier,
     city: initCity,
-    startDate: null,
+    startDate: initStartDate,
     adults: initAdults,
     rooms: initRooms,
     firstName: "",
-    lastName: "",
     phone: "",
     email: "",
     specialRequests: "",
@@ -169,10 +178,13 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
   const [error, setError] = useState<string | null>(null);
   const [attemptedNext, setAttemptedNext] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Stable per-attempt UUID so retries (manual double-click or auto) dedup
+  // on the server instead of creating duplicate bookings.
+  const submitUuidRef = useRef<string>(crypto.randomUUID());
   const router = useRouter();
 
   const pricing = pkg.tiers[state.tier];
-  const pricePerPerson =
+  const staticPerPerson =
     state.city === "lahore" && pricing.lahore ? pricing.lahore :
     state.city === "karachi" && pricing.karachi ? pricing.karachi :
     (pricing.islamabad ?? pricing.lahore ?? pricing.karachi ?? 0);
@@ -180,7 +192,47 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
   const defaultRooms = Math.ceil(state.adults / 3);
   const extraRooms = Math.max(0, state.rooms - defaultRooms);
   const roomSurcharge = extraRooms * (pricing.singleSupplement ?? 0);
-  const total = pricePerPerson * state.adults + roomSurcharge;
+  const staticTotal = staticPerPerson * state.adults + roomSurcharge;
+
+  // Engine-driven quote — same endpoint the sidebar uses so checkout shows
+  // the same number quoted at booking time (jeep legs + meals + entries +
+  // LHE extension + min-rooms allocation). Falls back to staticTotal while
+  // loading or if the engine returns an unresolved combo.
+  const [engineQuote, setEngineQuote] = useState<{ total: number; perPerson: number } | null>(null);
+  const requestSeqRef = useRef(0);
+  useEffect(() => {
+    const mySeq = ++requestSeqRef.current;
+    const home = state.city === "lahore" ? "LHE" : state.city === "karachi" ? "KHI" : "ISB";
+    const start = state.startDate ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const startDate = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
+    const params = new URLSearchParams({
+      home,
+      tier: state.tier,
+      pax: String(state.adults),
+      startDate,
+      rooms: String(state.rooms),
+    });
+    const controller = new AbortController();
+    fetch(`/api/packages/${pkg.slug}/quote?${params.toString()}`, { signal: controller.signal })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((j: { total: number; perPerson: number; unresolved?: string[] }) => {
+        if (mySeq !== requestSeqRef.current) return;
+        if ((j.unresolved && j.unresolved.length > 0) || !(j.perPerson > 0)) {
+          setEngineQuote(null);
+          return;
+        }
+        setEngineQuote({ total: j.total, perPerson: j.perPerson });
+      })
+      .catch((err) => {
+        if (mySeq !== requestSeqRef.current) return;
+        if ((err as Error).name === "AbortError") return;
+        setEngineQuote(null);
+      });
+    return () => controller.abort();
+  }, [pkg.slug, state.tier, state.city, state.adults, state.rooms, state.startDate]);
+
+  const pricePerPerson = engineQuote?.perPerson ?? staticPerPerson;
+  const total = engineQuote?.total ?? staticTotal;
 
   const endDate = state.startDate
     ? new Date(state.startDate.getFullYear(), state.startDate.getMonth(), state.startDate.getDate() + pkg.duration - 1)
@@ -194,7 +246,7 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
     if (step === 1 && !state.startDate) return "Please select a start date to continue";
     if (step === 2 && state.adults < 1) return "At least 1 adult is required";
     if (step === 3) {
-      if (!state.firstName.trim()) return "First name is required";
+      if (!state.firstName.trim()) return "Name is required";
       if (!validPhone(state.phone)) return "Enter a valid phone number";
       if (state.email && !validEmail(state.email)) return "Enter a valid email address";
     }
@@ -218,27 +270,48 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
     if (err) { setAttemptedNext(true); setError(err); goToStep(3); return; }
     setSubmitting(true);
     setError(null);
-    try {
-      const result = await createPackageBooking({
-        packageSlug: pkg.slug,
-        tier: state.tier,
-        departureCity: state.city,
-        startDate: state.startDate ? state.startDate.toISOString().slice(0, 10) : null,
-        adults: state.adults,
-        rooms: state.rooms,
-        totalAmount: total,
-        contact: {
-          name: `${state.firstName} ${state.lastName}`.trim(),
-          email: state.email,
-          phone: state.phone,
-        },
-        notes: state.specialRequests || undefined,
-      });
-      router.push(`/packages/${pkg.slug}/checkout/success?ref=${result.bookingRef}&amount=${result.totalAmount}`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Booking failed. Please try again.");
-      setSubmitting(false);
+    const input = {
+      packageSlug: pkg.slug,
+      tier: state.tier,
+      departureCity: state.city,
+      startDate: state.startDate ? state.startDate.toISOString().slice(0, 10) : null,
+      adults: state.adults,
+      rooms: state.rooms,
+      totalAmount: total,
+      contact: {
+        name: state.firstName.trim(),
+        email: state.email,
+        phone: state.phone,
+      },
+      notes: state.specialRequests || undefined,
+      submitUuid: submitUuidRef.current,
+    };
+    // Up to 3 attempts on network-ish failures. Server dedups by submitUuid
+    // so retries are safe — at most one row created per attempt UUID.
+    const isNetworkError = (e: unknown) => {
+      const msg = e instanceof Error ? e.message.toLowerCase() : "";
+      return msg.includes("load failed") || msg.includes("network") || msg.includes("fetch");
+    };
+    let lastErr: unknown = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const result = await createPackageBooking(input);
+        router.push(`/packages/${pkg.slug}/checkout/success?ref=${result.bookingRef}&amount=${result.totalAmount}`);
+        return;
+      } catch (e) {
+        lastErr = e;
+        if (!isNetworkError(e) || attempt === 2) break;
+        setError("Connection issue — retrying…");
+        await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+      }
     }
+    const msg = lastErr instanceof Error ? lastErr.message : "";
+    setError(
+      isNetworkError(lastErr)
+        ? "We couldn't reach the server. Please check your connection and try again, or contact us on WhatsApp at +92 321 6650670."
+        : msg || "Booking failed. Please try again."
+    );
+    setSubmitting(false);
   }
 
   const validationError = attemptedNext ? validateStep(state.step) : null;
@@ -366,13 +439,14 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
             <SectionHeader title="Your details" sub="We'll use these to confirm your booking." />
             <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] p-5">
               <p className="text-[13px] font-bold uppercase tracking-wider text-[var(--primary)] mb-3">Lead contact</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <LabeledInput label="First name" required value={state.firstName} onChange={v => patch({ firstName: v })} placeholder="Ali" />
-                <LabeledInput label="Last name" value={state.lastName} onChange={v => patch({ lastName: v })} placeholder="Khan" />
-                <LabeledInput label="Phone" required type="tel" value={state.phone} onChange={v => patch({ phone: v })} placeholder="+92 300 0000000"
-                  error={state.phone && !validPhone(state.phone) ? "Enter a valid phone" : undefined} />
-                <LabeledInput label="Email" type="email" value={state.email} onChange={v => patch({ email: v })} placeholder="ali@example.com"
-                  error={state.email && !validEmail(state.email) ? "Enter a valid email" : undefined} />
+              <div className="space-y-4">
+                <LabeledInput label="Name" required value={state.firstName} onChange={v => patch({ firstName: v })} placeholder="Ali Khan" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <LabeledInput label="Phone" required type="tel" value={state.phone} onChange={v => patch({ phone: v })} placeholder="+92 300 0000000"
+                    error={state.phone && !validPhone(state.phone) ? "Enter a valid phone" : undefined} />
+                  <LabeledInput label="Email" type="email" value={state.email} onChange={v => patch({ email: v })} placeholder="ali@example.com"
+                    error={state.email && !validEmail(state.email) ? "Enter a valid email" : undefined} />
+                </div>
               </div>
             </div>
             <div>
@@ -426,25 +500,10 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
               </div>
             </div>
 
-            {pkg.freeCancellation && (
-              <div className="p-4 bg-[var(--primary-light)] border border-[var(--primary)]/20 rounded-[var(--radius-md)] flex items-start gap-3">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2" className="mt-0.5 shrink-0">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                </svg>
-                <div>
-                  <p className="text-[13px] font-bold text-[var(--primary-deep)]">Free cancellation</p>
-                  <p className="text-[12px] text-[var(--text-secondary)]">Cancel up to 7 days before your start date for a full refund.</p>
-                </div>
-              </div>
-            )}
           </section>
         )}
 
-        {(validationError || error) && (
-          <div className="p-3 bg-[var(--error)]/10 border border-[var(--error)]/30 rounded-[var(--radius-sm)] text-[13px] text-[var(--error)] font-medium">
-            {validationError ?? error}
-          </div>
-        )}
+        {(validationError || error) && <InlineAlert>{validationError ?? error}</InlineAlert>}
 
         {/* Nav buttons */}
         <div className="flex items-center gap-3 pt-2">

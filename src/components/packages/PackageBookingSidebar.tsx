@@ -14,6 +14,12 @@ function toIsoDate(d: Date | null) {
   return `${y}-${m}-${day}`;
 }
 
+// In-session result cache. Toggling tier/pax/city/rooms back and forth
+// avoids a re-fetch — last value wins until the tab is reloaded. The
+// request-token guard in the sidebar effect ensures that even if a stale
+// in-flight response lands after a cache hit, it can't overwrite state.
+const quoteSessionCache = new Map<string, { total: number; perPerson: number; rooms: number }>();
+
 /* ─── Calendar helpers ─────────────────────────────────────────────────────── */
 
 const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
@@ -141,14 +147,27 @@ interface PackageBookingSidebarProps {
   onTierChange: (tier: PackageTier) => void;
   departureCity: DepartureCityOption;
   onDepartureCityChange: (city: DepartureCityOption) => void;
+  // Optional reporter — emits the resolved booking values + live price
+  // upward so a parent can mirror picks (e.g. on a mobile sticky bar) without
+  // owning the inputs. `engineDriven` is true once an engine quote has
+  // resolved; while false the prices reflect the static tier rate fallback.
+  onValuesChange?: (s: {
+    adults: number;
+    rooms: number;
+    checkIn: Date | null;
+    pricePerPerson: number;
+    total: number;
+    engineDriven: boolean;
+  }) => void;
 }
 
-export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departureCity, onDepartureCityChange }: PackageBookingSidebarProps) {
+export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departureCity, onDepartureCityChange, onValuesChange }: PackageBookingSidebarProps) {
   const pricing = pkg.tiers[selectedTier];
 
   // Calendar
   const today = new Date();
   const [calOpen, setCalOpen] = useState(false);
+  const [datePromptVisible, setDatePromptVisible] = useState(false);
   const [calYear, setCalYear] = useState(today.getFullYear());
   const [calMonth, setCalMonth] = useState(today.getMonth());
   const [checkIn, setCheckIn] = useState<Date | null>(null);
@@ -158,9 +177,16 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
     ? new Date(checkIn.getFullYear(), checkIn.getMonth(), checkIn.getDate() + pkg.duration - 1)
     : null;
 
-  // Rooms & travelers
-  const [rooms, setRooms] = useState(1);
+  // Rooms & travelers. `rooms` is null when the user hasn't touched the
+  // counter — the engine's natural allocation is shown. As soon as +/− is
+  // pressed, `rooms` becomes an explicit number sent to the quote endpoint.
+  const [rooms, setRooms] = useState<number | null>(null);
+  const [naturalRooms, setNaturalRooms] = useState(1);
   const [adults, setAdults] = useState(2);
+  // Clamp at render time: a stale fetch from a higher-pax click can write
+  // naturalRooms > adults, but the floor can never exceed the party size.
+  const safeNaturalRooms = Math.min(naturalRooms, adults);
+  const displayRooms = Math.min(rooms ?? safeNaturalRooms, adults);
 
   const calWrapRef = useRef<HTMLDivElement>(null);
 
@@ -200,6 +226,7 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
   function handleDateSelect(date: Date) {
     setCheckIn(date);
     setCalOpen(false);
+    setDatePromptVisible(false);
   }
 
   function clearDate() {
@@ -215,18 +242,111 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
     else setCalMonth(m => m + 1);
   }
 
-  // Price — 3 persons per room max; extra rooms beyond default incur single supplement
-  const nights = pkg.duration - 1;
-  const defaultRooms = Math.ceil(adults / 3);
-  const extraRooms = Math.max(0, rooms - defaultRooms);
+  // Engine-driven price. Falls back to the static `pricing[city] × adults`
+  // table while the quote is loading or if the engine endpoint errors so the
+  // sidebar never shows zero.
+  const nights = Math.max(0, pkg.duration - 1);
+  const isDayTrip = nights === 0;
+  const effectiveRooms = isDayTrip ? 0 : displayRooms;
+  const extraRooms = Math.max(0, displayRooms - naturalRooms);
   const singleSupp = pricing.singleSupplement ?? 0;
-  const pricePerPerson =
+  const staticPerPerson =
     (departureCity === "lahore" && pricing.lahore) ? pricing.lahore :
     (departureCity === "karachi" && pricing.karachi) ? pricing.karachi :
     (pricing.islamabad ?? pricing.lahore ?? pricing.karachi ?? 0);
-  const baseTotal = pricePerPerson * adults;
-  const roomSurcharge = extraRooms * singleSupp;
-  const totalPrice = baseTotal + roomSurcharge;
+  const staticTotal = staticPerPerson * adults + extraRooms * singleSupp;
+
+  const HOME_FROM_CITY: Record<DepartureCityOption, "ISB" | "LHE" | "KHI"> = {
+    islamabad: "ISB",
+    lahore: "LHE",
+    karachi: "KHI",
+  };
+  const [engineQuote, setEngineQuote] = useState<{ total: number; perPerson: number } | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  // Monotonic counter — every effect run captures the value at the time of
+  // dispatch; only the response whose captured token still equals the
+  // current ref value is allowed to write state. Older responses (out-of-
+  // order or post-abort stragglers) are dropped silently. This is the only
+  // mechanism that decides which response "wins"; there is no client-side
+  // result cache, so the displayed price + rooms always reflect the latest
+  // engine call. Server `unstable_cache` covers the repeated-fetch cost.
+  const requestSeqRef = useRef(0);
+
+  useEffect(() => {
+    const home = HOME_FROM_CITY[departureCity];
+    const startDate = toIsoDate(checkIn) ?? toIsoDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))!;
+    const mySeq = ++requestSeqRef.current;
+    const roomsKey = rooms === null ? "auto" : String(rooms);
+    const cacheKey = `${pkg.slug}|${home}|${selectedTier}|${adults}|${startDate}|${roomsKey}`;
+    const cached = quoteSessionCache.get(cacheKey);
+    if (cached) {
+      setEngineQuote({ total: cached.total, perPerson: cached.perPerson });
+      if (rooms === null && cached.rooms > 0) setNaturalRooms(cached.rooms);
+      setQuoteLoading(false);
+      return;
+    }
+    const controller = new AbortController();
+    setQuoteLoading(true);
+    // 50ms debounce so rapid +/- clicks coalesce into a single request but
+    // the engine fires almost immediately once the user pauses — the rooms
+    // counter visibly lags less. requestSeq guard drops stale responses.
+    const t = window.setTimeout(() => {
+      const params = new URLSearchParams({ home, tier: selectedTier, pax: String(adults), startDate });
+      if (rooms !== null) params.set("rooms", String(rooms));
+      fetch(`/api/packages/${pkg.slug}/quote?${params.toString()}`, { signal: controller.signal })
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+        .then((j: { total: number; perPerson: number; rooms: number; unresolved?: string[] }) => {
+          if (mySeq !== requestSeqRef.current) return;
+          if ((j.unresolved && j.unresolved.length > 0) || !(j.perPerson > 0)) {
+            setEngineQuote(null);
+            return;
+          }
+          const engineRooms = Number.isFinite(j.rooms) && j.rooms > 0 ? j.rooms : 1;
+          quoteSessionCache.set(cacheKey, { total: j.total, perPerson: j.perPerson, rooms: engineRooms });
+          setEngineQuote({ total: j.total, perPerson: j.perPerson });
+          if (rooms === null) setNaturalRooms(engineRooms);
+        })
+        .catch((err) => {
+          if (mySeq !== requestSeqRef.current) return;
+          if ((err as Error).name === "AbortError") return;
+          setEngineQuote(null);
+        })
+        .finally(() => {
+          if (mySeq === requestSeqRef.current) setQuoteLoading(false);
+        });
+    }, 50);
+    return () => {
+      window.clearTimeout(t);
+      controller.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pkg.slug, departureCity, selectedTier, adults, checkIn, rooms]);
+
+  // On adults/tier/slug change, clear any explicit rooms override so the
+  // engine's natural pick wins again. We deliberately don't reset
+  // naturalRooms here — keeping the previous value avoids the visible
+  // 1-then-jumps-to-3 flicker while the new fetch is in flight, and the
+  // safeNaturalRooms = min(naturalRooms, adults) clamp at render time
+  // already prevents a stale higher value from blocking the - button.
+  useEffect(() => {
+    setRooms(null);
+  }, [adults, selectedTier, pkg.slug]);
+
+  const pricePerPerson = engineQuote?.perPerson ?? staticPerPerson;
+  const totalPrice = engineQuote?.total ?? staticTotal;
+
+  // Report resolved values + live price upward so a parent (e.g. the mobile
+  // sticky bar) can mirror picks even when the sheet is closed.
+  useEffect(() => {
+    onValuesChange?.({
+      adults,
+      rooms: effectiveRooms,
+      checkIn,
+      pricePerPerson,
+      total: totalPrice,
+      engineDriven: engineQuote !== null,
+    });
+  }, [adults, effectiveRooms, checkIn, pricePerPerson, totalPrice, engineQuote, onValuesChange]);
 
   const dateLabel = checkIn && checkOut
     ? `${formatDateShort(checkIn)} → ${formatDateShort(checkOut)}`
@@ -236,8 +356,12 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
     `Hi! I'd like to book the "${pkg.name}" package.\n\n` +
     `Departure: ${departureCity === "lahore" ? "Lahore" : "Islamabad"}\n` +
     `Tier: ${selectedTier === "deluxe" ? "Deluxe" : "Luxury"}\n` +
-    (checkIn && checkOut ? `Dates: ${formatDateShort(checkIn)} – ${formatDateShort(checkOut)} (${nights} nights)\n` : "") +
-    `Adults: ${adults}\nRooms: ${rooms}\nTotal: ${formatPrice(totalPrice)}\n\nPlease confirm availability.`;
+    (checkIn && checkOut
+      ? isDayTrip
+        ? `Date: ${formatDateShort(checkIn)} (day trip)\n`
+        : `Dates: ${formatDateShort(checkIn)} – ${formatDateShort(checkOut)} (${nights} nights)\n`
+      : "") +
+    `Adults: ${adults}\n${isDayTrip ? "" : `Rooms: ${displayRooms}\n`}Total: ${formatPrice(totalPrice)}\n\nPlease confirm availability.`;
 
   return (
     <div className="sticky top-[120px]">
@@ -262,13 +386,15 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
           </div>
         </div>
 
-        {/* Departure City */}
-        {(pricing.lahore !== null || pricing.karachi !== null) && (
+        {/* Departure City — show whenever any bookable city exists so the
+            single-origin case still surfaces the city as a label (1-button
+            picker), and multi-city cases get the full selector. */}
+        {(pricing.islamabad != null || pricing.lahore != null || pricing.karachi != null) && (
           <div className="mb-5">
             <label className="text-[12px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)] block mb-2">Starting Location</label>
             <div className={`grid gap-2 ${pricing.karachi ? "grid-cols-3" : "grid-cols-2"}`}>
               {(["islamabad", "lahore", "karachi"] as DepartureCityOption[])
-                .filter((city) => pricing[city] !== null)
+                .filter((city) => pricing[city] != null)
                 .map((city) => (
                   <button key={city} type="button" onClick={() => onDepartureCityChange(city)}
                     className={`h-11 rounded-[var(--radius-sm)] text-[13px] font-semibold border transition-colors cursor-pointer capitalize ${
@@ -288,10 +414,12 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
         <div className="flex items-baseline gap-2 flex-wrap">
           <span className="text-2xl font-bold text-[var(--text-primary)] tabular-nums">{formatPrice(totalPrice)}</span>
           <span className="text-[14px] text-[var(--text-tertiary)]">total</span>
+          {quoteLoading && (
+            <span className="text-[11px] text-[var(--text-tertiary)] animate-pulse" aria-live="polite">recalculating…</span>
+          )}
         </div>
         <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
           {formatPrice(pricePerPerson)} × {adults} person{adults > 1 ? "s" : ""}
-          {roomSurcharge > 0 && ` + ${formatPrice(roomSurcharge)} room supplement`}
         </p>
 
 
@@ -329,7 +457,7 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
 
           {checkIn && checkOut && (
             <p className="mt-1.5 text-[12px] text-[var(--text-tertiary)]">
-              {nights} nights · ends {formatDateShort(checkOut)}
+              {isDayTrip ? "Day trip · returns same day" : `${nights} nights · ends ${formatDateShort(checkOut)}`}
             </p>
           )}
 
@@ -348,7 +476,9 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
                   <button type="button" onClick={clearDate} className="text-[12px] text-[var(--text-tertiary)] underline cursor-pointer hover:text-[var(--text-primary)] transition-colors">
                     Clear date
                   </button>
-                  <span className="text-[12px] font-semibold text-[var(--primary)]">{nights} night{nights !== 1 ? "s" : ""}</span>
+                  <span className="text-[12px] font-semibold text-[var(--primary)]">
+                    {isDayTrip ? "Day trip" : `${nights} night${nights !== 1 ? "s" : ""}`}
+                  </span>
                 </div>
               )}
             </div>
@@ -357,31 +487,44 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
 
         {/* Rooms & Adults */}
         <div className="mb-4 border border-[var(--border-default)] rounded-[var(--radius-sm)] overflow-hidden">
-          {/* Rooms row */}
+          {/* Rooms row — hidden on day trips (no hotel) */}
+          {!isDayTrip && (
           <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-subtle)]">
             <div>
               <p className="text-[13px] font-semibold text-[var(--text-primary)]">Rooms</p>
               <p className="text-[11px] text-[var(--text-tertiary)]">
-                {rooms > defaultRooms
-                  ? `+${formatPrice(roomSurcharge)} supplement`
-                  : "Up to 3 per room — no extra charge"}
+                {quoteLoading
+                  ? "Updating…"
+                  : displayRooms > safeNaturalRooms
+                  ? "Extra room — price recalculated above"
+                  : `Minimum ${safeNaturalRooms} room${safeNaturalRooms > 1 ? "s" : ""} for ${adults} guest${adults > 1 ? "s" : ""}`}
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <button type="button" onClick={() => setRooms(r => Math.max(1, r - 1))} disabled={rooms <= 1}
-                className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
+              <button
+                type="button"
+                onClick={() => setRooms(() => Math.max(safeNaturalRooms, displayRooms - 1))}
+                disabled={displayRooms <= safeNaturalRooms}
+                title={displayRooms <= safeNaturalRooms ? `Minimum ${safeNaturalRooms} room${safeNaturalRooms > 1 ? "s" : ""} required for ${adults} guest${adults > 1 ? "s" : ""}` : undefined}
+                className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]"
+              >
                 −
               </button>
-              <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{rooms}</span>
-              <button type="button" onClick={() => setRooms(r => Math.min(adults, r + 1))} disabled={rooms >= adults}
-                className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
+              <span className={`w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)] transition-opacity ${quoteLoading ? "opacity-40" : ""}`}>{displayRooms}</span>
+              <button
+                type="button"
+                onClick={() => setRooms(() => Math.min(adults, displayRooms + 1))}
+                disabled={displayRooms >= adults}
+                className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]"
+              >
                 +
               </button>
             </div>
           </div>
+          )}
 
           {/* Divider */}
-          <div className="h-px bg-[var(--border-default)]" />
+          {!isDayTrip && <div className="h-px bg-[var(--border-default)]" />}
 
           {/* Adults row */}
           <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-subtle)]">
@@ -391,22 +534,14 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
             </div>
             <div className="flex items-center gap-3">
               <button type="button"
-                onClick={() => {
-                  const next = Math.max(1, adults - 1);
-                  setAdults(next);
-                  setRooms(r => Math.min(r, Math.ceil(next / 3)));
-                }}
+                onClick={() => setAdults(Math.max(1, adults - 1))}
                 disabled={adults <= 1}
                 className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
                 −
               </button>
               <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{adults}</span>
               <button type="button"
-                onClick={() => {
-                  const next = Math.min(pkg.maxGroupSize, adults + 1);
-                  setAdults(next);
-                  setRooms(r => Math.max(r, Math.ceil(next / 3)));
-                }}
+                onClick={() => setAdults(Math.min(pkg.maxGroupSize, adults + 1))}
                 disabled={adults >= pkg.maxGroupSize}
                 className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
                 +
@@ -419,27 +554,38 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
         <div className="mb-4 space-y-1.5">
           <div className="flex justify-between text-[13px]">
             <span className="text-[var(--text-secondary)]">{formatPrice(pricePerPerson)} × {adults} person{adults > 1 ? "s" : ""}</span>
-            <span className="text-[var(--text-primary)] font-medium tabular-nums">{formatPrice(baseTotal)}</span>
+            <span className="text-[var(--text-primary)] font-medium tabular-nums">{formatPrice(totalPrice)}</span>
           </div>
-          {roomSurcharge > 0 && (
-            <div className="flex justify-between text-[13px]">
-              <span className="text-[var(--text-secondary)]">{extraRooms} extra room{extraRooms > 1 ? "s" : ""} supplement</span>
-              <span className="text-[var(--text-primary)] font-medium tabular-nums">+{formatPrice(roomSurcharge)}</span>
-            </div>
-          )}
           <div className="flex justify-between text-[15px] font-bold pt-2 border-t border-[var(--border-default)]">
             <span className="text-[var(--text-primary)]">Total</span>
             <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(totalPrice)}</span>
           </div>
         </div>
 
-        {/* CTA */}
-        <Link
-          href={`/packages/${pkg.slug}/checkout?adults=${adults}&rooms=${rooms}&tier=${selectedTier}&city=${departureCity}`}
-          className="w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-semibold rounded-[var(--radius-sm)] flex items-center justify-center gap-2 hover:bg-[var(--primary-hover)] active:scale-[0.98] transition-all"
-        >
-          Book Now
-        </Link>
+        {/* CTA — start date is mandatory but the button always reads "Book Now"
+            and stays visually active. When no date is selected, clicking it
+            scrolls to + opens the date picker and surfaces a one-line hint so
+            the user isn't bounced. */}
+        {checkIn ? (
+          <Link
+            href={`/packages/${pkg.slug}/checkout?adults=${adults}&rooms=${displayRooms}&tier=${selectedTier}&city=${departureCity}&checkin=${toIsoDate(checkIn)}`}
+            className="w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-semibold rounded-[var(--radius-sm)] flex items-center justify-center gap-2 hover:bg-[var(--primary-hover)] active:scale-[0.98] transition-all"
+          >
+            Book Now
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setDatePromptVisible(true);
+              setCalOpen(true);
+              calWrapRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }}
+            className="w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-semibold rounded-[var(--radius-sm)] flex items-center justify-center gap-2 hover:bg-[var(--primary-hover)] active:scale-[0.98] transition-all"
+          >
+            Book Now
+          </button>
+        )}
         <a
           href={getWhatsAppUrl(whatsappMessage)}
           target="_blank"
@@ -448,15 +594,14 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
         >
           or ask on WhatsApp →
         </a>
+        {!checkIn && datePromptVisible && (
+          <p className="mt-2 text-center text-[12px] text-[var(--accent-warning,#d97706)] font-medium">
+            Pick a start date above to continue.
+          </p>
+        )}
 
         {/* Guarantees */}
         <div className="mt-5 space-y-2">
-          {pkg.freeCancellation && (
-            <p className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)]">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
-              Free cancellation
-            </p>
-          )}
           {pkg.reserveNowPayLater && (
             <p className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)]">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>

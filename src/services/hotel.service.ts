@@ -1,12 +1,13 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
-import { getSupabaseAnon } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/server";
 import type { Hotel, HotelRoom, HotelSeasonDefinition, HotelReview, SeasonalPrice } from "@/types/hotel";
 
 // ── Raw Supabase row shapes ───────────────────────────────────────────────────
 
 type RawRoomPrice = {
   price: number;
+  single_price: number | null;
   hotel_seasons: { label: string } | null;
 };
 
@@ -15,6 +16,7 @@ type RawRoom = {
   name: string;
   beds: string;
   price: number;
+  single_price: number | null;
   available: number;
   extra_occupancy_charge: number | null;
   capacity_adults: number;
@@ -22,6 +24,7 @@ type RawRoom = {
   capacity_infants: number;
   max_occupancy: number | null;
   sort_order: number;
+  is_active: boolean | null;
   hotel_room_prices: RawRoomPrice[];
 };
 
@@ -52,6 +55,8 @@ type RawHotel = {
   review_count: number;
   price_per_night: number;
   margin: number;
+  tax_rate: number;
+  bed_tax_rate: number;
   guest_favourite: boolean;
   check_in: string;
   check_out: string;
@@ -67,12 +72,13 @@ type RawHotel = {
 
 const HOTEL_SELECT = `
   id, slug, name, destination_slug, location, tier, property_type, image,
-  rating, review_count, price_per_night, margin, guest_favourite, check_in, check_out,
+  rating, review_count, price_per_night, margin, tax_rate, bed_tax_rate, guest_favourite, check_in, check_out,
   tax_note, description, amenities, highlights, policies,
   hotel_rooms (
-    id, name, beds, price, available, extra_occupancy_charge,
+    id, name, beds, price, single_price, available, extra_occupancy_charge,
     capacity_adults, capacity_children, capacity_infants, max_occupancy, sort_order,
-    hotel_room_prices ( price, hotel_seasons ( label ) )
+    is_active,
+    hotel_room_prices ( price, single_price, hotel_seasons ( label ) )
   ),
   hotel_seasons ( label, sort_order, hotel_season_periods ( from_date, to_date ) ),
   hotel_reviews ( reviewer_name, initial, date, rating, body )
@@ -80,18 +86,45 @@ const HOTEL_SELECT = `
 
 // ── Mapper ────────────────────────────────────────────────────────────────────
 
+// Today's MM-DD against a season period (from/to are MM-DD after the slice below).
+function periodCoversToday(from: string, to: string, mmdd: string): boolean {
+  return from <= to ? mmdd >= from && mmdd <= to : mmdd >= from || mmdd <= to;
+}
+
+// Lowest room price for today's active season; falls back to global min(room.price)
+// when no season period matches (e.g. closed/single-rate hotels).
+function entryPriceForToday(rooms: HotelRoom[], seasons: HotelSeasonDefinition[]): number | null {
+  if (rooms.length === 0) return null;
+  const now = new Date();
+  const mmdd = `${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const activeLabel = seasons.find((s) => s.periods.some((p) => periodCoversToday(p.from, p.to, mmdd)))?.label;
+  if (activeLabel) {
+    const seasonal = rooms
+      .map((r) => r.prices?.find((p) => p.season === activeLabel)?.price)
+      .filter((p): p is number => typeof p === "number");
+    if (seasonal.length > 0) return Math.min(...seasonal);
+  }
+  return Math.min(...rooms.map((r) => r.price));
+}
+
 function toHotel(raw: RawHotel): Hotel {
   const rooms: HotelRoom[] = [...(raw.hotel_rooms ?? [])]
+    .filter((r) => r.is_active !== false)
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((r) => {
       const prices: SeasonalPrice[] = (r.hotel_room_prices ?? [])
         .filter((p) => p.hotel_seasons != null)
-        .map((p) => ({ season: p.hotel_seasons!.label, price: p.price }));
+        .map((p) => ({
+          season: p.hotel_seasons!.label,
+          price: p.price,
+          ...(p.single_price != null && { singlePrice: p.single_price }),
+        }));
 
       return {
         name: r.name,
         beds: r.beds,
         price: r.price,
+        ...(r.single_price != null && { singlePrice: r.single_price }),
         available: r.available,
         ...(r.extra_occupancy_charge != null && { extraOccupancyCharge: r.extra_occupancy_charge }),
         ...(prices.length > 0 && { prices }),
@@ -134,8 +167,10 @@ function toHotel(raw: RawHotel): Hotel {
     images: [raw.image],
     rating: Number(raw.rating),
     reviewCount: raw.review_count,
-    pricePerNight: raw.price_per_night,
+    pricePerNight: entryPriceForToday(rooms, seasons) ?? raw.price_per_night,
     margin: Number(raw.margin),
+    taxRate: Number(raw.tax_rate ?? 0),
+    bedTaxRate: Number(raw.bed_tax_rate ?? 0),
     guestFavourite: raw.guest_favourite,
     checkIn: raw.check_in,
     checkOut: raw.check_out,
@@ -154,7 +189,10 @@ function toHotel(raw: RawHotel): Hotel {
 
 const _fetchAllHotels = unstable_cache(
   async (): Promise<Hotel[]> => {
-    const supabase = getSupabaseAnon();
+    // Service-role read: hotel catalog tables have RLS enabled with no anon
+    // policies (deny-all), so cost columns (operator_price, margin) are not
+    // readable via the public anon key. Reads here are server-only.
+    const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("hotels")
       .select(HOTEL_SELECT)
@@ -169,7 +207,7 @@ const _fetchAllHotels = unstable_cache(
 export const getAllHotels = cache(_fetchAllHotels);
 
 export const getHotelBySlug = cache(async (slug: string): Promise<Hotel | null> => {
-  const supabase = getSupabaseAnon();
+  const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("hotels")
     .select(HOTEL_SELECT)

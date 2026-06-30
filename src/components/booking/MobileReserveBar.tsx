@@ -56,7 +56,7 @@ export function MobileReserveBar({ tour, reviews }: MobileReserveBarProps) {
               </p>
             ) : (
               <p className="text-[11px] text-[var(--text-secondary)]">
-                Free cancellation · Reserve now, pay later
+                Reserve now, pay later
               </p>
             )}
           </div>

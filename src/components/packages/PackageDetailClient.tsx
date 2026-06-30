@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Container } from "@/components/ui/Container";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { Chip } from "@/components/ui/Chip";
@@ -8,10 +8,10 @@ import { Icon } from "@/components/ui/Icon";
 import { StarRating } from "@/components/ui/StarRating";
 import { MosaicGallery } from "@/components/trip-detail/MosaicGallery";
 import { PackageBookingSidebar } from "@/components/packages/PackageBookingSidebar";
+import { PackageMobileBookingSheet } from "@/components/packages/PackageMobileBookingSheet";
 import { PackageItineraryAccordion } from "@/components/packages/PackageItineraryAccordion";
 import { PackageCard } from "@/components/packages/PackageCard";
 import { formatPrice } from "@/lib/utils";
-import Link from "next/link";
 import type { Package, PackageItinerary, PackageTier } from "@/types/package";
 import type { Hotel } from "@/types/hotel";
 
@@ -25,8 +25,34 @@ interface PackageDetailClientProps {
 export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages }: PackageDetailClientProps) {
   const [selectedTier, setSelectedTier] = useState<PackageTier>("deluxe");
   const [departureCity, setDepartureCity] = useState<"islamabad" | "lahore" | "karachi">(
-    pkg.tiers.deluxe.islamabad !== null ? "islamabad" : pkg.tiers.deluxe.lahore !== null ? "lahore" : "karachi"
+    pkg.tiers.deluxe.islamabad != null ? "islamabad" : pkg.tiers.deluxe.lahore != null ? "lahore" : "karachi"
   );
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+  // Picks emitted from the sidebar (rendered inside the mobile sheet) so the
+  // sticky bar can mirror the chosen adults/rooms/check-in AND the live price
+  // even when the sheet is closed.
+  const [sheetValues, setSheetValues] = useState<{
+    adults: number;
+    rooms: number;
+    checkIn: Date | null;
+    pricePerPerson: number;
+    total: number;
+    engineDriven: boolean;
+  }>({ adults: 2, rooms: 1, checkIn: null, pricePerPerson: 0, total: 0, engineDriven: false });
+  const handleValuesChange = useCallback((s: {
+    adults: number;
+    rooms: number;
+    checkIn: Date | null;
+    pricePerPerson: number;
+    total: number;
+    engineDriven: boolean;
+  }) => {
+    setSheetValues((prev) => (
+      prev.adults === s.adults && prev.rooms === s.rooms && prev.checkIn === s.checkIn &&
+      prev.pricePerPerson === s.pricePerPerson && prev.total === s.total && prev.engineDriven === s.engineDriven
+        ? prev : s
+    ));
+  }, []);
 
   return (
     <div className="pt-0 sm:pt-6 pb-24 sm:pb-8">
@@ -58,9 +84,6 @@ export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages
                 <Chip icon={<Icon name="users" size="sm" />}>Up to {pkg.maxGroupSize} people</Chip>
                 <Chip icon={<Icon name="globe" size="sm" />}>{pkg.languages.join(", ")}</Chip>
                 <Chip icon={<Icon name="calendar-check" size="sm" />}>Custom dates</Chip>
-                {pkg.freeCancellation && (
-                  <Chip variant="success" icon={<Icon name="check" size="sm" weight="bold" />}>Free cancellation</Chip>
-                )}
                 {pkg.reserveNowPayLater && (
                   <Chip variant="info" icon={<Icon name="credit-card" size="sm" />}>Reserve now, pay later</Chip>
                 )}
@@ -89,12 +112,12 @@ export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages
                   ))}
                 </div>
               </div>
-              {(() => { const cities = (["islamabad", "lahore", "karachi"] as const).filter(c => pkg.tiers[selectedTier][c] !== null); return cities.length > 1; })() && (
+              {(() => { const cities = (["islamabad", "lahore", "karachi"] as const).filter(c => pkg.tiers[selectedTier][c] != null); return cities.length >= 1; })() && (
                 <div>
                   <p className="text-[12px] font-bold uppercase tracking-wider text-[var(--text-secondary)] mb-3">Starting Location</p>
-                  <div className={`grid gap-2 ${(["islamabad", "lahore", "karachi"] as const).filter(c => pkg.tiers[selectedTier][c] !== null).length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+                  <div className={`grid gap-2 ${(["islamabad", "lahore", "karachi"] as const).filter(c => pkg.tiers[selectedTier][c] != null).length === 3 ? "grid-cols-3" : (["islamabad", "lahore", "karachi"] as const).filter(c => pkg.tiers[selectedTier][c] != null).length === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
                     {(["islamabad", "lahore", "karachi"] as const)
-                      .filter((city) => pkg.tiers[selectedTier][city] !== null)
+                      .filter((city) => pkg.tiers[selectedTier][city] != null)
                       .map((city) => (
                         <button
                           key={city}
@@ -224,19 +247,43 @@ export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages
 
         {/* Mobile sticky bar */}
         <div className="fixed bottom-0 left-0 right-0 lg:hidden z-40 bg-[var(--bg-primary)] border-t border-[var(--border-default)] px-5 py-3 flex items-center justify-between">
-          <div>
-            <span className="text-lg font-bold text-[var(--text-primary)]">
-              {formatPrice(pkg.tiers[selectedTier][departureCity] ?? pkg.tiers[selectedTier].islamabad ?? pkg.tiers[selectedTier].lahore ?? 0)}
-            </span>
-            <span className="text-[13px] text-[var(--text-tertiary)] ml-1">per person</span>
+          <div className="flex flex-col">
+            <div>
+              {!sheetValues.engineDriven && <span className="text-[11px] uppercase tracking-wider text-[var(--text-tertiary)] mr-1">From</span>}
+              <span className="text-lg font-bold text-[var(--text-primary)]">
+                {formatPrice(
+                  sheetValues.engineDriven
+                    ? sheetValues.pricePerPerson
+                    : pkg.tiers[selectedTier][departureCity] ?? pkg.tiers[selectedTier].islamabad ?? pkg.tiers[selectedTier].lahore ?? 0
+                )}
+              </span>
+              <span className="text-[13px] text-[var(--text-tertiary)] ml-1">per person</span>
+            </div>
+            <div className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
+              {sheetValues.adults} {sheetValues.adults === 1 ? "guest" : "guests"}
+              {sheetValues.rooms > 0 && ` · ${sheetValues.rooms} ${sheetValues.rooms === 1 ? "room" : "rooms"}`}
+              {sheetValues.checkIn && ` · ${sheetValues.checkIn.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
+            </div>
           </div>
-          <Link
-            href={`/packages/${pkg.slug}/checkout?adults=2&rooms=1&tier=${selectedTier}&city=${departureCity}`}
-            className="h-11 px-6 bg-[var(--primary)] text-[var(--text-inverse)] text-[14px] font-semibold rounded-full flex items-center justify-center hover:bg-[var(--primary-hover)] transition-colors"
+          <button
+            type="button"
+            onClick={() => setMobileSheetOpen(true)}
+            className="h-11 px-6 bg-[var(--primary)] text-[var(--text-inverse)] text-[14px] font-semibold rounded-full flex items-center justify-center hover:bg-[var(--primary-hover)] transition-colors cursor-pointer"
           >
             Book Now
-          </Link>
+          </button>
         </div>
+
+        <PackageMobileBookingSheet
+          open={mobileSheetOpen}
+          onClose={() => setMobileSheetOpen(false)}
+          pkg={pkg}
+          selectedTier={selectedTier}
+          onTierChange={setSelectedTier}
+          departureCity={departureCity}
+          onDepartureCityChange={setDepartureCity}
+          onValuesChange={handleValuesChange}
+        />
 
         {/* Related packages */}
         {relatedPackages.length > 0 && (

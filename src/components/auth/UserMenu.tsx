@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
 import { Icon } from "@/components/ui/Icon";
 
@@ -18,7 +18,14 @@ export function UserMenu() {
   const { user, loading, signOut } = useAuth();
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const pathname = usePathname() ?? "/";
   const ref = useRef<HTMLDivElement>(null);
+
+  // Pass the current page as ?next= so post-sign-in lands the user back
+  // where they clicked. Skip when already on an auth page (would loop).
+  const signInHref = pathname.startsWith("/auth")
+    ? "/auth/sign-in"
+    : `/auth/sign-in?next=${encodeURIComponent(pathname)}`;
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -28,14 +35,19 @@ export function UserMenu() {
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
-  if (loading) {
-    return <div className="w-9 h-9 rounded-full bg-[var(--bg-subtle)] animate-pulse" aria-hidden />;
-  }
-
-  if (!user) {
+  // While auth is still resolving (and for every logged-out visitor) render the
+  // sign-in link. This is deliberately the SAME element the server renders —
+  // the server has no auth knowledge so it always renders in the `loading`
+  // state. A logged-in session can only be confirmed asynchronously (after
+  // hydration), so the swap to the avatar happens as a normal post-hydration
+  // update, never as a hydration diff. Rendering a distinct loading skeleton
+  // here instead causes React error #418 because the navbar sits inside a
+  // <Suspense> boundary and the skeleton (server) wouldn't match the resolved
+  // link (client) at hydration time.
+  if (loading || !user) {
     return (
       <Link
-        href="/auth/sign-in"
+        href={signInHref}
         className="w-9 h-9 rounded-full border border-[var(--border-default)] flex items-center justify-center text-[var(--text-primary)] hover:border-[var(--primary)] hover:bg-[var(--bg-subtle)] transition-colors"
         aria-label="Sign in"
       >
@@ -44,7 +56,9 @@ export function UserMenu() {
     );
   }
 
-  const name = (user.user_metadata?.full_name as string | undefined) ?? user.email;
+  // `name` is set by silent-signup + Settings; `full_name` is what Supabase
+  // auto-populates for Google OAuth — fall back to that.
+  const name = ((user.user_metadata?.name ?? user.user_metadata?.full_name) as string | undefined) ?? user.email;
   const avatarUrl = user.user_metadata?.avatar_url as string | undefined;
 
   return (
@@ -61,7 +75,7 @@ export function UserMenu() {
           <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
         ) : (
           <span className="text-[12px] font-bold text-[var(--text-primary)]">
-            {initials(user.user_metadata?.full_name as string | undefined, user.email)}
+            {initials((user.user_metadata?.name ?? user.user_metadata?.full_name) as string | undefined, user.email)}
           </span>
         )}
       </button>
@@ -81,7 +95,7 @@ export function UserMenu() {
           <nav className="py-1">
             {[
               { href: "/account", label: "Account" },
-              { href: "/account/trips", label: "My Trips" },
+              { href: "/mybookings", label: "My Bookings" },
               { href: "/account/wishlist", label: "Wishlist" },
               { href: "/account/settings", label: "Settings" },
             ].map((item) => (

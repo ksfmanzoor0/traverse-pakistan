@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { alfaConfig } from "@/lib/alfa/config";
 import { markBooking } from "@/lib/payments/markBooking";
+import { createViewCookie } from "@/lib/auth/viewCookie";
 
 async function checkAlfaIPN(ref: string): Promise<"paid" | "failed" | "pending"> {
   try {
@@ -15,6 +16,30 @@ async function checkAlfaIPN(ref: string): Promise<"paid" | "failed" | "pending">
   } catch {
     return "pending";
   }
+}
+
+interface StatusResponse {
+  bookingRef: string;
+  status: "paid" | "failed" | "pending";
+  amount: number;
+}
+
+function buildResponse(ref: string, amount: number, status: "paid" | "failed" | "pending"): NextResponse<StatusResponse> {
+  const res = NextResponse.json({ bookingRef: ref, status, amount });
+  // Grant view-tier access to whoever's polling once payment terminates
+  // (paid or failed). They came through Alfa with this ref — trust them
+  // enough to see + retry the booking. Manage still requires verified_via_otp.
+  if (status === "paid" || status === "failed") {
+    const cookie = createViewCookie(ref);
+    res.cookies.set(cookie.name, cookie.value, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: cookie.maxAge,
+    });
+  }
+  return res;
 }
 
 export async function GET(req: NextRequest) {
@@ -33,13 +58,9 @@ export async function GET(req: NextRequest) {
       .select("booking_ref, payment_status, total_amount")
       .eq("booking_ref", ref)
       .maybeSingle();
+    if (error || !data) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
 
-    if (error || !data) {
-      return NextResponse.json({ error: "Booking not found" }, { status: 404 });
-    }
-
-    let status = data.payment_status ?? "pending";
-
+    let status = (data.payment_status ?? "pending") as "paid" | "failed" | "pending";
     if (status === "pending") {
       const alfaStatus = await checkAlfaIPN(ref);
       if (alfaStatus === "paid") {
@@ -47,8 +68,7 @@ export async function GET(req: NextRequest) {
         status = "paid";
       }
     }
-
-    return NextResponse.json({ bookingRef: data.booking_ref, status, amount: data.total_amount });
+    return buildResponse(ref, Number(data.total_amount), status);
   }
 
   if (ref.startsWith("HTL-")) {
@@ -57,13 +77,9 @@ export async function GET(req: NextRequest) {
       .select("booking_ref, payment_status, total_amount")
       .eq("booking_ref", ref)
       .maybeSingle();
+    if (error || !data) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
 
-    if (error || !data) {
-      return NextResponse.json({ error: "Booking not found" }, { status: 404 });
-    }
-
-    let status = data.payment_status ?? "pending";
-
+    let status = (data.payment_status ?? "pending") as "paid" | "failed" | "pending";
     if (status === "pending") {
       const alfaStatus = await checkAlfaIPN(ref);
       if (alfaStatus === "paid") {
@@ -71,8 +87,7 @@ export async function GET(req: NextRequest) {
         status = "paid";
       }
     }
-
-    return NextResponse.json({ bookingRef: data.booking_ref, status, amount: data.total_amount });
+    return buildResponse(ref, Number(data.total_amount), status);
   }
 
   const { data, error } = await supabase
@@ -80,12 +95,9 @@ export async function GET(req: NextRequest) {
     .select("booking_ref, status, total_amount")
     .eq("booking_ref", ref)
     .maybeSingle();
+  if (error || !data) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
 
-  if (error || !data) {
-    return NextResponse.json({ error: "Booking not found" }, { status: 404 });
-  }
-
-  let normalized =
+  let normalized: "paid" | "failed" | "pending" =
     data.status === "confirmed" ? "paid" :
     data.status === "cancelled" ? "failed" :
     "pending";
@@ -98,5 +110,5 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ bookingRef: data.booking_ref, status: normalized, amount: data.total_amount });
+  return buildResponse(ref, Number(data.total_amount), normalized);
 }

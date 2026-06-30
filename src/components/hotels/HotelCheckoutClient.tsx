@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { formatPrice } from "@/lib/utils";
 import { createHotelBooking } from "@/services/booking.service";
 import { Icon } from "@/components/ui/Icon";
-import type { Hotel } from "@/types/hotel";
+import { InlineAlert } from "@/components/ui/InlineAlert";
+import type { Hotel, HotelRoom, HotelSeasonDefinition } from "@/types/hotel";
 
 function fmt(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
@@ -16,29 +17,68 @@ function diffDays(a: string, b: string) {
   return Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86400000);
 }
 
+// Season-aware pricing — mirrors the sidebar so the charged total matches what was shown.
+function getSeasonLabel(date: Date, seasons: HotelSeasonDefinition[]): string | null {
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mmdd = `${mm}-${dd}`;
+  for (const season of seasons) {
+    for (const period of season.periods) {
+      if (period.from > period.to) {
+        if (mmdd >= period.from || mmdd <= period.to) return season.label;
+      } else {
+        if (mmdd >= period.from && mmdd <= period.to) return season.label;
+      }
+    }
+  }
+  return null;
+}
+
+function getRoomPrice(room: HotelRoom, seasonLabel: string | null): number {
+  if (room.prices && seasonLabel) {
+    const match = room.prices.find((p) => p.season === seasonLabel);
+    if (match) return match.price;
+  }
+  return room.price;
+}
+
+// Single-occupancy rate for the active season: seasonal single → flat single → none.
+function getSingleRate(room: HotelRoom, seasonLabel: string | null): number | null {
+  if (room.prices && seasonLabel) {
+    const match = room.prices.find((p) => p.season === seasonLabel);
+    if (match?.singlePrice != null) return match.singlePrice;
+  }
+  return room.singlePrice ?? null;
+}
+
 interface LineItem {
   roomName: string;
   qty: number;
   adults: number;
   children: number;
   pricePerNight: number;
+  isSingle: boolean;
+  singleSaving: number;   // per-stay saving vs the double rate (informational)
 }
 
 /** Parses repeated ?r=roomName|qty|adults|children params */
-function parseLineItems(searchParams: URLSearchParams, hotel: Hotel): LineItem[] {
+function parseLineItems(searchParams: URLSearchParams, hotel: Hotel, nights: number, seasonLabel: string | null): LineItem[] {
   return searchParams.getAll("r").flatMap((raw) => {
     const parts = raw.split("|");
     if (parts.length < 4) return [];
     const [roomName, qtyStr, adultsStr, childrenStr] = parts;
     const room = hotel.rooms.find((r) => r.name === roomName);
     if (!room) return [];
-    return [{
-      roomName,
-      qty: Math.max(1, Number(qtyStr)),
-      adults: Math.max(0, Number(adultsStr)),
-      children: Math.max(0, Number(childrenStr)),
-      pricePerNight: room.price,
-    }];
+    const qty = Math.max(1, Number(qtyStr));
+    const adults = Math.max(0, Number(adultsStr));
+    const children = Math.max(0, Number(childrenStr));
+    const basePrice = getRoomPrice(room, seasonLabel);
+    const singleRate = getSingleRate(room, seasonLabel);
+    // Single occupancy = exactly 1 adult per room, no children, and the room offers a single rate.
+    const isSingle = adults === qty && children === 0 && singleRate != null;
+    const pricePerNight = isSingle ? singleRate! : basePrice;
+    const singleSaving = isSingle ? (basePrice - singleRate!) * qty * nights : 0;
+    return [{ roomName, qty, adults, children, pricePerNight, isSingle, singleSaving }];
   });
 }
 
@@ -51,7 +91,9 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
   const infant   = searchParams.get("infant") === "1";
   const nights   = checkin && checkout ? diffDays(checkin, checkout) : 1;
 
-  const lineItems = parseLineItems(searchParams, hotel);
+  // Season is keyed off check-in, matching the sidebar — keeps the charged total in sync with what was shown.
+  const seasonLabel = checkin && hotel.seasons ? getSeasonLabel(new Date(checkin), hotel.seasons) : null;
+  const lineItems = parseLineItems(searchParams, hotel, nights, seasonLabel);
   const totalAdults   = lineItems.reduce((s, li) => s + li.adults, 0);
   const totalChildren = lineItems.reduce((s, li) => s + li.children, 0);
   const totalRooms    = lineItems.reduce((s, li) => s + li.qty, 0);
@@ -62,10 +104,15 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
     const extraRate = room?.extraOccupancyCharge ?? 0;
     return s + li.pricePerNight * li.qty * nights + extraRate * extraPeople * nights;
   }, 0);
+  const gstRate = hotel.taxRate ?? 0;
+  const bedRate = hotel.bedTaxRate ?? 0;
+  const gstAmount = Math.round(subtotal * gstRate);
+  const bedAmount = Math.round(subtotal * bedRate);
+  const grandTotal = subtotal + gstAmount + bedAmount;
+  const hasAnyTax = gstAmount > 0 || bedAmount > 0;
 
   const [form, setForm] = useState({
     firstName: "",
-    lastName: "",
     email: "",
     phone: "",
     specialRequests: infant ? "Travelling with an infant — crib may be required" : "",
@@ -73,6 +120,8 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Stable per-attempt UUID — server dedups so retries can't create duplicates.
+  const submitUuidRef = useRef<string>(crypto.randomUUID());
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
@@ -82,29 +131,48 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
-    try {
-      const result = await createHotelBooking({
-        hotelSlug: hotel.slug,
-        lineItems,
-        checkinDate: checkin || null,
-        checkoutDate: checkout || null,
-        adults: totalAdults,
-        children: totalChildren,
-        nights,
-        totalAmount: subtotal,
-        contact: {
-          name: `${form.firstName} ${form.lastName}`.trim(),
-          email: form.email,
-          phone: form.phone,
-        },
-        arrivalTime: form.arrivalTime || undefined,
-        notes: form.specialRequests || undefined,
-      });
-      router.push(`/hotels/${hotel.slug}/checkout/success?ref=${result.bookingRef}&amount=${result.totalAmount}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Booking failed. Please try again.");
-      setSubmitting(false);
+    const input = {
+      hotelSlug: hotel.slug,
+      lineItems,
+      checkinDate: checkin || null,
+      checkoutDate: checkout || null,
+      adults: totalAdults,
+      children: totalChildren,
+      nights,
+      totalAmount: grandTotal,
+      contact: {
+        name: form.firstName.trim(),
+        email: form.email,
+        phone: form.phone,
+      },
+      arrivalTime: form.arrivalTime || undefined,
+      notes: form.specialRequests || undefined,
+      submitUuid: submitUuidRef.current,
+    };
+    const isNetworkError = (e: unknown) => {
+      const msg = e instanceof Error ? e.message.toLowerCase() : "";
+      return msg.includes("load failed") || msg.includes("network") || msg.includes("fetch");
+    };
+    let lastErr: unknown = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const result = await createHotelBooking(input);
+        router.push(`/hotels/${hotel.slug}/checkout/success?ref=${result.bookingRef}&amount=${result.totalAmount}`);
+        return;
+      } catch (e) {
+        lastErr = e;
+        if (!isNetworkError(e) || attempt === 2) break;
+        setError("Connection issue — retrying…");
+        await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+      }
     }
+    const msg = lastErr instanceof Error ? lastErr.message : "";
+    setError(
+      isNetworkError(lastErr)
+        ? "We couldn't reach the server. Please check your connection and try again, or contact us on WhatsApp at +92 321 6650670."
+        : msg || "Booking failed. Please try again."
+    );
+    setSubmitting(false);
   }
 
   const isValid = form.firstName && form.phone && lineItems.length > 0;
@@ -118,30 +186,27 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
         {/* Guest details */}
         <section>
           <h2 className="text-[18px] font-bold text-[var(--text-primary)] mb-4">Guest details</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div>
               <label className="block text-[12px] font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wide">
-                First name <span className="text-[var(--error)]" aria-hidden="true">*</span>
+                Name <span className="text-[var(--error)]" aria-hidden="true">*</span>
               </label>
-              <input name="firstName" type="text" required value={form.firstName} onChange={handleChange} placeholder="Ali"
+              <input name="firstName" type="text" required value={form.firstName} onChange={handleChange} placeholder="Ali Khan"
                 className="w-full h-11 px-4 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)] transition-colors" />
             </div>
-            <div>
-              <label className="block text-[12px] font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wide">Last name</label>
-              <input name="lastName" type="text" value={form.lastName} onChange={handleChange} placeholder="Khan"
-                className="w-full h-11 px-4 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)] transition-colors" />
-            </div>
-            <div>
-              <label className="block text-[12px] font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wide">Email</label>
-              <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="ali@example.com"
-                className="w-full h-11 px-4 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)] transition-colors" />
-            </div>
-            <div>
-              <label className="block text-[12px] font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wide">
-                Phone <span className="text-[var(--error)]" aria-hidden="true">*</span>
-              </label>
-              <input name="phone" type="tel" required value={form.phone} onChange={handleChange} placeholder="+92 300 0000000"
-                className="w-full h-11 px-4 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)] transition-colors" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[12px] font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wide">
+                  Phone <span className="text-[var(--error)]" aria-hidden="true">*</span>
+                </label>
+                <input name="phone" type="tel" required value={form.phone} onChange={handleChange} placeholder="+92 300 0000000"
+                  className="w-full h-11 px-4 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)] transition-colors" />
+              </div>
+              <div>
+                <label className="block text-[12px] font-semibold text-[var(--text-secondary)] mb-1.5 uppercase tracking-wide">Email</label>
+                <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="ali@example.com"
+                  className="w-full h-11 px-4 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)] transition-colors" />
+              </div>
             </div>
           </div>
         </section>
@@ -174,22 +239,7 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
           <p className="text-[11px] text-[var(--text-tertiary)] mt-1.5">Special requests cannot be guaranteed — we&apos;ll do our best to accommodate them.</p>
         </section>
 
-        {/* Cancellation notice */}
-        <section className="p-4 bg-[var(--primary-light)] border border-[var(--primary)]/20 rounded-[var(--radius-md)]">
-          <div className="flex items-start gap-3">
-            <Icon name="lock" size="sm" color="var(--success)" className="mt-0.5 shrink-0" />
-            <div>
-              <p className="text-[13px] font-bold text-[var(--primary-deep)] mb-1">Free cancellation</p>
-              <p className="text-[12px] text-[var(--text-secondary)] leading-relaxed">
-                {hotel.policies.cancellation[0] ?? "Cancel anytime before check-in for a full refund."}
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {error && (
-          <div className="p-3 bg-[var(--error)]/10 border border-[var(--error)]/30 rounded-[var(--radius-sm)] text-[13px] text-[var(--error)]">{error}</div>
-        )}
+        {error && <InlineAlert>{error}</InlineAlert>}
 
         <div className="space-y-2">
           <button type="submit" disabled={!isValid || submitting}
@@ -198,6 +248,7 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
           </button>
         </div>
         <p className="text-center text-[12px] text-[var(--text-tertiary)] -mt-4">You won&apos;t be charged yet — pay securely on the next step.</p>
+
       </form>
 
       {/* ── Right: Booking summary ── */}
@@ -258,6 +309,11 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
                       </span>
                       <span className="font-semibold text-[var(--text-primary)] tabular-nums">{formatPrice(lineTotal)}</span>
                     </div>
+                    {li.isSingle && li.singleSaving > 0 && (
+                      <p className="text-[11px] text-[var(--success)] mt-0.5">
+                        Single occupancy rate · save {formatPrice(li.singleSaving)}
+                      </p>
+                    )}
                     {extraPeople > 0 && extraRate > 0 && (
                       <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
                         +{extraPeople} extra guest{extraPeople > 1 ? "s" : ""} · {formatPrice(extraRate)}/night each
@@ -272,13 +328,34 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
 
             {/* Totals */}
             <div className="space-y-2">
-              <div className="flex justify-between text-[13px] text-[var(--success)]">
-                <span>Taxes & fees</span>
-                <span>Included</span>
-              </div>
+              {hasAnyTax ? (
+                <>
+                  <div className="flex justify-between text-[13px]">
+                    <span className="text-[var(--text-secondary)]">Subtotal</span>
+                    <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(subtotal)}</span>
+                  </div>
+                  {gstAmount > 0 && (
+                    <div className="flex justify-between text-[13px]">
+                      <span className="text-[var(--text-secondary)]">GST ({Math.round(gstRate * 100)}%)</span>
+                      <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(gstAmount)}</span>
+                    </div>
+                  )}
+                  {bedAmount > 0 && (
+                    <div className="flex justify-between text-[13px]">
+                      <span className="text-[var(--text-secondary)]">Bed Tax ({Math.round(bedRate * 100)}%)</span>
+                      <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(bedAmount)}</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex justify-between text-[13px] text-[var(--success)]">
+                  <span>Taxes & fees</span>
+                  <span>Included</span>
+                </div>
+              )}
               <div className="flex justify-between text-[15px] font-bold">
                 <span className="text-[var(--text-primary)]">Total</span>
-                <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(subtotal)}</span>
+                <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(grandTotal)}</span>
               </div>
             </div>
           </div>

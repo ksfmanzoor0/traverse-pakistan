@@ -1,7 +1,9 @@
 # Traverse Pakistan — AI Agent Instructions
 
 Tourism booking platform for traversepakistan.com.
-**Stack:** Next.js 15 App Router · TypeScript strict · Tailwind v4 · Plus Jakarta Sans · Supabase (Phase 2) · Vercel.
+**Stack:** Next.js 16 App Router (Turbopack) · TypeScript strict · Tailwind v4 · Plus Jakarta Sans · Supabase (Postgres + Auth) · Resend (email) · Meta WhatsApp Cloud API (transactional) · Alfa Hosted Checkout (payments) · ImageKit CDN · Vercel.
+
+For a chronological narrative of major work shipped, see [PROGRESS.md](PROGRESS.md).
 
 ---
 
@@ -14,6 +16,24 @@ Tourism booking platform for traversepakistan.com.
 5. **Only 4 radius values:** 8 / 12 / 16 / 9999px via `--radius-{sm,md,lg,full}`.
 6. **Motion tokens** — `--duration-fast/normal/slow`, `--ease-default` (Airbnb curve). No `duration-300`.
 7. **Services are async** — components import from `src/services/*.service.ts`, never from `src/data/*` directly.
+8. **Branch hygiene** — never push directly to `main`; never commit directly to `Dev-Main` (merge-only); always pull latest from origin after switching branches; always `npm run build` before pushing; verify UI on localhost before commit.
+9. **Booking creation goes through silent signup** — every booking must call `stampBookingWithUser(bookingRef)` from a server-side route so `auth.users` is provisioned and `bookings.user_id` is stamped. Already wired into all 4 `/api/payments/alfa/initiate*` routes; do not bypass it.
+
+---
+
+## Branch strategy
+
+| Branch | Purpose |
+|---|---|
+| `main` | Production — never commit directly, PR through Dev-Main |
+| `Dev-Main` | Staging — merge-only; preview at sandbox.traversepakistan.com when assigned |
+| `Desktop-Frontend` | Desktop UI tweaks |
+| `Mobile-Frontend` | Mobile-specific UI; every Desktop-Frontend change must be ported here separately |
+| `backend-testing` | Server-side / API / Supabase RPC work |
+| `add-data` | Hotels / packages / tours seeding |
+| Feature branches | One per coherent feature (e.g. `booking`, `passwordless-signup`); merge full stack together when API and UI are coupled |
+
+Pull from `origin/main` (or feature base) after switching to any branch before doing any work.
 
 ---
 
@@ -43,9 +63,36 @@ Tourism booking platform for traversepakistan.com.
 ### Data / services / types
 - [src/data/](src/data/) — TS data (destinations, tours, regions, hotels, reviews, blog, travel-styles, faqs, packages, itinerary)
 - [src/services/](src/services/) — `*.service.ts`, async. Phase 2: swap body to Supabase, components stay
-- [src/types/](src/types/) — TS interfaces. `WhyVisitCard.icon` is typed as `IconName` (from `Icon.tsx`)
-- [src/lib/](src/lib/) — `utils.ts` (cn, formatPrice, slugify, getWhatsAppUrl), `constants.ts`, `supabase/`, `seo/`
+- [src/types/](src/types/) — TS interfaces. `WhyVisitCard.icon` is typed as `IconName` (from `Icon.tsx`). `BookingStatus` / `RefundStatus` literal-types in [booking-status.ts](src/types/booking-status.ts).
+- [src/lib/](src/lib/) — `utils.ts` (cn, formatPrice, slugify, getWhatsAppUrl), `constants.ts`, `supabase/`, `seo/`, `auth/`, `whatsapp/`, `email/`, `alfa/`, `payments/`, `imageLoader.ts`
 - [src/styles/fonts.ts](src/styles/fonts.ts) — Plus Jakarta Sans
+
+### Auth, bookings, payments — server-side primitives
+
+- [src/lib/supabase/server.ts](src/lib/supabase/server.ts) — `getSupabaseServer()` (cookie-aware, for user-context reads) and `getSupabaseAdmin()` (service-role, bypasses RLS)
+- [src/lib/auth/](src/lib/auth/)
+  - `phone.ts` — E.164 normalize + `synthesizeEmailFromPhone(phone)` → `wa-{digits}@traverse.internal`
+  - `findOrCreateUser.ts` — silent admin-create with `email_confirm: true` + `user_metadata { verified_via_otp: false, origin: "silent_checkout" }`
+  - `stampBookingWithUser.ts` — best-effort hook called from all 4 initiate routes; populates `bookings.user_id`
+  - `requireBookingOwner.ts` — guard for booking-action routes: requires session + verified_via_otp + user_id match
+- [src/lib/whatsapp/cloud.ts](src/lib/whatsapp/cloud.ts) — Meta Cloud API client; env-gated (no-ops if `META_WHATSAPP_TOKEN` unset); two senders: `sendOtpViaWhatsApp` (auth template) and `sendBookingConfirmedViaWhatsApp` (utility template)
+- [src/lib/email/](src/lib/email/) — `resend.ts` (lazy client init, `FROM` env-overridable), `sendBookingConfirmation.ts` (generates magic link, dispatches to email + WhatsApp), templates
+- [src/lib/alfa/](src/lib/alfa/) — config + hash helpers for Alfa Hosted Checkout
+- [src/lib/payments/markBooking.ts](src/lib/payments/markBooking.ts) — IPN-triggered status updates across all 3 booking tables
+
+### Auth flow (passwordless)
+
+1. **Booking checkout** — user enters contact + pays. Server (`/api/payments/alfa/initiate*`) calls `stampBookingWithUser` which silent-creates an `auth.users` row keyed by email (or synthesized email if phone-only) and stamps `booking.user_id`.
+2. **Payment confirmed** — IPN triggers `sendBookingConfirmation`, which mints a Supabase magic-link token via `auth.admin.generateLink` and sends `${SITE}/auth/callback?token_hash=...&next=/bookings/{ref}` via Resend email (if real email) + WhatsApp Cloud API.
+3. **User clicks magic link** — [/auth/callback](src/app/auth/callback/route.ts) consumes the token, flips `verified_via_otp = true`, redirects to `next`.
+4. **User opens /bookings/[ref] cold** — [server-side gate](src/app/bookings/[ref]/page.tsx) checks session + verified_via_otp + user_id; missing → redirects to `/bookings/find?next=/bookings/{ref}`.
+5. **Find-booking** — [/bookings/find](src/app/bookings/find/page.tsx) takes email or phone, sends OTP via chosen channel. Verify route mints a magic-link token, client calls `supabase.auth.verifyOtp({ token_hash, type: 'magiclink' })` → real session.
+
+### Auth routes
+- `POST /api/bookings/otp` — `{ identifier, channel }` (channel: `email` | `whatsapp`); always 200 to prevent enumeration
+- `PUT  /api/bookings/otp` — `{ identifier, code }`; on success returns `{ tokenHash, type: 'magiclink' }` and flips `verified_via_otp`
+- `GET  /auth/callback` — handles both OAuth `code` and magic-link `token_hash`; sets session cookies
+- `GET/POST/PATCH /api/bookings/[ref]/...` — gated by `requireBookingOwner`
 
 ---
 
@@ -53,13 +100,17 @@ Tourism booking platform for traversepakistan.com.
 
 | Task | Open |
 |------|------|
-| Add a new icon | [Icon.tsx](src/components/ui/Icon.tsx) — import + add to `iconMap` |
+| Add a new icon | [icon-map.ts](src/components/ui/icon-map.ts) — import + add to `iconMap` |
 | Add a new destination | [src/data/destinations.ts](src/data/destinations.ts) — use `IconName` tokens, include `opening` |
 | Change brand color | [src/app/globals.css](src/app/globals.css) — update the token, both light + dark blocks |
 | Add a section header with eyebrow | Use `<SectionHeader eyebrow="..." title="..." />` |
 | Empty state | Use `<EmptyState icon="..." title="..." description="..." action={...} />` |
 | Add a seasonal tint | Already derived in [SeasonCard.tsx](src/components/destination/SeasonCard.tsx) from `season` name — don't add per-destination |
 | Scroll-reveal wrap | `<Reveal delayMs={60}>…</Reveal>` (respects `prefers-reduced-motion`) |
+| Send something via WhatsApp | Use `sendOtpViaWhatsApp` / `sendBookingConfirmedViaWhatsApp` from [cloud.ts](src/lib/whatsapp/cloud.ts) — env-gated, safe to call when not configured |
+| Gate a booking action by ownership | Wrap route in `requireBookingOwner(ref)` from [requireBookingOwner.ts](src/lib/auth/requireBookingOwner.ts); the `ok: false` branch returns a ready `NextResponse` |
+| Add a new package | See "Adding a new package — checklist" below |
+| Add a new hotel | Add slug to `SUPABASE_HOTEL_SLUGS` in [hotel.service.ts](src/services/hotel.service.ts) + insert rows into 6 Supabase tables. **Never** add new hotels to static data. |
 
 ---
 
@@ -77,9 +128,36 @@ Tourism booking platform for traversepakistan.com.
 
 ```bash
 npm run dev    # Dev server (Turbopack) on :3000
-npm run build  # Production build, static-generates 565 pages (as of pkg-51, now pkg-56)
+npm run build  # Production build, static-generates ~570 pages
 npm run lint   # ESLint
 ```
+
+---
+
+## Environment variables
+
+Required for full functionality. Most are also set in [.env.example](.env.example).
+
+### Core
+- `NEXT_PUBLIC_SUPABASE_URL` · `NEXT_PUBLIC_SUPABASE_ANON_KEY` · `SUPABASE_SERVICE_ROLE_KEY`
+- `NEXT_PUBLIC_SITE_URL` — base URL for the deployment (e.g. `https://traversepakistan.com`, `https://sandbox.traversepakistan.com`). Used by SEO canonicals AND magic-link URLs in confirmation emails/WhatsApp. **Critical per deploy** — wrong value breaks sign-in flow from preview emails.
+
+### Email (Resend)
+- `RESEND_API_KEY` — required for OTP + booking confirmation send
+- `EMAIL_FROM` — optional override; defaults to `Traverse Pakistan <info@traversepakistan.com>`. Domain must be verified in Resend (info@ alias does not need to actually exist as a mailbox).
+
+### WhatsApp (Meta Cloud API) — optional; client no-ops when unset
+- `META_WHATSAPP_TOKEN` — system user permanent token
+- `META_WHATSAPP_PHONE_ID` — phone number ID from WhatsApp Manager
+- `META_WHATSAPP_TEMPLATE_OTP` — authentication template name (default `verification_code`)
+- `META_WHATSAPP_TEMPLATE_BOOKING_CONFIRMED` — utility template name (default `booking_confirmed`)
+
+### Payments (Alfa Hosted Checkout)
+- `ALFA_MERCHANT_ID` · `ALFA_STORE_ID` · `ALFA_MERCHANT_HASH` · `ALFA_MERCHANT_USERNAME` · `ALFA_MERCHANT_PASSWORD` · `ALFA_KEY1` · `ALFA_KEY2`
+- `ALFA_SANDBOX` — defaults to true unless set to `"false"` explicitly
+
+### Domain assignments
+- `sandbox.traversepakistan.com` → currently assigned to `passwordless-signup` branch in Vercel. Reassign in **Settings → Domains** when promoting feature branches.
 
 ---
 

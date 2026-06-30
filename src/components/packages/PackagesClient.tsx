@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PackageCard } from "@/components/packages/PackageCard";
+import { sortByDestinationRelevance } from "@/lib/packages/sortByDestinationRelevance";
 import type { Package } from "@/types/package";
 import type { DestinationOption } from "@/components/home/SearchWidget";
 
@@ -16,15 +17,15 @@ export function PackagesClient({ packages, destinations = [] }: { packages: Pack
   const selectedDest = destinations.find((d) => d.slug === destFilter);
   const filterSlug = selectedDest?.parentSlug ?? destFilter;
 
-  const filtered = useMemo(() => (
-    filterSlug
-      ? packages.filter(
-          (p) =>
-            p.destinationSlug === filterSlug ||
-            p.relatedDestinationSlugs?.includes(filterSlug)
-        )
-      : packages
-  ), [packages, filterSlug]);
+  const filtered = useMemo(() => {
+    if (!filterSlug) return packages;
+    const matches = packages.filter(
+      (p) =>
+        p.destinationSlug === filterSlug ||
+        p.relatedDestinationSlugs?.includes(filterSlug),
+    );
+    return sortByDestinationRelevance(matches, filterSlug);
+  }, [packages, filterSlug]);
 
   const destName = destinations.find((d) => d.slug === destFilter)?.name;
   const hasFilters = !!(destFilter || dateFilter);

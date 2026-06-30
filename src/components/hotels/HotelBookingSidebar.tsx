@@ -34,6 +34,15 @@ function getRoomPrice(room: HotelRoom, seasonLabel: string | null): number {
   return room.price;
 }
 
+// Single-occupancy rate for the active season: seasonal single → flat single → none.
+function getSingleRate(room: HotelRoom, seasonLabel: string | null): number | null {
+  if (room.prices && seasonLabel) {
+    const match = room.prices.find((p) => p.season === seasonLabel);
+    if (match?.singlePrice != null) return match.singlePrice;
+  }
+  return room.singlePrice ?? null;
+}
+
 const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 const MONTHS = [
   "January","February","March","April","May","June",
@@ -167,23 +176,37 @@ export function HotelBookingSidebar({ hotel }: { hotel: Hotel }) {
   function nextMonth() { if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1); } else setCalMonth(m => m + 1); }
 
   const nights = checkIn && checkOut ? diffDays(checkIn, checkOut) : 0;
-  const seasonLabel = hotel.seasons && checkIn ? getSeasonLabel(checkIn, hotel.seasons) : null;
+  // No date picked yet → price for today's season so line items match the room
+  // cards and the "from" header (which also default to today).
+  const seasonLabel = hotel.seasons ? getSeasonLabel(checkIn ?? new Date(), hotel.seasons) : null;
 
   // Per-room line items
   const lineItems = [...selections.values()].map((sel) => {
-    const pricePerNight = getRoomPrice(sel.room, seasonLabel);
+    const basePrice = getRoomPrice(sel.room, seasonLabel);
+    const singleRate = getSingleRate(sel.room, seasonLabel);
+    // Single occupancy = exactly 1 adult per room, no children, and the room offers a single rate.
+    const isSingle = sel.adults === sel.qty && sel.children === 0 && singleRate != null;
+    const pricePerNight = isSingle ? singleRate! : basePrice;
+    const singleSaving = isSingle ? (basePrice - singleRate!) * sel.qty * (nights || 1) : 0;
     const extraPeople = Math.max(0, sel.adults + sel.children - 2 * sel.qty);
     const extraRate = sel.room.extraOccupancyCharge ?? 0;
     const roomTotal = pricePerNight * sel.qty * (nights || 1);
     const extraTotal = extraRate * extraPeople * (nights || 1);
-    return { sel, pricePerNight, extraPeople, extraRate, roomTotal, extraTotal };
+    return { sel, pricePerNight, isSingle, singleSaving, extraPeople, extraRate, roomTotal, extraTotal };
   });
 
   const perNightTotal = lineItems.reduce((s, li) => s + li.pricePerNight * li.sel.qty, 0);
-  const grandTotal = lineItems.reduce((s, li) => s + li.roomTotal + li.extraTotal, 0);
+  const subtotal = lineItems.reduce((s, li) => s + li.roomTotal + li.extraTotal, 0);
+  const gstRate = hotel.taxRate ?? 0;
+  const bedRate = hotel.bedTaxRate ?? 0;
+  const gstAmount = Math.round(subtotal * gstRate);
+  const bedAmount = Math.round(subtotal * bedRate);
+  const grandTotal = subtotal + gstAmount + bedAmount;
+  const hasAnyTax = gstAmount > 0 || bedAmount > 0;
 
-  // Starting price shown in header
-  const minRoomPrice = hotel.rooms.length > 0 ? Math.min(...hotel.rooms.map((r) => r.price)) : 0;
+  // "from" header = lowest room rate for the CURRENT season (entryPriceForToday),
+  // not the absolute floor — so it never misrepresents what today's rate actually is.
+  const minRoomPrice = hotel.pricePerNight;
 
   // Checkout URL — encode each selection as roomName|qty|adults|children
   const selectionParams = [...selections.values()]
@@ -302,7 +325,7 @@ export function HotelBookingSidebar({ hotel }: { hotel: Hotel }) {
         {/* Price breakdown */}
         {hasSelections && (
           <div className="mb-4 space-y-2 pt-4 border-t border-[var(--border-default)]">
-            {lineItems.map(({ sel, pricePerNight, extraPeople, extraRate, roomTotal, extraTotal }) => (
+            {lineItems.map(({ sel, pricePerNight, isSingle, singleSaving, extraPeople, extraRate, roomTotal, extraTotal }) => (
               <div key={sel.room.name}>
                 <div className="flex justify-between text-[13px]">
                   <span className="text-[var(--text-secondary)]">
@@ -310,6 +333,11 @@ export function HotelBookingSidebar({ hotel }: { hotel: Hotel }) {
                   </span>
                   <span className="text-[var(--text-primary)] font-medium tabular-nums">{formatPrice(pricePerNight * sel.qty * (nights || 1))}</span>
                 </div>
+                {isSingle && singleSaving > 0 && (
+                  <p className="text-[11px] text-[var(--success)] mt-0.5">
+                    Single occupancy rate · save {formatPrice(singleSaving)}
+                  </p>
+                )}
                 {extraPeople > 0 && extraRate > 0 && (
                   <div className="flex justify-between text-[12px] mt-0.5">
                     <span className="text-[var(--text-tertiary)]">
@@ -321,8 +349,20 @@ export function HotelBookingSidebar({ hotel }: { hotel: Hotel }) {
                 {roomTotal + extraTotal !== pricePerNight * sel.qty * (nights || 1) + extraTotal && null}
               </div>
             ))}
+            {nights > 0 && gstAmount > 0 && (
+              <div className="flex justify-between text-[13px] pt-2 border-t border-[var(--border-default)]">
+                <span className="text-[var(--text-secondary)]">GST ({Math.round(gstRate * 100)}%)</span>
+                <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(gstAmount)}</span>
+              </div>
+            )}
+            {nights > 0 && bedAmount > 0 && (
+              <div className={`flex justify-between text-[13px] ${gstAmount > 0 ? "" : "pt-2 border-t border-[var(--border-default)]"}`}>
+                <span className="text-[var(--text-secondary)]">Bed Tax ({Math.round(bedRate * 100)}%)</span>
+                <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(bedAmount)}</span>
+              </div>
+            )}
             {nights > 0 && (
-              <div className="flex justify-between text-[15px] font-bold pt-2 border-t border-[var(--border-default)]">
+              <div className={`flex justify-between text-[15px] font-bold pt-2 ${hasAnyTax ? "" : "border-t border-[var(--border-default)]"}`}>
                 <span className="text-[var(--text-primary)]">Total</span>
                 <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(grandTotal)}</span>
               </div>
@@ -363,10 +403,6 @@ export function HotelBookingSidebar({ hotel }: { hotel: Hotel }) {
 
         {/* Guarantees */}
         <div className="mt-4 space-y-2 pt-4 border-t border-[var(--border-default)]">
-          <p className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)]">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
-            Free cancellation before check-in
-          </p>
           <p className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)]">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
             24/7 WhatsApp support

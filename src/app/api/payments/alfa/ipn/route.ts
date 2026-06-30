@@ -25,7 +25,11 @@ export async function POST(req: NextRequest) {
 
     console.log("[alfa/ipn POST] bookingRef:", bookingRef, "isPaid:", isPaid);
 
-    if (bookingRef) await markBooking(bookingRef, isPaid);
+    if (bookingRef) {
+      // markBooking handles the confirmation send internally (guarded on
+      // pending → paid transition, safe against duplicate IPN calls).
+      await markBooking(bookingRef, isPaid);
+    }
 
     return new NextResponse("OK", { status: 200 });
   } catch (err) {

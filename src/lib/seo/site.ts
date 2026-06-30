@@ -14,8 +14,15 @@ export const IS_GITHUB_PAGES = process.env.GITHUB_PAGES === "true";
  * sitemap URLs point at the actual deployed location — though the site is
  * also noindex'd in that mode, so canonicals don't need to resolve publicly.
  */
-export const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || SITE_CONFIG.url;
+function normalizeSiteUrl(raw: string | undefined): string {
+  if (!raw) return SITE_CONFIG.url;
+  const trimmed = raw.trim().replace(/\/+$/, "");
+  // Accept hostnames without scheme — common Vercel env-var input.
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
+export const SITE_URL = normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL);
 
 /** Path prefix under which the app is hosted (GitHub Pages subfolder). */
 export const BASE_PATH = IS_GITHUB_PAGES

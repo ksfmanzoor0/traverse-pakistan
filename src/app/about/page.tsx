@@ -51,7 +51,7 @@ export default function AboutPage() {
           </div>
           <div className="relative aspect-[4/3] rounded-xl overflow-hidden">
             <Image
-              src="https://traversepakistan.com/wp-content/uploads/2022/09/drone1-10.jpg"
+              src="https://media.traversepakistan.com/about/hero.jpg"
               alt="Traverse Pakistan team"
               fill
               className="object-cover"

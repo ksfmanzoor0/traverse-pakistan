@@ -19,6 +19,7 @@ const NAV_LINKS = [
   { label: "Custom Tours", href: "/packages" },
   { label: "Group Tours", href: "/grouptours" },
   { label: "Hotels", href: "/hotels" },
+  { label: "Plan My Trip", href: "/customise-tour" },
 ];
 
 const LISTING_PATHS = ["/packages", "/hotels", "/grouptours"] as const;
@@ -57,7 +58,7 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
     const rest = pathname.slice(p.length + 1);
     return !rest.includes("/") || rest.endsWith("/checkout");
   });
-  const showDesktopSearch = !isHome;
+  const showDesktopSearch = !isHome && pathname !== "/customise-tour";
 
   const detailCategory = pathname.startsWith("/hotels") ? "Hotels"
     : pathname.startsWith("/grouptours") ? "Group Tours"
@@ -153,7 +154,7 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
         className="sticky top-0 z-50 bg-[var(--bg-primary)]/95 backdrop-blur-md"
         style={{ boxShadow: "0 1px 0 var(--border-default)" }}
       >
-        <nav className="mx-auto max-w-[1400px] flex items-center md:grid md:grid-cols-[1fr_auto_1fr] md:items-start min-h-[64px] sm:min-h-[76px] px-4 sm:px-8 lg:px-16">
+        <nav className="mx-auto w-full flex items-center md:grid md:grid-cols-[1fr_auto_1fr] md:items-start min-h-[64px] sm:min-h-[76px] px-4 sm:px-8 lg:px-16">
           {/* Logo — CSS-driven so there's no flash on dark-mode reload */}
           <div className="shrink-0 h-[64px] sm:h-[76px] flex items-center">
             <Link href="/" onClick={closeAll}>
@@ -163,6 +164,7 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
                 width={1609}
                 height={706}
                 className="h-8 w-auto sm:h-11 hidden [[data-theme=dark]_&]:block"
+                style={{ mixBlendMode: "screen" }}
                 priority
                 unoptimized
               />
@@ -172,13 +174,17 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
                 width={1596}
                 height={700}
                 className="h-8 w-auto sm:h-11 [[data-theme=dark]_&]:hidden"
+                style={{ mixBlendMode: "multiply" }}
                 priority
                 unoptimized
               />
             </Link>
           </div>
 
-          {/* Desktop search bar — hidden on mobile and home page */}
+          {/* Desktop search bar — Airbnb style: full-width nav pins the logo
+              (left col) and actions (right col) to the edges; the search sits
+              in the centre column. Kept in flow so the navbar grows when the
+              search expands. Full-width gives the 850px search room to centre. */}
           <div className="hidden md:flex justify-center py-3 min-h-[76px] w-[850px]">
             {showDesktopSearch && <NavSearchBar destinations={destinations} />}
           </div>
@@ -186,6 +192,20 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
           {/* Right actions */}
           <div className="ml-auto flex items-center md:justify-end gap-1 h-[64px] sm:h-[76px]">
             <ThemeToggle />
+            <Link
+              href="/customise-tour"
+              className="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-sm)] text-[13px] font-semibold whitespace-nowrap text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] transition-colors"
+            >
+              <Icon name="compass" size="xs" />
+              Plan My Trip
+            </Link>
+            <Link
+              href="/bookings/find"
+              className="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-sm)] text-[13px] font-semibold whitespace-nowrap text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] transition-colors"
+            >
+              <Icon name="bookmark" size="xs" />
+              My Bookings
+            </Link>
             <UserMenu />
 
             {/* Hamburger */}
@@ -219,7 +239,7 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
                   href={link.href}
                   onClick={closeAll}
                   className={cn(
-                    "py-3.5 text-[15px] font-semibold border-b border-[var(--border-default)] last:border-0 transition-colors",
+                    "py-3.5 text-[15px] font-semibold border-b border-[var(--border-default)] transition-colors",
                     pathname.startsWith(link.href)
                       ? "text-[var(--primary)]"
                       : "text-[var(--text-primary)] hover:text-[var(--primary)]"
@@ -228,6 +248,19 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
                   {link.label}
                 </Link>
               ))}
+              <Link
+                href="/bookings/find"
+                onClick={closeAll}
+                className={cn(
+                  "flex items-center gap-2 py-3.5 text-[15px] font-semibold transition-colors",
+                  pathname.startsWith("/bookings") || pathname.startsWith("/mybookings")
+                    ? "text-[var(--primary)]"
+                    : "text-[var(--text-primary)] hover:text-[var(--primary)]"
+                )}
+              >
+                <Icon name="bookmark" size="xs" />
+                My Bookings
+              </Link>
             </nav>
 
           </div>

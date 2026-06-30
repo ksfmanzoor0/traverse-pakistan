@@ -5,6 +5,7 @@ import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { GroupToursClient } from "@/components/tours/GroupToursClient";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { getAllTours } from "@/services/tour.service";
+import { getAllDestinations } from "@/services/destination.service";
 
 export const metadata: Metadata = buildMetadata({
   title: "Pakistan Group Tours — 22 Fixed-Departure Trips from Islamabad & Lahore",
@@ -15,7 +16,13 @@ export const metadata: Metadata = buildMetadata({
 });
 
 export default async function GroupToursPage() {
-  const tours = await getAllTours();
+  const [tours, allDestinations] = await Promise.all([getAllTours(), getAllDestinations()]);
+  const destinationOptions = allDestinations.map((d) => ({
+    slug: d.slug,
+    name: d.name,
+    region: d.regionSlug,
+    parentSlug: d.parentSlug ?? null,
+  }));
 
   return (
     <div className="pb-12">
@@ -23,7 +30,7 @@ export default async function GroupToursPage() {
         <Container>
           <Breadcrumb items={[{ label: "Group Tours" }]} />
           <div className="mt-2 sm:mt-4">
-            <h1 className="text-[26px] sm:text-[42px] font-bold text-[var(--text-primary)] tracking-[-0.025em] leading-[1.15]">
+            <h1 className="text-[22px] sm:text-[42px] font-semibold sm:font-bold text-[var(--text-primary)] tracking-[-0.015em] sm:tracking-[-0.025em] leading-[1.15]">
               Explore All Group Tours
             </h1>
             <p className="mt-1.5 text-[15px] sm:text-lg text-[var(--text-secondary)]">
@@ -34,7 +41,7 @@ export default async function GroupToursPage() {
       </div>
 
       <Suspense fallback={<div className="py-20 text-center text-[var(--text-tertiary)]">Loading…</div>}>
-        <GroupToursClient tours={tours} />
+        <GroupToursClient tours={tours} destinations={destinationOptions} />
       </Suspense>
     </div>
   );

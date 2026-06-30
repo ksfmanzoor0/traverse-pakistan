@@ -184,12 +184,20 @@ function ReturnInner() {
             </div>
           )}
         </div>
-        <Link
-          href="/grouptours"
-          className="inline-flex h-11 px-6 items-center rounded-[var(--radius-sm)] bg-[var(--primary)] text-[var(--text-inverse)] text-[14px] font-semibold hover:bg-[var(--primary-hover)] transition-colors"
-        >
-          Browse more tours
-        </Link>
+        <div className="flex flex-col sm:flex-row gap-3 w-full">
+          <Link
+            href={`/bookings/${bookingRef}`}
+            className="flex-1 inline-flex h-11 px-6 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--primary)] text-[var(--text-inverse)] text-[14px] font-semibold hover:bg-[var(--primary-hover)] transition-colors"
+          >
+            View My Booking
+          </Link>
+          <Link
+            href="/grouptours"
+            className="flex-1 inline-flex h-11 px-6 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border-default)] text-[14px] font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-subtle)] transition-colors"
+          >
+            Browse more tours
+          </Link>
+        </div>
       </div>
     </div>
   );
