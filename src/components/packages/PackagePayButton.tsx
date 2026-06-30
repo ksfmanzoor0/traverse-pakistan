@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { formatPrice } from "@/lib/utils";
+import { throwOnRateLimit } from "@/lib/api/throwOnRateLimit";
 
 interface Props {
   bookingRef: string;
@@ -35,6 +36,7 @@ export function PackagePayButton({ bookingRef, amount, paymentStatus }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bookingRef, amount }),
       });
+      throwOnRateLimit(res, "payment attempts");
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error ?? "Payment initiation failed");
       setSsoData({ ssoUrl: data.ssoUrl, ssoParams: data.ssoParams });

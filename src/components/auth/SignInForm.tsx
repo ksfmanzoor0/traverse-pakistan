@@ -7,6 +7,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { Icon } from "@/components/ui/Icon";
 import { InlineAlert } from "@/components/ui/InlineAlert";
 import { useAuth } from "./AuthProvider";
+import { throwOnRateLimit } from "@/lib/api/throwOnRateLimit";
 
 const RESEND_COOLDOWN = 30;
 
@@ -86,13 +87,7 @@ function SignInInner() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ identifier: targetIdentifier, next }),
     });
-    if (res.status === 429) {
-      const retryAfter = Number(res.headers.get("Retry-After"));
-      const wait = Number.isFinite(retryAfter) && retryAfter > 0
-        ? ` Try again in ${retryAfter < 60 ? `${retryAfter}s` : `${Math.ceil(retryAfter / 60)} min`}.`
-        : "";
-      throw new Error(`Too many sign-in attempts.${wait}`);
-    }
+    throwOnRateLimit(res, "sign-in attempts");
     if (!res.ok) throw new Error("Could not send sign-in link. Please try again.");
   }, [next]);
 
