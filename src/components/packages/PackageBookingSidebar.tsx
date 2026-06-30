@@ -167,6 +167,7 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
   // Calendar
   const today = new Date();
   const [calOpen, setCalOpen] = useState(false);
+  const [datePromptVisible, setDatePromptVisible] = useState(false);
   const [calYear, setCalYear] = useState(today.getFullYear());
   const [calMonth, setCalMonth] = useState(today.getMonth());
   const [checkIn, setCheckIn] = useState<Date | null>(null);
@@ -225,6 +226,7 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
   function handleDateSelect(date: Date) {
     setCheckIn(date);
     setCalOpen(false);
+    setDatePromptVisible(false);
   }
 
   function clearDate() {
@@ -556,9 +558,10 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
           </div>
         </div>
 
-        {/* CTA — start date is mandatory. Until checkIn is picked, render a
-            disabled-looking button that opens the date picker on click so the
-            user is funnelled to the missing input instead of hitting a no-op. */}
+        {/* CTA — start date is mandatory but the button always reads "Book Now"
+            and stays visually active. When no date is selected, clicking it
+            scrolls to + opens the date picker and surfaces a one-line hint so
+            the user isn't bounced. */}
         {checkIn ? (
           <Link
             href={`/packages/${pkg.slug}/checkout?adults=${adults}&rooms=${displayRooms}&tier=${selectedTier}&city=${departureCity}&checkin=${toIsoDate(checkIn)}`}
@@ -570,27 +573,26 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
           <button
             type="button"
             onClick={() => {
+              setDatePromptVisible(true);
               setCalOpen(true);
               calWrapRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
             }}
-            className="w-full h-[52px] bg-[var(--primary)]/40 text-[var(--text-inverse)] text-[15px] font-semibold rounded-[var(--radius-sm)] flex items-center justify-center gap-2 cursor-pointer hover:bg-[var(--primary)]/55 transition-colors"
-            aria-disabled="true"
+            className="w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-semibold rounded-[var(--radius-sm)] flex items-center justify-center gap-2 hover:bg-[var(--primary-hover)] active:scale-[0.98] transition-all"
           >
-            Pick a start date
+            Book Now
           </button>
         )}
-        {checkIn ? (
-          <a
-            href={getWhatsAppUrl(whatsappMessage)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 w-full h-10 flex items-center justify-center gap-2 text-[13px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-          >
-            or ask on WhatsApp →
-          </a>
-        ) : (
-          <p className="mt-2 text-center text-[12px] text-[var(--text-tertiary)]">
-            Choose a start date to continue.
+        <a
+          href={getWhatsAppUrl(whatsappMessage)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 w-full h-10 flex items-center justify-center gap-2 text-[13px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+        >
+          or ask on WhatsApp →
+        </a>
+        {!checkIn && datePromptVisible && (
+          <p className="mt-2 text-center text-[12px] text-[var(--accent-warning,#d97706)] font-medium">
+            Pick a start date above to continue.
           </p>
         )}
 

@@ -113,7 +113,6 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--text-secondary)]">
-          {tour.freeCancellation && <TrustItem>Free cancellation</TrustItem>}
           {tour.reserveNowPayLater && <TrustItem>Reserve, pay later</TrustItem>}
           <TrustItem>Lowest price guarantee</TrustItem>
         </div>
