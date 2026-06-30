@@ -194,13 +194,13 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
           />
           {tour.pricing.singleSupplement && totalTravelers >= 2 && (
             <Stepper
-              label="Extra rooms"
-              sub={`+ ${formatPrice(tour.pricing.singleSupplement)} / extra room · skip sharing`}
+              label="Private room"
+              sub={`+ ${formatPrice(tour.pricing.singleSupplement)} / person · skip sharing`}
               value={singleRooms}
               min={0}
-              max={Math.floor(totalTravelers / 2)}
+              max={totalTravelers}
               onDecrement={() => setSingleRooms(Math.max(0, singleRooms - 1))}
-              onIncrement={() => setSingleRooms(Math.min(Math.floor(totalTravelers / 2), singleRooms + 1))}
+              onIncrement={() => setSingleRooms(Math.min(totalTravelers, singleRooms + 1))}
             />
           )}
         </div>
@@ -227,7 +227,7 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
           )}
           {pricing.singleSupplementTotal > 0 && (
             <div className="flex items-center justify-between text-[12px] text-[var(--text-secondary)]">
-              <span>Extra rooms</span>
+              <span>Private rooms</span>
               <span className="tabular-nums">{formatPrice(pricing.singleSupplementTotal)}</span>
             </div>
           )}
