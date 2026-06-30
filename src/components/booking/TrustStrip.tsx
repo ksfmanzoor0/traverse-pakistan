@@ -12,7 +12,6 @@ export function TrustStrip({ variant = "row", showSecurePayment = false }: Trust
       label: `${SITE_CONFIG.stats.rating}★ · ${SITE_CONFIG.stats.reviewCount.toLocaleString()}+ reviews`,
     },
     { icon: <Award />, label: "TripAdvisor Travelers' Choice 2025" },
-    { icon: <Shield />, label: "Free cancellation · 7 days" },
     { icon: <Headset />, label: "24/7 WhatsApp support" },
   ];
   if (showSecurePayment) items.push({ icon: <Lock />, label: "Secure booking" });
@@ -60,14 +59,6 @@ function Award() {
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <circle cx="12" cy="8" r="7" />
       <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
-    </svg>
-  );
-}
-
-function Shield() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     </svg>
   );
 }

@@ -249,17 +249,6 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
         </div>
         <p className="text-center text-[12px] text-[var(--text-tertiary)] -mt-4">You won&apos;t be charged yet — pay securely on the next step.</p>
 
-        <section className="p-4 bg-[var(--primary-light)] border border-[var(--primary)]/20 rounded-[var(--radius-md)]">
-          <div className="flex items-start gap-3">
-            <Icon name="lock" size="sm" color="var(--success)" className="mt-0.5 shrink-0" />
-            <div>
-              <p className="text-[13px] font-bold text-[var(--primary-deep)] mb-1">Free cancellation</p>
-              <p className="text-[12px] text-[var(--text-secondary)] leading-relaxed">
-                Cancel up to 2 weeks before departure for a full refund. After that, 50% refund up to 72 hours before.
-              </p>
-            </div>
-          </div>
-        </section>
       </form>
 
       {/* ── Right: Booking summary ── */}

@@ -405,10 +405,6 @@ export function HotelBookingSidebar({ hotel }: { hotel: Hotel }) {
         <div className="mt-4 space-y-2 pt-4 border-t border-[var(--border-default)]">
           <p className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)]">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
-            Free cancellation before check-in
-          </p>
-          <p className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)]">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
             24/7 WhatsApp support
           </p>
         </div>
