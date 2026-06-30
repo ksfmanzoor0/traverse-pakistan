@@ -99,12 +99,6 @@ export function PackageCard({ pkg, variant = "carousel", className }: PackageCar
         </div>
 
         <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2.5">
-          {pkg.freeCancellation && (
-            <span className="flex items-center gap-1 text-[11px] font-medium text-[var(--success)]">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
-              Free cancellation
-            </span>
-          )}
           {pkg.reserveNowPayLater && (
             <span className="flex items-center gap-1 text-[11px] font-medium text-[var(--info)]">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>

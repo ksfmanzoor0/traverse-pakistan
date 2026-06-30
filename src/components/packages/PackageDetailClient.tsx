@@ -84,9 +84,6 @@ export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages
                 <Chip icon={<Icon name="users" size="sm" />}>Up to {pkg.maxGroupSize} people</Chip>
                 <Chip icon={<Icon name="globe" size="sm" />}>{pkg.languages.join(", ")}</Chip>
                 <Chip icon={<Icon name="calendar-check" size="sm" />}>Custom dates</Chip>
-                {pkg.freeCancellation && (
-                  <Chip variant="success" icon={<Icon name="check" size="sm" weight="bold" />}>Free cancellation</Chip>
-                )}
                 {pkg.reserveNowPayLater && (
                   <Chip variant="info" icon={<Icon name="credit-card" size="sm" />}>Reserve now, pay later</Chip>
                 )}
