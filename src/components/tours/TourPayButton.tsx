@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { formatPrice } from "@/lib/utils";
+import { throwOnRateLimit } from "@/lib/api/throwOnRateLimit";
 
 interface TourPayButtonProps {
   bookingRef: string;
@@ -22,6 +23,7 @@ export function TourPayButton({ bookingRef, amount, plan = "full" }: TourPayButt
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bookingRef, plan }),
       });
+      throwOnRateLimit(res, "payment attempts");
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Payment initiation failed");
 
