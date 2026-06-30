@@ -556,21 +556,43 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
           </div>
         </div>
 
-        {/* CTA */}
-        <Link
-          href={`/packages/${pkg.slug}/checkout?adults=${adults}&rooms=${displayRooms}&tier=${selectedTier}&city=${departureCity}`}
-          className="w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-semibold rounded-[var(--radius-sm)] flex items-center justify-center gap-2 hover:bg-[var(--primary-hover)] active:scale-[0.98] transition-all"
-        >
-          Book Now
-        </Link>
-        <a
-          href={getWhatsAppUrl(whatsappMessage)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-2 w-full h-10 flex items-center justify-center gap-2 text-[13px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-        >
-          or ask on WhatsApp →
-        </a>
+        {/* CTA — start date is mandatory. Until checkIn is picked, render a
+            disabled-looking button that opens the date picker on click so the
+            user is funnelled to the missing input instead of hitting a no-op. */}
+        {checkIn ? (
+          <Link
+            href={`/packages/${pkg.slug}/checkout?adults=${adults}&rooms=${displayRooms}&tier=${selectedTier}&city=${departureCity}&checkin=${toIsoDate(checkIn)}`}
+            className="w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-semibold rounded-[var(--radius-sm)] flex items-center justify-center gap-2 hover:bg-[var(--primary-hover)] active:scale-[0.98] transition-all"
+          >
+            Book Now
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setCalOpen(true);
+              calWrapRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }}
+            className="w-full h-[52px] bg-[var(--primary)]/40 text-[var(--text-inverse)] text-[15px] font-semibold rounded-[var(--radius-sm)] flex items-center justify-center gap-2 cursor-pointer hover:bg-[var(--primary)]/55 transition-colors"
+            aria-disabled="true"
+          >
+            Pick a start date
+          </button>
+        )}
+        {checkIn ? (
+          <a
+            href={getWhatsAppUrl(whatsappMessage)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 w-full h-10 flex items-center justify-center gap-2 text-[13px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+          >
+            or ask on WhatsApp →
+          </a>
+        ) : (
+          <p className="mt-2 text-center text-[12px] text-[var(--text-tertiary)]">
+            Choose a start date to continue.
+          </p>
+        )}
 
         {/* Guarantees */}
         <div className="mt-5 space-y-2">

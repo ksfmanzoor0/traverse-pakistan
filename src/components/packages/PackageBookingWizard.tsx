@@ -150,13 +150,23 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
   const initTier = (searchParams?.get("tier") as "deluxe" | "luxury" | null) ?? "deluxe";
   const defaultCity = pkg.tiers.deluxe.islamabad !== null ? "islamabad" : pkg.tiers.deluxe.lahore !== null ? "lahore" : "karachi";
   const initCity = (searchParams?.get("city") as "islamabad" | "lahore" | "karachi" | null) ?? defaultCity;
+  const initCheckinParam = searchParams?.get("checkin") ?? null;
+  // Parse YYYY-MM-DD as a local date (avoid the UTC drift `new Date("YYYY-MM-DD")`
+  // gives in negative-UTC time zones).
+  const initStartDate: Date | null = (() => {
+    if (!initCheckinParam) return null;
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(initCheckinParam);
+    if (!m) return null;
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    return Number.isNaN(d.getTime()) ? null : d;
+  })();
   const initStep = searchParams?.get("adults") ? 3 : 1;
 
   const [state, setState] = useState<WizardState>({
     step: initStep as 1 | 2 | 3 | 4,
     tier: initTier,
     city: initCity,
-    startDate: null,
+    startDate: initStartDate,
     adults: initAdults,
     rooms: initRooms,
     firstName: "",
