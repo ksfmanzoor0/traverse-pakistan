@@ -10,7 +10,7 @@ import type { TourItinerary } from "@/types/itinerary";
 
 function toTour(
   row: TourRow,
-  priceMap?: Map<string, { islamabad: number; lahore: number | null }>,
+  priceMap?: Map<string, { islamabad: number; lahore: number | null; earliestDate: string | null }>,
   r2Images?: TourImage[]
 ): Tour {
   const prices = priceMap?.get(row.slug);
@@ -30,7 +30,7 @@ function toTour(
     },
     price: prices?.islamabad ?? 0,
     originalPrice: null,
-    departureDate: row.departure_date ?? "",
+    departureDate: prices?.earliestDate ?? row.departure_date ?? "",
     destinationSlug: row.destination_slug,
     regionSlug: row.region_slug,
     travelStyleSlugs: row.travel_style_slugs,
@@ -76,14 +76,21 @@ function toItinerary(tourSlug: string, rows: TourItineraryDayRow[]): TourItinera
 }
 
 async function buildPriceMap(supabase: ReturnType<typeof getSupabaseAnon>, slugs?: string[]) {
-  let query = supabase.from("departures").select("tour_slug, departure_city, price").eq("status", "open");
+  let query = supabase
+    .from("departures")
+    .select("tour_slug, departure_city, price, departure_date")
+    .eq("status", "open")
+    .gte("departure_date", todayISO());
   if (slugs?.length) query = query.in("tour_slug", slugs);
   const { data } = await query;
-  const map = new Map<string, { islamabad: number; lahore: number | null }>();
-  for (const row of (data ?? []) as { tour_slug: string; departure_city: string; price: number }[]) {
-    const entry = map.get(row.tour_slug) ?? { islamabad: 0, lahore: null };
+  const map = new Map<string, { islamabad: number; lahore: number | null; earliestDate: string | null }>();
+  for (const row of (data ?? []) as { tour_slug: string; departure_city: string; price: number; departure_date: string }[]) {
+    const entry = map.get(row.tour_slug) ?? { islamabad: 0, lahore: null, earliestDate: null };
     if (row.departure_city === "islamabad") entry.islamabad = row.price;
     else if (row.departure_city === "lahore") entry.lahore = row.price;
+    if (!entry.earliestDate || row.departure_date < entry.earliestDate) {
+      entry.earliestDate = row.departure_date;
+    }
     map.set(row.tour_slug, entry);
   }
   return map;
