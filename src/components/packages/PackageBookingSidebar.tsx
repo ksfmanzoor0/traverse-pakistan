@@ -596,12 +596,6 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
 
         {/* Guarantees */}
         <div className="mt-5 space-y-2">
-          {pkg.freeCancellation && (
-            <p className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)]">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
-              Free cancellation
-            </p>
-          )}
           {pkg.reserveNowPayLater && (
             <p className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)]">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>

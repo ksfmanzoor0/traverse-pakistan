@@ -533,18 +533,6 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
           </p>
         )}
 
-        {state.step === 4 && pkg.freeCancellation && (
-          <div className="p-4 bg-[var(--primary-light)] border border-[var(--primary)]/20 rounded-[var(--radius-md)] flex items-start gap-3">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2" className="mt-0.5 shrink-0">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
-            <div>
-              <p className="text-[13px] font-bold text-[var(--primary-deep)]">Free cancellation</p>
-              <p className="text-[12px] text-[var(--text-secondary)]">Cancel up to 2 weeks before departure for a full refund. After that, 50% refund up to 72 hours before.</p>
-            </div>
-          </div>
-        )}
-
         {state.step >= 2 && <TrustStrip variant="grid" showSecurePayment />}
         {state.step >= 3 && reviews.length > 0 && <ReviewQuoteCard reviews={reviews} />}
       </div>
