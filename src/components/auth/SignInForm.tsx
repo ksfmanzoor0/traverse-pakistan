@@ -86,6 +86,13 @@ function SignInInner() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ identifier: targetIdentifier, next }),
     });
+    if (res.status === 429) {
+      const retryAfter = Number(res.headers.get("Retry-After"));
+      const wait = Number.isFinite(retryAfter) && retryAfter > 0
+        ? ` Try again in ${retryAfter < 60 ? `${retryAfter}s` : `${Math.ceil(retryAfter / 60)} min`}.`
+        : "";
+      throw new Error(`Too many sign-in attempts.${wait}`);
+    }
     if (!res.ok) throw new Error("Could not send sign-in link. Please try again.");
   }, [next]);
 
