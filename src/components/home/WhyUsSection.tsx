@@ -34,7 +34,7 @@ const steps: Step[] = [
     icon: "users",
     title: "Safe for Everyone",
     description: "Verified drivers, professional guides. Solo, female, family — everyone travels safe.",
-    stat: "98%",
+    stat: "100%",
   },
 ];
 
