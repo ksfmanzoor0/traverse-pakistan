@@ -1,6 +1,6 @@
 import type { Destination } from "@/types/destination";
 
-const WP = "https://traversepakistan.com/wp-content/uploads";
+const WP = "https://wp.traversepakistan.com/wp-content/uploads";
 const MEDIA = "https://media.traversepakistan.com";
 
 export const destinations: Destination[] = [

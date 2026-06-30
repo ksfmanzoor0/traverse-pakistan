@@ -23,7 +23,7 @@ export const SITE_CONFIG = {
 } as const;
 
 export const IMAGE_BASE =
-  "https://traversepakistan.com/wp-content/uploads";
+  "https://wp.traversepakistan.com/wp-content/uploads";
 
 /** Margin applied on top of base hotel room rates before displaying to customers. */
 export const HOTEL_MARGIN = 0.20;
