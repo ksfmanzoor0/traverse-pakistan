@@ -10,7 +10,7 @@ import type { TourItinerary } from "@/types/itinerary";
 
 function toTour(
   row: TourRow,
-  priceMap?: Map<string, { islamabad: number; lahore: number | null; earliestDate: string | null }>,
+  priceMap?: Map<string, { islamabad: number; lahore: number | null; earliestDate: string | null; singleSupplement: number | null }>,
   r2Images?: TourImage[]
 ): Tour {
   const prices = priceMap?.get(row.slug);
@@ -26,7 +26,7 @@ function toTour(
     pricing: {
       islamabad: prices?.islamabad ?? 0,
       lahore: prices?.lahore ?? null,
-      singleSupplement: null,
+      singleSupplement: prices?.singleSupplement ?? null,
     },
     price: prices?.islamabad ?? 0,
     originalPrice: null,
@@ -78,18 +78,21 @@ function toItinerary(tourSlug: string, rows: TourItineraryDayRow[]): TourItinera
 async function buildPriceMap(supabase: ReturnType<typeof getSupabaseAnon>, slugs?: string[]) {
   let query = supabase
     .from("departures")
-    .select("tour_slug, departure_city, price, departure_date")
+    .select("tour_slug, departure_city, price, departure_date, single_supplement")
     .eq("status", "open")
     .gte("departure_date", todayISO());
   if (slugs?.length) query = query.in("tour_slug", slugs);
   const { data } = await query;
-  const map = new Map<string, { islamabad: number; lahore: number | null; earliestDate: string | null }>();
-  for (const row of (data ?? []) as { tour_slug: string; departure_city: string; price: number; departure_date: string }[]) {
-    const entry = map.get(row.tour_slug) ?? { islamabad: 0, lahore: null, earliestDate: null };
+  const map = new Map<string, { islamabad: number; lahore: number | null; earliestDate: string | null; singleSupplement: number | null }>();
+  for (const row of (data ?? []) as { tour_slug: string; departure_city: string; price: number; departure_date: string; single_supplement: number | null }[]) {
+    const entry = map.get(row.tour_slug) ?? { islamabad: 0, lahore: null, earliestDate: null, singleSupplement: null };
     if (row.departure_city === "islamabad") entry.islamabad = row.price;
     else if (row.departure_city === "lahore") entry.lahore = row.price;
     if (!entry.earliestDate || row.departure_date < entry.earliestDate) {
       entry.earliestDate = row.departure_date;
+    }
+    if (row.single_supplement && (!entry.singleSupplement || row.single_supplement < entry.singleSupplement)) {
+      entry.singleSupplement = row.single_supplement;
     }
     map.set(row.tour_slug, entry);
   }
