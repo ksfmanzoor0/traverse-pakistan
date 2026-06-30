@@ -195,12 +195,12 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
           {tour.pricing.singleSupplement && totalTravelers >= 2 && (
             <Stepper
               label="Private room"
-              sub={`+ ${formatPrice(tour.pricing.singleSupplement)} / person · skip sharing`}
+              sub={`+ ${formatPrice(tour.pricing.singleSupplement * 2)} / room · twin-share, skip strangers`}
               value={singleRooms}
               min={0}
-              max={totalTravelers}
+              max={Math.floor(totalTravelers / 2)}
               onDecrement={() => setSingleRooms(Math.max(0, singleRooms - 1))}
-              onIncrement={() => setSingleRooms(Math.min(totalTravelers, singleRooms + 1))}
+              onIncrement={() => setSingleRooms(Math.min(Math.floor(totalTravelers / 2), singleRooms + 1))}
             />
           )}
         </div>
