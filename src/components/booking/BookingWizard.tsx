@@ -597,9 +597,9 @@ function StepTravelers({
         <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-[14px] font-semibold text-[var(--text-primary)]">Single rooms</p>
+              <p className="text-[14px] font-semibold text-[var(--text-primary)]">Private room (separate occupancy)</p>
               <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
-                {formatPrice(tour.pricing.singleSupplement)} per single room supplement
+                {formatPrice(tour.pricing.singleSupplement)} / person · skip sharing on this tour
               </p>
             </div>
             <div className="flex items-center gap-3">
