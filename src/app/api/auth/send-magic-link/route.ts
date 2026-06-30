@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getResend, buildMagicLinkEmail } from "@/lib/resend";
 import { normalizePhone, phoneDigitsOnly } from "@/lib/auth/phone";
 import { sendViewMyBookingsViaWhatsApp, isWhatsAppConfigured } from "@/lib/whatsapp/cloud";
+import { otpSendLimiter, checkRateLimit } from "@/lib/ratelimit";
 
 const schema = z.object({
   identifier: z.string().min(3).max(120),
@@ -33,10 +34,20 @@ export async function POST(req: NextRequest) {
   const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/mybookings";
 
   const trimmed = identifier.trim();
-  if (looksLikeEmail(trimmed)) return sendEmail(req, trimmed.toLowerCase(), safeNext);
+  // Cap magic-link sends per destination — keyed on the email/phone since
+  // the abuse shape is mailbox/WhatsApp bombing the victim. Shares the same
+  // bucket prefix as /api/bookings/otp so resend-spam can't be split across
+  // both endpoints.
+  if (looksLikeEmail(trimmed)) {
+    const rlHit = await checkRateLimit(otpSendLimiter, `email:${trimmed.toLowerCase()}`);
+    if (rlHit) return rlHit;
+    return sendEmail(req, trimmed.toLowerCase(), safeNext);
+  }
 
   const phone = normalizePhone(trimmed);
   if (!phone) return NextResponse.json({ ok: true });
+  const rlHit = await checkRateLimit(otpSendLimiter, `whatsapp:${phone}`);
+  if (rlHit) return rlHit;
   return sendWhatsApp(req, phone, safeNext);
 }
 
