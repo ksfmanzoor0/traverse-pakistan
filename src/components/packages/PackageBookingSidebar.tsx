@@ -287,7 +287,9 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
     }
     const controller = new AbortController();
     setQuoteLoading(true);
-    // 200ms debounce so rapid +/- clicks coalesce into a single request.
+    // 50ms debounce so rapid +/- clicks coalesce into a single request but
+    // the engine fires almost immediately once the user pauses — the rooms
+    // counter visibly lags less. requestSeq guard drops stale responses.
     const t = window.setTimeout(() => {
       const params = new URLSearchParams({ home, tier: selectedTier, pax: String(adults), startDate });
       if (rooms !== null) params.set("rooms", String(rooms));
@@ -312,7 +314,7 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
         .finally(() => {
           if (mySeq === requestSeqRef.current) setQuoteLoading(false);
         });
-    }, 200);
+    }, 50);
     return () => {
       window.clearTimeout(t);
       controller.abort();
@@ -491,7 +493,9 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
             <div>
               <p className="text-[13px] font-semibold text-[var(--text-primary)]">Rooms</p>
               <p className="text-[11px] text-[var(--text-tertiary)]">
-                {displayRooms > safeNaturalRooms
+                {quoteLoading
+                  ? "Updating…"
+                  : displayRooms > safeNaturalRooms
                   ? "Extra room — price recalculated above"
                   : `Minimum ${safeNaturalRooms} room${safeNaturalRooms > 1 ? "s" : ""} for ${adults} guest${adults > 1 ? "s" : ""}`}
               </p>
@@ -506,7 +510,7 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
               >
                 −
               </button>
-              <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{displayRooms}</span>
+              <span className={`w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)] transition-opacity ${quoteLoading ? "opacity-40" : ""}`}>{displayRooms}</span>
               <button
                 type="button"
                 onClick={() => setRooms(() => Math.min(adults, displayRooms + 1))}
