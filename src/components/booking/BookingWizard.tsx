@@ -144,9 +144,10 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
       adults: draft.adults,
       childCount: draft.childCount,
       singleRooms: draft.singleRooms,
+      singleOccupancyRooms: draft.singleOccupancyRooms,
       paymentPlan: draft.paymentPlan,
     }),
-    [tour, liveDeparture, draft.departureCity, draft.adults, draft.childCount, draft.singleRooms, draft.paymentPlan],
+    [tour, liveDeparture, draft.departureCity, draft.adults, draft.childCount, draft.singleRooms, draft.singleOccupancyRooms, draft.paymentPlan],
   );
 
   const urgency = useMemo(() => deriveUrgency(tour, liveDeparture), [tour, liveDeparture]);
@@ -264,7 +265,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
         const result = await createBooking({
           departureId: liveDeparture.id,
           seats: totalTravelers,
-          singleRooms: draft.singleRooms,
+          singleRooms: draft.singleRooms + draft.singleOccupancyRooms,
           contact: {
             name: draft.contact.firstName.trim(),
             email: draft.contact.email,
@@ -334,12 +335,14 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
               adults={draft.adults}
               childCount={draft.childCount}
               singleRooms={draft.singleRooms}
+              singleOccupancyRooms={draft.singleOccupancyRooms}
               maxSeats={maxSeats}
               seatsLeft={seatsLeft}
               groupDiscountPct={pricing.groupDiscountPct}
               onAdults={(n) => patch({ adults: n })}
               onChildren={(n) => patch({ childCount: n })}
               onSingleRooms={(n) => patch({ singleRooms: n })}
+              onSingleOccupancyRooms={(n) => patch({ singleOccupancyRooms: n })}
             />
           </div>
         )}
@@ -372,6 +375,43 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
         {validationError && <InlineAlert>{validationError}</InlineAlert>}
 
         {error && <InlineAlert>{error}</InlineAlert>}
+
+        {draft.step === 1 && (
+          <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-subtle)] px-4 py-3 space-y-1.5 text-[12px]">
+            <div className="flex justify-between text-[var(--text-secondary)]">
+              <span>{draft.adults} adult{draft.adults !== 1 ? "s" : ""} × {formatPrice(pricing.basePrice)}</span>
+              <span className="tabular-nums">{formatPrice(pricing.adultsSubtotal)}</span>
+            </div>
+            {pricing.childrenSubtotal > 0 && (
+              <div className="flex justify-between text-[var(--text-secondary)]">
+                <span>{draft.childCount} child{draft.childCount !== 1 ? "ren" : ""} × {formatPrice(Math.round(pricing.basePrice * 0.5))}</span>
+                <span className="tabular-nums">{formatPrice(pricing.childrenSubtotal)}</span>
+              </div>
+            )}
+            {pricing.groupDiscountAmount > 0 && (
+              <div className="flex justify-between text-[var(--success)]">
+                <span>Group discount · {Math.round(pricing.groupDiscountPct * 100)}%</span>
+                <span className="tabular-nums">− {formatPrice(pricing.groupDiscountAmount)}</span>
+              </div>
+            )}
+            {draft.singleOccupancyRooms > 0 && tour.pricing.singleSupplement && (
+              <div className="flex justify-between text-[var(--text-secondary)]">
+                <span>Single occupancy × {draft.singleOccupancyRooms}</span>
+                <span className="tabular-nums">{formatPrice(tour.pricing.singleSupplement * 3 * draft.singleOccupancyRooms)}</span>
+              </div>
+            )}
+            {draft.singleRooms > 0 && tour.pricing.singleSupplement && (
+              <div className="flex justify-between text-[var(--text-secondary)]">
+                <span>Couple private room × {draft.singleRooms}</span>
+                <span className="tabular-nums">{formatPrice(tour.pricing.singleSupplement * 2 * draft.singleRooms)}</span>
+              </div>
+            )}
+            <div className="flex justify-between pt-1.5 border-t border-[var(--border-default)] text-[14px] font-bold text-[var(--text-primary)]">
+              <span>Total</span>
+              <span className="tabular-nums">{formatPrice(pricing.total)}</span>
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center gap-3 pt-2">
           {draft.step > 1 && (
@@ -471,9 +511,7 @@ function StepDates({
   );
 
   return (
-    <section className="space-y-6">
-      <SectionHeader title="When are you travelling?" sub="Pick your departure city. Dates below are our next confirmed group departure." />
-
+    <section className="space-y-4">
       {availableCities.length >= 2 && (
         <div>
           <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-2">
@@ -542,35 +580,47 @@ function StepTravelers({
   adults,
   childCount,
   singleRooms,
+  singleOccupancyRooms,
   maxSeats,
   seatsLeft,
   groupDiscountPct,
   onAdults,
   onChildren,
   onSingleRooms,
+  onSingleOccupancyRooms,
 }: {
   tour: Tour;
   adults: number;
   childCount: number;
   singleRooms: number;
+  singleOccupancyRooms: number;
   maxSeats: number;
   seatsLeft: number | null;
   groupDiscountPct: number;
   onAdults: (n: number) => void;
   onChildren: (n: number) => void;
   onSingleRooms: (n: number) => void;
+  onSingleOccupancyRooms: (n: number) => void;
 }) {
-  const totalTravelers = adults + childCount;
   const seatCap = seatsLeft !== null ? Math.min(maxSeats, seatsLeft) : maxSeats;
+  const supplement = tour.pricing.singleSupplement ?? 0;
+  const maxSingles = Math.max(0, adults - 2 * singleRooms);
+  const maxCoupleRooms = Math.max(0, Math.floor((adults - singleOccupancyRooms) / 2));
+  const nextAdultsForDiscount = groupDiscountPct === 0.05 ? 6 - adults : 3 - adults;
 
   return (
-    <section className="space-y-6">
-      <SectionHeader title="Who's travelling?" sub={`Up to ${maxSeats} travellers per group · children ages 2–12 get 50% off`} />
+    <section className="space-y-3">
+      <div>
+        <p className="text-[15px] font-bold text-[var(--text-primary)]">Who&apos;s travelling?</p>
+        <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
+          Up to {maxSeats} · children 2–12 get 50% off
+        </p>
+      </div>
 
-      <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] p-5 space-y-5">
+      <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] px-4 py-3 space-y-3">
         <Stepper
           label="Adults"
-          sub="Age 13 and over"
+          sub="Age 13+"
           value={adults}
           min={1}
           max={seatCap - childCount}
@@ -589,71 +639,93 @@ function StepTravelers({
         />
       </div>
 
-      {tour.pricing.singleSupplement && (() => {
-        const isSolo = totalTravelers === 1;
-        const maxRooms = isSolo ? 1 : Math.floor(totalTravelers / 2);
-        if (maxRooms === 0) return null;
-        const label = isSolo ? "Private room (single occupancy)" : "Private room (twin-share)";
-        const sub = isSolo
-          ? `${formatPrice(tour.pricing.singleSupplement * 3)} · your own room`
-          : `${formatPrice(tour.pricing.singleSupplement * 2)} / room · skip sharing with strangers`;
-        return (
-          <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[14px] font-semibold text-[var(--text-primary)]">{label}</p>
-                <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">{sub}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  aria-label="Decrease private rooms"
-                  onClick={() => onSingleRooms(Math.max(0, singleRooms - 1))}
-                  disabled={singleRooms <= 0}
-                  className="w-9 h-9 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30"
-                >
-                  −
-                </button>
-                <span className="w-7 text-center text-[15px] font-semibold tabular-nums">{singleRooms}</span>
-                <button
-                  type="button"
-                  aria-label="Increase private rooms"
-                  onClick={() => onSingleRooms(Math.min(maxRooms, singleRooms + 1))}
-                  disabled={singleRooms >= maxRooms}
-                  className="w-9 h-9 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
-      {groupDiscountPct > 0 && (
-        <div className="p-4 rounded-[var(--radius-md)] bg-[var(--primary-light)] border border-[var(--primary)]/30 flex items-start gap-3">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" className="shrink-0 mt-0.5">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-          </svg>
-          <div>
-            <p className="text-[13px] font-bold text-[var(--primary-deep)]">
-              Group discount unlocked — {Math.round(groupDiscountPct * 100)}% off
-            </p>
-            <p className="text-[12px] text-[var(--text-secondary)] mt-0.5">
-              Applied automatically. Add 4+ travellers for 10% off, 8+ for 15% off.
-            </p>
-          </div>
+      {supplement > 0 && (
+        <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] px-4 py-3 space-y-3">
+          <PrivateRoomRow
+            label="Single occupancy"
+            sub={`${formatPrice(supplement * 3)} · your own room`}
+            value={singleOccupancyRooms}
+            max={maxSingles}
+            onChange={(n) => onSingleOccupancyRooms(Math.min(maxSingles, Math.max(0, n)))}
+          />
+          <div className="border-t border-[var(--border-default)]" />
+          <PrivateRoomRow
+            label="Couple private room"
+            sub={`${formatPrice(supplement * 2)} / room · skip strangers`}
+            value={singleRooms}
+            max={maxCoupleRooms}
+            onChange={(n) => onSingleRooms(Math.min(maxCoupleRooms, Math.max(0, n)))}
+          />
         </div>
       )}
 
-      {groupDiscountPct === 0 && adults < 4 && (
-        <div className="p-4 rounded-[var(--radius-md)] bg-[var(--accent-warm-light)] border border-[var(--accent-warm)]/30">
-          <p className="text-[13px] font-semibold text-[var(--accent-warm)]">
-            Tip · Add {4 - totalTravelers} more traveller{4 - totalTravelers !== 1 ? "s" : ""} to unlock 10% group discount
+      {groupDiscountPct > 0 && (
+        <div className="px-3 py-2 rounded-[var(--radius-sm)] bg-[var(--primary-light)] border border-[var(--primary)]/30 flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--primary)" stroke="none" className="shrink-0">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
+          <p className="text-[12px] font-semibold text-[var(--primary-deep)]">
+            Group discount unlocked — {Math.round(groupDiscountPct * 100)}% off adult fare
           </p>
         </div>
       )}
+
+      {groupDiscountPct === 0 && adults < 3 && nextAdultsForDiscount > 0 && (
+        <p className="text-[12px] text-[var(--text-tertiary)]">
+          Tip · Add {nextAdultsForDiscount} more adult{nextAdultsForDiscount !== 1 ? "s" : ""} to unlock a 5% group discount
+        </p>
+      )}
+      {groupDiscountPct === 0.05 && (
+        <p className="text-[12px] text-[var(--text-tertiary)]">
+          Tip · Add {6 - adults} more adult{6 - adults !== 1 ? "s" : ""} for 10% off
+        </p>
+      )}
     </section>
+  );
+}
+
+function PrivateRoomRow({
+  label,
+  sub,
+  value,
+  max,
+  onChange,
+}: {
+  label: string;
+  sub: string;
+  value: number;
+  max: number;
+  onChange: (n: number) => void;
+}) {
+  const disabled = max === 0;
+  return (
+    <div className={`flex items-center justify-between gap-3 ${disabled ? "opacity-50" : ""}`}>
+      <div className="min-w-0">
+        <p className="text-[13px] font-semibold text-[var(--text-primary)]">{label}</p>
+        <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5 truncate">{sub}</p>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          aria-label={`Decrease ${label}`}
+          onClick={() => onChange(value - 1)}
+          disabled={value <= 0}
+          className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          −
+        </button>
+        <span className="w-6 text-center text-[14px] font-semibold tabular-nums">{value}</span>
+        <button
+          type="button"
+          aria-label={`Increase ${label}`}
+          onClick={() => onChange(value + 1)}
+          disabled={value >= max}
+          className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          +
+        </button>
+      </div>
+    </div>
   );
 }
 

@@ -9,7 +9,8 @@ export interface PricingInput {
   departureCity: DepartureCity;
   adults: number;
   childCount: number;
-  singleRooms: number;
+  singleRooms: number; // couple/twin private rooms
+  singleOccupancyRooms?: number; // solo travelers taking a private single room
   paymentPlan: PaymentPlan;
 }
 
@@ -31,14 +32,17 @@ export interface PricingBreakdown {
 const CHILD_DISCOUNT_PCT = 0.5;
 const INSTALLMENT_DEPOSIT_PCT = 0.2;
 
-export function getGroupDiscountPct(totalTravelers: number): number {
-  if (totalTravelers >= 8) return 0.15;
-  if (totalTravelers >= 4) return 0.1;
+// Group discount is now driven by adults only; children don't count.
+// 3 adults → 5%, 6 adults → 10%. Applied to the adults subtotal only.
+export function getGroupDiscountPct(adults: number): number {
+  if (adults >= 6) return 0.1;
+  if (adults >= 3) return 0.05;
   return 0;
 }
 
 export function calculatePricing(input: PricingInput): PricingBreakdown {
   const { tour, liveDeparture, departureCity, adults, childCount, singleRooms, paymentPlan } = input;
+  const singleOccupancyRooms = input.singleOccupancyRooms ?? 0;
 
   const basePrice = liveDeparture?.price
     ?? (departureCity === "lahore"
@@ -52,22 +56,19 @@ export function calculatePricing(input: PricingInput): PricingBreakdown {
   const subtotal = adultsSubtotal + childrenSubtotal;
 
   const totalTravelers = adults + childCount;
-  // Private-room add-on:
-  //  - Solo traveler (1 adult) opting for a private room: supplement × 3
-  //    (they lose the twin-sharing baseline entirely).
-  //  - 2+ travelers: each private room is twin-occupancy, cost = supplement × 2.
-  //    Max rooms = floor(travelers / 2).
-  let singleSupplementTotal = 0;
-  if (totalTravelers === 1) {
-    singleSupplementTotal = singleRooms > 0 ? singleSupplement * 3 : 0;
-  } else if (totalTravelers >= 2) {
-    const maxPrivateRooms = Math.floor(totalTravelers / 2);
-    const billableRooms = Math.min(singleRooms, maxPrivateRooms);
-    singleSupplementTotal = singleSupplement * 2 * billableRooms;
-  }
+  // Private-room add-on (two independent rows):
+  //  - Single occupancy: supplement × 3 per solo person (own room).
+  //  - Couple / twin private: supplement × 2 per room (both share, no strangers).
+  // Caller is responsible for enforcing that
+  //   singleOccupancyRooms + 2 * singleRooms ≤ adults.
+  const soloTotal = singleSupplement * 3 * singleOccupancyRooms;
+  const coupleTotal = singleSupplement * 2 * singleRooms;
+  const singleSupplementTotal = soloTotal + coupleTotal;
 
-  const groupDiscountPct = getGroupDiscountPct(totalTravelers);
-  const groupDiscountAmount = Math.round(subtotal * groupDiscountPct);
+  // Group discount applies to the adults subtotal only; children never trigger
+  // or receive it.
+  const groupDiscountPct = getGroupDiscountPct(adults);
+  const groupDiscountAmount = Math.round(adultsSubtotal * groupDiscountPct);
 
   const total = subtotal - groupDiscountAmount + singleSupplementTotal;
   const dueNow = paymentPlan === "installments" ? Math.round(total * INSTALLMENT_DEPOSIT_PCT) : total;
