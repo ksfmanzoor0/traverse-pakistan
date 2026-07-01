@@ -52,6 +52,16 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
     setResumeAvailable(hasResumableDraft(tour.slug) !== null);
   }, [tour.slug]);
 
+  // Clamp private-room selections when adults drops so a disabled couple/single
+  // row doesn't silently keep contributing to the total.
+  useEffect(() => {
+    const solos = Math.min(singleOccupancyRooms, adults);
+    const couples = Math.min(singleRooms, Math.max(0, Math.floor((adults - solos) / 2)));
+    if (solos !== singleOccupancyRooms) setSingleOccupancyRooms(solos);
+    if (couples !== singleRooms) setSingleRooms(couples);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adults]);
+
   useEffect(() => {
     if (!isSupabaseConfigured) return;
     let cancelled = false;
@@ -209,13 +219,13 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
               onIncrement={() => setSingleOccupancyRooms(Math.min(maxSingles, singleOccupancyRooms + 1))}
             />
           )}
-          {tour.pricing.singleSupplement && totalTravelers >= 2 && (
+          {tour.pricing.singleSupplement && (
             <Stepper
               label="Couple private room"
               sub={`+ ${formatPrice(tour.pricing.singleSupplement * 2)} / room · skip strangers`}
               value={singleRooms}
               min={0}
-              max={Math.max(1, Math.floor(totalTravelers / 2))}
+              max={maxCoupleRooms}
               onDecrement={() => setSingleRooms(Math.max(0, singleRooms - 1))}
               onIncrement={() => setSingleRooms(Math.min(maxCoupleRooms, singleRooms + 1))}
             />
