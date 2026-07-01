@@ -210,6 +210,7 @@ export type PackageRow = {
   rating: number;
   review_count: number;
   max_group_size: number | null;
+  max_adults_by_tier: Record<string, number> | null;
   languages: string[];
   free_cancellation: boolean;
   reserve_now_pay_later: boolean;

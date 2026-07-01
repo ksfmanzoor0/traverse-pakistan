@@ -54,6 +54,7 @@ function toPackage(row: PackageRow): Package {
     rating: Number(row.rating),
     reviewCount: row.review_count,
     maxGroupSize: row.max_group_size ?? 12,
+    maxAdultsByTier: (row.max_adults_by_tier ?? null) as Record<string, number> | null,
     languages: row.languages ?? [],
     freeCancellation: row.free_cancellation,
     reserveNowPayLater: row.reserve_now_pay_later,
