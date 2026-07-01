@@ -136,6 +136,17 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
     }));
   }, [draft.adults, draft.childCount, setDraft]);
 
+  // Clamp room selections when adults shrinks so a stale add-on doesn't linger
+  // (e.g. picked couple room at 2 adults then dropped to 1 adult).
+  useEffect(() => {
+    setDraft((d) => {
+      const solos = Math.min(d.singleOccupancyRooms, d.adults);
+      const couples = Math.min(d.singleRooms, Math.max(0, Math.floor((d.adults - solos) / 2)));
+      if (solos === d.singleOccupancyRooms && couples === d.singleRooms) return d;
+      return { ...d, singleOccupancyRooms: solos, singleRooms: couples };
+    });
+  }, [draft.adults, setDraft]);
+
   const pricing = useMemo(
     () => calculatePricing({
       tour,
@@ -527,14 +538,14 @@ function StepDates({
                   key={city}
                   type="button"
                   onClick={() => onCityChange(city)}
-                  className={`text-left p-4 rounded-[var(--radius-sm)] border-2 transition-all cursor-pointer ${
+                  className={`text-left px-3 py-2 rounded-[var(--radius-sm)] border-2 transition-all cursor-pointer ${
                     active
                       ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--text-inverse)]"
                       : "border-[var(--border-default)] bg-[var(--bg-primary)] hover:border-[var(--primary)]"
                   }`}
                 >
-                  <p className={`text-[15px] font-bold capitalize ${active ? "text-[var(--text-inverse)]" : "text-[var(--text-primary)]"}`}>{city}</p>
-                  <p className={`text-[12px] mt-0.5 ${active ? "text-[var(--text-inverse)] opacity-80" : "text-[var(--text-secondary)]"}`}>{formatPrice(price)} per person</p>
+                  <p className={`text-[14px] font-bold capitalize ${active ? "text-[var(--text-inverse)]" : "text-[var(--text-primary)]"}`}>{city}</p>
+                  <p className={`text-[11px] ${active ? "text-[var(--text-inverse)] opacity-80" : "text-[var(--text-secondary)]"}`}>{formatPrice(price)} pp</p>
                 </button>
               );
             })}
@@ -546,12 +557,12 @@ function StepDates({
         <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-2">
           Departure date
         </label>
-        <div className="flex items-center justify-between p-4 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-subtle)]">
+        <div className="flex items-center justify-between px-3 py-2 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-subtle)]">
           <div>
-            <p className="text-[16px] font-bold text-[var(--text-primary)]">
+            <p className="text-[14px] font-bold text-[var(--text-primary)]">
               {departureDate ? fmtLongDate(departureDate) : "Flexible"}
             </p>
-            <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
+            <p className="text-[11px] text-[var(--text-tertiary)]">
               {tour.duration} days · returns {departureDate ? fmtLongDate(new Date(new Date(departureDate).getTime() + tour.duration * 24 * 3600 * 1000).toISOString()) : "—"}
             </p>
           </div>
