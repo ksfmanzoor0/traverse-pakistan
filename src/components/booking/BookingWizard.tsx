@@ -23,7 +23,7 @@ import type { TravelerProfile } from "./types";
 import { useCheckoutDraft } from "@/hooks/useCheckoutDraft";
 import { InlineAlert } from "@/components/ui/InlineAlert";
 
-const STEP_LABELS = ["Dates", "Travellers", "Your details", "Review"];
+const STEP_LABELS = ["Dates & Travellers", "Your details", "Review"];
 
 export interface BookingWizardProps {
   tour: Tour;
@@ -89,7 +89,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
   const initAdults = Math.max(1, Number(searchParams?.get("adults") ?? 1));
   const initChildren = Math.max(0, Number(searchParams?.get("children") ?? 0));
   const initSingleRooms = Math.max(0, Number(searchParams?.get("singleRooms") ?? 0));
-  const initStep = searchParams?.get("adults") ? 3 : 1;
+  const initStep = searchParams?.get("adults") ? 2 : 1;
 
   const { draft, setDraft, clearDraft } = useCheckoutDraft(tour.slug, {
     step: initStep,
@@ -185,9 +185,6 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
   function validateStep(step: number): string | null {
     if (step === 1) {
       if (!departureDateDisplay) return "Pick a departure to continue";
-      return null;
-    }
-    if (step === 2) {
       if (draft.adults < 1) return "At least 1 adult is required";
       if (totalTravelers > maxSeats) return `Max group size is ${maxSeats}`;
       if (liveDeparture && liveDeparture.seatsAvailable < totalTravelers) {
@@ -195,7 +192,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
       }
       return null;
     }
-    if (step === 3) {
+    if (step === 2) {
       if (!draft.contact.firstName.trim()) return "Lead traveller name required";
       if (!validPhone(draft.contact.phone)) return "Enter a valid phone number";
       if (draft.contact.email && !validEmail(draft.contact.email)) return "Enter a valid email address";
@@ -214,7 +211,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
     }
     setError(null);
     setAttemptedNext(false);
-    setDraft((d) => ({ ...d, step: next as 1 | 2 | 3 | 4 }));
+    setDraft((d) => ({ ...d, step: next as 1 | 2 | 3 }));
     setMaxReachedStep((m) => Math.max(m, next));
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -308,7 +305,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
       <div className="space-y-7">
         <WizardProgress
           step={draft.step}
-          totalSteps={4}
+          totalSteps={3}
           labels={STEP_LABELS}
           maxReachedStep={maxReachedStep}
           onJump={goToStep}
@@ -321,34 +318,33 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
         )}
 
         {draft.step === 1 && (
-          <StepDates
-            tour={tour}
-            liveDeparture={liveDeparture}
-            cityDepartures={cityDepartures}
-            departuresLoaded={departuresLoaded}
-            departureCity={draft.departureCity}
-            onCityChange={(city) => patch({ departureCity: city })}
-            departureDate={departureDateDisplay}
-            seatsLeft={seatsLeft}
-          />
+          <div className="space-y-7">
+            <StepDates
+              tour={tour}
+              liveDeparture={liveDeparture}
+              cityDepartures={cityDepartures}
+              departuresLoaded={departuresLoaded}
+              departureCity={draft.departureCity}
+              onCityChange={(city) => patch({ departureCity: city })}
+              departureDate={departureDateDisplay}
+              seatsLeft={seatsLeft}
+            />
+            <StepTravelers
+              tour={tour}
+              adults={draft.adults}
+              childCount={draft.childCount}
+              singleRooms={draft.singleRooms}
+              maxSeats={maxSeats}
+              seatsLeft={seatsLeft}
+              groupDiscountPct={pricing.groupDiscountPct}
+              onAdults={(n) => patch({ adults: n })}
+              onChildren={(n) => patch({ childCount: n })}
+              onSingleRooms={(n) => patch({ singleRooms: n })}
+            />
+          </div>
         )}
 
         {draft.step === 2 && (
-          <StepTravelers
-            tour={tour}
-            adults={draft.adults}
-            childCount={draft.childCount}
-            singleRooms={draft.singleRooms}
-            maxSeats={maxSeats}
-            seatsLeft={seatsLeft}
-            groupDiscountPct={pricing.groupDiscountPct}
-            onAdults={(n) => patch({ adults: n })}
-            onChildren={(n) => patch({ childCount: n })}
-            onSingleRooms={(n) => patch({ singleRooms: n })}
-          />
-        )}
-
-        {draft.step === 3 && (
           <StepDetails
             contact={draft.contact}
             onContactChange={patchContact}
@@ -357,7 +353,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
           />
         )}
 
-        {draft.step === 4 && (
+        {draft.step === 3 && (
           <StepReview
             tour={tour}
             pricing={pricing}
@@ -387,7 +383,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
               Back
             </button>
           )}
-          {draft.step < 4 && (
+          {draft.step < 3 && (
             <button
               type="button"
               onClick={() => goToStep(draft.step + 1)}
@@ -396,7 +392,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
               Continue
             </button>
           )}
-          {draft.step === 4 && (
+          {draft.step === 3 && (
             <button
               type="button"
               onClick={handleSubmit}
@@ -408,7 +404,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
           )}
         </div>
 
-        {draft.step === 4 && (
+        {draft.step === 3 && (
           <p className="text-center text-[11px] text-[var(--text-tertiary)] -mt-4">
             You won&apos;t be charged yet — pay securely on the next page.
           </p>
@@ -416,7 +412,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
 
         {draft.step >= 2 && <TrustStrip variant="grid" showSecurePayment />}
         {draft.step >= 3 && reviews.length > 0 && <ReviewQuoteCard reviews={reviews} />}
-        {draft.step === 4 && <FAQInline tour={tour} />}
+        {draft.step === 3 && <FAQInline tour={tour} />}
 
         <p className="text-center text-[11px] text-[var(--text-tertiary)] pt-2">
           Prefer to chat?{" "}
@@ -593,16 +589,20 @@ function StepTravelers({
         />
       </div>
 
-      {tour.pricing.singleSupplement && totalTravelers >= 2 && (() => {
-        const maxRooms = Math.floor(totalTravelers / 2);
+      {tour.pricing.singleSupplement && (() => {
+        const isSolo = totalTravelers === 1;
+        const maxRooms = isSolo ? 1 : Math.floor(totalTravelers / 2);
+        if (maxRooms === 0) return null;
+        const label = isSolo ? "Private room (single occupancy)" : "Private room (twin-share)";
+        const sub = isSolo
+          ? `${formatPrice(tour.pricing.singleSupplement * 3)} · your own room`
+          : `${formatPrice(tour.pricing.singleSupplement * 2)} / room · skip sharing with strangers`;
         return (
           <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-[14px] font-semibold text-[var(--text-primary)]">Private room (twin-share)</p>
-                <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
-                  {formatPrice(tour.pricing.singleSupplement * 2)} / room · skip sharing with strangers
-                </p>
+                <p className="text-[14px] font-semibold text-[var(--text-primary)]">{label}</p>
+                <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">{sub}</p>
               </div>
               <div className="flex items-center gap-3">
                 <button
