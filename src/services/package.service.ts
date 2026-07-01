@@ -170,11 +170,16 @@ export const getFeaturedPackages = cache(async (): Promise<Package[]> => {
 export const getPackagesByDestination = cache(
   async (destinationSlug: string): Promise<Package[]> => {
     const supabase = getSupabaseAnon();
+    // Include packages anchored to any ancestor destination so child pages
+    // (e.g. buni, shandur) surface their parent's (chitral) packages.
+    const { data: ancestorSlugsData } = await supabase.rpc("destination_slug_with_ancestors" as never, { p_slug: destinationSlug } as never);
+    const slugs = ((ancestorSlugsData as string[] | null) ?? [destinationSlug]).filter(Boolean);
+    const slugList = slugs.join(",");
     const { data, error } = await supabase
       .from("packages")
       .select("*")
       .eq("published", true)
-      .or(`destination_slug.eq.${destinationSlug},related_destination_slugs.cs.{${destinationSlug}}`);
+      .or(`destination_slug.in.(${slugList}),related_destination_slugs.ov.{${slugList}}`);
 
     if (error) throw new Error(`getPackagesByDestination: ${error.message}`);
     return (data as unknown as PackageRow[]).map(toPackage);
