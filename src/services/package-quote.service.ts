@@ -28,6 +28,8 @@ export interface PublicPackageQuote {
   } | null;
   /** Per-person flight fare added to this quote. 0 when quote is drive-only. */
   flightPerPerson: number;
+  /** Which kind of ticket the engine booked. null when there's no flight. */
+  flightTicketType: "return" | "oneway" | null;
 }
 
 interface VehicleAllocation {
@@ -153,6 +155,7 @@ async function computeQuote(args: {
       unresolved: [`Home ${args.home} not in starting_cities for ${pkg.slug}`],
       vehicle: null,
       flightPerPerson: 0,
+      flightTicketType: null,
     };
   }
 
@@ -179,6 +182,7 @@ async function computeQuote(args: {
       unresolved: [`Package ${pkg.slug} has no positive total_distance_km — engine cannot compute transport cost.`],
       vehicle: null,
       flightPerPerson: 0,
+      flightTicketType: null,
     };
   }
   const baseDistance = pkg.total_distance_km;
@@ -230,6 +234,13 @@ async function computeQuote(args: {
   const flightRequired = !(flightQuote?.homeInStartingCities ?? true) && (flightQuote?.addons.length ?? 0) > 0;
   const flightPerPerson = flightQuote?.addonCostPerPerson ?? 0;
   const flightCost = flightRequired ? flightPerPerson * pax : 0;
+  // Ticket type for the UI chip. RETURN legs → return; else if any ONEWAY
+  // legs → oneway. Multiple ONEWAY legs (out + back booked separately) also
+  // count as a return trip end-user side.
+  const flightLegs = flightQuote?.addons.flatMap((a) => a.flightLegs ?? []) ?? [];
+  const flightTicketType: "return" | "oneway" | null = flightRequired && flightLegs.length > 0
+    ? (flightLegs.some((l) => l.routeType === "RETURN") || flightLegs.length >= 2 ? "return" : "oneway")
+    : null;
   if (flightRequired && flightPerPerson === 0) {
     unresolved.push("Flight cost could not be resolved for the requested dates.");
   }
@@ -267,6 +278,7 @@ async function computeQuote(args: {
       ? { code: vehiclePlan.code, isNcp: vehiclePlan.isNcp, count: vehiclePlan.count }
       : null,
     flightPerPerson: flightRequired && flightPerPerson > 0 ? flightPerPerson : 0,
+    flightTicketType,
   };
 }
 

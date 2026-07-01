@@ -66,6 +66,7 @@ export async function GET(
       unresolved: quote.unresolved,
       vehicle: quote.vehicle,
       flightPerPerson: quote.flightPerPerson,
+      flightTicketType: quote.flightTicketType,
     });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });
