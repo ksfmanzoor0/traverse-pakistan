@@ -157,7 +157,16 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
         <nav className="mx-auto w-full flex items-center md:grid md:grid-cols-[1fr_auto_1fr] md:items-start min-h-[64px] sm:min-h-[76px] px-4 sm:px-8 lg:px-16">
           {/* Logo — CSS-driven so there's no flash on dark-mode reload */}
           <div className="shrink-0 h-[64px] sm:h-[76px] flex items-center">
-            <Link href="/" onClick={closeAll}>
+            <Link
+              href="/"
+              onClick={(e) => {
+                closeAll();
+                if (pathname === "/") {
+                  e.preventDefault();
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              }}
+            >
               <Image
                 src="/logo-white.png"
                 alt="Traverse Pakistan"
