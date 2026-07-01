@@ -628,7 +628,7 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
 
 const VEHICLE_LABELS: Record<VehicleCode, string> = {
   corolla: "Sedan",
-  brv: "SUV",
+  brv: "BR-V",
   prado: "Prado",
   hiace: "Van",
   coaster: "Coaster",
@@ -658,7 +658,7 @@ function QuoteCompositionChips({
             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" opacity="0" />
             <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" />
           </svg>
-          Flight included
+          Return ticket included
         </span>
       )}
       {vehicle && (
@@ -682,7 +682,7 @@ function QuoteCompositionChips({
           <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
             <path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11h1a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-1v1a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H8v1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-1H4a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1h1zm2-1h10l-1-3H8l-1 3zm-1 5a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm12 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2z" />
           </svg>
-          {vehicle.isNcp ? `NCP ${VEHICLE_LABELS[vehicle.code]}` : VEHICLE_LABELS[vehicle.code]}
+          {VEHICLE_LABELS[vehicle.code]}
           {vehicle.count > 1 ? ` × ${vehicle.count}` : ""}
         </span>
       )}
