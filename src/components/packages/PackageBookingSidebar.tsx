@@ -429,7 +429,7 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
         </p>
 
         {/* Composition chips — engine-picked flight + transport */}
-        <QuoteCompositionChips quote={engineQuote} />
+        <QuoteCompositionChips quote={engineQuote} pax={adults} />
 
         {/* Rating */}
         <div className="mt-2">
@@ -638,14 +638,18 @@ const VEHICLE_LABELS: Record<VehicleCode, string> = {
 
 function QuoteCompositionChips({
   quote,
+  pax,
 }: {
   quote: { vehicle: VehicleInfo; flightPerPerson: number; flightTicketType: FlightTicketType } | null;
+  pax: number;
 }) {
   if (!quote) return null;
   const hasFlight = quote.flightPerPerson > 0;
   const vehicle = quote.vehicle;
   if (!hasFlight && !vehicle) return null;
-  const flightLabel = quote.flightTicketType === "oneway" ? "One-way ticket included" : "Return ticket included";
+  const flightLabel = quote.flightTicketType === "oneway"
+    ? `One-way ticket × ${pax}`
+    : `Return ticket × ${pax}`;
   return (
     <div className="mt-2 flex flex-wrap gap-1.5">
       {hasFlight && (
