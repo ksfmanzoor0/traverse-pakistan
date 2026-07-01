@@ -23,7 +23,7 @@ import type { TravelerProfile } from "./types";
 import { useCheckoutDraft } from "@/hooks/useCheckoutDraft";
 import { InlineAlert } from "@/components/ui/InlineAlert";
 
-const STEP_LABELS = ["Dates", "Travellers", "Your details", "Review"];
+const STEP_LABELS = ["Dates & Travellers", "Your details", "Review"];
 
 export interface BookingWizardProps {
   tour: Tour;
@@ -89,7 +89,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
   const initAdults = Math.max(1, Number(searchParams?.get("adults") ?? 1));
   const initChildren = Math.max(0, Number(searchParams?.get("children") ?? 0));
   const initSingleRooms = Math.max(0, Number(searchParams?.get("singleRooms") ?? 0));
-  const initStep = searchParams?.get("adults") ? 3 : 1;
+  const initStep = searchParams?.get("adults") ? 2 : 1;
 
   const { draft, setDraft, clearDraft } = useCheckoutDraft(tour.slug, {
     step: initStep,
@@ -136,6 +136,17 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
     }));
   }, [draft.adults, draft.childCount, setDraft]);
 
+  // Clamp room selections when adults shrinks so a stale add-on doesn't linger
+  // (e.g. picked couple room at 2 adults then dropped to 1 adult).
+  useEffect(() => {
+    setDraft((d) => {
+      const solos = Math.min(d.singleOccupancyRooms, d.adults);
+      const couples = Math.min(d.singleRooms, Math.max(0, Math.floor((d.adults - solos) / 2)));
+      if (solos === d.singleOccupancyRooms && couples === d.singleRooms) return d;
+      return { ...d, singleOccupancyRooms: solos, singleRooms: couples };
+    });
+  }, [draft.adults, setDraft]);
+
   const pricing = useMemo(
     () => calculatePricing({
       tour,
@@ -144,9 +155,10 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
       adults: draft.adults,
       childCount: draft.childCount,
       singleRooms: draft.singleRooms,
+      singleOccupancyRooms: draft.singleOccupancyRooms,
       paymentPlan: draft.paymentPlan,
     }),
-    [tour, liveDeparture, draft.departureCity, draft.adults, draft.childCount, draft.singleRooms, draft.paymentPlan],
+    [tour, liveDeparture, draft.departureCity, draft.adults, draft.childCount, draft.singleRooms, draft.singleOccupancyRooms, draft.paymentPlan],
   );
 
   const urgency = useMemo(() => deriveUrgency(tour, liveDeparture), [tour, liveDeparture]);
@@ -185,9 +197,6 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
   function validateStep(step: number): string | null {
     if (step === 1) {
       if (!departureDateDisplay) return "Pick a departure to continue";
-      return null;
-    }
-    if (step === 2) {
       if (draft.adults < 1) return "At least 1 adult is required";
       if (totalTravelers > maxSeats) return `Max group size is ${maxSeats}`;
       if (liveDeparture && liveDeparture.seatsAvailable < totalTravelers) {
@@ -195,7 +204,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
       }
       return null;
     }
-    if (step === 3) {
+    if (step === 2) {
       if (!draft.contact.firstName.trim()) return "Lead traveller name required";
       if (!validPhone(draft.contact.phone)) return "Enter a valid phone number";
       if (draft.contact.email && !validEmail(draft.contact.email)) return "Enter a valid email address";
@@ -214,7 +223,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
     }
     setError(null);
     setAttemptedNext(false);
-    setDraft((d) => ({ ...d, step: next as 1 | 2 | 3 | 4 }));
+    setDraft((d) => ({ ...d, step: next as 1 | 2 | 3 }));
     setMaxReachedStep((m) => Math.max(m, next));
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -267,7 +276,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
         const result = await createBooking({
           departureId: liveDeparture.id,
           seats: totalTravelers,
-          singleRooms: draft.singleRooms,
+          singleRooms: draft.singleRooms + draft.singleOccupancyRooms,
           contact: {
             name: draft.contact.firstName.trim(),
             email: draft.contact.email,
@@ -308,7 +317,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
       <div className="space-y-7">
         <WizardProgress
           step={draft.step}
-          totalSteps={4}
+          totalSteps={3}
           labels={STEP_LABELS}
           maxReachedStep={maxReachedStep}
           onJump={goToStep}
@@ -321,34 +330,35 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
         )}
 
         {draft.step === 1 && (
-          <StepDates
-            tour={tour}
-            liveDeparture={liveDeparture}
-            cityDepartures={cityDepartures}
-            departuresLoaded={departuresLoaded}
-            departureCity={draft.departureCity}
-            onCityChange={(city) => patch({ departureCity: city })}
-            departureDate={departureDateDisplay}
-            seatsLeft={seatsLeft}
-          />
+          <div className="space-y-7">
+            <StepDates
+              tour={tour}
+              liveDeparture={liveDeparture}
+              cityDepartures={cityDepartures}
+              departuresLoaded={departuresLoaded}
+              departureCity={draft.departureCity}
+              onCityChange={(city) => patch({ departureCity: city })}
+              departureDate={departureDateDisplay}
+              seatsLeft={seatsLeft}
+            />
+            <StepTravelers
+              tour={tour}
+              adults={draft.adults}
+              childCount={draft.childCount}
+              singleRooms={draft.singleRooms}
+              singleOccupancyRooms={draft.singleOccupancyRooms}
+              maxSeats={maxSeats}
+              seatsLeft={seatsLeft}
+              groupDiscountPct={pricing.groupDiscountPct}
+              onAdults={(n) => patch({ adults: n })}
+              onChildren={(n) => patch({ childCount: n })}
+              onSingleRooms={(n) => patch({ singleRooms: n })}
+              onSingleOccupancyRooms={(n) => patch({ singleOccupancyRooms: n })}
+            />
+          </div>
         )}
 
         {draft.step === 2 && (
-          <StepTravelers
-            tour={tour}
-            adults={draft.adults}
-            childCount={draft.childCount}
-            singleRooms={draft.singleRooms}
-            maxSeats={maxSeats}
-            seatsLeft={seatsLeft}
-            groupDiscountPct={pricing.groupDiscountPct}
-            onAdults={(n) => patch({ adults: n })}
-            onChildren={(n) => patch({ childCount: n })}
-            onSingleRooms={(n) => patch({ singleRooms: n })}
-          />
-        )}
-
-        {draft.step === 3 && (
           <StepDetails
             contact={draft.contact}
             onContactChange={patchContact}
@@ -357,7 +367,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
           />
         )}
 
-        {draft.step === 4 && (
+        {draft.step === 3 && (
           <StepReview
             tour={tour}
             pricing={pricing}
@@ -377,6 +387,43 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
 
         {error && <InlineAlert>{error}</InlineAlert>}
 
+        {draft.step === 1 && (
+          <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-subtle)] px-4 py-3 space-y-1.5 text-[12px]">
+            <div className="flex justify-between text-[var(--text-secondary)]">
+              <span>{draft.adults} adult{draft.adults !== 1 ? "s" : ""} × {formatPrice(pricing.basePrice)}</span>
+              <span className="tabular-nums">{formatPrice(pricing.adultsSubtotal)}</span>
+            </div>
+            {pricing.childrenSubtotal > 0 && (
+              <div className="flex justify-between text-[var(--text-secondary)]">
+                <span>{draft.childCount} child{draft.childCount !== 1 ? "ren" : ""} × {formatPrice(Math.round(pricing.basePrice * 0.5))}</span>
+                <span className="tabular-nums">{formatPrice(pricing.childrenSubtotal)}</span>
+              </div>
+            )}
+            {pricing.groupDiscountAmount > 0 && (
+              <div className="flex justify-between text-[var(--success)]">
+                <span>Group discount · {Math.round(pricing.groupDiscountPct * 100)}%</span>
+                <span className="tabular-nums">− {formatPrice(pricing.groupDiscountAmount)}</span>
+              </div>
+            )}
+            {draft.singleOccupancyRooms > 0 && tour.pricing.singleSupplement && (
+              <div className="flex justify-between text-[var(--text-secondary)]">
+                <span>Single occupancy × {draft.singleOccupancyRooms}</span>
+                <span className="tabular-nums">{formatPrice(tour.pricing.singleSupplement * 3 * draft.singleOccupancyRooms)}</span>
+              </div>
+            )}
+            {draft.singleRooms > 0 && tour.pricing.singleSupplement && (
+              <div className="flex justify-between text-[var(--text-secondary)]">
+                <span>Couple private room × {draft.singleRooms}</span>
+                <span className="tabular-nums">{formatPrice(tour.pricing.singleSupplement * 2 * draft.singleRooms)}</span>
+              </div>
+            )}
+            <div className="flex justify-between pt-1.5 border-t border-[var(--border-default)] text-[14px] font-bold text-[var(--text-primary)]">
+              <span>Total</span>
+              <span className="tabular-nums">{formatPrice(pricing.total)}</span>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center gap-3 pt-2">
           {draft.step > 1 && (
             <button
@@ -387,7 +434,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
               Back
             </button>
           )}
-          {draft.step < 4 && (
+          {draft.step < 3 && (
             <button
               type="button"
               onClick={() => goToStep(draft.step + 1)}
@@ -396,7 +443,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
               Continue
             </button>
           )}
-          {draft.step === 4 && (
+          {draft.step === 3 && (
             <button
               type="button"
               onClick={handleSubmit}
@@ -408,7 +455,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
           )}
         </div>
 
-        {draft.step === 4 && (
+        {draft.step === 3 && (
           <p className="text-center text-[11px] text-[var(--text-tertiary)] -mt-4">
             You won&apos;t be charged yet — pay securely on the next page.
           </p>
@@ -416,7 +463,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
 
         {draft.step >= 2 && <TrustStrip variant="grid" showSecurePayment />}
         {draft.step >= 3 && reviews.length > 0 && <ReviewQuoteCard reviews={reviews} />}
-        {draft.step === 4 && <FAQInline tour={tour} />}
+        {draft.step === 3 && <FAQInline tour={tour} />}
 
         <p className="text-center text-[11px] text-[var(--text-tertiary)] pt-2">
           Prefer to chat?{" "}
@@ -475,9 +522,7 @@ function StepDates({
   );
 
   return (
-    <section className="space-y-6">
-      <SectionHeader title="When are you travelling?" sub="Pick your departure city. Dates below are our next confirmed group departure." />
-
+    <section className="space-y-4">
       {availableCities.length >= 2 && (
         <div>
           <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-2">
@@ -493,14 +538,14 @@ function StepDates({
                   key={city}
                   type="button"
                   onClick={() => onCityChange(city)}
-                  className={`text-left p-4 rounded-[var(--radius-sm)] border-2 transition-all cursor-pointer ${
+                  className={`text-left px-3 py-2 rounded-[var(--radius-sm)] border-2 transition-all cursor-pointer ${
                     active
                       ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--text-inverse)]"
                       : "border-[var(--border-default)] bg-[var(--bg-primary)] hover:border-[var(--primary)]"
                   }`}
                 >
-                  <p className={`text-[15px] font-bold capitalize ${active ? "text-[var(--text-inverse)]" : "text-[var(--text-primary)]"}`}>{city}</p>
-                  <p className={`text-[12px] mt-0.5 ${active ? "text-[var(--text-inverse)] opacity-80" : "text-[var(--text-secondary)]"}`}>{formatPrice(price)} per person</p>
+                  <p className={`text-[14px] font-bold capitalize ${active ? "text-[var(--text-inverse)]" : "text-[var(--text-primary)]"}`}>{city}</p>
+                  <p className={`text-[11px] ${active ? "text-[var(--text-inverse)] opacity-80" : "text-[var(--text-secondary)]"}`}>{formatPrice(price)} pp</p>
                 </button>
               );
             })}
@@ -512,12 +557,12 @@ function StepDates({
         <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-2">
           Departure date
         </label>
-        <div className="flex items-center justify-between p-4 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-subtle)]">
+        <div className="flex items-center justify-between px-3 py-2 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-subtle)]">
           <div>
-            <p className="text-[16px] font-bold text-[var(--text-primary)]">
+            <p className="text-[14px] font-bold text-[var(--text-primary)]">
               {departureDate ? fmtLongDate(departureDate) : "Flexible"}
             </p>
-            <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
+            <p className="text-[11px] text-[var(--text-tertiary)]">
               {tour.duration} days · returns {departureDate ? fmtLongDate(new Date(new Date(departureDate).getTime() + tour.duration * 24 * 3600 * 1000).toISOString()) : "—"}
             </p>
           </div>
@@ -546,35 +591,47 @@ function StepTravelers({
   adults,
   childCount,
   singleRooms,
+  singleOccupancyRooms,
   maxSeats,
   seatsLeft,
   groupDiscountPct,
   onAdults,
   onChildren,
   onSingleRooms,
+  onSingleOccupancyRooms,
 }: {
   tour: Tour;
   adults: number;
   childCount: number;
   singleRooms: number;
+  singleOccupancyRooms: number;
   maxSeats: number;
   seatsLeft: number | null;
   groupDiscountPct: number;
   onAdults: (n: number) => void;
   onChildren: (n: number) => void;
   onSingleRooms: (n: number) => void;
+  onSingleOccupancyRooms: (n: number) => void;
 }) {
-  const totalTravelers = adults + childCount;
   const seatCap = seatsLeft !== null ? Math.min(maxSeats, seatsLeft) : maxSeats;
+  const supplement = tour.pricing.singleSupplement ?? 0;
+  const maxSingles = Math.max(0, adults - 2 * singleRooms);
+  const maxCoupleRooms = Math.max(0, Math.floor((adults - singleOccupancyRooms) / 2));
+  const nextAdultsForDiscount = groupDiscountPct === 0.05 ? 6 - adults : 3 - adults;
 
   return (
-    <section className="space-y-6">
-      <SectionHeader title="Who's travelling?" sub={`Up to ${maxSeats} travellers per group · children ages 2–12 get 50% off`} />
+    <section className="space-y-3">
+      <div>
+        <p className="text-[15px] font-bold text-[var(--text-primary)]">Who&apos;s travelling?</p>
+        <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
+          Up to {maxSeats} · children 2–12 get 50% off
+        </p>
+      </div>
 
-      <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] p-5 space-y-5">
+      <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] px-4 py-3 space-y-3">
         <Stepper
           label="Adults"
-          sub="Age 13 and over"
+          sub="Age 13+"
           value={adults}
           min={1}
           max={seatCap - childCount}
@@ -593,67 +650,93 @@ function StepTravelers({
         />
       </div>
 
-      {tour.pricing.singleSupplement && totalTravelers >= 2 && (() => {
-        const maxRooms = Math.floor(totalTravelers / 2);
-        return (
-          <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[14px] font-semibold text-[var(--text-primary)]">Private room (twin-share)</p>
-                <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
-                  {formatPrice(tour.pricing.singleSupplement * 2)} / room · skip sharing with strangers
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  aria-label="Decrease private rooms"
-                  onClick={() => onSingleRooms(Math.max(0, singleRooms - 1))}
-                  disabled={singleRooms <= 0}
-                  className="w-9 h-9 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30"
-                >
-                  −
-                </button>
-                <span className="w-7 text-center text-[15px] font-semibold tabular-nums">{singleRooms}</span>
-                <button
-                  type="button"
-                  aria-label="Increase private rooms"
-                  onClick={() => onSingleRooms(Math.min(maxRooms, singleRooms + 1))}
-                  disabled={singleRooms >= maxRooms}
-                  className="w-9 h-9 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
-      {groupDiscountPct > 0 && (
-        <div className="p-4 rounded-[var(--radius-md)] bg-[var(--primary-light)] border border-[var(--primary)]/30 flex items-start gap-3">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" className="shrink-0 mt-0.5">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-          </svg>
-          <div>
-            <p className="text-[13px] font-bold text-[var(--primary-deep)]">
-              Group discount unlocked — {Math.round(groupDiscountPct * 100)}% off
-            </p>
-            <p className="text-[12px] text-[var(--text-secondary)] mt-0.5">
-              Applied automatically. Add 4+ travellers for 10% off, 8+ for 15% off.
-            </p>
-          </div>
+      {supplement > 0 && (
+        <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] px-4 py-3 space-y-3">
+          <PrivateRoomRow
+            label="Single occupancy"
+            sub={`${formatPrice(supplement * 3)} · your own room`}
+            value={singleOccupancyRooms}
+            max={maxSingles}
+            onChange={(n) => onSingleOccupancyRooms(Math.min(maxSingles, Math.max(0, n)))}
+          />
+          <div className="border-t border-[var(--border-default)]" />
+          <PrivateRoomRow
+            label="Couple private room"
+            sub={`${formatPrice(supplement * 2)} / room · skip strangers`}
+            value={singleRooms}
+            max={maxCoupleRooms}
+            onChange={(n) => onSingleRooms(Math.min(maxCoupleRooms, Math.max(0, n)))}
+          />
         </div>
       )}
 
-      {groupDiscountPct === 0 && adults < 4 && (
-        <div className="p-4 rounded-[var(--radius-md)] bg-[var(--accent-warm-light)] border border-[var(--accent-warm)]/30">
-          <p className="text-[13px] font-semibold text-[var(--accent-warm)]">
-            Tip · Add {4 - totalTravelers} more traveller{4 - totalTravelers !== 1 ? "s" : ""} to unlock 10% group discount
+      {groupDiscountPct > 0 && (
+        <div className="px-3 py-2 rounded-[var(--radius-sm)] bg-[var(--primary-light)] border border-[var(--primary)]/30 flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--primary)" stroke="none" className="shrink-0">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
+          <p className="text-[12px] font-semibold text-[var(--primary-deep)]">
+            Group discount unlocked — {Math.round(groupDiscountPct * 100)}% off adult fare
           </p>
         </div>
       )}
+
+      {groupDiscountPct === 0 && adults < 3 && nextAdultsForDiscount > 0 && (
+        <p className="text-[12px] text-[var(--text-tertiary)]">
+          Tip · Add {nextAdultsForDiscount} more adult{nextAdultsForDiscount !== 1 ? "s" : ""} to unlock a 5% group discount
+        </p>
+      )}
+      {groupDiscountPct === 0.05 && (
+        <p className="text-[12px] text-[var(--text-tertiary)]">
+          Tip · Add {6 - adults} more adult{6 - adults !== 1 ? "s" : ""} for 10% off
+        </p>
+      )}
     </section>
+  );
+}
+
+function PrivateRoomRow({
+  label,
+  sub,
+  value,
+  max,
+  onChange,
+}: {
+  label: string;
+  sub: string;
+  value: number;
+  max: number;
+  onChange: (n: number) => void;
+}) {
+  const disabled = max === 0;
+  return (
+    <div className={`flex items-center justify-between gap-3 ${disabled ? "opacity-50" : ""}`}>
+      <div className="min-w-0">
+        <p className="text-[14px] font-semibold text-[var(--text-primary)]">{label}</p>
+        <p className="text-[11px] text-[var(--text-tertiary)] truncate">{sub}</p>
+      </div>
+      <div className="flex items-center gap-3 shrink-0">
+        <button
+          type="button"
+          aria-label={`Decrease ${label}`}
+          onClick={() => onChange(value - 1)}
+          disabled={value <= 0}
+          className="w-9 h-9 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          −
+        </button>
+        <span className="w-7 text-center text-[15px] font-semibold tabular-nums">{value}</span>
+        <button
+          type="button"
+          aria-label={`Increase ${label}`}
+          onClick={() => onChange(value + 1)}
+          disabled={value >= max}
+          className="w-9 h-9 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          +
+        </button>
+      </div>
+    </div>
   );
 }
 

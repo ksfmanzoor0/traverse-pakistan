@@ -13,6 +13,7 @@ export interface CheckoutDraft {
   adults: number;
   childCount: number;
   singleRooms: number;
+  singleOccupancyRooms: number;
   travelers: TravelerProfile[];
   contact: {
     firstName: string;
@@ -21,7 +22,7 @@ export interface CheckoutDraft {
   };
   specialRequests: string;
   paymentPlan: PaymentPlan;
-  step: 1 | 2 | 3 | 4;
+  step: 1 | 2 | 3;
   updatedAt: number;
 }
 
@@ -32,6 +33,7 @@ export const DEFAULT_DRAFT = (tourSlug: string, city: DepartureCity = "islamabad
   adults: 1,
   childCount: 0,
   singleRooms: 0,
+  singleOccupancyRooms: 0,
   travelers: [],
   contact: { firstName: "", email: "", phone: "" },
   specialRequests: "",

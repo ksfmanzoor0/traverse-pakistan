@@ -151,13 +151,23 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
   return (
     <>
       <header
-        className="sticky top-0 z-50 bg-[var(--bg-primary)]/95 backdrop-blur-md"
+        className="sticky top-0 z-50 bg-[var(--bg-primary)]"
         style={{ boxShadow: "0 1px 0 var(--border-default)" }}
       >
         <nav className="mx-auto w-full flex items-center md:grid md:grid-cols-[1fr_auto_1fr] md:items-start min-h-[64px] sm:min-h-[76px] px-4 sm:px-8 lg:px-16">
           {/* Logo — CSS-driven so there's no flash on dark-mode reload */}
-          <div className="shrink-0 h-[64px] sm:h-[76px] flex items-center">
-            <Link href="/" onClick={closeAll}>
+          <div className="shrink-0 h-[64px] sm:h-[76px] flex items-center relative z-10">
+            <Link
+              href="/"
+              className="cursor-pointer"
+              onClick={(e) => {
+                closeAll();
+                if (pathname === "/") {
+                  e.preventDefault();
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              }}
+            >
               <Image
                 src="/logo-white.png"
                 alt="Traverse Pakistan"
@@ -185,7 +195,7 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
               (left col) and actions (right col) to the edges; the search sits
               in the centre column. Kept in flow so the navbar grows when the
               search expands. Full-width gives the 850px search room to centre. */}
-          <div className="hidden md:flex justify-center py-3 min-h-[76px] w-[850px]">
+          <div className={`hidden md:flex justify-center py-3 min-h-[76px] w-[850px] max-w-full ${showDesktopSearch ? "" : "pointer-events-none"}`}>
             {showDesktopSearch && <NavSearchBar destinations={destinations} />}
           </div>
 

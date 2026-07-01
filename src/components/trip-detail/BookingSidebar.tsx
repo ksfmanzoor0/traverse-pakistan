@@ -192,6 +192,17 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
             onDecrement={() => setChildren(Math.max(0, children - 1))}
             onIncrement={() => setChildren(Math.min(seatCap - adults, children + 1))}
           />
+          {tour.pricing.singleSupplement && totalTravelers === 1 && (
+            <Stepper
+              label="Private room"
+              sub={`+ ${formatPrice(tour.pricing.singleSupplement * 3)} · your own room`}
+              value={singleRooms}
+              min={0}
+              max={1}
+              onDecrement={() => setSingleRooms(0)}
+              onIncrement={() => setSingleRooms(1)}
+            />
+          )}
           {tour.pricing.singleSupplement && totalTravelers >= 2 && (
             <Stepper
               label="Private room"
