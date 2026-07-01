@@ -17,7 +17,7 @@ const stats: Stat[] = [
   { value: 1300, suffix: "+", label: "Happy Travelers", isDecimal: false },
   { value: 63, suffix: "+", label: "Tour Packages", isDecimal: false },
   { value: 15, suffix: "+", label: "Regions Covered", isDecimal: false },
-  { value: 98, suffix: "%", label: "Would Recommend", isDecimal: false },
+  { value: 10, suffix: "+", label: "Years of Experience", isDecimal: false },
 ];
 
 function AnimatedNumber({ value, suffix, isDecimal }: { value: number; suffix: string; isDecimal: boolean }) {

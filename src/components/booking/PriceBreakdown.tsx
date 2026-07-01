@@ -87,7 +87,7 @@ export function PriceBreakdown({
           )}
           {breakdown.singleSupplementTotal > 0 && (
             <Row
-              label="Single room supplement"
+              label="Private room (separate occupancy)"
               value={formatPrice(breakdown.singleSupplementTotal)}
             />
           )}

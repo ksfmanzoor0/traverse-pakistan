@@ -593,39 +593,42 @@ function StepTravelers({
         />
       </div>
 
-      {tour.pricing.singleSupplement && (
-        <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-[14px] font-semibold text-[var(--text-primary)]">Single rooms</p>
-              <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
-                {formatPrice(tour.pricing.singleSupplement)} per single room supplement
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                aria-label="Decrease single rooms"
-                onClick={() => onSingleRooms(Math.max(0, singleRooms - 1))}
-                disabled={singleRooms <= 0}
-                className="w-9 h-9 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30"
-              >
-                −
-              </button>
-              <span className="w-7 text-center text-[15px] font-semibold tabular-nums">{singleRooms}</span>
-              <button
-                type="button"
-                aria-label="Increase single rooms"
-                onClick={() => onSingleRooms(Math.min(totalTravelers, singleRooms + 1))}
-                disabled={singleRooms >= totalTravelers}
-                className="w-9 h-9 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30"
-              >
-                +
-              </button>
+      {tour.pricing.singleSupplement && totalTravelers >= 2 && (() => {
+        const maxRooms = Math.floor(totalTravelers / 2);
+        return (
+          <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[14px] font-semibold text-[var(--text-primary)]">Private room (twin-share)</p>
+                <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
+                  {formatPrice(tour.pricing.singleSupplement * 2)} / room · skip sharing with strangers
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  aria-label="Decrease private rooms"
+                  onClick={() => onSingleRooms(Math.max(0, singleRooms - 1))}
+                  disabled={singleRooms <= 0}
+                  className="w-9 h-9 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30"
+                >
+                  −
+                </button>
+                <span className="w-7 text-center text-[15px] font-semibold tabular-nums">{singleRooms}</span>
+                <button
+                  type="button"
+                  aria-label="Increase private rooms"
+                  onClick={() => onSingleRooms(Math.min(maxRooms, singleRooms + 1))}
+                  disabled={singleRooms >= maxRooms}
+                  className="w-9 h-9 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30"
+                >
+                  +
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {groupDiscountPct > 0 && (
         <div className="p-4 rounded-[var(--radius-md)] bg-[var(--primary-light)] border border-[var(--primary)]/30 flex items-start gap-3">
