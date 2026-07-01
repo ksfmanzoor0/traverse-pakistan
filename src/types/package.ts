@@ -46,6 +46,7 @@ export interface Package {
   rating: number;
   reviewCount: number;
   maxGroupSize: number;
+  maxAdultsByTier: Record<string, number> | null;
   languages: string[];
   freeCancellation: boolean;
   reserveNowPayLater: boolean;
