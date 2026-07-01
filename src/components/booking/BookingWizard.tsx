@@ -712,26 +712,26 @@ function PrivateRoomRow({
   return (
     <div className={`flex items-center justify-between gap-3 ${disabled ? "opacity-50" : ""}`}>
       <div className="min-w-0">
-        <p className="text-[13px] font-semibold text-[var(--text-primary)]">{label}</p>
-        <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5 truncate">{sub}</p>
+        <p className="text-[14px] font-semibold text-[var(--text-primary)]">{label}</p>
+        <p className="text-[11px] text-[var(--text-tertiary)] truncate">{sub}</p>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-3 shrink-0">
         <button
           type="button"
           aria-label={`Decrease ${label}`}
           onClick={() => onChange(value - 1)}
           disabled={value <= 0}
-          className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+          className="w-9 h-9 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
         >
           −
         </button>
-        <span className="w-6 text-center text-[14px] font-semibold tabular-nums">{value}</span>
+        <span className="w-7 text-center text-[15px] font-semibold tabular-nums">{value}</span>
         <button
           type="button"
           aria-label={`Increase ${label}`}
           onClick={() => onChange(value + 1)}
           disabled={value >= max}
-          className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+          className="w-9 h-9 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
         >
           +
         </button>
