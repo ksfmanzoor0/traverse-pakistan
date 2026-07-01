@@ -148,7 +148,11 @@ export const getToursByDestination = cache(async (destinationSlug: string): Prom
   const supabase = getSupabaseAnon();
   const activeSlugs = await getActiveTourSlugs(supabase);
   if (activeSlugs.length === 0) return [];
-  const { data, error } = await supabase.from("tours").select("*").eq("destination_slug", destinationSlug).in("slug", activeSlugs);
+  const { data, error } = await supabase
+    .from("tours")
+    .select("*")
+    .or(`destination_slug.eq.${destinationSlug},related_destination_slugs.cs.{${destinationSlug}}`)
+    .in("slug", activeSlugs);
   if (error) throw new Error(`getToursByDestination: ${error.message}`);
   const rows = data as TourRow[];
   const priceMap = await buildPriceMap(supabase, rows.map((r) => r.slug));

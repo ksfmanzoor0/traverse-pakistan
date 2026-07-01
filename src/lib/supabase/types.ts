@@ -14,6 +14,7 @@ export type TourRow = {
   route: string;
   departure_date: string | null;
   destination_slug: string;
+  related_destination_slugs: string[];
   region_slug: string;
   travel_style_slugs: string[];
   rating: number;
