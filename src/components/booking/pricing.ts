@@ -52,7 +52,12 @@ export function calculatePricing(input: PricingInput): PricingBreakdown {
   const subtotal = adultsSubtotal + childrenSubtotal;
 
   const totalTravelers = adults + childCount;
-  const singleSupplementTotal = singleSupplement * Math.min(singleRooms, totalTravelers);
+  // Private-room add-on: each private room is twin-occupancy and the
+  // supplement is per-person, so each room costs supplement × 2.
+  // Hidden when only 1 traveler (sharing implicit on base price).
+  const maxPrivateRooms = totalTravelers >= 2 ? Math.floor(totalTravelers / 2) : 0;
+  const billableRooms = Math.min(singleRooms, maxPrivateRooms);
+  const singleSupplementTotal = singleSupplement * 2 * billableRooms;
 
   const groupDiscountPct = getGroupDiscountPct(totalTravelers);
   const groupDiscountAmount = Math.round(subtotal * groupDiscountPct);

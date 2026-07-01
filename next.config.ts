@@ -69,8 +69,15 @@ const nextConfig: NextConfig = {
     // GitHub Pages: fall back to unoptimized (no Node runtime)
     unoptimized: isGitHubPages,
   },
-  // headers() is ignored under `output: export`, so skip it for GH Pages.
+  // redirects() preserves SEO from the old WordPress URL structure.
+  // WP plugin slug `/st_tour/{slug}/` → new `/grouptours/{slug}`.
   ...(!isGitHubPages && {
+    async redirects() {
+      return [
+        { source: "/st_tour/:slug", destination: "/grouptours/:slug", permanent: true },
+        { source: "/st_tour/:slug/", destination: "/grouptours/:slug", permanent: true },
+      ];
+    },
     async headers() {
       return [
         {
