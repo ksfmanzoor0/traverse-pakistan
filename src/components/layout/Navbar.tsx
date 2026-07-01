@@ -151,7 +151,7 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
   return (
     <>
       <header
-        className="sticky top-0 z-50 bg-[var(--bg-primary)]/95 backdrop-blur-md"
+        className="sticky top-0 z-50 bg-[var(--bg-primary)]"
         style={{ boxShadow: "0 1px 0 var(--border-default)" }}
       >
         <nav className="mx-auto w-full flex items-center md:grid md:grid-cols-[1fr_auto_1fr] md:items-start min-h-[64px] sm:min-h-[76px] px-4 sm:px-8 lg:px-16">
