@@ -89,6 +89,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
   const initAdults = Math.max(1, Number(searchParams?.get("adults") ?? 1));
   const initChildren = Math.max(0, Number(searchParams?.get("children") ?? 0));
   const initSingleRooms = Math.max(0, Number(searchParams?.get("singleRooms") ?? 0));
+  const initSingleOccupancy = Math.max(0, Number(searchParams?.get("singleOccupancy") ?? 0));
   const initStep = searchParams?.get("adults") ? 2 : 1;
 
   const { draft, setDraft, clearDraft } = useCheckoutDraft(tour.slug, {
@@ -97,6 +98,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
     adults: initAdults,
     childCount: initChildren,
     singleRooms: initSingleRooms,
+    singleOccupancyRooms: initSingleOccupancy,
   });
 
   const [cityDepartures, setCityDepartures] = useState<{ islamabad: Departure | null; lahore: Departure | null; karachi: Departure | null }>({ islamabad: null, lahore: null, karachi: null });
