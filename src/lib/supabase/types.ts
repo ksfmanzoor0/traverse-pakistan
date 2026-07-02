@@ -94,6 +94,7 @@ export type BookingRow = {
   payment_plan: "full" | "installments";
   deposit_amount: number | null;
   amount_paid: number;
+  payment_confirmed_via: "ipn" | "polling" | null;
 };
 
 export type BookingParticipantRow = {
@@ -467,6 +468,7 @@ export type Database = {
           payment_plan: "full" | "installments";
           deposit_amount: number | null;
           amount_paid: number;
+          payment_confirmed_via: "ipn" | "polling" | null;
         };
         Insert: Record<string, unknown>;
         Update: Partial<{
@@ -479,6 +481,7 @@ export type Database = {
           user_id: string | null;
           confirmation_sent_at: string | null;
           amount_paid: number;
+          payment_confirmed_via: "ipn" | "polling" | null;
         }>;
         Relationships: [];
       };
@@ -517,6 +520,7 @@ export type Database = {
           user_id: string | null;
           confirmation_sent_at: string | null;
           amount_paid: number;
+          payment_confirmed_via: "ipn" | "polling" | null;
         }>;
         Relationships: [];
       };

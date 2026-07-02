@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
     if (status === "pending") {
       const alfa = await checkAlfaIPN(ref);
       if (alfa.status === "paid") {
-        await markBooking(ref, true, alfa.amount);
+        await markBooking(ref, true, alfa.amount, "polling");
         status = "paid";
       }
     }
@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
     if (status === "pending") {
       const alfa = await checkAlfaIPN(ref);
       if (alfa.status === "paid") {
-        await markBooking(ref, true, alfa.amount);
+        await markBooking(ref, true, alfa.amount, "polling");
         status = "paid";
       }
     }

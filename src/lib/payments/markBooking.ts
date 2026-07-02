@@ -2,6 +2,8 @@ import { after } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { sendPaymentConfirmation } from "@/lib/email/sendBookingConfirmation";
 
+export type PaymentSource = "ipn" | "polling";
+
 // Updates payment + booking status after Alfa reports a charge. Phase 2
 // supports split payments: a deposit charge lands amount_paid < total_amount
 // and the row sits in an intermediate state (payment_status='deposit_paid'
@@ -9,14 +11,21 @@ import { sendPaymentConfirmation } from "@/lib/email/sendBookingConfirmation";
 // charge lands and pushes amount_paid to total.
 //
 // amountCharged: the amount Alfa says was captured on this transaction. When
-// undefined we fall back to the outstanding balance (legacy full-payment path).
+//   undefined we fall back to the outstanding balance (legacy full-payment path).
+// source: which route invoked us — 'ipn' (Alfa webhook) or 'polling' (status
+//   endpoint checking Alfa's IPN API on page load). Recorded on the first
+//   positive payment landing so ops can see whether IPN whitelisting is
+//   actually working:
+//     select payment_confirmed_via, count(*) from bookings where amount_paid > 0 group by 1;
 export async function markBooking(
   bookingRef: string,
   isPaid: boolean,
   amountCharged?: number | null,
+  source: PaymentSource = "polling",
 ): Promise<void> {
   const supabase = getSupabaseAdmin();
   let shouldFireConfirmation = false;
+  let isFirstPositivePayment = false;
 
   if (bookingRef.startsWith("PKG-")) {
     const { data: before } = await supabase
@@ -49,7 +58,8 @@ export async function markBooking(
     // AND on the transition into fully paid (balance clears). Deposit lands
     // "your booking is confirmed with deposit"; balance lands "fully paid".
     const wasFullyPaid = (before.payment_status ?? "pending") === "paid";
-    shouldFireConfirmation = (priorPaid === 0 && newPaid > 0)
+    isFirstPositivePayment = priorPaid === 0 && newPaid > 0;
+    shouldFireConfirmation = isFirstPositivePayment
       || (!wasFullyPaid && newPaid >= total && priorPaid > 0);
 
     await supabase
@@ -59,6 +69,7 @@ export async function markBooking(
         booking_status: "active",
         amount_paid: newPaid,
         updated_at: new Date().toISOString(),
+        ...(isFirstPositivePayment ? { payment_confirmed_via: source } : {}),
       })
       .eq("booking_ref", bookingRef);
   } else if (bookingRef.startsWith("HTL-")) {
@@ -72,7 +83,8 @@ export async function markBooking(
 
     if (!before) return;
 
-    shouldFireConfirmation = isPaid && (before.payment_status ?? "pending") !== "paid";
+    isFirstPositivePayment = isPaid && (before.payment_status ?? "pending") !== "paid";
+    shouldFireConfirmation = isFirstPositivePayment;
 
     await supabase
       .from("hotel_bookings")
@@ -81,6 +93,7 @@ export async function markBooking(
         booking_status: isPaid ? "active" : "pending",
         amount_paid: isPaid ? Number(before.total_amount) : 0,
         updated_at: new Date().toISOString(),
+        ...(isFirstPositivePayment ? { payment_confirmed_via: source } : {}),
       })
       .eq("booking_ref", bookingRef);
   } else {
@@ -115,7 +128,8 @@ export async function markBooking(
     // Fire on the first positive payment (deposit) AND again on the flip into
     // fully paid (balance charge). Two customer touchpoints, same magic link.
     const wasFullyPaid = (before.status ?? "pending") === "confirmed";
-    shouldFireConfirmation = (priorPaid === 0 && newPaid > 0)
+    isFirstPositivePayment = priorPaid === 0 && newPaid > 0;
+    shouldFireConfirmation = isFirstPositivePayment
       || (!wasFullyPaid && newPaid >= total && priorPaid > 0);
 
     await supabase
@@ -125,9 +139,12 @@ export async function markBooking(
         booking_status: "active",
         amount_paid: newPaid,
         updated_at: new Date().toISOString(),
+        ...(isFirstPositivePayment ? { payment_confirmed_via: source } : {}),
       })
       .eq("booking_ref", bookingRef);
   }
+
+  console.log(`[markBooking] ref=${bookingRef} source=${source} firstPositive=${isFirstPositivePayment} fireConfirm=${shouldFireConfirmation}`);
 
   // Fires on two edges: (1) first positive payment (deposit or full-in-one),
   // and (2) the deposit→fully-paid flip when the balance charge lands.
