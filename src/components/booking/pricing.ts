@@ -30,7 +30,8 @@ export interface PricingBreakdown {
 }
 
 const CHILD_DISCOUNT_PCT = 0.5;
-const INSTALLMENT_DEPOSIT_PCT = 0.2;
+// Group tours: 40% deposit to confirm the seat; balance due 30 days pre-departure.
+export const TOUR_DEPOSIT_PCT = 0.4;
 
 // Group discount is now driven by adults only; children don't count.
 // 3 adults → 5%, 6 adults → 10%. Applied to the adults subtotal only.
@@ -71,7 +72,7 @@ export function calculatePricing(input: PricingInput): PricingBreakdown {
   const groupDiscountAmount = Math.round(adultsSubtotal * groupDiscountPct);
 
   const total = subtotal - groupDiscountAmount + singleSupplementTotal;
-  const dueNow = paymentPlan === "installments" ? Math.round(total * INSTALLMENT_DEPOSIT_PCT) : total;
+  const dueNow = paymentPlan === "installments" ? Math.round(total * TOUR_DEPOSIT_PCT) : total;
   const dueLater = total - dueNow;
 
   return {

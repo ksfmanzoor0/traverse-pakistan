@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("package_bookings")
-      .select("total_amount")
+      .select("total_amount, payment_plan, deposit_amount")
       .eq("booking_ref", bookingRef)
       .maybeSingle();
 
@@ -29,7 +29,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Booking not found" }, { status: 404 });
     }
 
-    const amount: number = data.total_amount as number;
+    const totalAmount = Number(data.total_amount);
+    const amount = data.payment_plan === "installments" && data.deposit_amount
+      ? Number(data.deposit_amount)
+      : totalAmount;
 
     const proto = req.headers.get("x-forwarded-proto") ?? "https";
     const host = req.headers.get("host") ?? "traversepakistan.com";

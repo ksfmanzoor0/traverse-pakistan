@@ -7,10 +7,9 @@ import { throwOnRateLimit } from "@/lib/api/throwOnRateLimit";
 interface TourPayButtonProps {
   bookingRef: string;
   amount: number;
-  plan?: "full" | "installments";
 }
 
-export function TourPayButton({ bookingRef, amount, plan = "full" }: TourPayButtonProps) {
+export function TourPayButton({ bookingRef, amount }: TourPayButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,7 +20,7 @@ export function TourPayButton({ bookingRef, amount, plan = "full" }: TourPayButt
       const res = await fetch("/api/payments/alfa/initiate-tour", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingRef, plan }),
+        body: JSON.stringify({ bookingRef }),
       });
       throwOnRateLimit(res, "payment attempts");
       const data = await res.json();

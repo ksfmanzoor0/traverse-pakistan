@@ -32,7 +32,7 @@ async function getBookingSummary(ref: string) {
   const supabase = getSupabaseAdmin();
   const { data } = await supabase
     .from("package_bookings")
-    .select("contact_name, contact_email, contact_phone, tier, departure_city, start_date, adults, rooms, total_amount, payment_status")
+    .select("contact_name, contact_email, contact_phone, tier, departure_city, start_date, adults, rooms, total_amount, payment_status, payment_plan, deposit_amount")
     .eq("booking_ref", ref)
     .maybeSingle();
   return data;
@@ -62,7 +62,16 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
     summary = await getBookingSummary(ref);
   }
 
-  const amount = amountParam ? Number(amountParam) : summary?.total_amount ? Number(summary.total_amount) : null;
+  // Pay-now amount: honour the persisted plan on the booking row (source of
+  // truth). Deposit plan → charge the 50% deposit; full plan → charge total.
+  // Falls back to ?amount= from the redirect if the summary isn't ready yet.
+  const amount = summary
+    ? (summary.payment_plan === "installments" && summary.deposit_amount
+        ? Number(summary.deposit_amount)
+        : Number(summary.total_amount))
+    : amountParam
+      ? Number(amountParam)
+      : null;
 
   return (
     <div className="py-10 sm:py-16">

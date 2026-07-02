@@ -244,7 +244,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
       draft.childCount > 0 ? `*Children:* ${draft.childCount}` : null,
       draft.singleRooms > 0 ? `*Single rooms:* ${draft.singleRooms}` : null,
       `*Total:* ${formatPrice(pricing.total)}`,
-      draft.paymentPlan === "installments" ? `*Payment:* 20% deposit (${formatPrice(pricing.dueNow)} now)` : null,
+      draft.paymentPlan === "installments" ? `*Payment:* 40% deposit (${formatPrice(pricing.dueNow)} now)` : null,
       "",
       `*Lead traveller:*`,
       draft.contact.firstName,
@@ -293,6 +293,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
           })),
           notes: draft.specialRequests || undefined,
           submitUuid: submitUuidRef.current,
+          paymentPlan: draft.paymentPlan,
         });
         clearDraft();
         router.push(`/grouptours/${tour.slug}/checkout/success?ref=${result.bookingRef}&plan=${draft.paymentPlan}&amount=${pricing.dueNow}`);

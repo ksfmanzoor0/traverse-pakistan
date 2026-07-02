@@ -35,6 +35,7 @@ export interface CreateBookingInput {
   participants: Participant[];
   notes?: string;
   submitUuid?: string;
+  paymentPlan?: "full" | "installments";
 }
 
 export interface BookingSummary {
