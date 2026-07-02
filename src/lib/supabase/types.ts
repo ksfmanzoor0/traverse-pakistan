@@ -14,6 +14,7 @@ export type TourRow = {
   route: string;
   departure_date: string | null;
   destination_slug: string;
+  related_destination_slugs: string[];
   region_slug: string;
   travel_style_slugs: string[];
   rating: number;
@@ -209,6 +210,7 @@ export type PackageRow = {
   rating: number;
   review_count: number;
   max_group_size: number | null;
+  max_adults_by_tier: Record<string, number> | null;
   languages: string[];
   free_cancellation: boolean;
   reserve_now_pay_later: boolean;

@@ -6,6 +6,8 @@ import { listVehicleTypes, getEngineConfig } from "@/services/vehicle.service";
 
 export type Tier = "deluxe" | "luxury" | "premium";
 
+export type VehicleCode = "corolla" | "brv" | "prado" | "hiace" | "coaster";
+
 export interface PublicPackageQuote {
   slug: string;
   duration: number;
@@ -18,6 +20,16 @@ export interface PublicPackageQuote {
   total: number;        // grand total for the whole party, post-margin
   perPerson: number;    // total / pax, rounded to nearest PKR 1,000
   unresolved: string[]; // soft warnings — e.g. missing flight fares, room shortfall
+  /** Vehicle the engine allocated for this quote. Null if allocation failed. */
+  vehicle: {
+    code: VehicleCode;
+    isNcp: boolean;
+    count: number;
+  } | null;
+  /** Per-person flight fare added to this quote. 0 when quote is drive-only. */
+  flightPerPerson: number;
+  /** Which kind of ticket the engine booked. null when there's no flight. */
+  flightTicketType: "return" | "oneway" | null;
 }
 
 interface VehicleAllocation {
@@ -25,6 +37,8 @@ interface VehicleAllocation {
   count: number;
   kmPerLitre: number;
   rentPerDay: number;
+  code: VehicleCode;
+  isNcp: boolean;
 }
 
 /**
@@ -46,6 +60,8 @@ function planVehicles(
       count: Math.max(1, Math.ceil(pax / Math.max(1, ncp.maxPeople))),
       kmPerLitre: ncp.kmPerLitre,
       rentPerDay: ncp.rentPerDay,
+      code: "prado",
+      isNcp: true,
     };
   }
   // Luxury tier on a single-day tour rides the non-NCP Prado, replicated by
@@ -58,14 +74,16 @@ function planVehicles(
         count: Math.max(1, Math.ceil(pax / Math.max(1, prado.maxPeople))),
         kmPerLitre: prado.kmPerLitre,
         rentPerDay: prado.rentPerDay,
+        code: "prado",
+        isNcp: false,
       };
     }
   }
-  const order = ["corolla", "brv", "hiace", "coaster"];
+  const order: VehicleCode[] = ["corolla", "brv", "hiace", "coaster"];
   for (const code of order) {
     const v = vehicles.find((x) => x.code === code);
     if (v && v.maxPeople >= pax) {
-      return { count: 1, kmPerLitre: v.kmPerLitre, rentPerDay: v.rentPerDay };
+      return { count: 1, kmPerLitre: v.kmPerLitre, rentPerDay: v.rentPerDay, code, isNcp: false };
     }
   }
   const coaster = vehicles.find((v) => v.code === "coaster");
@@ -74,6 +92,8 @@ function planVehicles(
     count: Math.max(1, Math.ceil(pax / Math.max(1, coaster.maxPeople))),
     kmPerLitre: coaster.kmPerLitre,
     rentPerDay: coaster.rentPerDay,
+    code: "coaster",
+    isNcp: false,
   };
 }
 
@@ -133,6 +153,9 @@ async function computeQuote(args: {
       total: 0,
       perPerson: 0,
       unresolved: [`Home ${args.home} not in starting_cities for ${pkg.slug}`],
+      vehicle: null,
+      flightPerPerson: 0,
+      flightTicketType: null,
     };
   }
 
@@ -157,6 +180,9 @@ async function computeQuote(args: {
       total: 0,
       perPerson: 0,
       unresolved: [`Package ${pkg.slug} has no positive total_distance_km — engine cannot compute transport cost.`],
+      vehicle: null,
+      flightPerPerson: 0,
+      flightTicketType: null,
     };
   }
   const baseDistance = pkg.total_distance_km;
@@ -208,6 +234,13 @@ async function computeQuote(args: {
   const flightRequired = !(flightQuote?.homeInStartingCities ?? true) && (flightQuote?.addons.length ?? 0) > 0;
   const flightPerPerson = flightQuote?.addonCostPerPerson ?? 0;
   const flightCost = flightRequired ? flightPerPerson * pax : 0;
+  // Ticket type for the UI chip. RETURN legs → return; else if any ONEWAY
+  // legs → oneway. Multiple ONEWAY legs (out + back booked separately) also
+  // count as a return trip end-user side.
+  const flightLegs = flightQuote?.addons.flatMap((a) => a.flightLegs ?? []) ?? [];
+  const flightTicketType: "return" | "oneway" | null = flightRequired && flightLegs.length > 0
+    ? (flightLegs.some((l) => l.routeType === "RETURN") || flightLegs.length >= 2 ? "return" : "oneway")
+    : null;
   if (flightRequired && flightPerPerson === 0) {
     unresolved.push("Flight cost could not be resolved for the requested dates.");
   }
@@ -241,6 +274,11 @@ async function computeQuote(args: {
     total,
     perPerson,
     unresolved,
+    vehicle: vehiclePlan
+      ? { code: vehiclePlan.code, isNcp: vehiclePlan.isNcp, count: vehiclePlan.count }
+      : null,
+    flightPerPerson: flightRequired && flightPerPerson > 0 ? flightPerPerson : 0,
+    flightTicketType,
   };
 }
 

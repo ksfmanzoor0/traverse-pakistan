@@ -338,7 +338,10 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
               <div className="grid grid-cols-2 gap-3">
                 {(["deluxe", "luxury"] as PackageTier[]).map(tier => (
                   <button
-                    key={tier} type="button" onClick={() => patch({ tier })}
+                    key={tier} type="button" onClick={() => {
+                      const cap = pkg.maxAdultsByTier?.[tier] ?? pkg.maxGroupSize;
+                      patch({ tier, adults: Math.min(state.adults, cap) });
+                    }}
                     className={`h-14 rounded-[var(--radius-sm)] border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
                       state.tier === tier
                         ? "bg-[var(--primary)] text-[var(--text-inverse)] border-[var(--primary)]"
@@ -400,22 +403,30 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
         )}
 
         {/* Step 2 — Travellers */}
-        {state.step === 2 && (
+        {state.step === 2 && (() => {
+          const tierCap = pkg.maxAdultsByTier?.[state.tier];
+          const effectiveMax = Math.min(pkg.maxGroupSize, tierCap ?? pkg.maxGroupSize);
+          return (
           <section className="space-y-6">
-            <SectionHeader title="Who's travelling?" sub={`Up to ${pkg.maxGroupSize} travellers · up to 3 per room`} />
+            <SectionHeader
+              title="Who's travelling?"
+              sub={tierCap && tierCap < pkg.maxGroupSize
+                ? `Up to ${effectiveMax} travellers on ${state.tier} tier (${pkg.maxGroupSize} on other tiers) · up to 3 per room`
+                : `Up to ${effectiveMax} travellers · up to 3 per room`}
+            />
             <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] p-5 space-y-5">
               <Stepper
                 label="Adults"
                 sub="Age 13 and over"
                 value={state.adults}
                 min={1}
-                max={pkg.maxGroupSize}
+                max={effectiveMax}
                 onDecrement={() => {
                   const next = Math.max(1, state.adults - 1);
                   patch({ adults: next, rooms: Math.min(state.rooms, Math.ceil(next / 3)) });
                 }}
                 onIncrement={() => {
-                  const next = Math.min(pkg.maxGroupSize, state.adults + 1);
+                  const next = Math.min(effectiveMax, state.adults + 1);
                   patch({ adults: next, rooms: Math.max(state.rooms, Math.ceil(next / 3)) });
                 }}
               />
@@ -431,7 +442,8 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
               />
             </div>
           </section>
-        )}
+          );
+        })()}
 
         {/* Step 3 — Details */}
         {state.step === 3 && (

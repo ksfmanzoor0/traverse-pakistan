@@ -25,6 +25,7 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
   const [adults, setAdults] = useState(1);
   const [children, setChildren] = useState(0);
   const [singleRooms, setSingleRooms] = useState(0);
+  const [singleOccupancyRooms, setSingleOccupancyRooms] = useState(0);
   const [departure, setDeparture] = useState<"islamabad" | "lahore" | "karachi">("islamabad");
   const [cityDepartures, setCityDepartures] = useState<{ islamabad: Departure | null; lahore: Departure | null; karachi: Departure | null }>({ islamabad: null, lahore: null, karachi: null });
   const [departuresLoaded, setDeparturesLoaded] = useState(false);
@@ -50,6 +51,16 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setResumeAvailable(hasResumableDraft(tour.slug) !== null);
   }, [tour.slug]);
+
+  // Clamp private-room selections when adults drops so a disabled couple/single
+  // row doesn't silently keep contributing to the total.
+  useEffect(() => {
+    const solos = Math.min(singleOccupancyRooms, adults);
+    const couples = Math.min(singleRooms, Math.max(0, Math.floor((adults - solos) / 2)));
+    if (solos !== singleOccupancyRooms) setSingleOccupancyRooms(solos);
+    if (couples !== singleRooms) setSingleRooms(couples);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adults]);
 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
@@ -78,6 +89,7 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
     adults,
     childCount: children,
     singleRooms,
+    singleOccupancyRooms,
     paymentPlan: "full",
   });
 
@@ -86,7 +98,11 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
   const maxSeats = liveDeparture?.maxSeats ?? tour.maxGroupSize;
   const seatCap = liveDeparture ? Math.min(maxSeats, liveDeparture.seatsAvailable) : maxSeats;
 
-  const checkoutHref = `/grouptours/${tour.slug}/checkout?departure=${departure}&adults=${adults}&children=${children}&singleRooms=${singleRooms}`;
+  const checkoutHref = `/grouptours/${tour.slug}/checkout?departure=${departure}&adults=${adults}&children=${children}&singleRooms=${singleRooms}&singleOccupancy=${singleOccupancyRooms}`;
+
+  // Clamp private-room selections when adults changes
+  const maxSingles = Math.max(0, adults - 2 * singleRooms);
+  const maxCoupleRooms = Math.max(0, Math.floor((adults - singleOccupancyRooms) / 2));
 
   return (
     <div className="sticky top-[120px] space-y-4">
@@ -192,26 +208,26 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
             onDecrement={() => setChildren(Math.max(0, children - 1))}
             onIncrement={() => setChildren(Math.min(seatCap - adults, children + 1))}
           />
-          {tour.pricing.singleSupplement && totalTravelers === 1 && (
+          {tour.pricing.singleSupplement && (
             <Stepper
-              label="Private room"
+              label="Single occupancy"
               sub={`+ ${formatPrice(tour.pricing.singleSupplement * 3)} · your own room`}
-              value={singleRooms}
+              value={singleOccupancyRooms}
               min={0}
-              max={1}
-              onDecrement={() => setSingleRooms(0)}
-              onIncrement={() => setSingleRooms(1)}
+              max={adults}
+              onDecrement={() => setSingleOccupancyRooms(Math.max(0, singleOccupancyRooms - 1))}
+              onIncrement={() => setSingleOccupancyRooms(Math.min(maxSingles, singleOccupancyRooms + 1))}
             />
           )}
-          {tour.pricing.singleSupplement && totalTravelers >= 2 && (
+          {tour.pricing.singleSupplement && (
             <Stepper
-              label="Private room"
-              sub={`+ ${formatPrice(tour.pricing.singleSupplement * 2)} / room · twin-share, skip strangers`}
+              label="Couple private room"
+              sub={`+ ${formatPrice(tour.pricing.singleSupplement * 2)} / room · skip strangers`}
               value={singleRooms}
               min={0}
-              max={Math.floor(totalTravelers / 2)}
+              max={maxCoupleRooms}
               onDecrement={() => setSingleRooms(Math.max(0, singleRooms - 1))}
-              onIncrement={() => setSingleRooms(Math.min(Math.floor(totalTravelers / 2), singleRooms + 1))}
+              onIncrement={() => setSingleRooms(Math.min(maxCoupleRooms, singleRooms + 1))}
             />
           )}
         </div>

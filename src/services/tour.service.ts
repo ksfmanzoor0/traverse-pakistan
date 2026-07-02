@@ -148,7 +148,16 @@ export const getToursByDestination = cache(async (destinationSlug: string): Prom
   const supabase = getSupabaseAnon();
   const activeSlugs = await getActiveTourSlugs(supabase);
   if (activeSlugs.length === 0) return [];
-  const { data, error } = await supabase.from("tours").select("*").eq("destination_slug", destinationSlug).in("slug", activeSlugs);
+  // Include tours anchored to any ancestor destination so child pages
+  // (e.g. buni, shandur) surface their parent's (chitral) tours.
+  const { data: ancestorSlugsData } = await supabase.rpc("destination_slug_with_ancestors" as never, { p_slug: destinationSlug } as never);
+  const slugs = ((ancestorSlugsData as string[] | null) ?? [destinationSlug]).filter(Boolean);
+  const slugList = slugs.join(",");
+  const { data, error } = await supabase
+    .from("tours")
+    .select("*")
+    .or(`destination_slug.in.(${slugList}),related_destination_slugs.ov.{${slugList}}`)
+    .in("slug", activeSlugs);
   if (error) throw new Error(`getToursByDestination: ${error.message}`);
   const rows = data as TourRow[];
   const priceMap = await buildPriceMap(supabase, rows.map((r) => r.slug));
