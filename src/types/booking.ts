@@ -1,4 +1,4 @@
-export type BookingStatus = "pending" | "confirmed" | "cancelled" | "refunded";
+export type BookingStatus = "pending" | "confirmed" | "cancelled" | "refunded" | "deposit_paid";
 export type DepartureCity = "islamabad" | "lahore" | "karachi";
 
 export interface Departure {

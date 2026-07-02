@@ -1,5 +1,5 @@
 export type DepartureStatus = "open" | "closed" | "cancelled";
-export type BookingStatus = "pending" | "confirmed" | "cancelled" | "refunded";
+export type BookingStatus = "pending" | "confirmed" | "cancelled" | "refunded" | "deposit_paid";
 export type PaymentStatus = "initiated" | "succeeded" | "failed" | "refunded";
 export type DepartureCity = "islamabad" | "lahore" | "karachi";
 
@@ -80,6 +80,7 @@ export type BookingRow = {
   single_rooms: number;
   total_amount: number;
   currency: string;
+  // Overloaded as the payment-status column; see BookingStatus enum values.
   status: BookingStatus;
   booking_status: string;
   refund_status: string | null;
@@ -477,6 +478,7 @@ export type Database = {
           updated_at: string;
           user_id: string | null;
           confirmation_sent_at: string | null;
+          amount_paid: number;
         }>;
         Relationships: [];
       };
@@ -514,6 +516,7 @@ export type Database = {
           updated_at: string;
           user_id: string | null;
           confirmation_sent_at: string | null;
+          amount_paid: number;
         }>;
         Relationships: [];
       };
