@@ -108,12 +108,21 @@ export function PriceBreakdown({
                   sub={formatPrice(breakdown.total)}
                   onClick={() => onPaymentPlanChange("full")}
                 />
-                <PlanTile
-                  active={paymentPlan === "installments"}
-                  label="20% deposit"
-                  sub={`${formatPrice(breakdown.dueNow)} now · ${formatPrice(breakdown.dueLater)} later`}
-                  onClick={() => onPaymentPlanChange("installments")}
-                />
+                {(() => {
+                  // Always preview the 20/80 split on the deposit tile, regardless
+                  // of the currently-selected plan (otherwise "Pay in full" mode
+                  // would show total/0 on this tile, which is wrong).
+                  const depositNow = Math.round(breakdown.total * 0.2);
+                  const depositLater = breakdown.total - depositNow;
+                  return (
+                    <PlanTile
+                      active={paymentPlan === "installments"}
+                      label="20% deposit"
+                      sub={`${formatPrice(depositNow)} now · ${formatPrice(depositLater)} later`}
+                      onClick={() => onPaymentPlanChange("installments")}
+                    />
+                  );
+                })()}
               </div>
               {paymentPlan === "installments" && (
                 <p className="mt-2 text-[11px] text-[var(--text-tertiary)]">
