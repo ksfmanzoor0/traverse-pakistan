@@ -23,11 +23,12 @@ interface BookingRecord {
   contactEmail: string;
   contactPhone: string;
   totalAmount: number;
+  amountPaid: number;
   userId: string | null;
   bookingType: "tour" | "package" | "hotel";
   itemName: string;
   details: Record<string, string>;
-  paymentStatus: "pending" | "paid" | "failed";
+  paymentStatus: "pending" | "paid" | "failed" | "deposit_paid";
   confirmationSentAt: string | null;
 }
 
@@ -37,7 +38,7 @@ async function loadBooking(bookingRef: string): Promise<BookingRecord | null> {
   if (bookingRef.startsWith("PKG-")) {
     const { data } = await supabase
       .from("package_bookings")
-      .select("contact_name, contact_email, contact_phone, total_amount, package_slug, tier, departure_city, start_date, adults, user_id, payment_status, confirmation_sent_at")
+      .select("contact_name, contact_email, contact_phone, total_amount, amount_paid, package_slug, tier, departure_city, start_date, adults, user_id, payment_status, confirmation_sent_at")
       .eq("booking_ref", bookingRef)
       .single();
     if (!data) return null;
@@ -46,6 +47,7 @@ async function loadBooking(bookingRef: string): Promise<BookingRecord | null> {
       contactEmail: data.contact_email,
       contactPhone: data.contact_phone,
       totalAmount: data.total_amount,
+      amountPaid: Number(data.amount_paid ?? 0),
       userId: (data.user_id as string | null) ?? null,
       bookingType: "package",
       itemName: data.package_slug,
@@ -73,6 +75,7 @@ async function loadBooking(bookingRef: string): Promise<BookingRecord | null> {
       contactEmail: data.contact_email,
       contactPhone: data.contact_phone,
       totalAmount: Number(data.total_amount),
+      amountPaid: Number(data.total_amount),
       userId: (data.user_id as string | null) ?? null,
       bookingType: "hotel",
       itemName: data.hotel_slug,
@@ -90,7 +93,7 @@ async function loadBooking(bookingRef: string): Promise<BookingRecord | null> {
 
   const { data } = await supabase
     .from("bookings")
-    .select("contact_name, contact_email, contact_phone, total_amount, seats, user_id, status, confirmation_sent_at")
+    .select("contact_name, contact_email, contact_phone, total_amount, amount_paid, seats, user_id, status, confirmation_sent_at")
     .eq("booking_ref", bookingRef)
     .single();
   if (!data) return null;
@@ -99,10 +102,11 @@ async function loadBooking(bookingRef: string): Promise<BookingRecord | null> {
     contactEmail: data.contact_email,
     contactPhone: data.contact_phone,
     totalAmount: data.total_amount,
+    amountPaid: Number(data.amount_paid ?? 0),
     userId: (data.user_id as string | null) ?? null,
     bookingType: "tour",
     itemName: "",
-    paymentStatus: (data.status === "confirmed" ? "paid" : data.status === "cancelled" ? "failed" : "pending") as BookingRecord["paymentStatus"],
+    paymentStatus: (data.status === "confirmed" ? "paid" : data.status === "cancelled" ? "failed" : data.status === "deposit_paid" ? "deposit_paid" : "pending") as BookingRecord["paymentStatus"],
     confirmationSentAt: (data.confirmation_sent_at as string | null) ?? null,
     details: { Seats: String(data.seats) },
   };
@@ -152,6 +156,21 @@ export async function sendBookingConfirmation(bookingRef: string): Promise<void>
   const magicUrl = await buildMagicLinkUrl(record.userId, bookingRef);
   const viewUrl = magicUrl ?? `${siteUrl()}/bookings/${bookingRef}`;
 
+  const balanceDue = Math.max(0, record.totalAmount - record.amountPaid);
+  const templateParams = {
+    bookingRef,
+    contactName: record.contactName,
+    contactEmail: "",
+    bookingType: record.bookingType,
+    itemName: record.itemName,
+    totalAmount: record.totalAmount,
+    amountPaid: record.amountPaid,
+    balanceDue,
+    details: record.details,
+    viewUrl,
+    paymentStatus: record.paymentStatus,
+  };
+
   const realEmail = record.contactEmail && !isSynthesizedEmail(record.contactEmail) ? record.contactEmail : null;
   if (realEmail) {
     try {
@@ -159,8 +178,8 @@ export async function sendBookingConfirmation(bookingRef: string): Promise<void>
         from: FROM,
         to: realEmail,
         subject: `Booking received — ${bookingRef} | Traverse Pakistan`,
-        html: bookingConfirmationHtml({ bookingRef, contactName: record.contactName, contactEmail: realEmail, bookingType: record.bookingType, itemName: record.itemName, totalAmount: record.totalAmount, details: record.details, viewUrl, paymentStatus: record.paymentStatus }),
-        text: bookingConfirmationText({ bookingRef, contactName: record.contactName, contactEmail: realEmail, bookingType: record.bookingType, itemName: record.itemName, totalAmount: record.totalAmount, details: record.details, viewUrl, paymentStatus: record.paymentStatus }),
+        html: bookingConfirmationHtml({ ...templateParams, contactEmail: realEmail }),
+        text: bookingConfirmationText({ ...templateParams, contactEmail: realEmail }),
       });
     } catch (err) {
       console.error("[sendBookingConfirmation] email send failed:", err);
@@ -191,15 +210,34 @@ export async function sendPaymentConfirmation(bookingRef: string): Promise<void>
   const magicUrl = await buildMagicLinkUrl(record.userId, bookingRef);
   const viewUrl = magicUrl ?? `${siteUrl()}/bookings/${bookingRef}`;
 
+  const balanceDue = Math.max(0, record.totalAmount - record.amountPaid);
+  const isSplit = record.paymentStatus === "deposit_paid";
+  const subject = isSplit
+    ? `Deposit received — ${bookingRef} | Traverse Pakistan`
+    : `Booking confirmed — ${bookingRef} | Traverse Pakistan`;
+  const templateParams = {
+    bookingRef,
+    contactName: record.contactName,
+    contactEmail: "",
+    bookingType: record.bookingType,
+    itemName: record.itemName,
+    totalAmount: record.totalAmount,
+    amountPaid: record.amountPaid,
+    balanceDue,
+    details: record.details,
+    viewUrl,
+    paymentStatus: record.paymentStatus,
+  };
+
   const realEmail = record.contactEmail && !isSynthesizedEmail(record.contactEmail) ? record.contactEmail : null;
   if (realEmail) {
     try {
       await getResend().emails.send({
         from: FROM,
         to: realEmail,
-        subject: `Booking confirmed — ${bookingRef} | Traverse Pakistan`,
-        html: bookingConfirmationHtml({ bookingRef, contactName: record.contactName, contactEmail: realEmail, bookingType: record.bookingType, itemName: record.itemName, totalAmount: record.totalAmount, details: record.details, viewUrl, paymentStatus: record.paymentStatus }),
-        text: bookingConfirmationText({ bookingRef, contactName: record.contactName, contactEmail: realEmail, bookingType: record.bookingType, itemName: record.itemName, totalAmount: record.totalAmount, details: record.details, viewUrl, paymentStatus: record.paymentStatus }),
+        subject,
+        html: bookingConfirmationHtml({ ...templateParams, contactEmail: realEmail }),
+        text: bookingConfirmationText({ ...templateParams, contactEmail: realEmail }),
       });
     } catch (err) {
       console.error("[sendPaymentConfirmation] email send failed:", err);
