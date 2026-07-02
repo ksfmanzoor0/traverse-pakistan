@@ -51,6 +51,7 @@ function toTour(
     meetingPoint: row.meeting_point,
     metaTitle: row.meta_title,
     metaDescription: row.meta_description,
+    updatedAt: row.updated_at ?? undefined,
   };
 }
 

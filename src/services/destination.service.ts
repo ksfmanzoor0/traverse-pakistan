@@ -45,6 +45,7 @@ function toDestination(row: DestinationWithRegion): Destination {
       : local?.seasons ?? []),
     metaTitle: row.meta_title ?? row.name,
     metaDescription: row.meta_description ?? row.description ?? "",
+    updatedAt: row.updated_at ?? undefined,
   };
 }
 

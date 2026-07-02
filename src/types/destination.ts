@@ -33,4 +33,5 @@ export interface Destination {
   seasons: SeasonInfo[];
   metaTitle: string;
   metaDescription: string;
+  updatedAt?: string;
 }

@@ -68,12 +68,13 @@ type RawHotel = {
   hotel_rooms: RawRoom[];
   hotel_seasons: RawSeason[];
   hotel_reviews: RawReview[];
+  updated_at: string | null;
 };
 
 const HOTEL_SELECT = `
   id, slug, name, destination_slug, location, tier, property_type, image,
   rating, review_count, price_per_night, margin, tax_rate, bed_tax_rate, guest_favourite, check_in, check_out,
-  tax_note, description, amenities, highlights, policies,
+  tax_note, description, amenities, highlights, policies, updated_at,
   hotel_rooms (
     id, name, beds, price, single_price, available, extra_occupancy_charge,
     capacity_adults, capacity_children, capacity_infants, max_occupancy, sort_order,
@@ -182,6 +183,7 @@ function toHotel(raw: RawHotel): Hotel {
     rooms,
     ...(seasons.length > 0 && { seasons }),
     reviews,
+    updatedAt: raw.updated_at ?? undefined,
   };
 }
 
