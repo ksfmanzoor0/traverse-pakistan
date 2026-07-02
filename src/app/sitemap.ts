@@ -20,18 +20,20 @@ type ChangeFrequency =
   | "yearly"
   | "never";
 
-const today = new Date();
-
+// Only emit lastModified when we have a real timestamp. Falsely stamping every
+// page as "changed today" makes Google deprioritize the sitemap.
 function entry(
   path: string,
   priority: number,
   changeFrequency: ChangeFrequency,
-  lastModified: string | Date = today
+  lastModified?: string | Date | null
 ): MetadataRoute.Sitemap[number] {
+  const resolved = lastModified
+    ? (typeof lastModified === "string" ? new Date(lastModified) : lastModified)
+    : undefined;
   return {
     url: absoluteUrl(path),
-    lastModified:
-      typeof lastModified === "string" ? new Date(lastModified) : lastModified,
+    ...(resolved && { lastModified: resolved }),
     changeFrequency,
     priority,
   };
@@ -61,16 +63,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   const tourPages = tours.map((t) =>
-    entry(`/grouptours/${t.slug}`, 0.85, "weekly")
+    entry(`/grouptours/${t.slug}`, 0.85, "weekly", t.updatedAt)
   );
 
 
   const packagePages = packages.map((p) =>
-    entry(`/packages/${p.slug}`, 0.85, "weekly")
+    entry(`/packages/${p.slug}`, 0.85, "weekly", p.updatedAt)
   );
 
   const destPages = destinations.map((d) =>
-    entry(`/destinations/${d.slug}`, 0.8, "weekly")
+    entry(`/destinations/${d.slug}`, 0.8, "weekly", d.updatedAt)
   );
 
   const regionPages = regions.map((r) =>
@@ -78,7 +80,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   );
 
   const hotelPages = hotels.map((h) =>
-    entry(`/hotels/${h.slug}`, 0.75, "weekly")
+    entry(`/hotels/${h.slug}`, 0.75, "weekly", h.updatedAt)
   );
 
 

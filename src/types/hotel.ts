@@ -74,4 +74,5 @@ export interface Hotel {
     safety: string[];
     cancellation: string[];
   };
+  updatedAt?: string;
 }
