@@ -18,7 +18,10 @@ function toIsoDate(d: Date | null) {
 // avoids a re-fetch — last value wins until the tab is reloaded. The
 // request-token guard in the sidebar effect ensures that even if a stale
 // in-flight response lands after a cache hit, it can't overwrite state.
-const quoteSessionCache = new Map<string, { total: number; perPerson: number; rooms: number }>();
+type VehicleCode = "corolla" | "brv" | "prado" | "hiace" | "coaster";
+type VehicleInfo = { code: VehicleCode; isNcp: boolean; count: number } | null;
+type FlightTicketType = "return" | "oneway" | null;
+const quoteSessionCache = new Map<string, { total: number; perPerson: number; rooms: number; vehicle: VehicleInfo; flightPerPerson: number; flightTicketType: FlightTicketType }>();
 
 /* ─── Calendar helpers ─────────────────────────────────────────────────────── */
 
@@ -261,7 +264,7 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
     lahore: "LHE",
     karachi: "KHI",
   };
-  const [engineQuote, setEngineQuote] = useState<{ total: number; perPerson: number } | null>(null);
+  const [engineQuote, setEngineQuote] = useState<{ total: number; perPerson: number; vehicle: VehicleInfo; flightPerPerson: number; flightTicketType: FlightTicketType } | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   // Monotonic counter — every effect run captures the value at the time of
   // dispatch; only the response whose captured token still equals the
@@ -280,7 +283,7 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
     const cacheKey = `${pkg.slug}|${home}|${selectedTier}|${adults}|${startDate}|${roomsKey}`;
     const cached = quoteSessionCache.get(cacheKey);
     if (cached) {
-      setEngineQuote({ total: cached.total, perPerson: cached.perPerson });
+      setEngineQuote({ total: cached.total, perPerson: cached.perPerson, vehicle: cached.vehicle, flightPerPerson: cached.flightPerPerson, flightTicketType: cached.flightTicketType });
       if (rooms === null && cached.rooms > 0) setNaturalRooms(cached.rooms);
       setQuoteLoading(false);
       return;
@@ -295,15 +298,18 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
       if (rooms !== null) params.set("rooms", String(rooms));
       fetch(`/api/packages/${pkg.slug}/quote?${params.toString()}`, { signal: controller.signal })
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-        .then((j: { total: number; perPerson: number; rooms: number; unresolved?: string[] }) => {
+        .then((j: { total: number; perPerson: number; rooms: number; unresolved?: string[]; vehicle: VehicleInfo; flightPerPerson: number; flightTicketType: FlightTicketType }) => {
           if (mySeq !== requestSeqRef.current) return;
           if ((j.unresolved && j.unresolved.length > 0) || !(j.perPerson > 0)) {
             setEngineQuote(null);
             return;
           }
           const engineRooms = Number.isFinite(j.rooms) && j.rooms > 0 ? j.rooms : 1;
-          quoteSessionCache.set(cacheKey, { total: j.total, perPerson: j.perPerson, rooms: engineRooms });
-          setEngineQuote({ total: j.total, perPerson: j.perPerson });
+          const vehicle = j.vehicle ?? null;
+          const flightPerPerson = j.flightPerPerson ?? 0;
+          const flightTicketType = j.flightTicketType ?? null;
+          quoteSessionCache.set(cacheKey, { total: j.total, perPerson: j.perPerson, rooms: engineRooms, vehicle, flightPerPerson, flightTicketType });
+          setEngineQuote({ total: j.total, perPerson: j.perPerson, vehicle, flightPerPerson, flightTicketType });
           if (rooms === null) setNaturalRooms(engineRooms);
         })
         .catch((err) => {
@@ -422,6 +428,8 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
           {formatPrice(pricePerPerson)} × {adults} person{adults > 1 ? "s" : ""}
         </p>
 
+        {/* Composition chips — engine-picked flight + transport */}
+        <QuoteCompositionChips quote={engineQuote} pax={adults} />
 
         {/* Rating */}
         <div className="mt-2">
@@ -614,6 +622,77 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Composition chips ────────────────────────────────────────────────────────
+
+const VEHICLE_LABELS: Record<VehicleCode, string> = {
+  corolla: "Sedan",
+  brv: "BR-V",
+  prado: "Prado",
+  hiace: "Van",
+  coaster: "Coaster",
+};
+
+function QuoteCompositionChips({
+  quote,
+  pax,
+}: {
+  quote: { vehicle: VehicleInfo; flightPerPerson: number; flightTicketType: FlightTicketType } | null;
+  pax: number;
+}) {
+  if (!quote) return null;
+  const hasFlight = quote.flightPerPerson > 0;
+  const vehicle = quote.vehicle;
+  if (!hasFlight && !vehicle) return null;
+  const flightLabel = quote.flightTicketType === "oneway"
+    ? `One-way ticket × ${pax}`
+    : `Return ticket × ${pax}`;
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      {hasFlight && (
+        <span
+          className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full border"
+          style={{
+            background: "var(--primary-light)",
+            color: "var(--primary-deep)",
+            borderColor: "color-mix(in srgb, var(--primary) 25%, transparent)",
+          }}
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" opacity="0" />
+            <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" />
+          </svg>
+          {flightLabel}
+        </span>
+      )}
+      {vehicle && (
+        <span
+          className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full border"
+          style={
+            vehicle.isNcp
+              ? {
+                  background: "color-mix(in srgb, var(--accent-warm) 15%, transparent)",
+                  color: "var(--accent-warm)",
+                  borderColor: "color-mix(in srgb, var(--accent-warm) 35%, transparent)",
+                }
+              : {
+                  background: "var(--bg-subtle)",
+                  color: "var(--text-secondary)",
+                  borderColor: "var(--border-default)",
+                }
+          }
+          title={vehicle.isNcp ? "NCP-registered vehicle (required in Gilgit-Baltistan permit areas)" : `${VEHICLE_LABELS[vehicle.code]}${vehicle.count > 1 ? ` × ${vehicle.count}` : ""}`}
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11h1a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-1v1a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H8v1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-1H4a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1h1zm2-1h10l-1-3H8l-1 3zm-1 5a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm12 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2z" />
+          </svg>
+          {VEHICLE_LABELS[vehicle.code]}
+          {vehicle.count > 1 ? ` × ${vehicle.count}` : ""}
+        </span>
+      )}
     </div>
   );
 }
