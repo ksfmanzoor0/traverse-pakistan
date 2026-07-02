@@ -38,7 +38,8 @@ function formatDateShort(iso: string): string {
 }
 
 async function getBookings(
-  filter: "all" | BookingStatus
+  filter: "all" | BookingStatus,
+  departureId?: string,
 ): Promise<BookingWithDeparture[]> {
   const supabase = await getSupabaseServer();
   let query = supabase
@@ -47,6 +48,7 @@ async function getBookings(
     .order("created_at", { ascending: false })
     .limit(200);
   if (filter !== "all") query = query.eq("status", filter);
+  if (departureId) query = query.eq("departure_id", departureId);
   const { data, error } = await query;
   if (error) throw new Error(error.message);
   return (data ?? []) as unknown as BookingWithDeparture[];
@@ -55,14 +57,14 @@ async function getBookings(
 export default async function BookingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; departure?: string }>;
 }) {
-  const { status } = await searchParams;
+  const { status, departure } = await searchParams;
   const activeFilter = (STATUS_FILTERS.find((f) => f.value === status)?.value ??
     "all") as "all" | BookingStatus;
 
   const [rows, tours] = await Promise.all([
-    getBookings(activeFilter),
+    getBookings(activeFilter, departure),
     getAllTours(),
   ]);
   const tourNameBySlug = new Map(tours.map((t) => [t.slug, t.name]));
