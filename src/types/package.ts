@@ -61,4 +61,5 @@ export interface Package {
   };
   metaTitle: string;
   metaDescription: string;
+  updatedAt?: string;
 }

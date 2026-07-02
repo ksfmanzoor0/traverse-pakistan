@@ -23,10 +23,9 @@ const VideoStories = dynamic(() =>
 );
 
 export const metadata: Metadata = buildMetadata({
-  title:
-    "Pakistan Tours & Holiday Packages — 4.9★ Rated Tour Operator | Traverse Pakistan",
+  title: "Pakistan Tours & Holiday Packages · 4.9★ | Traverse Pakistan",
   description:
-    "Book Pakistan group tours, custom trips, and hotels with the highest-rated tour operator. 22 tours across Hunza, Skardu, Chitral, K2 BC. 4.9★ from 1,300+ travelers.",
+    "Book Pakistan group tours, custom trips & hotels with the highest-rated tour operator. Hunza, Skardu, K2 BC. 4.9★ · 1,300+ travelers.",
   path: "/",
   tags: [
     "Pakistan tours",

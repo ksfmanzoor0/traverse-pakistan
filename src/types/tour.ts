@@ -70,4 +70,5 @@ export interface Tour {
   meetingPoint: MeetingPoint;
   metaTitle: string;
   metaDescription: string;
+  updatedAt?: string;
 }
