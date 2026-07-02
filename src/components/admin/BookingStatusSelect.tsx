@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateBookingStatus } from "@/app/admin/bookings/actions";
+import { updateBookingStatus } from "@/app/admin/tourbookings/actions";
 import type { BookingStatus } from "@/lib/supabase/types";
 
 const OPTIONS: { value: BookingStatus; label: string }[] = [

@@ -7,7 +7,9 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/quote-requests", label: "Quote Requests" },
-  { href: "/admin/bookings", label: "Bookings" },
+  { href: "/admin/tourbookings", label: "Tour Bookings" },
+  { href: "/admin/package-bookings", label: "Package Bookings" },
+  { href: "/admin/hotel-bookings", label: "Hotel Bookings" },
   { href: "/admin/departures", label: "Departures" },
   { href: "/admin/reviews", label: "Reviews" },
   { href: "/admin/flight-fares", label: "Flight Fares" },

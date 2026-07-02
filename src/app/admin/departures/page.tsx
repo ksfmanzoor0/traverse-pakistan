@@ -229,7 +229,7 @@ export default async function AdminDeparturesPage({
                         <td className="px-4 py-2.5">
                           {d.booking_count > 0 ? (
                             <Link
-                              href={`/admin/bookings?departure=${d.id}`}
+                              href={`/admin/tourbookings?departure=${d.id}`}
                               className="font-semibold hover:underline"
                               style={{ color: "var(--primary)" }}
                             >
@@ -257,7 +257,7 @@ export default async function AdminDeparturesPage({
                         </td>
                         <td className="px-4 py-2.5">
                           <Link
-                            href={`/admin/bookings?departure=${d.id}`}
+                            href={`/admin/tourbookings?departure=${d.id}`}
                             className="text-[12px] hover:underline"
                             style={{ color: "var(--text-secondary)" }}
                           >

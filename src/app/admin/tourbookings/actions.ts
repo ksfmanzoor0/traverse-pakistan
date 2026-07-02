@@ -30,7 +30,7 @@ export async function updateBookingStatus(
 
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath("/admin/bookings");
+  revalidatePath("/admin/tourbookings");
   revalidatePath("/admin");
   return { ok: true };
 }
