@@ -141,7 +141,10 @@ interface WizardState {
   phone: string;
   email: string;
   specialRequests: string;
+  paymentPlan: "full" | "installments";
 }
+
+const PACKAGE_DEPOSIT_PCT = 0.5;
 
 export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: Review[] }) {
   const searchParams = useSearchParams();
@@ -173,6 +176,7 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
     phone: "",
     email: "",
     specialRequests: "",
+    paymentPlan: "full",
   });
   const [maxReached, setMaxReached] = useState(initStep);
   const [error, setError] = useState<string | null>(null);
@@ -285,6 +289,7 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
       },
       notes: state.specialRequests || undefined,
       submitUuid: submitUuidRef.current,
+      paymentPlan: state.paymentPlan,
     };
     // Up to 3 attempts on network-ish failures. Server dedups by submitUuid
     // so retries are safe — at most one row created per attempt UUID.
@@ -296,7 +301,7 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const result = await createPackageBooking(input);
-        router.push(`/packages/${pkg.slug}/checkout/success?ref=${result.bookingRef}&amount=${result.totalAmount}`);
+        router.push(`/packages/${pkg.slug}/checkout/success?ref=${result.bookingRef}&amount=${result.totalAmount}&plan=${state.paymentPlan}`);
         return;
       } catch (e) {
         lastErr = e;
@@ -510,6 +515,48 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
                 <span className="text-[var(--text-primary)]">Total</span>
                 <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(total)}</span>
               </div>
+            </div>
+
+            {/* Payment plan */}
+            <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] p-5">
+              <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--text-secondary)] mb-3">Payment plan</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => patch({ paymentPlan: "full" })}
+                  className={`text-left p-3 rounded-[var(--radius-sm)] border-2 transition-all cursor-pointer ${
+                    state.paymentPlan === "full"
+                      ? "border-[var(--primary)] bg-[var(--primary-light)]"
+                      : "border-[var(--border-default)] bg-[var(--bg-primary)] hover:border-[var(--primary)]"
+                  }`}
+                >
+                  <p className="text-[13px] font-bold text-[var(--text-primary)]">Pay in full</p>
+                  <p className="text-[11px] text-[var(--text-secondary)] mt-0.5 tabular-nums">{formatPrice(total)}</p>
+                </button>
+                {(() => {
+                  const depositNow = Math.round(total * PACKAGE_DEPOSIT_PCT);
+                  const depositLater = total - depositNow;
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => patch({ paymentPlan: "installments" })}
+                      className={`text-left p-3 rounded-[var(--radius-sm)] border-2 transition-all cursor-pointer ${
+                        state.paymentPlan === "installments"
+                          ? "border-[var(--primary)] bg-[var(--primary-light)]"
+                          : "border-[var(--border-default)] bg-[var(--bg-primary)] hover:border-[var(--primary)]"
+                      }`}
+                    >
+                      <p className="text-[13px] font-bold text-[var(--text-primary)]">50% deposit</p>
+                      <p className="text-[11px] text-[var(--text-secondary)] mt-0.5 tabular-nums">{formatPrice(depositNow)} now · {formatPrice(depositLater)} later</p>
+                    </button>
+                  );
+                })()}
+              </div>
+              {state.paymentPlan === "installments" && (
+                <p className="mt-2 text-[11px] text-[var(--text-tertiary)]">
+                  Balance due 30 days before trip start. No interest, no fees.
+                </p>
+              )}
             </div>
 
           </section>

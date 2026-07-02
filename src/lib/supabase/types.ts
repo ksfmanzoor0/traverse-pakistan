@@ -90,6 +90,9 @@ export type BookingRow = {
   created_at: string;
   updated_at: string;
   confirmation_sent_at: string | null;
+  payment_plan: "full" | "installments";
+  deposit_amount: number | null;
+  amount_paid: number;
 };
 
 export type BookingParticipantRow = {
@@ -289,6 +292,7 @@ export type CreateBookingArgs = {
     emergency_contact?: string | null;
   }>;
   p_notes?: string | null;
+  p_payment_plan?: "full" | "installments";
 };
 
 export type CreateBookingResult = {
@@ -459,6 +463,9 @@ export type Database = {
           created_at: string;
           updated_at: string;
           confirmation_sent_at: string | null;
+          payment_plan: "full" | "installments";
+          deposit_amount: number | null;
+          amount_paid: number;
         };
         Insert: Record<string, unknown>;
         Update: Partial<{

@@ -7,10 +7,7 @@ import { paymentInitiateLimiter, checkRateLimit, clientIp } from "@/lib/ratelimi
 
 const Schema = z.object({
   bookingRef: z.string().min(1),
-  plan: z.enum(["full", "installments"]).default("full"),
 });
-
-const INSTALLMENT_DEPOSIT_PCT = 0.2;
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,13 +20,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
-    const { bookingRef, plan } = parsed.data;
+    const { bookingRef } = parsed.data;
 
-    // Look up amount server-side — never trust client-supplied amount
+    // The payment plan + deposit are locked at booking creation (create_booking
+    // RPC), so we read them here rather than trusting the client.
     const supabase = getSupabaseAdmin();
     const { data: booking, error: dbError } = await supabase
       .from("bookings")
-      .select("total_amount")
+      .select("total_amount, payment_plan, deposit_amount")
       .eq("booking_ref", bookingRef)
       .single();
 
@@ -38,8 +36,8 @@ export async function POST(req: NextRequest) {
     }
 
     const totalAmount = Number(booking.total_amount);
-    const amount = plan === "installments"
-      ? Math.round(totalAmount * INSTALLMENT_DEPOSIT_PCT)
+    const amount = booking.payment_plan === "installments" && booking.deposit_amount
+      ? Number(booking.deposit_amount)
       : totalAmount;
 
     const proto = req.headers.get("x-forwarded-proto") ?? "https";

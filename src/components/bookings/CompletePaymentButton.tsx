@@ -29,7 +29,7 @@ export function CompletePaymentButton({ bookingRef, amount, type }: Props) {
       const res = await fetch(initiateRoute(type), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingRef, amount, plan: "full" }),
+        body: JSON.stringify({ bookingRef, amount }),
       });
       throwOnRateLimit(res, "payment attempts");
       const data = await res.json();

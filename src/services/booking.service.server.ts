@@ -27,6 +27,7 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingS
       emergency_contact: p.emergencyContact ?? null,
     })),
     p_notes: input.notes ?? null,
+    p_payment_plan: input.paymentPlan ?? "full",
   };
 
   const { data, error } = await supabase.rpc("create_booking", { ...args, p_submit_uuid: input.submitUuid ?? null } as never);

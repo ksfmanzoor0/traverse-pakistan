@@ -100,6 +100,7 @@ export async function createBooking(
       emergency_contact: p.emergencyContact ?? null,
     })),
     p_notes: input.notes ?? null,
+    p_payment_plan: input.paymentPlan ?? "full",
   };
 
   const { data, error } = await supabase.rpc("create_booking", { ...args, p_submit_uuid: input.submitUuid ?? null } as never);
@@ -150,6 +151,7 @@ export interface CreatePackageBookingInput {
   contact: { name: string; email: string; phone: string };
   notes?: string;
   submitUuid?: string;
+  paymentPlan?: "full" | "installments";
 }
 
 export interface PackageBookingSummary {
@@ -179,6 +181,7 @@ export async function createPackageBooking(
     p_contact_phone: input.contact.phone,
     p_notes: input.notes ?? null,
     p_submit_uuid: input.submitUuid ?? null,
+    p_payment_plan: input.paymentPlan ?? "full",
   } as never);
 
   if (error) throw new Error(error.message);
