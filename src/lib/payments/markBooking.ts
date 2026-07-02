@@ -16,7 +16,7 @@ export async function markBooking(
   amountCharged?: number | null,
 ): Promise<void> {
   const supabase = getSupabaseAdmin();
-  let firstPositivePaymentLanded = false;
+  let shouldFireConfirmation = false;
 
   if (bookingRef.startsWith("PKG-")) {
     const { data: before } = await supabase
@@ -45,7 +45,12 @@ export async function markBooking(
     const newPaid = Math.min(total, priorPaid + charged);
     const nextStatus = newPaid >= total ? "paid" : "deposit_paid";
 
-    firstPositivePaymentLanded = priorPaid === 0 && newPaid > 0;
+    // Fire the confirmation both on the first positive payment (deposit lands)
+    // AND on the transition into fully paid (balance clears). Deposit lands
+    // "your booking is confirmed with deposit"; balance lands "fully paid".
+    const wasFullyPaid = (before.payment_status ?? "pending") === "paid";
+    shouldFireConfirmation = (priorPaid === 0 && newPaid > 0)
+      || (!wasFullyPaid && newPaid >= total && priorPaid > 0);
 
     await supabase
       .from("package_bookings")
@@ -67,7 +72,7 @@ export async function markBooking(
 
     if (!before) return;
 
-    firstPositivePaymentLanded = isPaid && (before.payment_status ?? "pending") !== "paid";
+    shouldFireConfirmation = isPaid && (before.payment_status ?? "pending") !== "paid";
 
     await supabase
       .from("hotel_bookings")
@@ -107,7 +112,11 @@ export async function markBooking(
     // Phase-2 intermediate value between 'pending' and 'confirmed'.
     const nextStatus = newPaid >= total ? "confirmed" : "deposit_paid";
 
-    firstPositivePaymentLanded = priorPaid === 0 && newPaid > 0;
+    // Fire on the first positive payment (deposit) AND again on the flip into
+    // fully paid (balance charge). Two customer touchpoints, same magic link.
+    const wasFullyPaid = (before.status ?? "pending") === "confirmed";
+    shouldFireConfirmation = (priorPaid === 0 && newPaid > 0)
+      || (!wasFullyPaid && newPaid >= total && priorPaid > 0);
 
     await supabase
       .from("bookings")
@@ -120,9 +129,10 @@ export async function markBooking(
       .eq("booking_ref", bookingRef);
   }
 
-  // Fire the confirmation on the first positive payment (deposit or full).
-  // Balance charges don't refire — the customer already has the ref.
-  if (firstPositivePaymentLanded) {
+  // Fires on two edges: (1) first positive payment (deposit or full-in-one),
+  // and (2) the deposit→fully-paid flip when the balance charge lands.
+  // The email template branches on payment_status to render the right copy.
+  if (shouldFireConfirmation) {
     after(async () => {
       try {
         await sendPaymentConfirmation(bookingRef);
