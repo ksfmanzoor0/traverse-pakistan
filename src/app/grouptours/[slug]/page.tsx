@@ -24,6 +24,7 @@ import {
   getItineraryByTourSlug,
 } from "@/services/tour.service";
 import { getReviewsByTour } from "@/services/review.service";
+import { getUpcomingOpenDeparturesServer } from "@/services/booking.server";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -60,10 +61,11 @@ export default async function TripDetailPage({ params }: Props) {
   const tour = await getTourBySlug(slug);
   if (!tour) notFound();
 
-  const [itinerary, reviews, similarTours] = await Promise.all([
+  const [itinerary, reviews, similarTours, upcomingDepartures] = await Promise.all([
     getItineraryByTourSlug(slug),
     getReviewsByTour(slug),
     getSimilarTours(slug, 4),
+    getUpcomingOpenDeparturesServer(slug),
   ]);
 
   const schema = combineSchemas(
@@ -114,18 +116,52 @@ export default async function TripDetailPage({ params }: Props) {
               <div className="flex flex-wrap gap-2 mt-4">
                 <Chip icon={<Icon name="calendar" size="sm" />}>{tour.duration} days</Chip>
                 <Chip icon={<Icon name="users" size="sm" />}>Up to {tour.maxGroupSize} people</Chip>
-                <Chip icon={<Icon name="globe" size="sm" />}>{tour.languages.join(", ")}</Chip>
-                {tour.freeCancellation && (
-                  <Chip variant="success" icon={<Icon name="check" size="sm" weight="bold" />}>
-                    Free cancellation
-                  </Chip>
-                )}
                 {tour.reserveNowPayLater && (
                   <Chip variant="info" icon={<Icon name="credit-card" size="sm" />}>
                     Reserve now, pay later
                   </Chip>
                 )}
               </div>
+
+              {upcomingDepartures.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] mb-2">
+                    Upcoming departures
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {upcomingDepartures.slice(0, 8).map((d) => {
+                      const label = new Date(d.departureDate).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      });
+                      const city = d.departureCity ? d.departureCity.charAt(0).toUpperCase() + d.departureCity.slice(1, 3) : null;
+                      return (
+                        <span
+                          key={d.id}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-full border"
+                          style={{
+                            background: "var(--bg-subtle)",
+                            color: "var(--text-secondary)",
+                            borderColor: "var(--border-default)",
+                          }}
+                        >
+                          {label}
+                          {city && <span style={{ color: "var(--text-tertiary)" }}>· {city}</span>}
+                          {d.seatsAvailable > 0 && d.seatsAvailable <= 4 && (
+                            <span style={{ color: "var(--error)" }}>· {d.seatsAvailable} left</span>
+                          )}
+                        </span>
+                      );
+                    })}
+                    {upcomingDepartures.length > 8 && (
+                      <span className="text-[11px] px-2 py-1" style={{ color: "var(--text-tertiary)" }}>
+                        + {upcomingDepartures.length - 8} more
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Overview */}
