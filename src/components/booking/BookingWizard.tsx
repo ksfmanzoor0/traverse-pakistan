@@ -104,6 +104,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
   const [allDepartures, setAllDepartures] = useState<Departure[]>([]);
   const [departuresLoaded, setDeparturesLoaded] = useState(false);
   const initDepartureId = searchParams?.get("departureId") ?? null;
+  const [selectedDepartureId, setSelectedDepartureId] = useState<string | null>(initDepartureId);
   const [maxReachedStep, setMaxReachedStep] = useState<number>(initStep);
   const [submitting, setSubmitting] = useState(false);
   // Stable per-attempt UUID so a network blip + retry never creates two bookings.
@@ -127,10 +128,19 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
   }, [tour.slug]);
 
   const departuresForCity = allDepartures.filter((d) => d.departureCity === draft.departureCity);
-  const liveDeparture =
-    (initDepartureId && allDepartures.find((d) => d.id === initDepartureId)) ||
-    departuresForCity[0] ||
-    null;
+  // Auto-select the earliest departure for the city when the city changes or
+  // when the currently-selected id doesn't belong to the visible list.
+  useEffect(() => {
+    if (departuresForCity.length === 0) {
+      if (selectedDepartureId !== null) setSelectedDepartureId(null);
+      return;
+    }
+    if (!selectedDepartureId || !departuresForCity.some((d) => d.id === selectedDepartureId)) {
+      setSelectedDepartureId(departuresForCity[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.departureCity, allDepartures.length]);
+  const liveDeparture = departuresForCity.find((d) => d.id === selectedDepartureId) ?? departuresForCity[0] ?? null;
 
   // Also expose cityDepartures-shaped map for the StepDates picker below.
   const cityDepartures = {
@@ -351,6 +361,9 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
               onCityChange={(city) => patch({ departureCity: city })}
               departureDate={departureDateDisplay}
               seatsLeft={seatsLeft}
+              departuresForCity={departuresForCity}
+              selectedDepartureId={selectedDepartureId}
+              onDepartureIdChange={setSelectedDepartureId}
             />
             <StepTravelers
               tour={tour}
@@ -518,6 +531,9 @@ function StepDates({
   onCityChange,
   departureDate,
   seatsLeft,
+  departuresForCity,
+  selectedDepartureId,
+  onDepartureIdChange,
 }: {
   tour: Tour;
   liveDeparture: Departure | null;
@@ -527,6 +543,9 @@ function StepDates({
   onCityChange: (city: DepartureCity) => void;
   departureDate: string | null;
   seatsLeft: number | null;
+  departuresForCity: Departure[];
+  selectedDepartureId: string | null;
+  onDepartureIdChange: (id: string) => void;
 }) {
   const availableCities = (["islamabad", "lahore", "karachi"] as const).filter((c) =>
     departuresLoaded ? cityDepartures[c] !== null : c !== "karachi" && !!tour.pricing.lahore,
@@ -568,32 +587,132 @@ function StepDates({
         <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-2">
           Departure date
         </label>
-        <div className="flex items-center justify-between px-3 py-2 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-subtle)]">
-          <div>
-            <p className="text-[14px] font-bold text-[var(--text-primary)]">
-              {departureDate ? fmtLongDate(departureDate) : "Flexible"}
-            </p>
-            <p className="text-[11px] text-[var(--text-tertiary)]">
-              {tour.duration} days · returns {departureDate ? fmtLongDate(new Date(new Date(departureDate).getTime() + tour.duration * 24 * 3600 * 1000).toISOString()) : "—"}
-            </p>
+        {departuresForCity.length > 1 ? (
+          <WizardDeparturePicker
+            departures={departuresForCity}
+            selectedId={selectedDepartureId}
+            onSelect={onDepartureIdChange}
+          />
+        ) : (
+          <div className="flex items-center justify-between px-3 py-2 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-subtle)]">
+            <div>
+              <p className="text-[14px] font-bold text-[var(--text-primary)]">
+                {departureDate ? fmtLongDate(departureDate) : "Flexible"}
+              </p>
+              <p className="text-[11px] text-[var(--text-tertiary)]">
+                {tour.duration} days · returns {departureDate ? fmtLongDate(new Date(new Date(departureDate).getTime() + tour.duration * 24 * 3600 * 1000).toISOString()) : "—"}
+              </p>
+            </div>
+            {liveDeparture && seatsLeft !== null && (
+              <span
+                className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
+                  seatsLeft <= 4 && seatsLeft > 0
+                    ? "bg-[var(--error)]/10 text-[var(--error)]"
+                    : "bg-[var(--primary-light)] text-[var(--primary-deep)]"
+                }`}
+              >
+                {seatsLeft > 0 ? `${seatsLeft} seats left` : "Sold out"}
+              </span>
+            )}
           </div>
-          {liveDeparture && seatsLeft !== null && (
-            <span
-              className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
-                seatsLeft <= 4 && seatsLeft > 0
-                  ? "bg-[var(--error)]/10 text-[var(--error)]"
-                  : "bg-[var(--primary-light)] text-[var(--primary-deep)]"
-              }`}
-            >
-              {seatsLeft > 0 ? `${seatsLeft} seats left` : "Sold out"}
-            </span>
-          )}
-        </div>
+        )}
         <p className="text-[11px] text-[var(--text-tertiary)] mt-2">
           Need a different date? Chat with us — we run this route on request.
         </p>
       </div>
     </section>
+  );
+}
+
+// Custom listbox for the wizard's date picker. Same pattern as the sidebar's
+// DepartureListbox — native <select> popups can't be styled cross-browser
+// (macOS Safari's dark navy popup is the offender). Uses our tokens instead.
+function WizardDeparturePicker({
+  departures,
+  selectedId,
+  onSelect,
+}: {
+  departures: Departure[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDocClick(e: MouseEvent) {
+      if (!rootRef.current) return;
+      if (!rootRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const selected = departures.find((d) => d.id === selectedId) ?? departures[0];
+  const fmt = (iso: string) =>
+    new Date(iso).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-subtle)] cursor-pointer focus:outline-none focus:border-[var(--primary)]"
+      >
+        <span className="text-left">
+          <span className="block text-[14px] font-bold text-[var(--text-primary)]">
+            {fmt(selected.departureDate)}
+          </span>
+          {selected.seatsAvailable > 0 && selected.seatsAvailable <= 4 && (
+            <span className="text-[11px] font-bold text-[var(--error)]">{selected.seatsAvailable} seats left</span>
+          )}
+        </span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2">
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      {open && (
+        <ul
+          role="listbox"
+          className="absolute left-0 right-0 top-[calc(100%+4px)] z-30 max-h-64 overflow-auto rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-primary)] py-1"
+          style={{ boxShadow: "var(--shadow-lg)" }}
+        >
+          {departures.map((d) => {
+            const isSelected = d.id === selected.id;
+            const seatsWarn = d.seatsAvailable > 0 && d.seatsAvailable <= 6;
+            return (
+              <li key={d.id}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  onClick={() => { onSelect(d.id); setOpen(false); }}
+                  className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left text-[13px] cursor-pointer hover:bg-[var(--bg-subtle)] ${
+                    isSelected ? "font-bold text-[var(--text-primary)] bg-[var(--bg-subtle)]" : "font-medium text-[var(--text-primary)]"
+                  }`}
+                >
+                  <span>{fmt(d.departureDate)}</span>
+                  {seatsWarn && (
+                    <span className="text-[11px] font-bold text-[var(--error)]">{d.seatsAvailable} left</span>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }
 
