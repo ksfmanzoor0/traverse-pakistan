@@ -135,7 +135,8 @@ export default async function TripDetailPage({ params }: Props) {
                         day: "numeric",
                         year: "numeric",
                       });
-                      const city = d.departureCity ? d.departureCity.charAt(0).toUpperCase() + d.departureCity.slice(1, 3) : null;
+                      const CITY_CODE: Record<string, string> = { islamabad: "ISB", lahore: "LHE", karachi: "KHI" };
+                      const city = d.departureCity ? (CITY_CODE[d.departureCity.toLowerCase()] ?? d.departureCity.toUpperCase()) : null;
                       return (
                         <span
                           key={d.id}
