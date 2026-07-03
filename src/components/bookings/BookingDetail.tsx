@@ -6,6 +6,7 @@ import { formatPrice, getWhatsAppUrl } from "@/lib/utils";
 import { Icon } from "@/components/ui/Icon";
 import type { BookingStatus, RefundStatus } from "@/types/booking-status";
 import { CompletePaymentButton } from "./CompletePaymentButton";
+import { PayBalanceButton } from "./PayBalanceButton";
 import { ManageBanner } from "./ManageBanner";
 import { InlineAlert } from "@/components/ui/InlineAlert";
 
@@ -72,8 +73,13 @@ export function BookingDetail({ bookingRef, data, canManage, needsEmail = false 
   const rawPaymentStatus = type === "tour"
     ? String(localBooking.status ?? "pending")
     : String(localBooking.payment_status ?? "pending");
-  const isUnpaid = !isCancelled && rawPaymentStatus !== "paid" && rawPaymentStatus !== "confirmed";
+  const isFullyPaid = rawPaymentStatus === "paid" || rawPaymentStatus === "confirmed";
+  const isDepositPaid = rawPaymentStatus === "deposit_paid";
   const totalAmount = Number(localBooking.total_amount ?? 0);
+  const amountPaid = Number(localBooking.amount_paid ?? 0);
+  const balanceDue = Math.max(0, totalAmount - amountPaid);
+  const canPayBalance = !isCancelled && isDepositPaid && balanceDue > 0 && (type === "tour" || type === "package");
+  const isUnpaid = !isCancelled && !isFullyPaid && !isDepositPaid;
 
   async function applyNameChange() {
     setActionError(null);
@@ -138,9 +144,19 @@ export function BookingDetail({ bookingRef, data, canManage, needsEmail = false 
         </span>
       </div>
 
-      {/* Complete payment CTA */}
+      {/* Complete payment CTA — nothing has been captured yet */}
       {isUnpaid && totalAmount > 0 && (
         <CompletePaymentButton bookingRef={bookingRef} amount={totalAmount} type={type} />
+      )}
+
+      {/* Balance due — deposit captured, balance still owed */}
+      {canPayBalance && (
+        <PayBalanceButton
+          bookingRef={bookingRef}
+          balanceDue={balanceDue}
+          amountPaid={amountPaid}
+          totalAmount={totalAmount}
+        />
       )}
 
       {/* Refund status */}

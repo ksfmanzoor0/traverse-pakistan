@@ -22,13 +22,16 @@ export async function POST(req: NextRequest) {
 
     const bookingRef: string = status.TransactionReferenceNumber ?? "";
     const isPaid: boolean = status.TransactionStatus === "Paid";
+    const rawAmount = status.TransactionAmount ?? status.Amount;
+    const amountCharged: number | null =
+      rawAmount != null && !Number.isNaN(Number(rawAmount)) ? Number(rawAmount) : null;
 
-    console.log("[alfa/ipn POST] bookingRef:", bookingRef, "isPaid:", isPaid);
+    console.log("[alfa/ipn POST] bookingRef:", bookingRef, "isPaid:", isPaid, "amount:", amountCharged);
 
     if (bookingRef) {
-      // markBooking handles the confirmation send internally (guarded on
-      // pending → paid transition, safe against duplicate IPN calls).
-      await markBooking(bookingRef, isPaid);
+      // markBooking handles the confirmation send internally (guarded on the
+      // first positive payment landing, safe against duplicate IPN calls).
+      await markBooking(bookingRef, isPaid, amountCharged, "ipn");
     }
 
     return new NextResponse("OK", { status: 200 });

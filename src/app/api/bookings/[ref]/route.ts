@@ -14,7 +14,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ ref
   if (guard.table === "package_bookings") {
     const { data, error } = await supabase
       .from("package_bookings")
-      .select("booking_ref, package_slug, tier, departure_city, start_date, adults, rooms, total_amount, currency, booking_status, refund_status, payment_status, contact_name, contact_email, contact_phone, notes, created_at")
+      .select("booking_ref, package_slug, tier, departure_city, start_date, adults, rooms, total_amount, currency, booking_status, refund_status, payment_status, payment_plan, deposit_amount, amount_paid, contact_name, contact_email, contact_phone, notes, created_at")
       .eq("booking_ref", ref)
       .maybeSingle();
     if (error || !data) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
@@ -33,7 +33,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ ref
 
   const { data, error } = await supabase
     .from("bookings")
-    .select("booking_ref, departure_id, seats, single_rooms, total_amount, currency, status, booking_status, refund_status, contact_name, contact_email, contact_phone, notes, created_at")
+    .select("booking_ref, departure_id, seats, single_rooms, total_amount, currency, status, booking_status, refund_status, payment_plan, deposit_amount, amount_paid, contact_name, contact_email, contact_phone, notes, created_at")
     .eq("booking_ref", ref)
     .maybeSingle();
   if (error || !data) return NextResponse.json({ error: "Booking not found" }, { status: 404 });

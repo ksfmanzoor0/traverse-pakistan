@@ -4,17 +4,19 @@ import { alfaConfig } from "@/lib/alfa/config";
 import { markBooking } from "@/lib/payments/markBooking";
 import { createViewCookie } from "@/lib/auth/viewCookie";
 
-async function checkAlfaIPN(ref: string): Promise<"paid" | "failed" | "pending"> {
+async function checkAlfaIPN(ref: string): Promise<{ status: "paid" | "failed" | "pending"; amount: number | null }> {
   try {
     const ipnUrl = `${alfaConfig.ipnBaseUrl}/${alfaConfig.merchantId}/${alfaConfig.storeId}/${ref}`;
     const res = await fetch(ipnUrl);
     const raw = await res.json();
     const data = typeof raw === "string" ? JSON.parse(raw) : raw;
-    if (data.TransactionStatus === "Paid") return "paid";
-    if (data.ResponseCode === "00") return "paid";
-    return "pending";
+    const rawAmount = data.TransactionAmount ?? data.Amount;
+    const amount = rawAmount != null && !Number.isNaN(Number(rawAmount)) ? Number(rawAmount) : null;
+    if (data.TransactionStatus === "Paid") return { status: "paid", amount };
+    if (data.ResponseCode === "00") return { status: "paid", amount };
+    return { status: "pending", amount: null };
   } catch {
-    return "pending";
+    return { status: "pending", amount: null };
   }
 }
 
@@ -62,9 +64,9 @@ export async function GET(req: NextRequest) {
 
     let status = (data.payment_status ?? "pending") as "paid" | "failed" | "pending";
     if (status === "pending") {
-      const alfaStatus = await checkAlfaIPN(ref);
-      if (alfaStatus === "paid") {
-        await markBooking(ref, true);
+      const alfa = await checkAlfaIPN(ref);
+      if (alfa.status === "paid") {
+        await markBooking(ref, true, alfa.amount, "polling");
         status = "paid";
       }
     }
@@ -81,9 +83,9 @@ export async function GET(req: NextRequest) {
 
     let status = (data.payment_status ?? "pending") as "paid" | "failed" | "pending";
     if (status === "pending") {
-      const alfaStatus = await checkAlfaIPN(ref);
-      if (alfaStatus === "paid") {
-        await markBooking(ref, true);
+      const alfa = await checkAlfaIPN(ref);
+      if (alfa.status === "paid") {
+        await markBooking(ref, true, alfa.amount, "polling");
         status = "paid";
       }
     }
@@ -103,9 +105,9 @@ export async function GET(req: NextRequest) {
     "pending";
 
   if (normalized === "pending") {
-    const alfaStatus = await checkAlfaIPN(ref);
-    if (alfaStatus === "paid") {
-      await markBooking(ref, true);
+    const alfa = await checkAlfaIPN(ref);
+    if (alfa.status === "paid") {
+      await markBooking(ref, true, alfa.amount);
       normalized = "paid";
     }
   }

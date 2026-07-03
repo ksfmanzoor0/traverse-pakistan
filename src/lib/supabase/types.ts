@@ -1,5 +1,5 @@
 export type DepartureStatus = "open" | "closed" | "cancelled";
-export type BookingStatus = "pending" | "confirmed" | "cancelled" | "refunded";
+export type BookingStatus = "pending" | "confirmed" | "cancelled" | "refunded" | "deposit_paid";
 export type PaymentStatus = "initiated" | "succeeded" | "failed" | "refunded";
 export type DepartureCity = "islamabad" | "lahore" | "karachi";
 
@@ -80,6 +80,7 @@ export type BookingRow = {
   single_rooms: number;
   total_amount: number;
   currency: string;
+  // Overloaded as the payment-status column; see BookingStatus enum values.
   status: BookingStatus;
   booking_status: string;
   refund_status: string | null;
@@ -93,6 +94,7 @@ export type BookingRow = {
   payment_plan: "full" | "installments";
   deposit_amount: number | null;
   amount_paid: number;
+  payment_confirmed_via: "ipn" | "polling" | null;
 };
 
 export type BookingParticipantRow = {
@@ -466,6 +468,7 @@ export type Database = {
           payment_plan: "full" | "installments";
           deposit_amount: number | null;
           amount_paid: number;
+          payment_confirmed_via: "ipn" | "polling" | null;
         };
         Insert: Record<string, unknown>;
         Update: Partial<{
@@ -477,6 +480,8 @@ export type Database = {
           updated_at: string;
           user_id: string | null;
           confirmation_sent_at: string | null;
+          amount_paid: number;
+          payment_confirmed_via: "ipn" | "polling" | null;
         }>;
         Relationships: [];
       };
@@ -514,6 +519,8 @@ export type Database = {
           updated_at: string;
           user_id: string | null;
           confirmation_sent_at: string | null;
+          amount_paid: number;
+          payment_confirmed_via: "ipn" | "polling" | null;
         }>;
         Relationships: [];
       };
