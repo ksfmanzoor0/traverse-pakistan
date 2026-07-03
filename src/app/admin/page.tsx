@@ -48,7 +48,7 @@ export default async function AdminDashboardPage() {
     {
       label: "Pending bookings",
       value: pendingBookings,
-      href: "/admin/bookings",
+      href: "/admin/tourbookings",
       hint: "Not yet confirmed",
     },
     {
