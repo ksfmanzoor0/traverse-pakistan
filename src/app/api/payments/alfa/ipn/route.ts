@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     if (bookingRef) {
       // markBooking handles the confirmation send internally (guarded on the
       // first positive payment landing, safe against duplicate IPN calls).
-      await markBooking(bookingRef, isPaid, amountCharged);
+      await markBooking(bookingRef, isPaid, amountCharged, "ipn");
     }
 
     return new NextResponse("OK", { status: 200 });
