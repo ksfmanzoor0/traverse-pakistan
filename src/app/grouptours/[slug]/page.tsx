@@ -123,46 +123,57 @@ export default async function TripDetailPage({ params }: Props) {
                 )}
               </div>
 
-              {upcomingDepartures.length > 0 && (
-                <div className="mt-4">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] mb-2">
-                    Upcoming departures
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {upcomingDepartures.slice(0, 8).map((d) => {
-                      const label = new Date(d.departureDate).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      });
-                      const CITY_CODE: Record<string, string> = { islamabad: "ISB", lahore: "LHE", karachi: "KHI" };
-                      const city = d.departureCity ? (CITY_CODE[d.departureCity.toLowerCase()] ?? d.departureCity.toUpperCase()) : null;
-                      return (
-                        <span
-                          key={d.id}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-full border"
-                          style={{
-                            background: "var(--bg-subtle)",
-                            color: "var(--text-secondary)",
-                            borderColor: "var(--border-default)",
-                          }}
-                        >
-                          {label}
-                          {city && <span style={{ color: "var(--text-tertiary)" }}>· {city}</span>}
-                          {d.seatsAvailable > 0 && d.seatsAvailable <= 4 && (
-                            <span style={{ color: "var(--error)" }}>· {d.seatsAvailable} left</span>
-                          )}
-                        </span>
-                      );
-                    })}
-                    {upcomingDepartures.length > 8 && (
-                      <span className="text-[11px] px-2 py-1" style={{ color: "var(--text-tertiary)" }}>
-                        + {upcomingDepartures.length - 8} more
-                      </span>
-                    )}
+              {upcomingDepartures.length > 0 && (() => {
+                // Group by city so the strip shows one pill per city with all
+                // upcoming dates for that city inline, e.g. "ISB · Jul 18, Aug 14".
+                const CITY_CODE: Record<string, string> = { islamabad: "ISB", lahore: "LHE", karachi: "KHI" };
+                const CITY_ORDER = ["islamabad", "lahore", "karachi"];
+                const byCity = new Map<string, typeof upcomingDepartures>();
+                for (const d of upcomingDepartures) {
+                  const key = (d.departureCity ?? "").toLowerCase();
+                  if (!byCity.has(key)) byCity.set(key, [] as typeof upcomingDepartures);
+                  byCity.get(key)!.push(d);
+                }
+                const cityKeys = Array.from(byCity.keys()).sort(
+                  (a, b) => (CITY_ORDER.indexOf(a) - CITY_ORDER.indexOf(b)),
+                );
+                const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                return (
+                  <div className="mt-4">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] mb-2">
+                      Upcoming departures
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {cityKeys.map((cityKey) => {
+                        const deps = byCity.get(cityKey)!;
+                        const code = CITY_CODE[cityKey] ?? cityKey.toUpperCase();
+                        const shown = deps.slice(0, 3);
+                        const dateLabel = shown.map((d) => fmtDate(d.departureDate)).join(", ");
+                        const overflow = deps.length - shown.length;
+                        const tight = deps.find((d) => d.seatsAvailable > 0 && d.seatsAvailable <= 4);
+                        return (
+                          <span
+                            key={cityKey || "unknown"}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-full border"
+                            style={{
+                              background: "var(--bg-subtle)",
+                              color: "var(--text-secondary)",
+                              borderColor: "var(--border-default)",
+                            }}
+                          >
+                            <span style={{ color: "var(--text-primary)" }}>{code}</span>
+                            <span style={{ color: "var(--text-tertiary)" }}>·</span>
+                            <span>{dateLabel}{overflow > 0 ? ` +${overflow}` : ""}</span>
+                            {tight && (
+                              <span style={{ color: "var(--error)" }}>· seats low</span>
+                            )}
+                          </span>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
 
             {/* Overview */}
