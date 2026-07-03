@@ -113,16 +113,8 @@ export default async function TripDetailPage({ params }: Props) {
                   size="md"
                 />
               </div>
-              <div className="flex flex-wrap gap-2 mt-4">
-                <Chip icon={<Icon name="calendar" size="sm" />}>{tour.duration} days</Chip>
-                <Chip icon={<Icon name="users" size="sm" />}>Up to {tour.maxGroupSize} people</Chip>
-                {tour.reserveNowPayLater && (
-                  <Chip variant="info" icon={<Icon name="credit-card" size="sm" />}>
-                    Reserve now, pay later
-                  </Chip>
-                )}
-              </div>
-
+              {/* Upcoming departures — kept above the meta chips so dates are
+                  the first thing visible above the mobile fold. */}
               {upcomingDepartures.length > 0 && (() => {
                 // Group by city so the strip shows one pill per city with all
                 // upcoming dates for that city inline, e.g. "ISB · Jul 18, Aug 14".
@@ -174,6 +166,16 @@ export default async function TripDetailPage({ params }: Props) {
                   </div>
                 );
               })()}
+
+              <div className="flex flex-wrap gap-2 mt-4">
+                <Chip icon={<Icon name="calendar" size="sm" />}>{tour.duration} days</Chip>
+                <Chip icon={<Icon name="users" size="sm" />}>Up to {tour.maxGroupSize} people</Chip>
+                {tour.reserveNowPayLater && (
+                  <Chip variant="info" icon={<Icon name="credit-card" size="sm" />}>
+                    Reserve now, pay later
+                  </Chip>
+                )}
+              </div>
             </div>
 
             {/* Overview */}
