@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { formatPrice, getWhatsAppUrl } from "@/lib/utils";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { createBooking, getNextOpenDeparture } from "@/services/booking.service";
+import { createBooking, getUpcomingOpenDepartures } from "@/services/booking.service";
 import type { Departure, DepartureCity } from "@/types/booking";
 import type { Tour } from "@/types/tour";
 import type { Review } from "@/types/review";
@@ -101,8 +101,9 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
     singleOccupancyRooms: initSingleOccupancy,
   });
 
-  const [cityDepartures, setCityDepartures] = useState<{ islamabad: Departure | null; lahore: Departure | null; karachi: Departure | null }>({ islamabad: null, lahore: null, karachi: null });
+  const [allDepartures, setAllDepartures] = useState<Departure[]>([]);
   const [departuresLoaded, setDeparturesLoaded] = useState(false);
+  const initDepartureId = searchParams?.get("departureId") ?? null;
   const [maxReachedStep, setMaxReachedStep] = useState<number>(initStep);
   const [submitting, setSubmitting] = useState(false);
   // Stable per-attempt UUID so a network blip + retry never creates two bookings.
@@ -114,14 +115,10 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
   useEffect(() => {
     if (!isSupabaseConfigured) return;
     let cancelled = false;
-    Promise.all([
-      getNextOpenDeparture(tour.slug, "islamabad"),
-      getNextOpenDeparture(tour.slug, "lahore"),
-      getNextOpenDeparture(tour.slug, "karachi"),
-    ])
-      .then(([isb, lhr, khi]) => {
+    getUpcomingOpenDepartures(tour.slug)
+      .then((list) => {
         if (!cancelled) {
-          setCityDepartures({ islamabad: isb, lahore: lhr, karachi: khi });
+          setAllDepartures(list);
           setDeparturesLoaded(true);
         }
       })
@@ -129,7 +126,18 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
     return () => { cancelled = true; };
   }, [tour.slug]);
 
-  const liveDeparture = cityDepartures[draft.departureCity as "islamabad" | "lahore" | "karachi"] ?? null;
+  const departuresForCity = allDepartures.filter((d) => d.departureCity === draft.departureCity);
+  const liveDeparture =
+    (initDepartureId && allDepartures.find((d) => d.id === initDepartureId)) ||
+    departuresForCity[0] ||
+    null;
+
+  // Also expose cityDepartures-shaped map for the StepDates picker below.
+  const cityDepartures = {
+    islamabad: allDepartures.find((d) => d.departureCity === "islamabad") ?? null,
+    lahore: allDepartures.find((d) => d.departureCity === "lahore") ?? null,
+    karachi: allDepartures.find((d) => d.departureCity === "karachi") ?? null,
+  };
 
   useEffect(() => {
     setDraft((d) => ({

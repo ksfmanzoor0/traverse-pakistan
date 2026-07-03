@@ -8,7 +8,7 @@ import type { Tour } from "@/types/tour";
 import type { Review } from "@/types/review";
 import type { Departure } from "@/types/booking";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { getNextOpenDeparture } from "@/services/booking.service";
+import { getUpcomingOpenDepartures } from "@/services/booking.service";
 import { UrgencyStrip } from "@/components/booking/UrgencyStrip";
 import { ReviewQuoteCard } from "@/components/booking/ReviewQuoteCard";
 import { calculatePricing } from "@/components/booking/pricing";
@@ -27,7 +27,8 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
   const [singleRooms, setSingleRooms] = useState(0);
   const [singleOccupancyRooms, setSingleOccupancyRooms] = useState(0);
   const [departure, setDeparture] = useState<"islamabad" | "lahore" | "karachi">("islamabad");
-  const [cityDepartures, setCityDepartures] = useState<{ islamabad: Departure | null; lahore: Departure | null; karachi: Departure | null }>({ islamabad: null, lahore: null, karachi: null });
+  const [allDepartures, setAllDepartures] = useState<Departure[]>([]);
+  const [selectedDepartureId, setSelectedDepartureId] = useState<string | null>(null);
   const [departuresLoaded, setDeparturesLoaded] = useState(false);
   const [resumeAvailable, setResumeAvailable] = useState(false);
 
@@ -65,14 +66,10 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
   useEffect(() => {
     if (!isSupabaseConfigured) return;
     let cancelled = false;
-    Promise.all([
-      getNextOpenDeparture(tour.slug, "islamabad"),
-      getNextOpenDeparture(tour.slug, "lahore"),
-      getNextOpenDeparture(tour.slug, "karachi"),
-    ])
-      .then(([isb, lhr, khi]) => {
+    getUpcomingOpenDepartures(tour.slug)
+      .then((list) => {
         if (!cancelled) {
-          setCityDepartures({ islamabad: isb, lahore: lhr, karachi: khi });
+          setAllDepartures(list);
           setDeparturesLoaded(true);
         }
       })
@@ -80,7 +77,20 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
     return () => { cancelled = true; };
   }, [tour.slug]);
 
-  const liveDeparture = cityDepartures[departure] ?? null;
+  const departuresForCity = allDepartures.filter((d) => d.departureCity === departure);
+  // When city changes (or on first load), select the earliest for that city.
+  useEffect(() => {
+    if (departuresForCity.length === 0) {
+      setSelectedDepartureId(null);
+      return;
+    }
+    if (!selectedDepartureId || !departuresForCity.some((d) => d.id === selectedDepartureId)) {
+      setSelectedDepartureId(departuresForCity[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [departure, allDepartures.length]);
+
+  const liveDeparture = departuresForCity.find((d) => d.id === selectedDepartureId) ?? departuresForCity[0] ?? null;
 
   const pricing = calculatePricing({
     tour,
@@ -98,7 +108,7 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
   const maxSeats = liveDeparture?.maxSeats ?? tour.maxGroupSize;
   const seatCap = liveDeparture ? Math.min(maxSeats, liveDeparture.seatsAvailable) : maxSeats;
 
-  const checkoutHref = `/grouptours/${tour.slug}/checkout?departure=${departure}&adults=${adults}&children=${children}&singleRooms=${singleRooms}&singleOccupancy=${singleOccupancyRooms}`;
+  const checkoutHref = `/grouptours/${tour.slug}/checkout?departure=${departure}&adults=${adults}&children=${children}&singleRooms=${singleRooms}&singleOccupancy=${singleOccupancyRooms}${liveDeparture ? `&departureId=${liveDeparture.id}` : ""}`;
 
   // Clamp private-room selections when adults changes
   const maxSingles = Math.max(0, adults - 2 * singleRooms);
@@ -137,7 +147,7 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
 
         {(() => {
           const availableCities = (["islamabad", "lahore", "karachi"] as const).filter(
-            (c) => departuresLoaded ? cityDepartures[c] !== null : c !== "karachi" && !!tour.pricing.lahore,
+            (c) => departuresLoaded ? allDepartures.some((d) => d.departureCity === c) : c !== "karachi" && !!tour.pricing.lahore,
           );
           if (availableCities.length < 2) return null;
           return (
@@ -169,21 +179,49 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
           <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-2">
             Departure date
           </label>
-          <div className="h-11 px-4 border border-[var(--border-default)] rounded-[var(--radius-sm)] flex items-center justify-between text-[13px] bg-[var(--bg-subtle)]">
-            <span className="text-[var(--text-primary)] font-medium">
-              {new Date((liveDeparture?.departureDate ?? tour.departureDate)).toLocaleDateString("en-US", {
-                weekday: "short",
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
-            </span>
-            {liveDeparture && liveDeparture.seatsAvailable <= 6 && liveDeparture.seatsAvailable > 0 && (
-              <span className="text-[11px] font-bold text-[var(--error)]">
-                {liveDeparture.seatsAvailable} left
+          {departuresForCity.length > 1 ? (
+            <div className="relative">
+              <select
+                value={selectedDepartureId ?? ""}
+                onChange={(e) => setSelectedDepartureId(e.target.value)}
+                className="w-full h-11 pl-4 pr-9 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-subtle)] text-[13px] font-medium text-[var(--text-primary)] appearance-none cursor-pointer focus:outline-none focus:border-[var(--primary)]"
+              >
+                {departuresForCity.map((d) => {
+                  const label = new Date(d.departureDate).toLocaleDateString("en-US", {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  });
+                  const seatsWarn = d.seatsAvailable > 0 && d.seatsAvailable <= 6 ? ` · ${d.seatsAvailable} left` : "";
+                  return (
+                    <option key={d.id} value={d.id}>
+                      {label}{seatsWarn}
+                    </option>
+                  );
+                })}
+              </select>
+              <svg className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </div>
+          ) : (
+            <div className="h-11 px-4 border border-[var(--border-default)] rounded-[var(--radius-sm)] flex items-center justify-between text-[13px] bg-[var(--bg-subtle)]">
+              <span className="text-[var(--text-primary)] font-medium">
+                {new Date((liveDeparture?.departureDate ?? tour.departureDate)).toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
               </span>
-            )}
-          </div>
+              {liveDeparture && liveDeparture.seatsAvailable <= 6 && liveDeparture.seatsAvailable > 0 && (
+                <span className="text-[11px] font-bold text-[var(--error)]">
+                  {liveDeparture.seatsAvailable} left
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="space-y-3">

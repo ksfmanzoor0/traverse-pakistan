@@ -32,6 +32,21 @@ function toDeparture(row: DepartureRow): Departure {
   };
 }
 
+export async function getUpcomingOpenDepartures(tourSlug: string): Promise<Departure[]> {
+  if (!isSupabaseConfigured) return [];
+  const supabase = getSupabaseBrowser();
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("departures")
+    .select("*")
+    .eq("tour_slug", tourSlug)
+    .eq("status", "open")
+    .gte("departure_date", today)
+    .order("departure_date", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(toDeparture);
+}
+
 export async function getNextOpenDeparture(
   tourSlug: string,
   city?: DepartureCity
