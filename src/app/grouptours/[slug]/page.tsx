@@ -113,6 +113,60 @@ export default async function TripDetailPage({ params }: Props) {
                   size="md"
                 />
               </div>
+              {/* Upcoming departures — kept above the meta chips so dates are
+                  the first thing visible above the mobile fold. */}
+              {upcomingDepartures.length > 0 && (() => {
+                // Group by city so the strip shows one pill per city with all
+                // upcoming dates for that city inline, e.g. "ISB · Jul 18, Aug 14".
+                const CITY_CODE: Record<string, string> = { islamabad: "ISB", lahore: "LHE", karachi: "KHI" };
+                const CITY_ORDER = ["islamabad", "lahore", "karachi"];
+                const byCity = new Map<string, typeof upcomingDepartures>();
+                for (const d of upcomingDepartures) {
+                  const key = (d.departureCity ?? "").toLowerCase();
+                  if (!byCity.has(key)) byCity.set(key, [] as typeof upcomingDepartures);
+                  byCity.get(key)!.push(d);
+                }
+                const cityKeys = Array.from(byCity.keys()).sort(
+                  (a, b) => (CITY_ORDER.indexOf(a) - CITY_ORDER.indexOf(b)),
+                );
+                const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                return (
+                  <div className="mt-4">
+                    <p className="text-[12px] font-bold uppercase tracking-wider text-[var(--text-secondary)] mb-2.5">
+                      Upcoming departures
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {cityKeys.map((cityKey) => {
+                        const deps = byCity.get(cityKey)!;
+                        const code = CITY_CODE[cityKey] ?? cityKey.toUpperCase();
+                        const shown = deps.slice(0, 3);
+                        const dateLabel = shown.map((d) => fmtDate(d.departureDate)).join(", ");
+                        const overflow = deps.length - shown.length;
+                        const tight = deps.find((d) => d.seatsAvailable > 0 && d.seatsAvailable <= 4);
+                        return (
+                          <span
+                            key={cityKey || "unknown"}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[13px] font-semibold rounded-full border"
+                            style={{
+                              background: "var(--bg-subtle)",
+                              color: "var(--text-secondary)",
+                              borderColor: "var(--border-default)",
+                            }}
+                          >
+                            <span style={{ color: "var(--text-primary)" }}>{code}</span>
+                            <span style={{ color: "var(--text-tertiary)" }}>·</span>
+                            <span>{dateLabel}{overflow > 0 ? ` +${overflow}` : ""}</span>
+                            {tight && (
+                              <span className="text-[12px]" style={{ color: "var(--error)" }}>· seats low</span>
+                            )}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div className="flex flex-wrap gap-2 mt-4">
                 <Chip icon={<Icon name="calendar" size="sm" />}>{tour.duration} days</Chip>
                 <Chip icon={<Icon name="users" size="sm" />}>Up to {tour.maxGroupSize} people</Chip>
@@ -122,46 +176,6 @@ export default async function TripDetailPage({ params }: Props) {
                   </Chip>
                 )}
               </div>
-
-              {upcomingDepartures.length > 0 && (
-                <div className="mt-4">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] mb-2">
-                    Upcoming departures
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {upcomingDepartures.slice(0, 8).map((d) => {
-                      const label = new Date(d.departureDate).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      });
-                      const city = d.departureCity ? d.departureCity.charAt(0).toUpperCase() + d.departureCity.slice(1, 3) : null;
-                      return (
-                        <span
-                          key={d.id}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-full border"
-                          style={{
-                            background: "var(--bg-subtle)",
-                            color: "var(--text-secondary)",
-                            borderColor: "var(--border-default)",
-                          }}
-                        >
-                          {label}
-                          {city && <span style={{ color: "var(--text-tertiary)" }}>· {city}</span>}
-                          {d.seatsAvailable > 0 && d.seatsAvailable <= 4 && (
-                            <span style={{ color: "var(--error)" }}>· {d.seatsAvailable} left</span>
-                          )}
-                        </span>
-                      );
-                    })}
-                    {upcomingDepartures.length > 8 && (
-                      <span className="text-[11px] px-2 py-1" style={{ color: "var(--text-tertiary)" }}>
-                        + {upcomingDepartures.length - 8} more
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Overview */}
@@ -344,8 +358,10 @@ export default async function TripDetailPage({ params }: Props) {
             )}
           </div>
 
-          {/* Sidebar */}
-          <aside className="hidden lg:block">
+          {/* Sidebar — inline on mobile below the content, sticky on desktop.
+              The MobileReserveBar below still offers the quick sticky-bottom
+              Reserve tap; this exposes the full picker on mobile too. */}
+          <aside className="mt-8 lg:mt-0">
             <BookingSidebar tour={tour} reviews={reviews.slice(0, 3)} />
           </aside>
         </div>
