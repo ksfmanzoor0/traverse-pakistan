@@ -115,7 +115,7 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
   const maxCoupleRooms = Math.max(0, Math.floor((adults - singleOccupancyRooms) / 2));
 
   return (
-    <div className="sticky top-[120px] space-y-4">
+    <div className="lg:sticky lg:top-[120px] space-y-4 pb-24 lg:pb-0">
       <div
         className="bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-[var(--radius-md)] p-6"
         style={{ boxShadow: "var(--shadow-sm)" }}

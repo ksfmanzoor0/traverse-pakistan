@@ -345,8 +345,10 @@ export default async function TripDetailPage({ params }: Props) {
             )}
           </div>
 
-          {/* Sidebar */}
-          <aside className="hidden lg:block">
+          {/* Sidebar — inline on mobile below the content, sticky on desktop.
+              The MobileReserveBar below still offers the quick sticky-bottom
+              Reserve tap; this exposes the full picker on mobile too. */}
+          <aside className="mt-8 lg:mt-0">
             <BookingSidebar tour={tour} reviews={reviews.slice(0, 3)} />
           </aside>
         </div>
