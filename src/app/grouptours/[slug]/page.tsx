@@ -132,10 +132,10 @@ export default async function TripDetailPage({ params }: Props) {
                 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
                 return (
                   <div className="mt-4">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] mb-2">
+                    <p className="text-[12px] font-bold uppercase tracking-wider text-[var(--text-secondary)] mb-2.5">
                       Upcoming departures
                     </p>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-2">
                       {cityKeys.map((cityKey) => {
                         const deps = byCity.get(cityKey)!;
                         const code = CITY_CODE[cityKey] ?? cityKey.toUpperCase();
@@ -146,7 +146,7 @@ export default async function TripDetailPage({ params }: Props) {
                         return (
                           <span
                             key={cityKey || "unknown"}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-full border"
+                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[13px] font-semibold rounded-full border"
                             style={{
                               background: "var(--bg-subtle)",
                               color: "var(--text-secondary)",
@@ -157,7 +157,7 @@ export default async function TripDetailPage({ params }: Props) {
                             <span style={{ color: "var(--text-tertiary)" }}>·</span>
                             <span>{dateLabel}{overflow > 0 ? ` +${overflow}` : ""}</span>
                             {tight && (
-                              <span style={{ color: "var(--error)" }}>· seats low</span>
+                              <span className="text-[12px]" style={{ color: "var(--error)" }}>· seats low</span>
                             )}
                           </span>
                         );
