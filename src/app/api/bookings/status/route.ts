@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { alfaConfig } from "@/lib/alfa/config";
 import { markBooking } from "@/lib/payments/markBooking";
 import { createViewCookie } from "@/lib/auth/viewCookie";
+import { stripAttemptSuffix, withAttemptSuffix } from "@/lib/alfa/txnRef";
 
 async function checkAlfaIPN(ref: string): Promise<{ status: "paid" | "failed" | "pending"; amount: number | null }> {
   try {
@@ -46,56 +47,71 @@ function buildResponse(ref: string, amount: number, status: "paid" | "failed" | 
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const ref = searchParams.get("ref");
+  const rawRef = searchParams.get("ref");
 
-  if (!ref) {
+  if (!rawRef) {
     return NextResponse.json({ error: "Missing ref" }, { status: 400 });
   }
 
+  // Callers may hand us either the parent ref (customer opening the booking
+  // page cold) or the per-attempt suffixed ref that Alfa echoed on redirect.
+  // DB always keys on the parent ref; Alfa's OrderStatus keys on the exact
+  // ref we sent them, which is the suffixed one.
+  const parentRef = stripAttemptSuffix(rawRef);
+  const suffixedFromCaller = rawRef !== parentRef ? rawRef : null;
+
   const supabase = getSupabaseAdmin();
 
-  if (ref.startsWith("PKG-")) {
-    const { data, error } = await supabase
-      .from("package_bookings")
-      .select("booking_ref, payment_status, total_amount")
-      .eq("booking_ref", ref)
-      .maybeSingle();
-    if (error || !data) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
-
-    let status = (data.payment_status ?? "pending") as "paid" | "failed" | "pending";
-    if (status === "pending") {
-      const alfa = await checkAlfaIPN(ref);
-      if (alfa.status === "paid") {
-        await markBooking(ref, true, alfa.amount, "polling");
-        status = "paid";
-      }
-    }
-    return buildResponse(ref, Number(data.total_amount), status);
+  // Pick the ref Alfa knows about. If the caller passed a suffixed ref, use
+  // it as-is. Otherwise construct "-<latest attempt>" from the booking row.
+  async function alfaRefFor(latestAttempt: number): Promise<string> {
+    if (suffixedFromCaller) return suffixedFromCaller;
+    if (latestAttempt <= 0) return parentRef; // pre-attempt polling, Alfa won't find it either
+    return withAttemptSuffix(parentRef, latestAttempt);
   }
 
-  if (ref.startsWith("HTL-")) {
+  if (parentRef.startsWith("PKG-")) {
     const { data, error } = await supabase
-      .from("hotel_bookings")
-      .select("booking_ref, payment_status, total_amount")
-      .eq("booking_ref", ref)
+      .from("package_bookings")
+      .select("booking_ref, payment_status, total_amount, payment_attempts")
+      .eq("booking_ref", parentRef)
       .maybeSingle();
     if (error || !data) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
 
     let status = (data.payment_status ?? "pending") as "paid" | "failed" | "pending";
     if (status === "pending") {
-      const alfa = await checkAlfaIPN(ref);
+      const alfa = await checkAlfaIPN(await alfaRefFor(Number(data.payment_attempts ?? 0)));
       if (alfa.status === "paid") {
-        await markBooking(ref, true, alfa.amount, "polling");
+        await markBooking(parentRef, true, alfa.amount, "polling");
         status = "paid";
       }
     }
-    return buildResponse(ref, Number(data.total_amount), status);
+    return buildResponse(parentRef, Number(data.total_amount), status);
+  }
+
+  if (parentRef.startsWith("HTL-")) {
+    const { data, error } = await supabase
+      .from("hotel_bookings")
+      .select("booking_ref, payment_status, total_amount, payment_attempts")
+      .eq("booking_ref", parentRef)
+      .maybeSingle();
+    if (error || !data) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+
+    let status = (data.payment_status ?? "pending") as "paid" | "failed" | "pending";
+    if (status === "pending") {
+      const alfa = await checkAlfaIPN(await alfaRefFor(Number(data.payment_attempts ?? 0)));
+      if (alfa.status === "paid") {
+        await markBooking(parentRef, true, alfa.amount, "polling");
+        status = "paid";
+      }
+    }
+    return buildResponse(parentRef, Number(data.total_amount), status);
   }
 
   const { data, error } = await supabase
     .from("bookings")
-    .select("booking_ref, status, total_amount")
-    .eq("booking_ref", ref)
+    .select("booking_ref, status, total_amount, payment_attempts")
+    .eq("booking_ref", parentRef)
     .maybeSingle();
   if (error || !data) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
 
@@ -105,12 +121,12 @@ export async function GET(req: NextRequest) {
     "pending";
 
   if (normalized === "pending") {
-    const alfa = await checkAlfaIPN(ref);
+    const alfa = await checkAlfaIPN(await alfaRefFor(Number(data.payment_attempts ?? 0)));
     if (alfa.status === "paid") {
-      await markBooking(ref, true, alfa.amount);
+      await markBooking(parentRef, true, alfa.amount, "polling");
       normalized = "paid";
     }
   }
 
-  return buildResponse(ref, Number(data.total_amount), normalized);
+  return buildResponse(parentRef, Number(data.total_amount), normalized);
 }

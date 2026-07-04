@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { alfaConfig } from "@/lib/alfa/config";
 import { generateAlfaHash } from "@/lib/alfa/hash";
+import { withAttemptSuffix } from "@/lib/alfa/txnRef";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { paymentInitiateLimiter, checkRateLimit, clientIp } from "@/lib/ratelimit";
 
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     const { data: booking, error: dbError } = await supabase
       .from(table)
-      .select("total_amount, payment_plan, amount_paid")
+      .select("total_amount, payment_plan, amount_paid, payment_attempts")
       .eq("booking_ref", bookingRef)
       .maybeSingle();
 
@@ -53,6 +54,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Balance is already settled" }, { status: 400 });
     }
 
+    const nextAttempt = Number(booking.payment_attempts ?? 0) + 1;
+    const alfaTxnRef = withAttemptSuffix(bookingRef, nextAttempt);
+    const { error: bumpError } = await supabase
+      .from(table)
+      .update({ payment_attempts: nextAttempt })
+      .eq("booking_ref", bookingRef);
+    if (bumpError) {
+      console.error("[alfa/initiate-balance] failed to bump payment_attempts:", bumpError);
+      return NextResponse.json({ error: "Could not start payment. Please try again." }, { status: 500 });
+    }
+
     const proto = req.headers.get("x-forwarded-proto") ?? "https";
     const host = req.headers.get("host") ?? "traversepakistan.com";
     const siteUrl = `${proto}://${host}`;
@@ -68,7 +80,7 @@ export async function POST(req: NextRequest) {
       HS_MerchantHash: alfaConfig.merchantHash,
       HS_MerchantUsername: alfaConfig.merchantUsername,
       HS_MerchantPassword: alfaConfig.merchantPassword,
-      HS_TransactionReferenceNumber: bookingRef,
+      HS_TransactionReferenceNumber: alfaTxnRef,
     };
 
     const requestHash = generateAlfaHash(hsParams, alfaConfig.key1, alfaConfig.key2);
@@ -113,7 +125,7 @@ export async function POST(req: NextRequest) {
       MerchantUsername: alfaConfig.merchantUsername,
       MerchantPassword: alfaConfig.merchantPassword,
       TransactionTypeId: "3",
-      TransactionReferenceNumber: bookingRef,
+      TransactionReferenceNumber: alfaTxnRef,
       TransactionAmount: balance.toFixed(2),
     };
 

@@ -80,6 +80,14 @@ export function BookingDetail({ bookingRef, data, canManage, needsEmail = false 
   const balanceDue = Math.max(0, totalAmount - amountPaid);
   const canPayBalance = !isCancelled && isDepositPaid && balanceDue > 0 && (type === "tour" || type === "package");
   const isUnpaid = !isCancelled && !isFullyPaid && !isDepositPaid;
+  // First charge on an installments booking is the deposit, not the total.
+  // Alfa was already being charged the deposit server-side; the button
+  // just needs to promise the right number to the customer.
+  const paymentPlan = String(localBooking.payment_plan ?? "full");
+  const depositAmount = Number(localBooking.deposit_amount ?? 0);
+  const pendingCharge = paymentPlan === "installments" && depositAmount > 0
+    ? depositAmount
+    : totalAmount;
 
   async function applyNameChange() {
     setActionError(null);
@@ -145,8 +153,8 @@ export function BookingDetail({ bookingRef, data, canManage, needsEmail = false 
       </div>
 
       {/* Complete payment CTA — nothing has been captured yet */}
-      {isUnpaid && totalAmount > 0 && (
-        <CompletePaymentButton bookingRef={bookingRef} amount={totalAmount} type={type} />
+      {isUnpaid && pendingCharge > 0 && (
+        <CompletePaymentButton bookingRef={bookingRef} amount={pendingCharge} type={type} />
       )}
 
       {/* Balance due — deposit captured, balance still owed */}
