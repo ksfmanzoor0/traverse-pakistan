@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { markBooking } from "@/lib/payments/markBooking";
+import { stripAttemptSuffix } from "@/lib/alfa/txnRef";
 
 // Per Alfa docs: APG POSTs to the listener URL with "url" as a query parameter:
 // e.g. /api/payments/alfa/ipn?url=https://sandbox.bankalfalah.com/HS/api/IPN/OrderStatus/...
@@ -20,7 +21,11 @@ export async function POST(req: NextRequest) {
 
     console.log("[alfa/ipn POST] status response:", JSON.stringify(status));
 
-    const bookingRef: string = status.TransactionReferenceNumber ?? "";
+    // Alfa echoes back the exact TransactionReferenceNumber we sent it,
+    // including the per-attempt suffix. Strip that so markBooking looks up
+    // and updates the parent booking row.
+    const rawRef: string = status.TransactionReferenceNumber ?? "";
+    const bookingRef = stripAttemptSuffix(rawRef);
     const isPaid: boolean = status.TransactionStatus === "Paid";
     const rawAmount = status.TransactionAmount ?? status.Amount;
     const amountCharged: number | null =
