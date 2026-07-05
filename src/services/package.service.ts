@@ -142,11 +142,11 @@ export const getPackageItinerary = cache(async (slug: string): Promise<PackageIt
 });
 
 const FEATURED_PACKAGE_SLUGS = [
-  "northern-pakistan-grand-tour",
   "hunza-valley-escape",
-  "pakistan-historical-12day",
   "skardu-heaven-on-earth",
   "chitral-kailash-gol-4day",
+  "northern-pakistan-grand-tour",
+  "pakistan-historical-12day",
   "old-lahore-day-tour",
   "historical-sindh-3day",
   "sharan-forest-3day",
