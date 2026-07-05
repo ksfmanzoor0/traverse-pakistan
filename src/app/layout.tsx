@@ -8,6 +8,7 @@ import { WhatsAppFAB } from "@/components/layout/WhatsAppFAB";
 import { AwardStrip } from "@/components/layout/AwardStrip";
 import { RouteProgress } from "@/components/ui/RouteProgress";
 import { JsonLd } from "@/components/seo/JsonLd";
+import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import {
   organizationSchema,
   websiteSchema,
@@ -164,6 +165,7 @@ export default function RootLayout({
           <Footer />
           <WhatsAppFAB />
         </Providers>
+        <GoogleAnalytics />
       </body>
     </html>
   );
