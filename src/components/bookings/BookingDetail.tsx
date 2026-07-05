@@ -249,7 +249,7 @@ export function BookingDetail({ bookingRef, data, canManage, needsEmail = false 
             <Row label="Seats" value={String(localBooking.seats ?? "-")} />
           )}
 
-          <Row label={isUnpaid ? "Amount Due" : "Amount Paid"} value={formatPrice(totalAmount)} />
+          <Row label={isUnpaid ? "Amount Due" : "Amount Paid"} value={formatPrice(isUnpaid ? totalAmount : amountPaid)} />
         </div>
       </div>
 
