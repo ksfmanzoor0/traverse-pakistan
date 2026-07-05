@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { formatPrice, getWhatsAppUrl } from "@/lib/utils";
 import { Icon } from "@/components/ui/Icon";
 import type { BookingStatus, RefundStatus } from "@/types/booking-status";
@@ -88,18 +89,26 @@ export function BookingDetail({ bookingRef, data, canManage, needsEmail = false 
     ? depositAmount
     : totalAmount;
 
-  // Signal that a previous Alfa handshake happened but no money is captured
-  // for the charge the customer is about to make. Two shapes:
-  //   Complete Payment path: any attempt happened but amount_paid is still 0
-  //   Pay Balance path: attempts >= 2 (deposit + at least one balance try)
-  //     while amount_paid still sits at the deposit
-  // Not exact — a webhook-deduped retry can also bump payment_attempts — but
-  // it catches the common "customer bounced back and the row didn't advance"
-  // shape and lets us prompt them to try again.
-  const paymentAttempts = Number(localBooking.payment_attempts ?? 0);
-  const showRetryBanner =
-    (isUnpaid && paymentAttempts > 0) ||
-    (canPayBalance && paymentAttempts > 1);
+  // Banner is arrival-scoped, not row-state-scoped: only render it when the
+  // customer just came off the Alfa return page's failed state (which
+  // redirects here with ?payment=failed). We clear the param on first render
+  // so a refresh or a later visit from /mybookings won't keep nagging them.
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [showRetryBanner, setShowRetryBanner] = useState(
+    () => searchParams?.get("payment") === "failed",
+  );
+  useEffect(() => {
+    if (searchParams?.get("payment") === "failed") {
+      router.replace(`/bookings/${bookingRef}`, { scroll: false });
+    }
+  }, [searchParams, router, bookingRef]);
+  useEffect(() => {
+    if (!showRetryBanner) return;
+    // Auto-hide the banner if payment ends up landing while the customer is
+    // still on the page (they resolve the flow from another tab, etc.).
+    if (isFullyPaid || (isDepositPaid && !canPayBalance)) setShowRetryBanner(false);
+  }, [showRetryBanner, isFullyPaid, isDepositPaid, canPayBalance]);
 
   async function applyNameChange() {
     setActionError(null);

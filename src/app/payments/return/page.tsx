@@ -174,7 +174,7 @@ function ReturnInner() {
         </div>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link
-            href={`/bookings/${bookingRef}`}
+            href={`/bookings/${bookingRef}?payment=failed`}
             className="inline-flex h-11 px-6 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--primary)] text-[var(--text-inverse)] text-[14px] font-semibold hover:bg-[var(--primary-hover)] transition-colors"
           >
             Try Again
