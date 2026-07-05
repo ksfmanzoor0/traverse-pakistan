@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { formatPrice, getWhatsAppUrl } from "@/lib/utils";
 import { Icon } from "@/components/ui/Icon";
 import type { BookingStatus, RefundStatus } from "@/types/booking-status";
@@ -88,6 +89,27 @@ export function BookingDetail({ bookingRef, data, canManage, needsEmail = false 
     ? depositAmount
     : totalAmount;
 
+  // Banner is arrival-scoped, not row-state-scoped: only render it when the
+  // customer just came off the Alfa return page's failed state (which
+  // redirects here with ?payment=failed). We clear the param on first render
+  // so a refresh or a later visit from /mybookings won't keep nagging them.
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [showRetryBanner, setShowRetryBanner] = useState(
+    () => searchParams?.get("payment") === "failed",
+  );
+  useEffect(() => {
+    if (searchParams?.get("payment") === "failed") {
+      router.replace(`/bookings/${bookingRef}`, { scroll: false });
+    }
+  }, [searchParams, router, bookingRef]);
+  useEffect(() => {
+    if (!showRetryBanner) return;
+    // Auto-hide the banner if payment ends up landing while the customer is
+    // still on the page (they resolve the flow from another tab, etc.).
+    if (isFullyPaid || (isDepositPaid && !canPayBalance)) setShowRetryBanner(false);
+  }, [showRetryBanner, isFullyPaid, isDepositPaid, canPayBalance]);
+
   async function applyNameChange() {
     setActionError(null);
     setBusy(true);
@@ -150,6 +172,19 @@ export function BookingDetail({ bookingRef, data, canManage, needsEmail = false 
           {statusInfo.label}
         </span>
       </div>
+
+      {/* Retry banner — surfaces above whichever payment card renders below. */}
+      {showRetryBanner && (
+        <div className="p-4 border border-[var(--warning)]/40 bg-[var(--warning)]/10 rounded-[var(--radius-md)] flex items-start gap-3">
+          <span className="w-6 h-6 rounded-full bg-[var(--warning)]/20 flex items-center justify-center text-[13px] font-bold text-[var(--warning)] shrink-0 mt-0.5">!</span>
+          <div className="space-y-1">
+            <p className="text-[13px] font-bold text-[var(--text-primary)]">Last payment attempt didn&apos;t go through</p>
+            <p className="text-[12px] text-[var(--text-secondary)]">
+              You can try again below. If you keep seeing issues, tap <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="underline font-semibold text-[var(--text-primary)]">contact us on WhatsApp</a> and we&apos;ll help.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Complete payment CTA — nothing has been captured yet */}
       {isUnpaid && pendingCharge > 0 && (
