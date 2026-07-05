@@ -23,6 +23,7 @@ import {
   getSimilarTours,
   getItineraryByTourSlug,
 } from "@/services/tour.service";
+import { TrackView } from "@/components/analytics/TrackView";
 import { getReviewsByTour } from "@/services/review.service";
 import { getUpcomingOpenDeparturesServer } from "@/services/booking.server";
 
@@ -80,6 +81,7 @@ export default async function TripDetailPage({ params }: Props) {
   return (
     <div className="pt-0 sm:pt-6 pb-24 sm:pb-8">
       <JsonLd data={schema} id={`tour-${tour.slug}-jsonld`} />
+      <TrackView itemId={tour.slug} itemName={tour.name} bookingType="tour" />
       <Container>
         {/* Breadcrumb */}
         <Breadcrumb

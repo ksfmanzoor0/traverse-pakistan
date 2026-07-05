@@ -22,6 +22,7 @@ import { deriveUrgency } from "./urgency";
 import type { TravelerProfile } from "./types";
 import { useCheckoutDraft } from "@/hooks/useCheckoutDraft";
 import { InlineAlert } from "@/components/ui/InlineAlert";
+import { trackAddToCart } from "@/lib/analytics/track";
 
 const STEP_LABELS = ["Dates & Travellers", "Your details", "Review"];
 
@@ -311,6 +312,14 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
           })),
           notes: draft.specialRequests || undefined,
           submitUuid: submitUuidRef.current,
+          paymentPlan: draft.paymentPlan,
+        });
+        trackAddToCart({
+          bookingRef: result.bookingRef,
+          bookingType: "tour",
+          itemId: tour.slug,
+          itemName: tour.name,
+          totalAmount: result.totalAmount,
           paymentPlan: draft.paymentPlan,
         });
         clearDraft();

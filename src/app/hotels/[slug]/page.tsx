@@ -15,6 +15,7 @@ import {
 } from "@/lib/seo/schema";
 import { formatPrice, slugify } from "@/lib/utils";
 import { getHotelBySlug, getAllHotels, getHotelsByDestination } from "@/services/hotel.service";
+import { TrackView } from "@/components/analytics/TrackView";
 import { listR2Images } from "@/lib/r2";
 import Link from "next/link";
 import { HotelBookingSidebar } from "@/components/hotels/HotelBookingSidebar";
@@ -102,6 +103,7 @@ export default async function HotelDetailPage({ params }: Props) {
   return (
     <div className="pt-0 sm:pt-6 pb-24 sm:pb-8">
       <JsonLd data={schema} id={`hotel-${hotel.slug}-jsonld`} />
+      <TrackView itemId={hotel.slug} itemName={hotel.name} bookingType="hotel" />
       <Container>
         {/* Breadcrumb */}
         <Breadcrumb
