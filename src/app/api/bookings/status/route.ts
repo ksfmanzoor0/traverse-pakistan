@@ -13,10 +13,16 @@ async function checkAlfaIPN(ref: string): Promise<{ status: "paid" | "failed" | 
     const data = typeof raw === "string" ? JSON.parse(raw) : raw;
     const rawAmount = data.TransactionAmount ?? data.Amount;
     const amount = rawAmount != null && !Number.isNaN(Number(rawAmount)) ? Number(rawAmount) : null;
+    // TransactionStatus is Alfa's authoritative field for the outcome of the
+    // charge itself. Do NOT fall back to ResponseCode === "00" — on the
+    // OrderStatus API that field indicates "the API request succeeded",
+    // not "the transaction was approved", so trusting it turned failed
+    // sandbox payments into false positives (see TP-9FF908).
+    console.log(`[checkAlfaIPN] ref=${ref} TransactionStatus=${data.TransactionStatus} ResponseCode=${data.ResponseCode} amount=${amount}`);
     if (data.TransactionStatus === "Paid") return { status: "paid", amount };
-    if (data.ResponseCode === "00") return { status: "paid", amount };
     return { status: "pending", amount: null };
-  } catch {
+  } catch (err) {
+    console.error(`[checkAlfaIPN] fetch failed for ref=${ref}:`, err);
     return { status: "pending", amount: null };
   }
 }
