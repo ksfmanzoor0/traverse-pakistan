@@ -26,8 +26,8 @@ export async function FeaturedPackagesCarousel() {
           light
         />
         <Carousel>
-          {packages.map((pkg) => (
-            <PackageCard key={pkg.id} pkg={pkg} variant="carousel" />
+          {packages.map((pkg, i) => (
+            <PackageCard key={pkg.id} pkg={pkg} variant="carousel" priority={i === 0} />
           ))}
         </Carousel>
       </Container>
