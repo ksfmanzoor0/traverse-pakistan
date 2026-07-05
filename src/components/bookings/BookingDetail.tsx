@@ -284,7 +284,22 @@ export function BookingDetail({ bookingRef, data, canManage, needsEmail = false 
             <Row label="Seats" value={String(localBooking.seats ?? "-")} />
           )}
 
-          <Row label={isUnpaid ? "Amount Due" : "Amount Paid"} value={formatPrice(isUnpaid ? totalAmount : amountPaid)} />
+          {/* Payment breakdown — Trip Details stays self-contained regardless
+              of the CTA card above. Three shapes: unpaid, deposit-paid, or
+              fully paid. */}
+          {isUnpaid && (
+            <Row label="Amount Due" value={formatPrice(totalAmount)} />
+          )}
+          {isDepositPaid && (
+            <>
+              <Row label="Total" value={formatPrice(totalAmount)} />
+              <Row label="Deposit Paid" value={formatPrice(amountPaid)} />
+              <Row label="Balance Due" value={formatPrice(balanceDue)} />
+            </>
+          )}
+          {isFullyPaid && (
+            <Row label="Amount Paid" value={formatPrice(amountPaid)} />
+          )}
         </div>
       </div>
 
