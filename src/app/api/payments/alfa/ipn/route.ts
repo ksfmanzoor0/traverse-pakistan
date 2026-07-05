@@ -34,9 +34,10 @@ export async function POST(req: NextRequest) {
     console.log("[alfa/ipn POST] bookingRef:", bookingRef, "isPaid:", isPaid, "amount:", amountCharged);
 
     if (bookingRef) {
-      // markBooking handles the confirmation send internally (guarded on the
-      // first positive payment landing, safe against duplicate IPN calls).
-      await markBooking(bookingRef, isPaid, amountCharged, "ipn");
+      // Pass the suffixed rawRef (Alfa's TransactionReferenceNumber) so
+      // markBooking's ledger guard can reject duplicate deliveries of the
+      // same charge.
+      await markBooking(bookingRef, isPaid, amountCharged, "ipn", rawRef || null);
     }
 
     return new NextResponse("OK", { status: 200 });

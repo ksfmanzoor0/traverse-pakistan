@@ -87,9 +87,10 @@ export async function GET(req: NextRequest) {
       raw === "failed" ? "failed" :
       "pending";
     if (status === "pending") {
-      const alfa = await checkAlfaIPN(await alfaRefFor(Number(data.payment_attempts ?? 0)));
+      const alfaRef = await alfaRefFor(Number(data.payment_attempts ?? 0));
+      const alfa = await checkAlfaIPN(alfaRef);
       if (alfa.status === "paid") {
-        await markBooking(parentRef, true, alfa.amount, "polling");
+        await markBooking(parentRef, true, alfa.amount, "polling", alfaRef);
         status = "paid";
       }
     }
@@ -106,9 +107,10 @@ export async function GET(req: NextRequest) {
 
     let status = (data.payment_status ?? "pending") as "paid" | "failed" | "pending";
     if (status === "pending") {
-      const alfa = await checkAlfaIPN(await alfaRefFor(Number(data.payment_attempts ?? 0)));
+      const alfaRef = await alfaRefFor(Number(data.payment_attempts ?? 0));
+      const alfa = await checkAlfaIPN(alfaRef);
       if (alfa.status === "paid") {
-        await markBooking(parentRef, true, alfa.amount, "polling");
+        await markBooking(parentRef, true, alfa.amount, "polling", alfaRef);
         status = "paid";
       }
     }
@@ -132,9 +134,10 @@ export async function GET(req: NextRequest) {
     "pending";
 
   if (normalized === "pending") {
-    const alfa = await checkAlfaIPN(await alfaRefFor(Number(data.payment_attempts ?? 0)));
+    const alfaRef = await alfaRefFor(Number(data.payment_attempts ?? 0));
+    const alfa = await checkAlfaIPN(alfaRef);
     if (alfa.status === "paid") {
-      await markBooking(parentRef, true, alfa.amount, "polling");
+      await markBooking(parentRef, true, alfa.amount, "polling", alfaRef);
       normalized = "paid";
     }
   }

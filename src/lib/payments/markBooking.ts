@@ -22,8 +22,38 @@ export async function markBooking(
   isPaid: boolean,
   amountCharged?: number | null,
   source: PaymentSource = "polling",
+  alfaTxnRef?: string | null,
 ): Promise<void> {
   const supabase = getSupabaseAdmin();
+
+  // Idempotency guard. Alfa can redeliver IPNs, and our polling path can race
+  // an IPN that already landed. Both would otherwise re-run the additive
+  // amount_paid update and double the deposit. The ledger's UNIQUE
+  // (booking_ref, alfa_txn_ref) index means the second insert fails with
+  // 23505, at which point we no-op the rest of the function. When the caller
+  // has no txn ref (legacy callsite, defensive fallback) we skip the guard.
+  if (alfaTxnRef) {
+    const { error: ledgerErr } = await supabase
+      .from("payment_transactions" as never)
+      .insert({
+        booking_ref: bookingRef,
+        alfa_txn_ref: alfaTxnRef,
+        amount: amountCharged ?? 0,
+        is_paid: isPaid,
+        source,
+      } as never);
+    if (ledgerErr) {
+      // 23505 = unique_violation. Anything else is unexpected; log and bail
+      // rather than proceed with a partially-reconciled state.
+      if (ledgerErr.code === "23505") {
+        console.log(`[markBooking] duplicate txn ${alfaTxnRef} for ${bookingRef} — skipping`);
+        return;
+      }
+      console.error(`[markBooking] ledger insert failed for ${bookingRef}/${alfaTxnRef}:`, ledgerErr);
+      return;
+    }
+  }
+
   let shouldFireConfirmation = false;
   let isFirstPositivePayment = false;
 
