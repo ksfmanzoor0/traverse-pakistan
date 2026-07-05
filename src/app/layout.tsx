@@ -71,13 +71,9 @@ export const metadata: Metadata = {
     creator: "@traversepakistan",
     site: "@traversepakistan",
   },
-  icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/icon.svg", type: "image/svg+xml" },
-    ],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
-  },
+  // Icons auto-detected from src/app/icon.png and src/app/apple-icon.png —
+  // Next.js generates the <link> tags at all requested sizes. Overriding
+  // here would take precedence over the file-based icons, so we don't.
   manifest: "/site.webmanifest",
   robots: IS_GITHUB_PAGES
     ? {
