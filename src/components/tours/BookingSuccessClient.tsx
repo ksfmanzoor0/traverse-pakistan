@@ -9,7 +9,7 @@ import { SITE_CONFIG } from "@/lib/constants";
 import { buildIcsDataUri, googleCalendarLink } from "@/components/booking/calendar";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getBookingByRef } from "@/services/booking.service";
-import { TourPayButton } from "@/components/tours/TourPayButton";
+import { PayButton } from "@/components/payments/PayButton";
 import type { Booking } from "@/types/booking";
 import type { Tour } from "@/types/tour";
 
@@ -182,7 +182,15 @@ function SuccessInner({ tour }: { tour: Tour }) {
 
       {ref && dueNow !== null && (
         <div className="mt-6">
-          <TourPayButton bookingRef={ref} amount={dueNow} />
+          <PayButton
+            flow="tour"
+            bookingRef={ref}
+            amount={dueNow}
+            size="lg"
+            showCardIcon
+            buttonLabel={`Pay ${formatPrice(dueNow)} now`}
+            loadingLabel="Processing…"
+          />
           <p className="mt-2 text-center text-[11px] text-[var(--text-tertiary)]">
             Secure card payment via Alfa Bank
           </p>

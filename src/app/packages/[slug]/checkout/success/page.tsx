@@ -6,7 +6,8 @@ import { Container } from "@/components/ui/Container";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { getAllPackages, getPackageBySlug } from "@/services/package.service";
 import { getWhatsAppUrl } from "@/lib/utils";
-import { PackagePayButton } from "@/components/packages/PackagePayButton";
+import { PayButton } from "@/components/payments/PayButton";
+import { formatPrice } from "@/lib/utils";
 import { after } from "next/server";
 import { stampBookingWithUser } from "@/lib/auth/stampBookingWithUser";
 import { sendBookingConfirmation } from "@/lib/email/sendBookingConfirmation";
@@ -142,10 +143,14 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
         {/* Pay now */}
         {ref && amount && (
           <div className="mt-6 max-w-[760px] mx-auto">
-            <PackagePayButton
+            <PayButton
+              flow="package"
               bookingRef={ref}
               amount={amount}
               paymentStatus={summary?.payment_status ?? "pending"}
+              size="lg"
+              buttonLabel={`Pay ${formatPrice(amount)}`}
+              showFailedRetryHint={summary?.payment_status === "failed"}
             />
             <p className="mt-2 text-center text-[11px] text-[var(--text-tertiary)]">
               Secure card payment via Alfa Bank

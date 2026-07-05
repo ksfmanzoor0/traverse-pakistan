@@ -5,8 +5,7 @@ import Link from "next/link";
 import { formatPrice, getWhatsAppUrl } from "@/lib/utils";
 import { Icon } from "@/components/ui/Icon";
 import type { BookingStatus, RefundStatus } from "@/types/booking-status";
-import { CompletePaymentButton } from "./CompletePaymentButton";
-import { PayBalanceButton } from "./PayBalanceButton";
+import { PayButton } from "@/components/payments/PayButton";
 import { ManageBanner } from "./ManageBanner";
 import { InlineAlert } from "@/components/ui/InlineAlert";
 
@@ -154,16 +153,25 @@ export function BookingDetail({ bookingRef, data, canManage, needsEmail = false 
 
       {/* Complete payment CTA — nothing has been captured yet */}
       {isUnpaid && pendingCharge > 0 && (
-        <CompletePaymentButton bookingRef={bookingRef} amount={pendingCharge} type={type} />
+        <PayButton
+          flow={type}
+          bookingRef={bookingRef}
+          amount={pendingCharge}
+          variant="complete-card"
+          buttonLabel={`Complete Payment · ${formatPrice(pendingCharge)}`}
+        />
       )}
 
       {/* Balance due — deposit captured, balance still owed */}
       {canPayBalance && (
-        <PayBalanceButton
+        <PayButton
+          flow="balance"
           bookingRef={bookingRef}
-          balanceDue={balanceDue}
+          amount={balanceDue}
           amountPaid={amountPaid}
           totalAmount={totalAmount}
+          variant="balance-card"
+          buttonLabel={`Pay balance · ${formatPrice(balanceDue)}`}
         />
       )}
 
