@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateBookingStatus } from "@/app/admin/bookings/actions";
+import { updateBookingStatus } from "@/app/admin/tourbookings/actions";
 import type { BookingStatus } from "@/lib/supabase/types";
 
 const OPTIONS: { value: BookingStatus; label: string }[] = [
   { value: "pending", label: "Pending" },
+  { value: "deposit_paid", label: "Deposit paid" },
   { value: "confirmed", label: "Confirmed" },
   { value: "cancelled", label: "Cancelled" },
   { value: "refunded", label: "Refunded" },
@@ -13,6 +14,7 @@ const OPTIONS: { value: BookingStatus; label: string }[] = [
 
 const TONE: Record<BookingStatus, { fg: string; bg: string }> = {
   pending: { fg: "var(--warning)", bg: "color-mix(in srgb, var(--warning) 14%, transparent)" },
+  deposit_paid: { fg: "var(--accent-warm)", bg: "color-mix(in srgb, var(--accent-warm) 14%, transparent)" },
   confirmed: { fg: "var(--success)", bg: "color-mix(in srgb, var(--success) 14%, transparent)" },
   cancelled: { fg: "var(--text-tertiary)", bg: "var(--bg-subtle)" },
   refunded: { fg: "var(--error)", bg: "color-mix(in srgb, var(--error) 12%, transparent)" },

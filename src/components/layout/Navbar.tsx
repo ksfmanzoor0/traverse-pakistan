@@ -168,6 +168,9 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
                 }
               }}
             >
+              {/* Intrinsic dimensions must match the actual PNG pixel ratio,
+                  otherwise next/image warps the render — a 1.3% horizontal
+                  squish is enough to turn the circular badge into an ellipse. */}
               <Image
                 src="/logo-white.png"
                 alt="Traverse Pakistan"
@@ -181,8 +184,8 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
               <Image
                 src="/logo-day.png"
                 alt="Traverse Pakistan"
-                width={1596}
-                height={700}
+                width={1612}
+                height={716}
                 className="h-8 w-auto sm:h-11 [[data-theme=dark]_&]:hidden"
                 style={{ mixBlendMode: "multiply" }}
                 priority

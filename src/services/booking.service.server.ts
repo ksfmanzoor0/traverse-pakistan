@@ -27,13 +27,17 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingS
       emergency_contact: p.emergencyContact ?? null,
     })),
     p_notes: input.notes ?? null,
+    p_payment_plan: input.paymentPlan ?? "full",
   };
 
   const { data, error } = await supabase.rpc("create_booking", { ...args, p_submit_uuid: input.submitUuid ?? null } as never);
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error("[createBooking:server] rpc failed:", error);
+    throw new Error("We couldn't reserve that seat. Please try again in a moment, or contact us on WhatsApp.");
+  }
 
   const result = Array.isArray(data) ? (data[0] as CreateBookingResult) : null;
-  if (!result) throw new Error("Booking creation returned no data");
+  if (!result) throw new Error("We couldn't reserve that seat. Please try again in a moment, or contact us on WhatsApp.");
 
   return {
     bookingId: result.booking_id,

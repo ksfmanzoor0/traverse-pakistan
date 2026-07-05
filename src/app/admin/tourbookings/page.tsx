@@ -93,8 +93,8 @@ export default async function BookingsPage({
             const active = f.value === activeFilter;
             const href =
               f.value === "all"
-                ? "/admin/bookings"
-                : `/admin/bookings?status=${f.value}`;
+                ? "/admin/tourbookings"
+                : `/admin/tourbookings?status=${f.value}`;
             return (
               <Link
                 key={f.value}

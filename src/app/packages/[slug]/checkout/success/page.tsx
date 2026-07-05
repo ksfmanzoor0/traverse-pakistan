@@ -6,7 +6,8 @@ import { Container } from "@/components/ui/Container";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { getAllPackages, getPackageBySlug } from "@/services/package.service";
 import { getWhatsAppUrl } from "@/lib/utils";
-import { PackagePayButton } from "@/components/packages/PackagePayButton";
+import { PayButton } from "@/components/payments/PayButton";
+import { formatPrice } from "@/lib/utils";
 import { after } from "next/server";
 import { stampBookingWithUser } from "@/lib/auth/stampBookingWithUser";
 import { sendBookingConfirmation } from "@/lib/email/sendBookingConfirmation";
@@ -32,7 +33,7 @@ async function getBookingSummary(ref: string) {
   const supabase = getSupabaseAdmin();
   const { data } = await supabase
     .from("package_bookings")
-    .select("contact_name, contact_email, contact_phone, tier, departure_city, start_date, adults, rooms, total_amount, payment_status")
+    .select("contact_name, contact_email, contact_phone, tier, departure_city, start_date, adults, rooms, total_amount, payment_status, payment_plan, deposit_amount")
     .eq("booking_ref", ref)
     .maybeSingle();
   return data;
@@ -62,7 +63,16 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
     summary = await getBookingSummary(ref);
   }
 
-  const amount = amountParam ? Number(amountParam) : summary?.total_amount ? Number(summary.total_amount) : null;
+  // Pay-now amount: honour the persisted plan on the booking row (source of
+  // truth). Deposit plan → charge the 50% deposit; full plan → charge total.
+  // Falls back to ?amount= from the redirect if the summary isn't ready yet.
+  const amount = summary
+    ? (summary.payment_plan === "installments" && summary.deposit_amount
+        ? Number(summary.deposit_amount)
+        : Number(summary.total_amount))
+    : amountParam
+      ? Number(amountParam)
+      : null;
 
   return (
     <div className="py-10 sm:py-16">
@@ -133,10 +143,14 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
         {/* Pay now */}
         {ref && amount && (
           <div className="mt-6 max-w-[760px] mx-auto">
-            <PackagePayButton
+            <PayButton
+              flow="package"
               bookingRef={ref}
               amount={amount}
               paymentStatus={summary?.payment_status ?? "pending"}
+              size="lg"
+              buttonLabel={`Pay ${formatPrice(amount)}`}
+              showFailedRetryHint={summary?.payment_status === "failed"}
             />
             <p className="mt-2 text-center text-[11px] text-[var(--text-tertiary)]">
               Secure card payment via Alfa Bank

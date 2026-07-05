@@ -4,9 +4,33 @@ import { Carousel } from "@/components/ui/Carousel";
 import { TourCard } from "@/components/tours/TourCard";
 import { getAllTours } from "@/services/tour.service";
 
+// Hand-pinned slots in the Popular Tours carousel.
+const PINNED_POSITIONS: Record<number, string> = {
+  0: "trip-to-hunza-naltar-khunjerab",
+  1: "trip-to-minimarg",
+  2: "trip-to-skardu-basho-deosai-khaplu",
+  3: "k2-base-camp-trek",
+};
+
 export async function PopularToursCarousel() {
   const allTours = await getAllTours();
-  const tours = allTours.slice(0, 10);
+
+  const pinnedSlugs = new Set(Object.values(PINNED_POSITIONS));
+  const rest = allTours.filter((t) => !pinnedSlugs.has(t.slug));
+  const pinnedBySlug = new Map(allTours.filter((t) => pinnedSlugs.has(t.slug)).map((t) => [t.slug, t]));
+
+  const ordered: typeof allTours = [];
+  let restCursor = 0;
+  for (let i = 0; i < 10; i++) {
+    const pinnedSlug = PINNED_POSITIONS[i];
+    const pinned = pinnedSlug ? pinnedBySlug.get(pinnedSlug) : undefined;
+    if (pinned) {
+      ordered.push(pinned);
+    } else if (restCursor < rest.length) {
+      ordered.push(rest[restCursor++]);
+    }
+  }
+  const tours = ordered;
 
   return (
     <section id="section-tours" className="relative bg-[var(--bg-primary)] pt-6 pb-20 sm:py-24" style={{ scrollMarginTop: "200px" }}>

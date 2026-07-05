@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { formatPrice, getWhatsAppUrl } from "@/lib/utils";
 import { Icon } from "@/components/ui/Icon";
 import type { BookingStatus, RefundStatus } from "@/types/booking-status";
-import { CompletePaymentButton } from "./CompletePaymentButton";
+import { PayButton } from "@/components/payments/PayButton";
 import { ManageBanner } from "./ManageBanner";
 import { InlineAlert } from "@/components/ui/InlineAlert";
 
@@ -72,8 +73,42 @@ export function BookingDetail({ bookingRef, data, canManage, needsEmail = false 
   const rawPaymentStatus = type === "tour"
     ? String(localBooking.status ?? "pending")
     : String(localBooking.payment_status ?? "pending");
-  const isUnpaid = !isCancelled && rawPaymentStatus !== "paid" && rawPaymentStatus !== "confirmed";
+  const isFullyPaid = rawPaymentStatus === "paid" || rawPaymentStatus === "confirmed";
+  const isDepositPaid = rawPaymentStatus === "deposit_paid";
   const totalAmount = Number(localBooking.total_amount ?? 0);
+  const amountPaid = Number(localBooking.amount_paid ?? 0);
+  const balanceDue = Math.max(0, totalAmount - amountPaid);
+  const canPayBalance = !isCancelled && isDepositPaid && balanceDue > 0 && (type === "tour" || type === "package");
+  const isUnpaid = !isCancelled && !isFullyPaid && !isDepositPaid;
+  // First charge on an installments booking is the deposit, not the total.
+  // Alfa was already being charged the deposit server-side; the button
+  // just needs to promise the right number to the customer.
+  const paymentPlan = String(localBooking.payment_plan ?? "full");
+  const depositAmount = Number(localBooking.deposit_amount ?? 0);
+  const pendingCharge = paymentPlan === "installments" && depositAmount > 0
+    ? depositAmount
+    : totalAmount;
+
+  // Banner is arrival-scoped, not row-state-scoped: only render it when the
+  // customer just came off the Alfa return page's failed state (which
+  // redirects here with ?payment=failed). We clear the param on first render
+  // so a refresh or a later visit from /mybookings won't keep nagging them.
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [showRetryBanner, setShowRetryBanner] = useState(
+    () => searchParams?.get("payment") === "failed",
+  );
+  useEffect(() => {
+    if (searchParams?.get("payment") === "failed") {
+      router.replace(`/bookings/${bookingRef}`, { scroll: false });
+    }
+  }, [searchParams, router, bookingRef]);
+  useEffect(() => {
+    if (!showRetryBanner) return;
+    // Auto-hide the banner if payment ends up landing while the customer is
+    // still on the page (they resolve the flow from another tab, etc.).
+    if (isFullyPaid || (isDepositPaid && !canPayBalance)) setShowRetryBanner(false);
+  }, [showRetryBanner, isFullyPaid, isDepositPaid, canPayBalance]);
 
   async function applyNameChange() {
     setActionError(null);
@@ -138,9 +173,41 @@ export function BookingDetail({ bookingRef, data, canManage, needsEmail = false 
         </span>
       </div>
 
-      {/* Complete payment CTA */}
-      {isUnpaid && totalAmount > 0 && (
-        <CompletePaymentButton bookingRef={bookingRef} amount={totalAmount} type={type} />
+      {/* Retry banner — surfaces above whichever payment card renders below. */}
+      {showRetryBanner && (
+        <div className="p-4 border border-[var(--warning)]/40 bg-[var(--warning)]/10 rounded-[var(--radius-md)] flex items-start gap-3">
+          <span className="w-6 h-6 rounded-full bg-[var(--warning)]/20 flex items-center justify-center text-[13px] font-bold text-[var(--warning)] shrink-0 mt-0.5">!</span>
+          <div className="space-y-1">
+            <p className="text-[13px] font-bold text-[var(--text-primary)]">Last payment attempt didn&apos;t go through</p>
+            <p className="text-[12px] text-[var(--text-secondary)]">
+              You can try again below. If you keep seeing issues, tap <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="underline font-semibold text-[var(--text-primary)]">contact us on WhatsApp</a> and we&apos;ll help.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Complete payment CTA — nothing has been captured yet */}
+      {isUnpaid && pendingCharge > 0 && (
+        <PayButton
+          flow={type}
+          bookingRef={bookingRef}
+          amount={pendingCharge}
+          variant="complete-card"
+          buttonLabel={`Complete Payment · ${formatPrice(pendingCharge)}`}
+        />
+      )}
+
+      {/* Balance due — deposit captured, balance still owed */}
+      {canPayBalance && (
+        <PayButton
+          flow="balance"
+          bookingRef={bookingRef}
+          amount={balanceDue}
+          amountPaid={amountPaid}
+          totalAmount={totalAmount}
+          variant="balance-card"
+          buttonLabel={`Pay balance · ${formatPrice(balanceDue)}`}
+        />
       )}
 
       {/* Refund status */}
@@ -217,7 +284,19 @@ export function BookingDetail({ bookingRef, data, canManage, needsEmail = false 
             <Row label="Seats" value={String(localBooking.seats ?? "-")} />
           )}
 
-          <Row label={isUnpaid ? "Amount Due" : "Amount Paid"} value={formatPrice(totalAmount)} />
+          {/* Payment breakdown — always three rows so Trip Details reads the
+              same regardless of state. Due Now mirrors whatever amount the
+              CTA button below would bill on click (or 0 when fully paid). */}
+          <Row label="Total" value={formatPrice(totalAmount)} />
+          <Row label="Paid" value={formatPrice(amountPaid)} />
+          <Row
+            label="Due Now"
+            value={formatPrice(
+              isFullyPaid ? 0 :
+              canPayBalance ? balanceDue :
+              pendingCharge,
+            )}
+          />
         </div>
       </div>
 

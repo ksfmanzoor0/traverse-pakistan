@@ -32,6 +32,21 @@ function toDeparture(row: DepartureRow): Departure {
   };
 }
 
+export async function getUpcomingOpenDepartures(tourSlug: string): Promise<Departure[]> {
+  if (!isSupabaseConfigured) return [];
+  const supabase = getSupabaseBrowser();
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("departures")
+    .select("*")
+    .eq("tour_slug", tourSlug)
+    .eq("status", "open")
+    .gte("departure_date", today)
+    .order("departure_date", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(toDeparture);
+}
+
 export async function getNextOpenDeparture(
   tourSlug: string,
   city?: DepartureCity
@@ -100,14 +115,18 @@ export async function createBooking(
       emergency_contact: p.emergencyContact ?? null,
     })),
     p_notes: input.notes ?? null,
+    p_payment_plan: input.paymentPlan ?? "full",
   };
 
   const { data, error } = await supabase.rpc("create_booking", { ...args, p_submit_uuid: input.submitUuid ?? null } as never);
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error("[createBooking] rpc failed:", error);
+    throw new Error("We couldn't reserve that seat. Please try again in a moment, or contact us on WhatsApp.");
+  }
 
   const result = Array.isArray(data) ? (data[0] as CreateBookingResult) : null;
-  if (!result) throw new Error("Booking creation returned no data");
+  if (!result) throw new Error("We couldn't reserve that seat. Please try again in a moment, or contact us on WhatsApp.");
 
   return {
     bookingId: result.booking_id,
@@ -150,6 +169,7 @@ export interface CreatePackageBookingInput {
   contact: { name: string; email: string; phone: string };
   notes?: string;
   submitUuid?: string;
+  paymentPlan?: "full" | "installments";
 }
 
 export interface PackageBookingSummary {
@@ -179,6 +199,7 @@ export async function createPackageBooking(
     p_contact_phone: input.contact.phone,
     p_notes: input.notes ?? null,
     p_submit_uuid: input.submitUuid ?? null,
+    p_payment_plan: input.paymentPlan ?? "full",
   } as never);
 
   if (error) throw new Error(error.message);

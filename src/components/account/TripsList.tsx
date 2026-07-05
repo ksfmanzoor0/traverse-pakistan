@@ -14,6 +14,7 @@ type LoadState = "loading" | "empty" | "unconfigured" | "loaded" | "error" | "si
 
 const statusColor: Record<Booking["status"], string> = {
   pending: "var(--warning)",
+  deposit_paid: "var(--accent-warm)",
   confirmed: "var(--success)",
   cancelled: "var(--text-tertiary)",
   refunded: "var(--text-tertiary)",

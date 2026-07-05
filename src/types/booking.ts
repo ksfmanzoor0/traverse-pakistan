@@ -1,4 +1,4 @@
-export type BookingStatus = "pending" | "confirmed" | "cancelled" | "refunded";
+export type BookingStatus = "pending" | "confirmed" | "cancelled" | "refunded" | "deposit_paid";
 export type DepartureCity = "islamabad" | "lahore" | "karachi";
 
 export interface Departure {
@@ -35,6 +35,7 @@ export interface CreateBookingInput {
   participants: Participant[];
   notes?: string;
   submitUuid?: string;
+  paymentPlan?: "full" | "installments";
 }
 
 export interface BookingSummary {

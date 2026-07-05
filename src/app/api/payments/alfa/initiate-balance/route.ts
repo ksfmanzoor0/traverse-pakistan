@@ -6,6 +6,10 @@ import { withAttemptSuffix } from "@/lib/alfa/txnRef";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { paymentInitiateLimiter, checkRateLimit, clientIp } from "@/lib/ratelimit";
 
+// Charges the outstanding balance on a booking whose deposit has already
+// been captured. Works for both tour (TP-) and package (PKG-) refs. Hotels
+// don't support installments so they're rejected here.
+
 const Schema = z.object({
   bookingRef: z.string().min(1),
 });
@@ -14,44 +18,50 @@ export async function POST(req: NextRequest) {
   try {
     const rlHit = await checkRateLimit(paymentInitiateLimiter, clientIp(req));
     if (rlHit) return rlHit;
-    const raw = await req.json();
-    const parsed = Schema.safeParse(raw);
 
+    const parsed = Schema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
-
     const { bookingRef } = parsed.data;
 
-    // The payment plan + deposit are locked at booking creation (create_booking
-    // RPC), so we read them here rather than trusting the client.
+    if (bookingRef.startsWith("HTL-")) {
+      return NextResponse.json({ error: "Balance charges are not supported for hotel bookings" }, { status: 400 });
+    }
+
     const supabase = getSupabaseAdmin();
+    const table = bookingRef.startsWith("PKG-") ? "package_bookings" : "bookings";
+
     const { data: booking, error: dbError } = await supabase
-      .from("bookings")
-      .select("total_amount, payment_plan, deposit_amount, payment_attempts")
+      .from(table)
+      .select("total_amount, payment_plan, amount_paid, payment_attempts")
       .eq("booking_ref", bookingRef)
-      .single();
+      .maybeSingle();
 
     if (dbError || !booking) {
       return NextResponse.json({ error: "Booking not found" }, { status: 404 });
     }
 
-    const totalAmount = Number(booking.total_amount);
-    const amount = booking.payment_plan === "installments" && booking.deposit_amount
-      ? Number(booking.deposit_amount)
-      : totalAmount;
+    if (booking.payment_plan !== "installments") {
+      return NextResponse.json({ error: "Booking is not on the installments plan" }, { status: 400 });
+    }
 
-    // Alfa rejects re-use of TransactionReferenceNumber ("Invalid Request"),
-    // so bump the attempt counter and suffix the ref before sending. IPN +
-    // status routes strip the suffix so markBooking sees the parent ref.
+    const total = Number(booking.total_amount);
+    const paid = Number(booking.amount_paid ?? 0);
+    const balance = Math.max(0, total - paid);
+
+    if (balance <= 0) {
+      return NextResponse.json({ error: "Balance is already settled" }, { status: 400 });
+    }
+
     const nextAttempt = Number(booking.payment_attempts ?? 0) + 1;
     const alfaTxnRef = withAttemptSuffix(bookingRef, nextAttempt);
     const { error: bumpError } = await supabase
-      .from("bookings")
+      .from(table)
       .update({ payment_attempts: nextAttempt })
       .eq("booking_ref", bookingRef);
     if (bumpError) {
-      console.error("[alfa/initiate-tour] failed to bump payment_attempts:", bumpError);
+      console.error("[alfa/initiate-balance] failed to bump payment_attempts:", bumpError);
       return NextResponse.json({ error: "Could not start payment. Please try again." }, { status: 500 });
     }
 
@@ -74,8 +84,8 @@ export async function POST(req: NextRequest) {
     };
 
     const requestHash = generateAlfaHash(hsParams, alfaConfig.key1, alfaConfig.key2);
-
     const hsFormBody = new URLSearchParams({ ...hsParams, HS_RequestHash: requestHash });
+
     const hsResponse = await fetch(alfaConfig.hsUrl, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -87,16 +97,17 @@ export async function POST(req: NextRequest) {
     try {
       hsData = JSON.parse(hsText);
     } catch {
-      console.error("[alfa/initiate-tour] HS non-JSON response:", hsText.slice(0, 500));
+      console.error("[alfa/initiate-balance] HS non-JSON:", hsText.slice(0, 500));
       return NextResponse.json(
-        { error: `Handshake returned unexpected response (HTTP ${hsResponse.status}): ${hsText.slice(0, 200)}` },
+        { error: `Handshake error (HTTP ${hsResponse.status}): ${hsText.slice(0, 200)}` },
         { status: 502 }
       );
     }
 
     if (!hsData.AuthToken) {
+      console.error("[alfa/initiate-balance] HS failed:", JSON.stringify(hsData));
       return NextResponse.json(
-        { error: hsData.ErrorMessage ?? "Handshake failed — no AuthToken returned" },
+        { error: hsData.ErrorMessage ?? "Handshake failed — no AuthToken" },
         { status: 502 }
       );
     }
@@ -115,7 +126,7 @@ export async function POST(req: NextRequest) {
       MerchantPassword: alfaConfig.merchantPassword,
       TransactionTypeId: "3",
       TransactionReferenceNumber: alfaTxnRef,
-      TransactionAmount: Number(amount).toFixed(2),
+      TransactionAmount: balance.toFixed(2),
     };
 
     const ssoHash = generateAlfaHash(ssoHashParams, alfaConfig.key1, alfaConfig.key2);
@@ -123,10 +134,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ssoUrl: alfaConfig.ssoUrl,
       ssoParams: { ...ssoHashParams, RequestHash: ssoHash },
+      balance,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Internal error";
-    console.error("[alfa/initiate-tour]", err);
+    console.error("[alfa/initiate-balance]", err);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

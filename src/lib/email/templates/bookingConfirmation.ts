@@ -7,10 +7,22 @@ interface BookingConfirmationParams {
   totalAmount: number;
   details: Record<string, string>;
   viewUrl: string; // magic-link URL — signs the user in on click
-  paymentStatus: "pending" | "paid" | "failed";
+  paymentStatus: "pending" | "paid" | "failed" | "deposit_paid";
+  amountPaid?: number;
+  balanceDue?: number;
 }
 
 function copyFor(status: BookingConfirmationParams["paymentStatus"], bookingType: BookingConfirmationParams["bookingType"]) {
+  if (status === "deposit_paid") {
+    return {
+      title: "Deposit Received",
+      subhead: `Thanks — your deposit is in and your ${bookingType} is reserved. Pay the balance any time before departure.`,
+      amountLabel: "Deposit Paid",
+      cta: "Pay Remaining Balance",
+      textTitle: "Deposit Received",
+      textBody: `Thanks — your deposit is in and your ${bookingType} is reserved. Pay the balance any time before departure.`,
+    };
+  }
   if (status === "paid") {
     return {
       title: "Booking Confirmed",
@@ -35,6 +47,8 @@ export function bookingConfirmationHtml(p: BookingConfirmationParams): string {
   const viewUrl = p.viewUrl;
   const whatsappUrl = `https://wa.me/923216650670?text=Hi%2C%20I%20need%20help%20with%20booking%20${p.bookingRef}`;
   const c = copyFor(p.paymentStatus, p.bookingType);
+  const isSplit = p.paymentStatus === "deposit_paid";
+  const amountShown = isSplit && p.amountPaid != null ? p.amountPaid : p.totalAmount;
 
   const detailRows = Object.entries(p.details)
     .map(([k, v]) => `
@@ -43,6 +57,16 @@ export function bookingConfirmationHtml(p: BookingConfirmationParams): string {
         <td style="padding:8px 0;color:#151515;font-size:13px;font-weight:600">${v}</td>
       </tr>`)
     .join("");
+
+  const splitRows = isSplit ? `
+      <tr>
+        <td style="padding:8px 0;color:#8A8A8A;font-size:13px">Trip Total</td>
+        <td style="padding:8px 0;color:#151515;font-size:13px;font-weight:600">PKR ${p.totalAmount.toLocaleString()}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;color:#8A8A8A;font-size:13px">Balance Due</td>
+        <td style="padding:8px 0;color:#B45309;font-size:13px;font-weight:700">PKR ${(p.balanceDue ?? 0).toLocaleString()}</td>
+      </tr>` : "";
 
   return `<!DOCTYPE html>
 <html>
@@ -86,8 +110,9 @@ export function bookingConfirmationHtml(p: BookingConfirmationParams): string {
               </tr>
               <tr>
                 <td style="padding:8px 0;color:#8A8A8A;font-size:13px">${c.amountLabel}</td>
-                <td style="padding:8px 0;color:#1E6A52;font-size:15px;font-weight:700">PKR ${p.totalAmount.toLocaleString()}</td>
+                <td style="padding:8px 0;color:#1E6A52;font-size:15px;font-weight:700">PKR ${amountShown.toLocaleString()}</td>
               </tr>
+              ${splitRows}
               ${detailRows}
             </table>
           </div>
@@ -124,6 +149,11 @@ export function bookingConfirmationHtml(p: BookingConfirmationParams): string {
 
 export function bookingConfirmationText(p: BookingConfirmationParams): string {
   const c = copyFor(p.paymentStatus, p.bookingType);
+  const isSplit = p.paymentStatus === "deposit_paid";
+  const amountShown = isSplit && p.amountPaid != null ? p.amountPaid : p.totalAmount;
+  const splitLines = isSplit
+    ? `Trip Total: PKR ${p.totalAmount.toLocaleString()}\nBalance Due: PKR ${(p.balanceDue ?? 0).toLocaleString()}\n`
+    : "";
   const details = Object.entries(p.details).map(([k, v]) => `${k}: ${v}`).join("\n");
   return `${c.textTitle} — Traverse Pakistan
 
@@ -131,8 +161,8 @@ ${c.textBody}
 
 Booking Ref: ${p.bookingRef}
 Name: ${p.contactName}
-${c.amountLabel}: PKR ${p.totalAmount.toLocaleString()}
-${details}
+${c.amountLabel}: PKR ${amountShown.toLocaleString()}
+${splitLines}${details}
 
 ${c.cta}: ${p.viewUrl}
 

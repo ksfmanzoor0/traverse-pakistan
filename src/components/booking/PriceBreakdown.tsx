@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { formatPrice } from "@/lib/utils";
-import type { PaymentPlan, PricingBreakdown } from "./pricing";
+import { TOUR_DEPOSIT_PCT, type PaymentPlan, type PricingBreakdown } from "./pricing";
 
 interface PriceBreakdownProps {
   breakdown: PricingBreakdown;
@@ -12,6 +12,7 @@ interface PriceBreakdownProps {
   onPaymentPlanChange?: (plan: PaymentPlan) => void;
   allowInstallments?: boolean;
   defaultOpen?: boolean;
+  depositPct?: number;
 }
 
 export function PriceBreakdown({
@@ -22,6 +23,7 @@ export function PriceBreakdown({
   onPaymentPlanChange,
   allowInstallments = true,
   defaultOpen = false,
+  depositPct = TOUR_DEPOSIT_PCT,
 }: PriceBreakdownProps) {
   const [open, setOpen] = useState(defaultOpen);
 
@@ -109,15 +111,16 @@ export function PriceBreakdown({
                   onClick={() => onPaymentPlanChange("full")}
                 />
                 {(() => {
-                  // Always preview the 20/80 split on the deposit tile, regardless
-                  // of the currently-selected plan (otherwise "Pay in full" mode
+                  // Always preview the deposit split on this tile, regardless of
+                  // the currently-selected plan (otherwise "Pay in full" mode
                   // would show total/0 on this tile, which is wrong).
-                  const depositNow = Math.round(breakdown.total * 0.2);
+                  const depositNow = Math.round(breakdown.total * depositPct);
                   const depositLater = breakdown.total - depositNow;
+                  const pctLabel = `${Math.round(depositPct * 100)}% deposit`;
                   return (
                     <PlanTile
                       active={paymentPlan === "installments"}
-                      label="20% deposit"
+                      label={pctLabel}
                       sub={`${formatPrice(depositNow)} now · ${formatPrice(depositLater)} later`}
                       onClick={() => onPaymentPlanChange("installments")}
                     />
