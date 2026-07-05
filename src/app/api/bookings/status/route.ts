@@ -20,6 +20,7 @@ async function checkAlfaIPN(ref: string): Promise<{ status: "paid" | "failed" | 
     // sandbox payments into false positives (see TP-9FF908).
     console.log(`[checkAlfaIPN] ref=${ref} TransactionStatus=${data.TransactionStatus} ResponseCode=${data.ResponseCode} amount=${amount}`);
     if (data.TransactionStatus === "Paid") return { status: "paid", amount };
+    if (data.TransactionStatus === "Failed") return { status: "failed", amount: null };
     return { status: "pending", amount: null };
   } catch (err) {
     console.error(`[checkAlfaIPN] fetch failed for ref=${ref}:`, err);
@@ -98,6 +99,9 @@ export async function GET(req: NextRequest) {
       if (alfa.status === "paid") {
         await markBooking(parentRef, true, alfa.amount, "polling", alfaRef);
         status = "paid";
+      } else if (alfa.status === "failed") {
+        await markBooking(parentRef, false, null, "polling", alfaRef);
+        status = "failed";
       }
     }
     return buildResponse(parentRef, Number(data.total_amount), status);
@@ -118,6 +122,9 @@ export async function GET(req: NextRequest) {
       if (alfa.status === "paid") {
         await markBooking(parentRef, true, alfa.amount, "polling", alfaRef);
         status = "paid";
+      } else if (alfa.status === "failed") {
+        await markBooking(parentRef, false, null, "polling", alfaRef);
+        status = "failed";
       }
     }
     return buildResponse(parentRef, Number(data.total_amount), status);
@@ -145,6 +152,9 @@ export async function GET(req: NextRequest) {
     if (alfa.status === "paid") {
       await markBooking(parentRef, true, alfa.amount, "polling", alfaRef);
       normalized = "paid";
+    } else if (alfa.status === "failed") {
+      await markBooking(parentRef, false, null, "polling", alfaRef);
+      normalized = "failed";
     }
   }
 
