@@ -284,22 +284,19 @@ export function BookingDetail({ bookingRef, data, canManage, needsEmail = false 
             <Row label="Seats" value={String(localBooking.seats ?? "-")} />
           )}
 
-          {/* Payment breakdown — Trip Details stays self-contained regardless
-              of the CTA card above. Three shapes: unpaid, deposit-paid, or
-              fully paid. */}
-          {isUnpaid && (
-            <Row label="Amount Due" value={formatPrice(totalAmount)} />
-          )}
-          {isDepositPaid && (
-            <>
-              <Row label="Total" value={formatPrice(totalAmount)} />
-              <Row label="Deposit Paid" value={formatPrice(amountPaid)} />
-              <Row label="Balance Due" value={formatPrice(balanceDue)} />
-            </>
-          )}
-          {isFullyPaid && (
-            <Row label="Amount Paid" value={formatPrice(amountPaid)} />
-          )}
+          {/* Payment breakdown — always three rows so Trip Details reads the
+              same regardless of state. Due Now mirrors whatever amount the
+              CTA button below would bill on click (or 0 when fully paid). */}
+          <Row label="Total" value={formatPrice(totalAmount)} />
+          <Row label="Paid" value={formatPrice(amountPaid)} />
+          <Row
+            label="Due Now"
+            value={formatPrice(
+              isFullyPaid ? 0 :
+              canPayBalance ? balanceDue :
+              pendingCharge,
+            )}
+          />
         </div>
       </div>
 
