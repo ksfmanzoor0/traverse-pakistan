@@ -48,7 +48,7 @@ export default async function Home() {
       </DesktopOnly>
 
       {/* All devices — lazy-mounted to prevent iOS OOM on scroll */}
-      <LazyMount>
+      <LazyMount eager>
         <FeaturedPackagesCarousel />
       </LazyMount>
       <LazyMount>

@@ -18,6 +18,6 @@ export default function imageKitLoader({
   }
 
   const path = src.slice(R2_ORIGIN.length);
-  const q = quality ?? 80;
+  const q = quality ?? 70;
   return `${IMAGEKIT_URL}${path}?tr=w-${width},q-${q},f-auto`;
 }
