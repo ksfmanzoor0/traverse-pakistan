@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseServer, getSupabaseAdmin } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { linkGhostsToOAuthUser } from "@/lib/auth/mergeUsers";
 
 export const dynamic = "force-dynamic";
 
@@ -76,6 +77,18 @@ export async function GET(request: NextRequest) {
     }
     if (data?.user) {
       await flipVerifiedFlag(data.user.id, data.user.user_metadata as Record<string, unknown> | undefined);
+      // A customer may have booked earlier under a phone-only ghost identity
+      // that also used this email at checkout. Merge those into the OAuth
+      // account now so /mybookings shows their history. Best-effort — a
+      // failure here shouldn't block sign-in.
+      if (data.user.email) {
+        try {
+          const admin = getSupabaseAdmin();
+          await linkGhostsToOAuthUser(admin, data.user.id, data.user.email);
+        } catch (err) {
+          console.error("[auth/callback] linkGhostsToOAuthUser failed:", err);
+        }
+      }
     }
     return NextResponse.redirect(new URL(next, url.origin));
   }

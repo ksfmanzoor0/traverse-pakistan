@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { normalizePhone, phoneDigitsOnly, synthesizeEmailFromPhone } from "./phone";
+import { mergeUsers } from "./mergeUsers";
 
 export interface SilentSignupInput {
   name: string;
@@ -40,6 +41,38 @@ export async function findOrCreateUserForBooking(input: SilentSignupInput): Prom
   if (foundId) {
     const { data: existing, error: getErr } = await admin.auth.admin.getUserById(foundId);
     if (getErr) throw getErr;
+
+    // The lookup matched by email (OAuth users typically have no phone on
+    // auth.users). If this booking supplies a phone the matched user lacks,
+    // stamp it so future phone-only lookups reach the same user instead of
+    // spawning a wa-{phone} ghost.
+    const matchedByEmail = !!lookupEmail && existing.user.email?.toLowerCase() === lookupEmail.toLowerCase();
+    if (matchedByEmail && !existing.user.phone) {
+      const { error: updateErr } = await admin.auth.admin.updateUserById(existing.user.id, {
+        phone,
+        phone_confirm: true,
+      });
+      if (updateErr) console.error("[findOrCreateUser] failed to stamp phone on OAuth user:", updateErr);
+    }
+
+    // If a wa-{phone} ghost already exists for this phone (silent checkout
+    // ran earlier under a phone-only identity), merge it into the resolved
+    // user. contact_email + contact_phone on the booking will still show the
+    // original values.
+    if (matchedByEmail) {
+      const { data: ghostId } = await admin.rpc("find_auth_user_by_contact", {
+        p_email: null,
+        p_phone: phoneDigitsOnly(phone),
+      });
+      if (ghostId && ghostId !== existing.user.id) {
+        try {
+          await mergeUsers(admin, existing.user.id, ghostId as string);
+        } catch (err) {
+          console.error("[findOrCreateUser] ghost merge failed:", err);
+        }
+      }
+    }
+
     return {
       userId: existing.user.id,
       isNew: false,
