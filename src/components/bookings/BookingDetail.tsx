@@ -88,6 +88,19 @@ export function BookingDetail({ bookingRef, data, canManage, needsEmail = false 
     ? depositAmount
     : totalAmount;
 
+  // Signal that a previous Alfa handshake happened but no money is captured
+  // for the charge the customer is about to make. Two shapes:
+  //   Complete Payment path: any attempt happened but amount_paid is still 0
+  //   Pay Balance path: attempts >= 2 (deposit + at least one balance try)
+  //     while amount_paid still sits at the deposit
+  // Not exact — a webhook-deduped retry can also bump payment_attempts — but
+  // it catches the common "customer bounced back and the row didn't advance"
+  // shape and lets us prompt them to try again.
+  const paymentAttempts = Number(localBooking.payment_attempts ?? 0);
+  const showRetryBanner =
+    (isUnpaid && paymentAttempts > 0) ||
+    (canPayBalance && paymentAttempts > 1);
+
   async function applyNameChange() {
     setActionError(null);
     setBusy(true);
@@ -150,6 +163,19 @@ export function BookingDetail({ bookingRef, data, canManage, needsEmail = false 
           {statusInfo.label}
         </span>
       </div>
+
+      {/* Retry banner — surfaces above whichever payment card renders below. */}
+      {showRetryBanner && (
+        <div className="p-4 border border-[var(--warning)]/40 bg-[var(--warning)]/10 rounded-[var(--radius-md)] flex items-start gap-3">
+          <span className="w-6 h-6 rounded-full bg-[var(--warning)]/20 flex items-center justify-center text-[13px] font-bold text-[var(--warning)] shrink-0 mt-0.5">!</span>
+          <div className="space-y-1">
+            <p className="text-[13px] font-bold text-[var(--text-primary)]">Last payment attempt didn&apos;t go through</p>
+            <p className="text-[12px] text-[var(--text-secondary)]">
+              You can try again below. If you keep seeing issues, tap <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="underline font-semibold text-[var(--text-primary)]">contact us on WhatsApp</a> and we&apos;ll help.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Complete payment CTA — nothing has been captured yet */}
       {isUnpaid && pendingCharge > 0 && (
