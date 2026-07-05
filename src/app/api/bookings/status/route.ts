@@ -78,7 +78,14 @@ export async function GET(req: NextRequest) {
       .maybeSingle();
     if (error || !data) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
 
-    let status = (data.payment_status ?? "pending") as "paid" | "failed" | "pending";
+    // Same reasoning as the bookings block below: deposit_paid is a positive
+    // reconciled state; don't re-poll Alfa or markBooking will double the
+    // amount_paid on the next tick.
+    const raw = (data.payment_status ?? "pending") as string;
+    let status: "paid" | "failed" | "pending" =
+      raw === "paid" || raw === "deposit_paid" ? "paid" :
+      raw === "failed" ? "failed" :
+      "pending";
     if (status === "pending") {
       const alfa = await checkAlfaIPN(await alfaRefFor(Number(data.payment_attempts ?? 0)));
       if (alfa.status === "paid") {
@@ -115,8 +122,12 @@ export async function GET(req: NextRequest) {
     .maybeSingle();
   if (error || !data) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
 
+  // deposit_paid is a terminal-for-polling state: the row already reconciled
+  // a positive payment (deposit lands here). Treating it as "pending" would
+  // re-invoke markBooking on the next poll and additively double-count
+  // amount_paid, so we surface it as "paid" and skip the Alfa recheck.
   let normalized: "paid" | "failed" | "pending" =
-    data.status === "confirmed" ? "paid" :
+    data.status === "confirmed" || data.status === "deposit_paid" ? "paid" :
     data.status === "cancelled" ? "failed" :
     "pending";
 
