@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { formatPrice } from "@/lib/utils";
 import { throwOnRateLimit } from "@/lib/api/throwOnRateLimit";
 
@@ -12,6 +12,23 @@ interface TourPayButtonProps {
 export function TourPayButton({ bookingRef, amount }: TourPayButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // handlePay navigates the browser to Alfa via form.submit(). If the user
+  // then comes back — back button, tab restore, Safari's bfcache — the
+  // component instance is restored with loading=true and the button reads
+  // "Processing…" forever. Reset the state whenever the page is shown from
+  // bfcache. (A fresh mount after refresh already starts with loading=false,
+  // so no fix needed there.)
+  useEffect(() => {
+    function onPageShow(e: PageTransitionEvent) {
+      if (e.persisted) {
+        setLoading(false);
+        setError(null);
+      }
+    }
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
 
   async function handlePay() {
     setError(null);

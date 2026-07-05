@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatPrice } from "@/lib/utils";
 import { throwOnRateLimit } from "@/lib/api/throwOnRateLimit";
 
@@ -16,6 +16,20 @@ export function PayBalanceButton({ bookingRef, balanceDue, amountPaid, totalAmou
   const [error, setError] = useState<string | null>(null);
   const [ssoData, setSsoData] = useState<{ ssoUrl: string; ssoParams: Record<string, string> } | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+
+  // Reset local state on bfcache restore (browser back from Alfa, tab reopen).
+  // Otherwise loading stays true and the button reads "Redirecting…" forever.
+  useEffect(() => {
+    function onPageShow(e: PageTransitionEvent) {
+      if (e.persisted) {
+        setLoading(false);
+        setError(null);
+        setSsoData(null);
+      }
+    }
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
 
   async function handlePay() {
     setLoading(true);
