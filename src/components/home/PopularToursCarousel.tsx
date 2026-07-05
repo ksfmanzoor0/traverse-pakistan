@@ -4,10 +4,10 @@ import { Carousel } from "@/components/ui/Carousel";
 import { TourCard } from "@/components/tours/TourCard";
 import { getAllTours } from "@/services/tour.service";
 
-// Hand-pinned slots in the Popular Tours carousel. Position 1 stays dynamic
-// (earliest upcoming departure), positions 2-4 pin these signature trips.
+// Hand-pinned slots in the Popular Tours carousel.
 const PINNED_POSITIONS: Record<number, string> = {
-  1: "trip-to-minimarg", // slot index 1 = display position 2
+  0: "trip-to-hunza-naltar-khunjerab",
+  1: "trip-to-minimarg",
   2: "trip-to-skardu-basho-deosai-khaplu",
   3: "k2-base-camp-trek",
 };
