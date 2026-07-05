@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { formatPrice } from "@/lib/utils";
 import { throwOnRateLimit } from "@/lib/api/throwOnRateLimit";
+import { trackBeginCheckout, type BookingType } from "@/lib/analytics/track";
 
 type Flow = "tour" | "package" | "hotel" | "balance";
 type Variant = "inline" | "complete-card" | "balance-card";
@@ -92,6 +93,19 @@ export function PayButton({
       throwOnRateLimit(res, "payment attempts");
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error ?? "Payment initiation failed");
+      // Analytics: customer is about to hand off to Alfa. bookingType maps
+      // one-to-one from flow for the three primary types; balance flow
+      // charges an existing tour/package but we don't know which without
+      // another lookup — record it as "tour" (the dominant balance case).
+      const bookingType: BookingType =
+        flow === "package" ? "package" : flow === "hotel" ? "hotel" : "tour";
+      trackBeginCheckout({
+        bookingRef,
+        bookingType,
+        itemId: bookingRef,
+        totalAmount: amount,
+        chargeAmount: amount,
+      });
       setSsoData({ ssoUrl: data.ssoUrl, ssoParams: data.ssoParams });
       setTimeout(() => formRef.current?.submit(), 50);
     } catch (e) {

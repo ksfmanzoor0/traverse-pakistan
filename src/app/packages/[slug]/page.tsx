@@ -9,6 +9,7 @@ import {
   combineSchemas,
 } from "@/lib/seo/schema";
 import { getAllPackages, getPackageBySlug, getPackageItinerary } from "@/services/package.service";
+import { TrackView } from "@/components/analytics/TrackView";
 import { getAllHotels } from "@/services/hotel.service";
 import type { Hotel } from "@/types/hotel";
 
@@ -70,9 +71,12 @@ export default async function PackageDetailPage({ params }: Props) {
     ])
   );
 
+  const fromPrice = pkg.tiers?.deluxe?.islamabad ?? pkg.tiers?.deluxe?.lahore ?? null;
+
   return (
     <>
       <JsonLd data={schema} id={`package-${pkg.slug}-jsonld`} />
+      <TrackView itemId={pkg.slug} itemName={pkg.name} bookingType="package" price={fromPrice} />
       <PackageDetailClient
         pkg={pkg}
         itinerary={itinerary}

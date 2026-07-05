@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { formatPrice } from "@/lib/utils";
 import { createHotelBooking } from "@/services/booking.service";
+import { trackAddToCart } from "@/lib/analytics/track";
 import { Icon } from "@/components/ui/Icon";
 import { InlineAlert } from "@/components/ui/InlineAlert";
 import type { Hotel, HotelRoom, HotelSeasonDefinition } from "@/types/hotel";
@@ -157,6 +158,13 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const result = await createHotelBooking(input);
+        trackAddToCart({
+          bookingRef: result.bookingRef,
+          bookingType: "hotel",
+          itemId: hotel.slug,
+          itemName: hotel.name,
+          totalAmount: result.totalAmount,
+        });
         router.push(`/hotels/${hotel.slug}/checkout/success?ref=${result.bookingRef}&amount=${result.totalAmount}`);
         return;
       } catch (e) {
