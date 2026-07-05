@@ -155,7 +155,7 @@ function SuccessInner({ tour }: { tour: Tour }) {
                 </dd>
                 {dueNow !== null && plan === "installments" && (
                   <>
-                    <dt className="text-[var(--text-tertiary)]">Due now (20% deposit)</dt>
+                    <dt className="text-[var(--text-tertiary)]">Due now (40% deposit)</dt>
                     <dd className="text-right text-[var(--primary)] font-bold tabular-nums">
                       {formatPrice(dueNow)}
                     </dd>

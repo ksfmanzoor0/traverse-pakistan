@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatPrice } from "@/lib/utils";
 import { throwOnRateLimit } from "@/lib/api/throwOnRateLimit";
 
@@ -15,6 +15,19 @@ export function PackagePayButton({ bookingRef, amount, paymentStatus }: Props) {
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const [ssoData, setSsoData] = useState<{ ssoUrl: string; ssoParams: Record<string, string> } | null>(null);
+
+  // Reset local state on bfcache restore so a bounced-back customer can retry.
+  useEffect(() => {
+    function onPageShow(e: PageTransitionEvent) {
+      if (e.persisted) {
+        setLoading(false);
+        setError(null);
+        setSsoData(null);
+      }
+    }
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
 
   if (paymentStatus === "paid") {
     return (
