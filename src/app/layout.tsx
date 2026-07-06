@@ -143,6 +143,26 @@ export default function RootLayout({
         />
         <link rel="preconnect" href="https://traversepakistan.com" />
         <link rel="dns-prefetch" href="https://traversepakistan.com" />
+        {/* Preconnect for the LCP image chain — desktop LCP is HeroSection
+            (media.traversepakistan.com), mobile LCP is FeaturedPackagesCarousel
+            first card (ik.imagekit.io via WP or R2 origin). Both platforms
+            benefit; connection setup saves ~100-200ms per host. */}
+        <link rel="preconnect" href="https://ik.imagekit.io" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://media.traversepakistan.com" crossOrigin="anonymous" />
+        {/* Desktop-only preload for the HeroSection LCP image.
+            HeroSection is dynamic({ ssr: false }) + gated behind DesktopOnly,
+            so the <img> only appears after client hydration mounts it — Next.js
+            can't emit an automatic preload. This manual hint starts the image
+            fetch during initial HTML parse, in parallel with the JS chunk.
+            media query keeps mobile bytes flat (HeroSection is hidden md:block,
+            so mobile never uses this image). */}
+        <link
+          rel="preload"
+          as="image"
+          href="https://ik.imagekit.io/traversepakistan/homepageslider/15.jpg?tr=w-1920,q-75,f-auto"
+          media="(min-width: 768px)"
+          fetchPriority="high"
+        />
         {isSupabaseConfigured && (
           <>
             <link rel="preconnect" href={SUPABASE_URL} crossOrigin="anonymous" />
