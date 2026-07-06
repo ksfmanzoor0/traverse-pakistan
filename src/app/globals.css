@@ -42,7 +42,7 @@
   /* ── "On-dark" text (for dark bg sections — works in both themes) ── */
   --on-dark: #FFFFFF;
   --on-dark-secondary: rgba(255, 255, 255, 0.72);
-  --on-dark-tertiary: rgba(255, 255, 255, 0.45);
+  --on-dark-tertiary: rgba(255, 255, 255, 0.60);
   --on-dark-border: rgba(255, 255, 255, 0.10);
   --on-dark-glass: rgba(255, 255, 255, 0.06);
   --on-dark-glass-hover: rgba(255, 255, 255, 0.10);
@@ -143,7 +143,7 @@
 
   --on-dark: #EAEAEA;
   --on-dark-secondary: rgba(234, 234, 234, 0.65);
-  --on-dark-tertiary: rgba(234, 234, 234, 0.35);
+  --on-dark-tertiary: rgba(234, 234, 234, 0.55);
   --on-dark-border: rgba(234, 234, 234, 0.08);
   --on-dark-glass: rgba(234, 234, 234, 0.04);
   --on-dark-glass-hover: rgba(234, 234, 234, 0.08);
