@@ -159,7 +159,7 @@ export default function RootLayout({
         <link
           rel="preload"
           as="image"
-          href="https://ik.imagekit.io/traversepakistan/homepageslider/1.jpg?tr=w-1600,q-75,f-auto&v=2"
+          href="https://ik.imagekit.io/traversepakistan/homepageslider/1.jpg?tr=w-1600,q-75,f-auto"
           media="(min-width: 768px)"
           fetchPriority="high"
         />
