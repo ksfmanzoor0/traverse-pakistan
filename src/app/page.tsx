@@ -53,7 +53,7 @@ export default async function Home() {
         mobile, so mobile still never mounts HeroSection (iOS mitigation
         preserved) and desktop no longer shifts when hydration lands.
       */}
-      <div className="hidden md:block" style={{ minHeight: "720px" }}>
+      <div className="hidden md:block" style={{ minHeight: "540px" }}>
         <DesktopOnly>
           <HeroSectionWrapper destinations={destinations} />
         </DesktopOnly>
