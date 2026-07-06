@@ -29,7 +29,7 @@
   /* ── Text ── */
   --text-primary: #151515;
   --text-secondary: #525252;
-  --text-tertiary: #8A8A8A;
+  --text-tertiary: #6E6E6E;
   --text-inverse: #FFFFFF;
 
   /* ── Backgrounds ── */
@@ -132,7 +132,7 @@
 
   --text-primary: #EAEAEA;
   --text-secondary: #999999;
-  --text-tertiary: #5E5E5E;
+  --text-tertiary: #949494;
   --text-inverse: #0D1B19;
 
   --bg-primary: #0D1B19;
