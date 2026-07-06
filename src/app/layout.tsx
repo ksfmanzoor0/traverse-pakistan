@@ -143,6 +143,12 @@ export default function RootLayout({
         />
         <link rel="preconnect" href="https://traversepakistan.com" />
         <link rel="dns-prefetch" href="https://traversepakistan.com" />
+        {/* Desktop-only preconnect for the hero LCP image chain.
+            HeroSection is hidden on mobile so these hosts are not needed for
+            first paint on mobile — the media query keeps mobile bytes flat
+            while saving ~100-200ms on desktop LCP. */}
+        <link rel="preconnect" href="https://ik.imagekit.io" crossOrigin="anonymous" media="(min-width: 768px)" />
+        <link rel="preconnect" href="https://media.traversepakistan.com" crossOrigin="anonymous" media="(min-width: 768px)" />
         {isSupabaseConfigured && (
           <>
             <link rel="preconnect" href={SUPABASE_URL} crossOrigin="anonymous" />
