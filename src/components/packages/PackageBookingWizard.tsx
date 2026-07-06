@@ -12,6 +12,7 @@ import { Stepper } from "@/components/booking/Stepper";
 import { TrustStrip } from "@/components/booking/TrustStrip";
 import { ReviewQuoteCard } from "@/components/booking/ReviewQuoteCard";
 import { InlineAlert } from "@/components/ui/InlineAlert";
+import { trackAddToCart } from "@/lib/analytics/track";
 
 type DepartureCity = "islamabad" | "lahore" | "karachi";
 
@@ -301,6 +302,15 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const result = await createPackageBooking(input);
+        trackAddToCart({
+          bookingRef: result.bookingRef,
+          bookingType: "package",
+          itemId: pkg.slug,
+          itemName: pkg.name,
+          totalAmount: result.totalAmount,
+          tier: state.tier,
+          paymentPlan: state.paymentPlan,
+        });
         router.push(`/packages/${pkg.slug}/checkout/success?ref=${result.bookingRef}&amount=${result.totalAmount}&plan=${state.paymentPlan}`);
         return;
       } catch (e) {

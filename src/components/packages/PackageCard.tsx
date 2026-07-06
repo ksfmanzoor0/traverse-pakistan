@@ -10,6 +10,10 @@ interface PackageCardProps {
   pkg: Package;
   variant?: "carousel" | "grid";
   className?: string;
+  // Set on the first card of an above-the-fold carousel so Next.js emits a
+  // preload link + fetchpriority=high for the hero image. This is the LCP
+  // element on mobile home (hero is desktop-only).
+  priority?: boolean;
 }
 
 function pickImage(slug: string, images: Package["images"]) {
@@ -21,7 +25,7 @@ function pickImage(slug: string, images: Package["images"]) {
   return images[h % images.length];
 }
 
-export function PackageCard({ pkg, variant = "carousel", className }: PackageCardProps) {
+export function PackageCard({ pkg, variant = "carousel", className, priority = false }: PackageCardProps) {
   const heroImage = pickImage(pkg.slug, pkg.images);
   return (
     <div
@@ -45,6 +49,8 @@ export function PackageCard({ pkg, variant = "carousel", className }: PackageCar
           fill
           className="object-cover transition-transform duration-700 ease-[cubic-bezier(0.2,0,0,1)] group-hover:scale-[1.04]"
           sizes="(max-width: 640px) 261px, (max-width: 1024px) 50vw, 310px"
+          priority={priority}
+          fetchPriority={priority ? "high" : undefined}
         />
         <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/30 to-transparent" />
 

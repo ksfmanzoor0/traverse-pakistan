@@ -41,14 +41,29 @@ export default async function Home() {
 
   return (
     <>
-      {/* Desktop only — hero + stats */}
+      {/*
+        Desktop only — hero + stats.
+        HeroSectionWrapper is client-only (dynamic ssr:false + DesktopOnly's
+        useEffect gate) because framer-motion inside SearchWidget crashed iOS
+        Safari. That means the server sends nothing where hero should sit,
+        client hydrates, inserts a ~720px block, and every below-fold section
+        shifts down — Lighthouse desktop CLS 0.428.
+        Fix: reserve the vertical space via a CSS-only wrapper *outside*
+        DesktopOnly. The wrapper SSRs on desktop and is display:none on
+        mobile, so mobile still never mounts HeroSection (iOS mitigation
+        preserved) and desktop no longer shifts when hydration lands.
+      */}
+      <div className="hidden md:block" style={{ minHeight: "720px" }}>
+        <DesktopOnly>
+          <HeroSectionWrapper destinations={destinations} />
+        </DesktopOnly>
+      </div>
       <DesktopOnly>
-        <HeroSectionWrapper destinations={destinations} />
         <StatsBar />
       </DesktopOnly>
 
       {/* All devices — lazy-mounted to prevent iOS OOM on scroll */}
-      <LazyMount>
+      <LazyMount eager>
         <FeaturedPackagesCarousel />
       </LazyMount>
       <LazyMount>

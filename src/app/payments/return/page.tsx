@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "@/components/ui/Icon";
 import { getWhatsAppUrl } from "@/lib/utils";
+import { trackPurchase, trackPaymentFailed, type BookingType } from "@/lib/analytics/track";
 
 type PollState = "confirming" | "failed" | "processing" | "error";
 
@@ -52,12 +53,26 @@ function ReturnInner() {
           if (intervalRef.current) clearInterval(intervalRef.current);
           if (!redirectedRef.current) {
             redirectedRef.current = true;
+            const bookingType: BookingType =
+              nextRef.startsWith("PKG-") ? "package" :
+              nextRef.startsWith("HTL-") ? "hotel" : "tour";
+            trackPurchase({
+              bookingRef: nextRef,
+              bookingType,
+              itemId: nextRef,
+              totalAmount: data.amount ?? 0,
+              amountPaid: data.amount ?? 0,
+            });
             router.replace(`/bookings/${nextRef}`);
           }
           return;
         }
         if (data.status === "failed") {
           if (intervalRef.current) clearInterval(intervalRef.current);
+          const bookingType: BookingType =
+            nextRef.startsWith("PKG-") ? "package" :
+            nextRef.startsWith("HTL-") ? "hotel" : "tour";
+          trackPaymentFailed({ bookingRef: nextRef, bookingType });
           setState("failed");
           return;
         }

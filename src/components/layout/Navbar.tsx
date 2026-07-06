@@ -171,6 +171,12 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
               {/* Intrinsic dimensions must match the actual PNG pixel ratio,
                   otherwise next/image warps the render — a 1.3% horizontal
                   squish is enough to turn the circular badge into an ellipse. */}
+              {/* Both variants render — CSS reveals the one matching the current
+                  theme. Next.js can't know theme at SSR to pick one, so priority
+                  would preload both and Lighthouse flags the invisible one as
+                  "preloaded but not used". Logos are ~30KB PNGs and never the
+                  LCP element (LCP is Featured Packages on mobile, HeroSection on
+                  desktop), so eager load is fine without priority. */}
               <Image
                 src="/logo-white.png"
                 alt="Traverse Pakistan"
@@ -178,7 +184,7 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
                 height={706}
                 className="h-8 w-auto sm:h-11 hidden [[data-theme=dark]_&]:block"
                 style={{ mixBlendMode: "screen" }}
-                priority
+                loading="eager"
                 unoptimized
               />
               <Image
@@ -188,7 +194,7 @@ export function Navbar({ destinations = [] }: { destinations?: DestinationOption
                 height={716}
                 className="h-8 w-auto sm:h-11 [[data-theme=dark]_&]:hidden"
                 style={{ mixBlendMode: "multiply" }}
-                priority
+                loading="eager"
                 unoptimized
               />
             </Link>
