@@ -34,7 +34,9 @@ export default function imageKitLoader({
 
   if (src.startsWith(R2_ORIGIN)) {
     const path = src.slice(R2_ORIGIN.length);
-    return `${IMAGEKIT_URL}${path}?tr=w-${width},q-${q},f-auto`;
+    // Cache-buster scoped to hero slides only — bump when re-encoding slides
+    const bust = path.startsWith("/homepageslider/") ? "&v=2" : "";
+    return `${IMAGEKIT_URL}${path}?tr=w-${width},q-${q},f-auto${bust}`;
   }
 
   const wpPath = stripWpPrefix(src);
