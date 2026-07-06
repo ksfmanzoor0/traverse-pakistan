@@ -41,12 +41,10 @@
     "typescript": "^5"
   },
   "browserslist": [
-    "Chrome >= 94",
-    "Edge >= 94",
-    "Firefox >= 92",
-    "Safari >= 15.4",
-    "iOS >= 15.4",
-    "ChromeAndroid >= 94",
-    "not dead"
+    ">0.3% and last 2 major versions",
+    "not dead",
+    "not op_mini all",
+    "not IE 11",
+    "supports es6-module"
   ]
 }
