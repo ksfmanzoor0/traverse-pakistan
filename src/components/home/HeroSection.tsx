@@ -6,7 +6,7 @@ import { SearchWidget, type DestinationOption } from "./SearchWidget";
 
 const MEDIA = "https://media.traversepakistan.com";
 
-const heroImages = [15, 1, 9, 12, 14, 10].map((n) => ({
+const heroImages = [1, 14, 9, 12, 15, 10].map((n) => ({
   url: `${MEDIA}/homepageslider/${n}.jpg`,
   alt: "Pakistan travel destination",
 }));
@@ -38,8 +38,8 @@ export function HeroSection({ destinations = [] }: { destinations?: DestinationO
                 priority={i === 0}
                 fetchPriority={i === 0 ? "high" : "low"}
                 loading={i === 0 ? "eager" : "lazy"}
-                sizes="100vw"
-                quality={75}
+                sizes="(min-width: 1600px) 1600px, 100vw"
+                quality={i === 0 ? 75 : 55}
                 className="object-cover"
               />
             </div>
