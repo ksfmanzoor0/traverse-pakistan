@@ -34,12 +34,15 @@ export async function FeaturedPackagesCarousel() {
   return (
     <section id="section-packages" className="relative bg-[var(--bg-dark)] pt-6 pb-20 sm:py-24" style={{ scrollMarginTop: "200px" }}>
       {preloadHref && (
+        // Preload without fetchPriority=high — on Slow 4G the high hint stole
+        // bandwidth from CSS/fonts, delaying FCP by ~1.7s while only saving
+        // ~500ms on LCP. Normal priority still lets the preload scanner
+        // discover the URL during HTML parse.
         <link
           rel="preload"
           as="image"
           href={preloadHref}
           media="(max-width: 767px)"
-          fetchPriority="high"
         />
       )}
 
