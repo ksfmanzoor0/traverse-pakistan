@@ -39,7 +39,7 @@ export function HeroSection({ destinations = [] }: { destinations?: DestinationO
                 fetchPriority={i === 0 ? "high" : "low"}
                 loading={i === 0 ? "eager" : "lazy"}
                 sizes="100vw"
-                quality={65}
+                quality={75}
                 className="object-cover"
               />
             </div>
