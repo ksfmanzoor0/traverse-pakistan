@@ -85,11 +85,11 @@ export function VideoStories() {
             className="group relative w-full aspect-[21/9] rounded-[var(--radius-lg)] overflow-hidden cursor-pointer mb-5"
           >
             <Image
-              src={`https://img.youtube.com/vi/${featured.id}/maxresdefault.jpg`}
+              src={`https://img.youtube.com/vi/${featured.id}/sddefault.jpg`}
               alt={featured.title}
               fill
               className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-              sizes="100vw"
+              sizes="(max-width: 1024px) 100vw, 66vw"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/10 group-hover:from-black/70 transition-all duration-500" />
 
