@@ -35,6 +35,7 @@ export function HeroSection({ destinations = [] }: { destinations?: DestinationO
                 src={img.url}
                 alt={img.alt}
                 fill
+                priority={i === 0}
                 fetchPriority={i === 0 ? "high" : "low"}
                 loading={i === 0 ? "eager" : "lazy"}
                 sizes="(min-width: 1600px) 1600px, 100vw"
