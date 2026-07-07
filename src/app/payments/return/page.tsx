@@ -12,6 +12,7 @@ type PollState = "confirming" | "failed" | "processing" | "error";
 function bookingMeta(ref: string): { label: string } {
   if (ref.startsWith("PKG-")) return { label: "package" };
   if (ref.startsWith("HTL-")) return { label: "hotel" };
+  if (ref.startsWith("INV-")) return { label: "invitation letter" };
   return { label: "tour" };
 }
 
@@ -63,7 +64,10 @@ function ReturnInner() {
               totalAmount: data.amount ?? 0,
               amountPaid: data.amount ?? 0,
             });
-            router.replace(`/bookings/${nextRef}`);
+            const successPath = nextRef.startsWith("INV-")
+              ? `/invitation-letter/${nextRef}`
+              : `/bookings/${nextRef}`;
+            router.replace(successPath);
           }
           return;
         }

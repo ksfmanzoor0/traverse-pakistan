@@ -57,6 +57,49 @@ export async function markBooking(
   let shouldFireConfirmation = false;
   let isFirstPositivePayment = false;
 
+  if (bookingRef.startsWith("INV-")) {
+    const { data: before } = await supabase
+      .from("invitation_requests" as never)
+      .select("status, amount_pkr, amount_paid")
+      .eq("ref", bookingRef)
+      .maybeSingle();
+
+    if (!before) return;
+    const rec = before as { status: string; amount_pkr: number; amount_paid: number | null };
+
+    if (!isPaid) {
+      await supabase
+        .from("invitation_requests" as never)
+        .update({ status: "failed", updated_at: new Date().toISOString() } as never)
+        .eq("ref", bookingRef);
+      return;
+    }
+
+    isFirstPositivePayment = (rec.amount_paid ?? 0) === 0;
+    shouldFireConfirmation = isFirstPositivePayment;
+    const paid = amountCharged != null ? Number(amountCharged) : Number(rec.amount_pkr);
+
+    await supabase
+      .from("invitation_requests" as never)
+      .update({
+        status: "paid",
+        amount_paid: paid,
+        paid_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as never)
+      .eq("ref", bookingRef);
+
+    if (shouldFireConfirmation) {
+      const { sendInvitationLetterPaid } = await import("@/lib/email/sendInvitationLetterPaid");
+      after(async () => {
+        try { await sendInvitationLetterPaid(bookingRef); }
+        catch (err) { console.error(`[markBooking] invitation paid email failed for ${bookingRef}:`, err); }
+      });
+    }
+    console.log(`[markBooking] ref=${bookingRef} (invitation) source=${source} firstPositive=${isFirstPositivePayment}`);
+    return;
+  }
+
   if (bookingRef.startsWith("PKG-")) {
     const { data: before } = await supabase
       .from("package_bookings")

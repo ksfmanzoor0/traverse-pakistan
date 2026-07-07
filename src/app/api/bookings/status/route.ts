@@ -77,6 +77,32 @@ export async function GET(req: NextRequest) {
     return withAttemptSuffix(parentRef, latestAttempt);
   }
 
+  if (parentRef.startsWith("INV-")) {
+    const { data, error } = await supabase
+      .from("invitation_requests" as never)
+      .select("ref, status, amount_pkr, payment_attempts")
+      .eq("ref", parentRef)
+      .maybeSingle();
+    if (error || !data) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+    const row = data as { ref: string; status: string; amount_pkr: number; payment_attempts: number };
+    let status: "paid" | "failed" | "pending" =
+      row.status === "paid" || row.status === "issued" ? "paid" :
+      row.status === "failed" || row.status === "cancelled" ? "failed" :
+      "pending";
+    if (status === "pending") {
+      const alfaRef = await alfaRefFor(Number(row.payment_attempts ?? 0));
+      const alfa = await checkAlfaIPN(alfaRef);
+      if (alfa.status === "paid") {
+        await markBooking(parentRef, true, alfa.amount, "polling", alfaRef);
+        status = "paid";
+      } else if (alfa.status === "failed") {
+        await markBooking(parentRef, false, null, "polling", alfaRef);
+        status = "failed";
+      }
+    }
+    return buildResponse(parentRef, Number(row.amount_pkr), status);
+  }
+
   if (parentRef.startsWith("PKG-")) {
     const { data, error } = await supabase
       .from("package_bookings")
