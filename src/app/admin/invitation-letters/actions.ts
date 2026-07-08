@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { setInvitationLetterPricePkr } from "@/lib/invitation/config";
+import { setInvitationLetterPricePkr, setInvitationSignatureDataUrl } from "@/lib/invitation/config";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import type { LetterData } from "@/lib/invitation/letterData";
 import { sendInvitationLetterIssued } from "@/lib/email/sendInvitationLetterIssued";
@@ -13,6 +13,17 @@ export async function updateInvitationLetterPrice(formData: FormData): Promise<v
   await setInvitationLetterPricePkr(n);
   revalidatePath("/admin/invitation-letters");
   revalidatePath("/invitation-letter");
+}
+
+export async function updateInvitationSignature(dataUrl: string | null): Promise<{ ok: boolean; error?: string }> {
+  if (dataUrl !== null) {
+    if (!dataUrl.startsWith("data:image/") || dataUrl.length > 2_500_000) {
+      return { ok: false, error: "Invalid image (max ~1.8 MB PNG/JPG)" };
+    }
+  }
+  await setInvitationSignatureDataUrl(dataUrl);
+  revalidatePath("/admin/invitation-letters");
+  return { ok: true };
 }
 
 export async function saveInvitationLetterData(ref: string, data: LetterData): Promise<{ ok: boolean; error?: string }> {

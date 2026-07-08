@@ -2,23 +2,24 @@ import { Document, Page, Text, View, Image, StyleSheet, Font, renderToBuffer } f
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { LetterData } from "./letterData";
+import { getInvitationSignatureDataUrl } from "./config";
 
 // Prevent react-pdf's default hyphenation from breaking words like
 // "MANZOOR" across lines with a "-".
 Font.registerHyphenationCallback((word) => [word]);
 
-const BLUE = "#1e40af";
+const GREEN = "#1E6A52";
 const GREY = "#e5e7eb";
 const BLACK = "#111111";
 
 const styles = StyleSheet.create({
   page: { paddingTop: 40, paddingBottom: 40, paddingHorizontal: 48, fontFamily: "Times-Roman", fontSize: 11, color: BLACK, lineHeight: 1.4 },
-  topRule: { borderTopWidth: 2, borderTopColor: BLUE, paddingTop: 16 },
+  topRule: { borderTopWidth: 2, borderTopColor: GREEN, paddingTop: 16 },
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   logo: { height: 68, width: 200, objectFit: "contain" },
-  addressBlock: { textAlign: "right", fontSize: 10, color: BLUE },
+  addressBlock: { textAlign: "right", fontSize: 10, color: GREEN },
   addressLine: { marginBottom: 1 },
-  metaBlock: { textAlign: "right", fontSize: 10, marginTop: 8, color: BLUE },
+  metaBlock: { textAlign: "right", fontSize: 10, marginTop: 8, color: GREEN },
   metaNtn: { color: BLACK, marginTop: 2 },
   toBlock: { marginTop: 28 },
   subject: { marginTop: 16 },
@@ -26,8 +27,8 @@ const styles = StyleSheet.create({
   paragraph: { marginTop: 12 },
   table: { marginTop: 14, borderWidth: 1, borderColor: GREY },
   tr: { flexDirection: "row" },
-  thCell: { flex: 1, padding: 6, backgroundColor: BLUE, color: "#ffffff", fontFamily: "Times-Bold", textAlign: "center", borderRightWidth: 1, borderRightColor: BLUE },
-  thCellLast: { flex: 1, padding: 6, backgroundColor: BLUE, color: "#ffffff", fontFamily: "Times-Bold", textAlign: "center" },
+  thCell: { flex: 1, padding: 6, backgroundColor: GREEN, color: "#ffffff", fontFamily: "Times-Bold", textAlign: "center", borderRightWidth: 1, borderRightColor: GREEN },
+  thCellLast: { flex: 1, padding: 6, backgroundColor: GREEN, color: "#ffffff", fontFamily: "Times-Bold", textAlign: "center" },
   td: { flex: 1, padding: 6, borderRightWidth: 1, borderRightColor: GREY, borderTopWidth: 1, borderTopColor: GREY },
   tdLast: { flex: 1, padding: 6, borderTopWidth: 1, borderTopColor: GREY },
   signBlock: { marginTop: 32 },
@@ -52,10 +53,12 @@ async function loadPublicImage(rel: string): Promise<string | null> {
 }
 
 export async function generateInvitationLetterPdf(data: LetterData): Promise<Buffer> {
-  const [logoData, signatureData] = await Promise.all([
+  const [logoData, stored, filePng] = await Promise.all([
     loadPublicImage("logo-day.png"),
+    getInvitationSignatureDataUrl(),
     loadPublicImage("signature.png"),
   ]);
+  const signatureData = stored ?? filePng;
 
   const doc = (
     <Document>

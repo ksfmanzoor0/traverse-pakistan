@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import type { InvitationRequest, Traveler } from "@/lib/invitation/types";
 import { defaultLetterData, type LetterData } from "@/lib/invitation/letterData";
+import { getInvitationSignatureDataUrl } from "@/lib/invitation/config";
 import { InvitationLetterEditor } from "@/components/admin/InvitationLetterEditor";
 import { saveInvitationLetterData, sendInvitationLetter } from "../actions";
 
@@ -30,7 +31,7 @@ async function fetchRow(ref: string): Promise<InvitationRequest | null> {
 
 export default async function AdminInvitationLetterDetail({ params }: { params: Promise<{ ref: string }> }) {
   const { ref } = await params;
-  const row = await fetchRow(ref);
+  const [row, signatureDataUrl] = await Promise.all([fetchRow(ref), getInvitationSignatureDataUrl()]);
   if (!row) notFound();
 
   const travelers = (row.travelers as Traveler[]) ?? [];
@@ -124,6 +125,7 @@ export default async function AdminInvitationLetterDetail({ params }: { params: 
           bookingRef={row.ref}
           initialData={(row.letter_data as LetterData | null) ?? defaultLetterData(row)}
           status={row.status}
+          signatureDataUrl={signatureDataUrl}
           saveAction={saveInvitationLetterData}
           sendAction={sendInvitationLetter}
         />

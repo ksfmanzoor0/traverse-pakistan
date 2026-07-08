@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { getInvitationLetterPricePkr, INVITATION_LETTER_PRICE_USD } from "@/lib/invitation/config";
-import { updateInvitationLetterPrice } from "./actions";
+import { getInvitationLetterPricePkr, getInvitationSignatureDataUrl, INVITATION_LETTER_PRICE_USD } from "@/lib/invitation/config";
+import { updateInvitationLetterPrice, updateInvitationSignature } from "./actions";
+import { InvitationSignatureUpload } from "@/components/admin/InvitationSignatureUpload";
 
 export const dynamic = "force-dynamic";
 
@@ -41,11 +42,19 @@ async function fetchRows(): Promise<Row[]> {
 }
 
 export default async function AdminInvitationLetters() {
-  const [rows, pricePkr] = await Promise.all([fetchRows(), getInvitationLetterPricePkr()]);
+  const [rows, pricePkr, signatureDataUrl] = await Promise.all([
+    fetchRows(),
+    getInvitationLetterPricePkr(),
+    getInvitationSignatureDataUrl(),
+  ]);
 
   return (
     <div className="p-6 sm:p-8">
       <h1 className="text-[24px] font-bold text-[var(--text-primary)] mb-6">Invitation letters</h1>
+
+      <div className="mb-6">
+        <InvitationSignatureUpload currentDataUrl={signatureDataUrl} saveAction={updateInvitationSignature} />
+      </div>
 
       <form action={updateInvitationLetterPrice} className="mb-8 p-4 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-subtle)] flex items-end gap-3 max-w-lg">
         <div className="flex-1">

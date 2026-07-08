@@ -27,10 +27,10 @@ function renderLetterHtml(data: LetterData): string {
     .join("");
 
   return `<div style="font-family:Georgia,'Times New Roman',serif;color:#111;padding:32px;background:#fff;max-width:820px;margin:0 auto">
-    <div style="border-top:3px solid #1e40af;padding-top:24px">
+    <div style="border-top:3px solid #1E6A52;padding-top:24px">
       <table width="100%"><tr>
         <td width="50%" valign="top"><img src="${site}/logo-day.png" alt="Traverse Pakistan" style="height:80px" /></td>
-        <td width="50%" valign="top" align="right" style="font-size:13px;color:#1e40af">
+        <td width="50%" valign="top" align="right" style="font-size:13px;color:#1E6A52">
           <div>${esc(data.header.address_line_1)}</div>
           <div>${esc(data.header.address_line_2)}</div>
           <div>${esc(data.header.city)}</div>
@@ -55,11 +55,11 @@ function renderLetterHtml(data: LetterData): string {
     <table style="width:100%;border-collapse:collapse;margin-top:20px;font-size:13px">
       <thead>
         <tr>
-          <th style="background:#1e40af;color:#fff;padding:8px;border:1px solid #1e40af">NAME</th>
-          <th style="background:#1e40af;color:#fff;padding:8px;border:1px solid #1e40af">Date of Birth</th>
-          <th style="background:#1e40af;color:#fff;padding:8px;border:1px solid #1e40af">Nationality</th>
-          <th style="background:#1e40af;color:#fff;padding:8px;border:1px solid #1e40af">Passport No.</th>
-          <th style="background:#1e40af;color:#fff;padding:8px;border:1px solid #1e40af">Expiry Date</th>
+          <th style="background:#1E6A52;color:#fff;padding:8px;border:1px solid #1E6A52">NAME</th>
+          <th style="background:#1E6A52;color:#fff;padding:8px;border:1px solid #1E6A52">Date of Birth</th>
+          <th style="background:#1E6A52;color:#fff;padding:8px;border:1px solid #1E6A52">Nationality</th>
+          <th style="background:#1E6A52;color:#fff;padding:8px;border:1px solid #1E6A52">Passport No.</th>
+          <th style="background:#1E6A52;color:#fff;padding:8px;border:1px solid #1E6A52">Expiry Date</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>

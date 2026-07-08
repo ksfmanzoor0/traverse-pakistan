@@ -8,11 +8,12 @@ type Props = {
   bookingRef: string;
   initialData: LetterData;
   status: string;
+  signatureDataUrl: string | null;
   saveAction: (ref: string, data: LetterData) => Promise<{ ok: boolean; error?: string }>;
   sendAction: (ref: string) => Promise<{ ok: boolean; error?: string }>;
 };
 
-export function InvitationLetterEditor({ bookingRef, initialData, status, saveAction, sendAction }: Props) {
+export function InvitationLetterEditor({ bookingRef, initialData, status, signatureDataUrl, saveAction, sendAction }: Props) {
   const [data, setData] = useState<LetterData>(initialData);
   const [pending, startTransition] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
@@ -131,47 +132,49 @@ export function InvitationLetterEditor({ bookingRef, initialData, status, saveAc
           </div>
         </details>
 
-        <div className="sticky bottom-0 py-4 bg-[var(--bg-primary)] border-t border-[var(--border-default)] flex gap-3 items-center flex-wrap">
-          <button type="button" onClick={onSave} disabled={pending}
-            className="h-10 px-4 rounded-[var(--radius-sm)] border border-[var(--border-default)] text-[13px] font-semibold text-[var(--text-primary)] disabled:opacity-50">
-            {pending ? "Saving…" : "Save draft"}
-          </button>
-          <a href={`/api/admin/invitation-letter/${bookingRef}/pdf`} target="_blank" rel="noopener"
-            className="h-10 px-4 inline-flex items-center rounded-[var(--radius-sm)] border border-[var(--border-default)] text-[13px] font-semibold text-[var(--text-primary)]">
-            Download PDF
-          </a>
-          <button type="button" onClick={onSend} disabled={pending || (status !== "paid" && status !== "issued")}
-            className="h-10 px-4 rounded-[var(--radius-sm)] bg-[var(--primary)] text-[var(--text-inverse)] text-[13px] font-semibold disabled:opacity-50">
-            {status === "issued" ? "Re-send letter" : "Send letter to traveler"}
-          </button>
-          {msg && <span className="text-[12px] text-[var(--text-secondary)]">{msg}</span>}
+        <div className="sticky bottom-0 py-4 bg-[var(--bg-primary)] border-t border-[var(--border-default)]">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button type="button" onClick={onSave} disabled={pending}
+              className="h-10 px-4 rounded-[var(--radius-sm)] border border-[var(--border-default)] text-[13px] font-semibold text-[var(--text-primary)] disabled:opacity-50">
+              {pending ? "Saving…" : "Save draft"}
+            </button>
+            <a href={`/api/admin/invitation-letter/${bookingRef}/pdf`} target="_blank" rel="noopener"
+              className="h-10 px-4 inline-flex items-center rounded-[var(--radius-sm)] border border-[var(--border-default)] text-[13px] font-semibold text-[var(--text-primary)]">
+              Download PDF
+            </a>
+            <button type="button" onClick={onSend} disabled={pending || (status !== "paid" && status !== "issued")}
+              className="ml-auto h-10 px-4 rounded-[var(--radius-sm)] bg-[var(--primary)] text-[var(--text-inverse)] text-[13px] font-semibold disabled:opacity-50">
+              {status === "issued" ? "Re-send letter" : "Send letter to traveler"}
+            </button>
+          </div>
+          {msg && <p className="mt-2 text-[12px] text-[var(--text-secondary)]">{msg}</p>}
         </div>
       </div>
 
       {/* Preview pane */}
       <div className="rounded border border-[var(--border-default)] overflow-hidden">
         <div className="px-3 py-2 border-b border-[var(--border-default)] bg-[var(--bg-subtle)] text-[12px] text-[var(--text-tertiary)]">Live preview</div>
-        <LetterPreview data={data} />
+        <LetterPreview data={data} signatureDataUrl={signatureDataUrl} />
       </div>
     </div>
   );
 }
 
-export function LetterPreview({ data }: { data: LetterData }) {
+export function LetterPreview({ data, signatureDataUrl }: { data: LetterData; signatureDataUrl?: string | null }) {
   return (
     <div className="p-8 bg-white text-[#111] font-serif text-[14px] leading-relaxed" style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
-      <div className="border-t-[3px] border-[#1e40af] pt-6">
+      <div className="border-t-[3px] border-[#1E6A52] pt-6">
         <div className="grid grid-cols-2 gap-6 items-start">
           <img src="/logo-day.png" alt="Traverse Pakistan" className="h-24 w-auto" />
           <div className="text-right text-[13px] space-y-3 text-[#111]">
-            <div className="text-[#1e40af]">
+            <div className="text-[#1E6A52]">
               <div>{data.header.address_line_1}</div>
               <div>{data.header.address_line_2}</div>
               <div>{data.header.city}</div>
               <div>{data.header.phone}</div>
             </div>
-            <div className="text-[#1e40af]"><strong>DTS Licence ID:</strong> {data.header.dts_licence}</div>
-            <div className="text-[#1e40af]"><strong>SECP Incorporation #:</strong> {data.header.secp_incorporation}</div>
+            <div className="text-[#1E6A52]"><strong>DTS Licence ID:</strong> {data.header.dts_licence}</div>
+            <div className="text-[#1E6A52]"><strong>SECP Incorporation #:</strong> {data.header.secp_incorporation}</div>
             <div><strong>NTN:</strong> {data.header.ntn}</div>
           </div>
         </div>
@@ -194,7 +197,7 @@ export function LetterPreview({ data }: { data: LetterData }) {
           <thead>
             <tr>
               {["NAME", "Date of Birth", "Nationality", "Passport No.", "Expiry Date"].map((h) => (
-                <th key={h} className="text-white bg-[#1e40af] border border-[#1e40af] px-2 py-2 text-center font-semibold">{h}</th>
+                <th key={h} className="text-white bg-[#1E6A52] border border-[#1E6A52] px-2 py-2 text-center font-semibold">{h}</th>
               ))}
             </tr>
           </thead>
@@ -219,9 +222,14 @@ export function LetterPreview({ data }: { data: LetterData }) {
         <div>{data.signer_title}</div>
         <div className="mt-6 flex items-end gap-2">
           <div>
-            <div className="h-14 w-64 border border-dashed border-[#9ca3af] flex items-center justify-center text-[11px] text-[#9ca3af] mb-1">
-              [signature placeholder — /public/signature.png]
-            </div>
+            {signatureDataUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={signatureDataUrl} alt="Signature" className="h-14 w-auto max-w-[240px] object-contain mb-1" />
+            ) : (
+              <div className="h-14 w-64 border border-dashed border-[#9ca3af] flex items-center justify-center text-[11px] text-[#9ca3af] mb-1">
+                Upload signature above
+              </div>
+            )}
             <div className="border-t border-black w-64"></div>
             <div className="text-[12px]">Sign</div>
           </div>
