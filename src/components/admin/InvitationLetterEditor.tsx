@@ -131,12 +131,16 @@ export function InvitationLetterEditor({ ref, initialData, status, saveAction, s
           </div>
         </details>
 
-        <div className="sticky bottom-0 py-4 bg-[var(--bg-primary)] border-t border-[var(--border-default)] flex gap-3 items-center">
+        <div className="sticky bottom-0 py-4 bg-[var(--bg-primary)] border-t border-[var(--border-default)] flex gap-3 items-center flex-wrap">
           <button type="button" onClick={onSave} disabled={pending}
             className="h-10 px-4 rounded-[var(--radius-sm)] border border-[var(--border-default)] text-[13px] font-semibold text-[var(--text-primary)] disabled:opacity-50">
             {pending ? "Saving…" : "Save draft"}
           </button>
-          <button type="button" onClick={onSend} disabled={pending || status !== "paid"}
+          <a href={`/api/admin/invitation-letter/${ref}/pdf`} target="_blank" rel="noopener"
+            className="h-10 px-4 inline-flex items-center rounded-[var(--radius-sm)] border border-[var(--border-default)] text-[13px] font-semibold text-[var(--text-primary)]">
+            Download PDF
+          </a>
+          <button type="button" onClick={onSend} disabled={pending || (status !== "paid" && status !== "issued")}
             className="h-10 px-4 rounded-[var(--radius-sm)] bg-[var(--primary)] text-[var(--text-inverse)] text-[13px] font-semibold disabled:opacity-50">
             {status === "issued" ? "Re-send letter" : "Send letter to traveler"}
           </button>

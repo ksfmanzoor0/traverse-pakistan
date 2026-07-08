@@ -1,5 +1,6 @@
 import { getResend, FROM } from "./resend";
 import type { LetterData } from "@/lib/invitation/letterData";
+import { generateInvitationLetterPdf } from "@/lib/invitation/generatePdf";
 
 function esc(s: string): string {
   return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
@@ -91,11 +92,14 @@ export async function sendInvitationLetterIssued(input: Input): Promise<void> {
   const resend = getResend();
   if (!resend) throw new Error("Resend not configured");
 
-  const letterHtml = renderLetterHtml(input.letterData);
+  const [pdfBuffer, letterHtml] = await Promise.all([
+    generateInvitationLetterPdf(input.letterData),
+    Promise.resolve(renderLetterHtml(input.letterData)),
+  ]);
 
   const wrapper = `<div style="font-family:system-ui,-apple-system,sans-serif;color:#111827;max-width:820px;margin:0 auto;padding:16px">
     <p>Hi ${esc(input.contactName)},</p>
-    <p>Please find your invitation letter below. You can print this email to PDF from your browser or email client to submit with your visa application. Reference: <strong>${esc(input.ref)}</strong>.</p>
+    <p>Please find your invitation letter attached as a PDF. A preview is included below. Reference: <strong>${esc(input.ref)}</strong>.</p>
     <p>If you need any changes, reply to this email and we'll help.</p>
     <p>— Traverse Pakistan</p>
     <hr style="margin:24px 0;border:0;border-top:1px solid #e5e7eb" />
@@ -107,6 +111,12 @@ export async function sendInvitationLetterIssued(input: Input): Promise<void> {
     to: input.contactEmail,
     subject: `Your Pakistan visa invitation letter — ${input.ref}`,
     html: wrapper,
+    attachments: [
+      {
+        filename: `Invitation-Letter-${input.ref}.pdf`,
+        content: pdfBuffer,
+      },
+    ],
   });
   if (error) throw new Error(error.message);
 }
