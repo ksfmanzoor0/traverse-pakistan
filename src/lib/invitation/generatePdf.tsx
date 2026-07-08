@@ -1,7 +1,11 @@
-import { Document, Page, Text, View, Image, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
+import { Document, Page, Text, View, Image, StyleSheet, Font, renderToBuffer } from "@react-pdf/renderer";
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { LetterData } from "./letterData";
+
+// Prevent react-pdf's default hyphenation from breaking words like
+// "MANZOOR" across lines with a "-".
+Font.registerHyphenationCallback((word) => [word]);
 
 const BLUE = "#1e40af";
 const GREY = "#e5e7eb";

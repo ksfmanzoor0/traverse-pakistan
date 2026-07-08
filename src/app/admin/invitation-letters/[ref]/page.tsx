@@ -36,7 +36,7 @@ export default async function AdminInvitationLetterDetail({ params }: { params: 
   const travelers = (row.travelers as Traveler[]) ?? [];
 
   return (
-    <div className="p-6 sm:p-8 space-y-8 max-w-4xl">
+    <div className="p-6 sm:p-8 space-y-8 max-w-[1400px]">
       <div>
         <Link href="/admin/invitation-letters" className="text-[13px] text-[var(--text-tertiary)]">← All requests</Link>
         <div className="mt-2 flex items-center gap-3">
