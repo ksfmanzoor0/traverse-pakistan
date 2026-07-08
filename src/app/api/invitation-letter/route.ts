@@ -3,7 +3,7 @@ import { z } from "zod";
 import { after } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { quoteNotifyLimiter, checkRateLimit, clientIp } from "@/lib/ratelimit";
-import { INVITATION_LETTER_PRICE_PKR, generateInvitationRef } from "@/lib/invitation/config";
+import { getInvitationLetterPricePkr, generateInvitationRef } from "@/lib/invitation/config";
 import { sendInvitationLetterReceived } from "@/lib/email/sendInvitationLetterReceived";
 
 const TravelerSchema = z.object({
@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
     const supabase = getSupabaseAdmin();
     const ref = generateInvitationRef();
     const input = parsed.data;
+    const pricePkr = await getInvitationLetterPricePkr();
 
     const { error } = await supabase
       .from("invitation_requests" as never)
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
         departure_date: input.departure_date,
         destinations: input.destinations,
         travelers: input.travelers,
-        amount_pkr: INVITATION_LETTER_PRICE_PKR,
+        amount_pkr: pricePkr,
       } as never);
 
     if (error) {
@@ -65,13 +66,13 @@ export async function POST(req: NextRequest) {
     // Fire "we received your request" email now; the "paid" email lands after Alfa IPN.
     after(async () => {
       try {
-        await sendInvitationLetterReceived({ ref, ...input });
+        await sendInvitationLetterReceived({ ref, pricePkr, ...input });
       } catch (err) {
         console.error("[invitation-letter] received email failed:", err);
       }
     });
 
-    return NextResponse.json({ ok: true, ref, amount_pkr: INVITATION_LETTER_PRICE_PKR });
+    return NextResponse.json({ ok: true, ref, amount_pkr: pricePkr });
   } catch (err) {
     console.error("[invitation-letter]", err);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });

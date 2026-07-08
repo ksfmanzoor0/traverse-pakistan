@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { getSupabaseServer } from "@/lib/supabase/server";
+import { getInvitationLetterPricePkr, INVITATION_LETTER_PRICE_USD } from "@/lib/invitation/config";
+import { updateInvitationLetterPrice } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -39,11 +41,31 @@ async function fetchRows(): Promise<Row[]> {
 }
 
 export default async function AdminInvitationLetters() {
-  const rows = await fetchRows();
+  const [rows, pricePkr] = await Promise.all([fetchRows(), getInvitationLetterPricePkr()]);
 
   return (
     <div className="p-6 sm:p-8">
       <h1 className="text-[24px] font-bold text-[var(--text-primary)] mb-6">Invitation letters</h1>
+
+      <form action={updateInvitationLetterPrice} className="mb-8 p-4 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-subtle)] flex items-end gap-3 max-w-lg">
+        <div className="flex-1">
+          <label className="block text-[13px] font-medium text-[var(--text-secondary)] mb-1">Service price (PKR)</label>
+          <input
+            name="price_pkr"
+            type="number"
+            min={1}
+            step={100}
+            defaultValue={pricePkr}
+            required
+            className="w-full h-10 px-3 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-primary)] text-[15px] text-[var(--text-primary)]"
+          />
+          <p className="text-[12px] text-[var(--text-tertiary)] mt-1">Currently charging PKR {pricePkr.toLocaleString()} (≈ USD {INVITATION_LETTER_PRICE_USD})</p>
+        </div>
+        <button type="submit" className="h-10 px-4 rounded-[var(--radius-sm)] bg-[var(--primary)] text-[var(--text-inverse)] text-[14px] font-semibold">
+          Update
+        </button>
+      </form>
+
 
       <div className="overflow-x-auto rounded-[var(--radius-md)] border border-[var(--border-default)]">
         <table className="min-w-full text-[14px]">

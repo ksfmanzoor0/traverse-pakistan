@@ -3,7 +3,7 @@ import { Container } from "@/components/ui/Container";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { InvitationLetterForm } from "@/components/invitation/InvitationLetterForm";
 import {
-  INVITATION_LETTER_PRICE_PKR,
+  getInvitationLetterPricePkr,
   INVITATION_LETTER_PRICE_USD,
 } from "@/lib/invitation/config";
 import { buildMetadata } from "@/lib/seo/metadata";
@@ -16,7 +16,8 @@ export const metadata: Metadata = buildMetadata({
   tags: ["Pakistan invitation letter", "tourist visa Pakistan", "visa support letter"],
 });
 
-export default function InvitationLetterPage() {
+export default async function InvitationLetterPage() {
+  const pricePkr = await getInvitationLetterPricePkr();
   return (
     <div className="py-8 sm:py-12">
       <Container>
@@ -35,7 +36,7 @@ export default function InvitationLetterPage() {
 
         <InvitationLetterForm
           priceUsd={INVITATION_LETTER_PRICE_USD}
-          pricePkr={INVITATION_LETTER_PRICE_PKR}
+          pricePkr={pricePkr}
         />
       </Container>
     </div>

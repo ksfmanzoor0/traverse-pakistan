@@ -1,5 +1,5 @@
 import { getResend, FROM } from "./resend";
-import { INVITATION_LETTER_PRICE_PKR, INVITATION_LETTER_PRICE_USD } from "@/lib/invitation/config";
+import { INVITATION_LETTER_PRICE_USD } from "@/lib/invitation/config";
 import type { InvitationRequestInput } from "@/lib/invitation/types";
 
 const NOTIFY_TO = process.env.QUOTE_NOTIFY_TO?.trim() || "info@traversepakistan.com";
@@ -14,7 +14,7 @@ function esc(s: string): string {
   return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 }
 
-type Input = InvitationRequestInput & { ref: string };
+type Input = InvitationRequestInput & { ref: string; pricePkr: number };
 
 export async function sendInvitationLetterReceived(input: Input): Promise<void> {
   const resend = getResend();
@@ -68,7 +68,7 @@ export async function sendInvitationLetterReceived(input: Input): Promise<void> 
     html: `<div style="font-family:system-ui,-apple-system,sans-serif;line-height:1.5;color:#111827">
       <p>Hi ${esc(input.contact_name)},</p>
       <p>We've received your invitation letter request. Your reference is <strong>${esc(input.ref)}</strong>.</p>
-      <p>Once your payment of <strong>PKR ${INVITATION_LETTER_PRICE_PKR.toLocaleString()}</strong> (equivalent to USD ${INVITATION_LETTER_PRICE_USD}) is confirmed, our team will prepare your letter and email it back within 2–3 business days.</p>
+      <p>Once your payment of <strong>PKR ${input.pricePkr.toLocaleString()}</strong> (equivalent to USD ${INVITATION_LETTER_PRICE_USD}) is confirmed, our team will prepare your letter and email it back within 2–3 business days.</p>
       ${summary}
       <p style="margin-top:20px">If your plans change, reply to this email and we'll help.</p>
       <p>— Traverse Pakistan</p>
