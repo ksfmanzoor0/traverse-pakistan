@@ -56,7 +56,8 @@ function ReturnInner() {
             redirectedRef.current = true;
             const bookingType: BookingType =
               nextRef.startsWith("PKG-") ? "package" :
-              nextRef.startsWith("HTL-") ? "hotel" : "tour";
+              nextRef.startsWith("HTL-") ? "hotel" :
+              nextRef.startsWith("INV-") ? "invitation" : "tour";
             trackPurchase({
               bookingRef: nextRef,
               bookingType,
