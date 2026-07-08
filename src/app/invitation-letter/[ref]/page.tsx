@@ -3,6 +3,7 @@ import { Container } from "@/components/ui/Container";
 import { Icon } from "@/components/ui/Icon";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { InvitationLetterPayButton } from "@/components/invitation/InvitationLetterPayButton";
+import { CopyRefButton } from "@/components/invitation/CopyRefButton";
 
 export const dynamic = "force-dynamic";
 
@@ -130,22 +131,23 @@ export default async function InvitationLetterStatusPage({ params }: { params: P
           </div>
 
           {showPayButton && (
-            <div className="mt-6 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+            <div className="mt-6 flex flex-col items-center gap-2">
               <InvitationLetterPayButton bookingRef={row.ref} amountPkr={row.amount_pkr} />
               <p className="text-[13px] text-[var(--text-tertiary)]">Secure payment via Alfa Hosted Checkout.</p>
             </div>
           )}
 
           <div className="mt-8 p-4 rounded-[var(--radius-md)] bg-[var(--bg-subtle)]">
-            <p className="text-[13px] text-[var(--text-secondary)]">
-              <strong>Save this link</strong> to check status any time:<br />
-              <a className="text-[var(--primary)] break-all" href={`/invitation-letter/${row.ref}`}>
-                /invitation-letter/{row.ref}
-              </a>
-            </p>
-            <p className="text-[13px] text-[var(--text-tertiary)] mt-2">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <p className="text-[13px] font-semibold text-[var(--text-secondary)]">Your reference</p>
+                <p className="text-[15px] font-mono font-bold text-[var(--text-primary)]">{row.ref}</p>
+              </div>
+              <CopyRefButton value={row.ref} />
+            </div>
+            <p className="text-[13px] text-[var(--text-tertiary)] mt-3">
               A copy has also been emailed to <strong>{row.contact_email}</strong>.
-              Lost the link? <a href="/bookings/find" className="text-[var(--primary)] underline">Track your request</a> with your email or phone.
+              Lost the link? <a href="/bookings/find" className="text-[var(--primary)] underline">Track your request</a> with your reference and email or phone.
             </p>
           </div>
         </div>
