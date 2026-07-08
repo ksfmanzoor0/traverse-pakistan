@@ -131,7 +131,7 @@ export default async function InvitationLetterStatusPage({ params }: { params: P
 
           {showPayButton && (
             <div className="mt-6 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-              <InvitationLetterPayButton ref={row.ref} amountPkr={row.amount_pkr} />
+              <InvitationLetterPayButton bookingRef={row.ref} amountPkr={row.amount_pkr} />
               <p className="text-[13px] text-[var(--text-tertiary)]">Secure payment via Alfa Hosted Checkout.</p>
             </div>
           )}

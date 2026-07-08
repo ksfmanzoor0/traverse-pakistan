@@ -5,14 +5,14 @@ import type { LetterData } from "@/lib/invitation/letterData";
 import type { Traveler } from "@/lib/invitation/types";
 
 type Props = {
-  ref: string;
+  bookingRef: string;
   initialData: LetterData;
   status: string;
   saveAction: (ref: string, data: LetterData) => Promise<{ ok: boolean; error?: string }>;
   sendAction: (ref: string) => Promise<{ ok: boolean; error?: string }>;
 };
 
-export function InvitationLetterEditor({ ref, initialData, status, saveAction, sendAction }: Props) {
+export function InvitationLetterEditor({ bookingRef, initialData, status, saveAction, sendAction }: Props) {
   const [data, setData] = useState<LetterData>(initialData);
   const [pending, startTransition] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
@@ -35,7 +35,7 @@ export function InvitationLetterEditor({ ref, initialData, status, saveAction, s
   function onSave() {
     setMsg(null);
     startTransition(async () => {
-      const res = await saveAction(ref, data);
+      const res = await saveAction(bookingRef, data);
       setMsg(res.ok ? "Saved." : res.error ?? "Save failed");
       setTimeout(() => setMsg(null), 3000);
     });
@@ -44,9 +44,9 @@ export function InvitationLetterEditor({ ref, initialData, status, saveAction, s
     setMsg(null);
     if (!confirm("Send this letter to the traveler and mark as issued?")) return;
     startTransition(async () => {
-      const save = await saveAction(ref, data);
+      const save = await saveAction(bookingRef, data);
       if (!save.ok) { setMsg(save.error ?? "Save failed"); return; }
-      const send = await sendAction(ref);
+      const send = await sendAction(bookingRef);
       setMsg(send.ok ? "Letter sent." : send.error ?? "Send failed");
     });
   }
@@ -136,7 +136,7 @@ export function InvitationLetterEditor({ ref, initialData, status, saveAction, s
             className="h-10 px-4 rounded-[var(--radius-sm)] border border-[var(--border-default)] text-[13px] font-semibold text-[var(--text-primary)] disabled:opacity-50">
             {pending ? "Saving…" : "Save draft"}
           </button>
-          <a href={`/api/admin/invitation-letter/${ref}/pdf`} target="_blank" rel="noopener"
+          <a href={`/api/admin/invitation-letter/${bookingRef}/pdf`} target="_blank" rel="noopener"
             className="h-10 px-4 inline-flex items-center rounded-[var(--radius-sm)] border border-[var(--border-default)] text-[13px] font-semibold text-[var(--text-primary)]">
             Download PDF
           </a>

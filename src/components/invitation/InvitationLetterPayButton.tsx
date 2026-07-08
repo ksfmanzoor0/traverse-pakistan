@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 
-export function InvitationLetterPayButton({ ref, amountPkr }: { ref: string; amountPkr: number }) {
+export function InvitationLetterPayButton({ bookingRef, amountPkr }: { bookingRef: string; amountPkr: number }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -14,7 +14,7 @@ export function InvitationLetterPayButton({ ref, amountPkr }: { ref: string; amo
       const res = await fetch("/api/payments/alfa/initiate-invitation-letter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ref }),
+        body: JSON.stringify({ ref: bookingRef }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not start payment");

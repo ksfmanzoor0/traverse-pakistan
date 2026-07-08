@@ -121,7 +121,7 @@ export default async function AdminInvitationLetterDetail({ params }: { params: 
       <section>
         <h2 className="text-[14px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-3">Letter editor</h2>
         <InvitationLetterEditor
-          ref={row.ref}
+          bookingRef={row.ref}
           initialData={(row.letter_data as LetterData | null) ?? defaultLetterData(row)}
           status={row.status}
           saveAction={saveInvitationLetterData}
