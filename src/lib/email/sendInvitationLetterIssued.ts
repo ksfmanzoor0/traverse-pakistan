@@ -71,9 +71,9 @@ function renderLetterHtml(data: LetterData): string {
       <div>${esc(data.signer_name)}</div>
       <div>${esc(data.signer_title)}</div>
       <div style="margin-top:24px;display:flex;justify-content:space-between;align-items:flex-end">
-        <div>
+        <div style="display:inline-block;text-align:center">
           <div style="border-top:1px solid #000;width:240px;margin-top:56px"></div>
-          <div style="font-size:12px">Sign</div>
+          <div style="font-size:12px;text-align:left">Sign</div>
         </div>
         <div style="font-size:13px">Date: ${esc(data.issued_date)}</div>
       </div>

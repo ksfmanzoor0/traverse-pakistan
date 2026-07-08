@@ -142,16 +142,11 @@ export function InvitationLetterEditor({ bookingRef, initialData, status, signat
               className="h-10 px-4 inline-flex items-center rounded-[var(--radius-sm)] border border-[var(--border-default)] text-[13px] font-semibold text-[var(--text-primary)]">
               Download PDF
             </a>
-            <button type="button" onClick={onSend} disabled={pending || (status !== "paid" && status !== "issued")}
+            <button type="button" onClick={onSend} disabled={pending}
               className="h-10 px-4 rounded-[var(--radius-sm)] bg-[var(--primary)] text-[var(--text-inverse)] text-[13px] font-semibold disabled:opacity-50">
               {status === "issued" ? "Re-send letter" : "Send letter to traveler"}
             </button>
           </div>
-          {(status !== "paid" && status !== "issued") && (
-            <p className="mt-2 text-[12px] text-[var(--text-tertiary)] text-center">
-              &ldquo;Send letter&rdquo; unlocks once the traveler has paid. Current status: <strong>{status.replace(/_/g, " ")}</strong>.
-            </p>
-          )}
           {msg && <p className="mt-2 text-[12px] text-[var(--text-secondary)] text-center">{msg}</p>}
         </div>
       </div>
@@ -226,17 +221,17 @@ export function LetterPreview({ data, signatureDataUrl }: { data: LetterData; si
         <div>{data.signer_name}</div>
         <div>{data.signer_title}</div>
         <div className="mt-6 flex items-end gap-2">
-          <div>
+          <div className="flex flex-col items-center">
             {signatureDataUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={signatureDataUrl} alt="Signature" className="h-14 w-auto max-w-[240px] object-contain mb-1" />
+              <img src={signatureDataUrl} alt="Signature" className="h-24 w-auto max-w-[260px] object-contain mb-1" />
             ) : (
               <a href="/admin/invitation-letters" className="block h-14 w-64 border border-dashed border-[#9ca3af] flex items-center justify-center text-[11px] text-[#9ca3af] mb-1 hover:border-[var(--primary)] hover:text-[var(--primary)]">
                 Upload signature on Invitation Letters page →
               </a>
             )}
             <div className="border-t border-black w-64"></div>
-            <div className="text-[12px]">Sign</div>
+            <div className="text-[12px] self-start">Sign</div>
           </div>
           <div className="ml-auto text-[13px]">
             Date: {data.issued_date}

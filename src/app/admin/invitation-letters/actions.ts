@@ -49,7 +49,6 @@ export async function sendInvitationLetter(ref: string): Promise<{ ok: boolean; 
     .maybeSingle();
   if (error || !data) return { ok: false, error: "Request not found" };
   const row = data as { status: string; letter_data: LetterData | null; contact_name: string; contact_email: string };
-  if (row.status !== "paid" && row.status !== "issued") return { ok: false, error: "Not paid yet" };
   if (!row.letter_data) return { ok: false, error: "Save the letter draft first" };
 
   try {
