@@ -145,6 +145,7 @@ export default async function InvitationLetterStatusPage({ params }: { params: P
             </p>
             <p className="text-[13px] text-[var(--text-tertiary)] mt-2">
               A copy has also been emailed to <strong>{row.contact_email}</strong>.
+              Lost the link? <a href="/bookings/find" className="text-[var(--primary)] underline">Track your request</a> with your email or phone.
             </p>
           </div>
         </div>
