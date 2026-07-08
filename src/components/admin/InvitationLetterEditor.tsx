@@ -132,8 +132,8 @@ export function InvitationLetterEditor({ bookingRef, initialData, status, signat
           </div>
         </details>
 
-        <div className="sticky bottom-0 py-4 bg-[var(--bg-primary)] border-t border-[var(--border-default)]">
-          <div className="flex items-center gap-2 flex-wrap">
+        <div className="sticky bottom-0 mt-6 py-4 bg-[var(--bg-primary)] border-t border-[var(--border-default)]">
+          <div className="flex items-center justify-center gap-3 flex-wrap">
             <button type="button" onClick={onSave} disabled={pending}
               className="h-10 px-4 rounded-[var(--radius-sm)] border border-[var(--border-default)] text-[13px] font-semibold text-[var(--text-primary)] disabled:opacity-50">
               {pending ? "Saving…" : "Save draft"}
@@ -143,11 +143,16 @@ export function InvitationLetterEditor({ bookingRef, initialData, status, signat
               Download PDF
             </a>
             <button type="button" onClick={onSend} disabled={pending || (status !== "paid" && status !== "issued")}
-              className="ml-auto h-10 px-4 rounded-[var(--radius-sm)] bg-[var(--primary)] text-[var(--text-inverse)] text-[13px] font-semibold disabled:opacity-50">
+              className="h-10 px-4 rounded-[var(--radius-sm)] bg-[var(--primary)] text-[var(--text-inverse)] text-[13px] font-semibold disabled:opacity-50">
               {status === "issued" ? "Re-send letter" : "Send letter to traveler"}
             </button>
           </div>
-          {msg && <p className="mt-2 text-[12px] text-[var(--text-secondary)]">{msg}</p>}
+          {(status !== "paid" && status !== "issued") && (
+            <p className="mt-2 text-[12px] text-[var(--text-tertiary)] text-center">
+              &ldquo;Send letter&rdquo; unlocks once the traveler has paid. Current status: <strong>{status.replace(/_/g, " ")}</strong>.
+            </p>
+          )}
+          {msg && <p className="mt-2 text-[12px] text-[var(--text-secondary)] text-center">{msg}</p>}
         </div>
       </div>
 
@@ -226,9 +231,9 @@ export function LetterPreview({ data, signatureDataUrl }: { data: LetterData; si
               // eslint-disable-next-line @next/next/no-img-element
               <img src={signatureDataUrl} alt="Signature" className="h-14 w-auto max-w-[240px] object-contain mb-1" />
             ) : (
-              <div className="h-14 w-64 border border-dashed border-[#9ca3af] flex items-center justify-center text-[11px] text-[#9ca3af] mb-1">
-                Upload signature above
-              </div>
+              <a href="/admin/invitation-letters" className="block h-14 w-64 border border-dashed border-[#9ca3af] flex items-center justify-center text-[11px] text-[#9ca3af] mb-1 hover:border-[var(--primary)] hover:text-[var(--primary)]">
+                Upload signature on Invitation Letters page →
+              </a>
             )}
             <div className="border-t border-black w-64"></div>
             <div className="text-[12px]">Sign</div>
