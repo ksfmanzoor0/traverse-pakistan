@@ -1,6 +1,9 @@
 import { getResend, FROM } from "./resend";
 import type { LetterData } from "@/lib/invitation/letterData";
 import { generateInvitationLetterPdf } from "@/lib/invitation/generatePdf";
+import { getInvitationSignatureDataUrl } from "@/lib/invitation/config";
+import fs from "node:fs/promises";
+import path from "node:path";
 
 function esc(s: string): string {
   return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
@@ -12,7 +15,17 @@ function siteUrl(): string {
   return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
 }
 
-function renderLetterHtml(data: LetterData): string {
+async function loadSignatureFileDataUrl(): Promise<string | null> {
+  try {
+    const abs = path.join(process.cwd(), "public", "signature.png");
+    const buf = await fs.readFile(abs);
+    return `data:image/png;base64,${buf.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
+
+function renderLetterHtml(data: LetterData, signatureDataUrl: string | null): string {
   const site = siteUrl();
   const rows = data.travelers
     .map(
@@ -72,7 +85,8 @@ function renderLetterHtml(data: LetterData): string {
       <div>${esc(data.signer_title)}</div>
       <div style="margin-top:24px;display:flex;justify-content:space-between;align-items:flex-end">
         <div style="display:inline-block;text-align:center">
-          <div style="border-top:1px solid #000;width:240px;margin-top:56px"></div>
+          ${signatureDataUrl ? `<img src="${signatureDataUrl}" alt="Signature" style="height:64px;width:auto;max-width:240px;display:block;margin:0 auto -4px" />` : ""}
+          <div style="border-top:1px solid #000;width:240px;${signatureDataUrl ? "" : "margin-top:56px"}"></div>
           <div style="font-size:12px;text-align:left">Sign</div>
         </div>
         <div style="font-size:13px">Date: ${esc(data.issued_date)}</div>
@@ -92,10 +106,12 @@ export async function sendInvitationLetterIssued(input: Input): Promise<void> {
   const resend = getResend();
   if (!resend) throw new Error("Resend not configured");
 
-  const [pdfBuffer, letterHtml] = await Promise.all([
+  const [pdfBuffer, storedSig, fileSig] = await Promise.all([
     generateInvitationLetterPdf(input.letterData),
-    Promise.resolve(renderLetterHtml(input.letterData)),
+    getInvitationSignatureDataUrl(),
+    loadSignatureFileDataUrl(),
   ]);
+  const letterHtml = renderLetterHtml(input.letterData, storedSig ?? fileSig);
 
   const wrapper = `<div style="font-family:system-ui,-apple-system,sans-serif;color:#111827;max-width:820px;margin:0 auto;padding:16px">
     <p>Hi ${esc(input.contactName)},</p>
