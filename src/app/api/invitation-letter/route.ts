@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { quoteNotifyLimiter, checkRateLimit, clientIp } from "@/lib/ratelimit";
 import { getInvitationLetterPricePkr, generateInvitationRef } from "@/lib/invitation/config";
 import { sendInvitationLetterReceived } from "@/lib/email/sendInvitationLetterReceived";
+import { stampBookingWithUser } from "@/lib/auth/stampBookingWithUser";
 
 const TravelerSchema = z.object({
   full_name: z.string().max(120).default(""),
@@ -65,6 +66,12 @@ export async function POST(req: NextRequest) {
       console.error("[invitation-letter] insert failed:", error);
       return NextResponse.json({ error: "Could not create request" }, { status: 500 });
     }
+
+    // Silent signup so tracking + My Bookings work even before payment.
+    after(async () => {
+      try { await stampBookingWithUser(ref); }
+      catch (err) { console.error("[invitation-letter] stampBookingWithUser failed:", err); }
+    });
 
     // Fire "we received your request" email now; the "paid" email lands after Alfa IPN.
     after(async () => {

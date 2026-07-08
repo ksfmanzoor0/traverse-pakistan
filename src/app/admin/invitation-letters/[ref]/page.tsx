@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/server";
 import type { InvitationRequest, Traveler } from "@/lib/invitation/types";
 import { defaultLetterData, type LetterData } from "@/lib/invitation/letterData";
 import { InvitationLetterEditor } from "@/components/admin/InvitationLetterEditor";
@@ -19,7 +19,7 @@ function fmt(iso: string): string {
 }
 
 async function fetchRow(ref: string): Promise<InvitationRequest | null> {
-  const supabase = await getSupabaseServer();
+  const supabase = getSupabaseAdmin();
   const { data } = await supabase
     .from("invitation_requests" as never)
     .select("*")

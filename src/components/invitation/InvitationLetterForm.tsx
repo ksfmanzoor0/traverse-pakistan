@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { DateField } from "@/components/ui/DateField";
 import { COUNTRIES, NATIONALITIES } from "@/lib/invitation/countries";
@@ -27,6 +28,7 @@ const emptyTraveler: TravelerDraft = {
 type Props = { priceUsd: number; pricePkr: number };
 
 export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
+  const router = useRouter();
   const [firstName, setFirstName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
@@ -85,26 +87,7 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not create request");
 
-      const initRes = await fetch("/api/payments/alfa/initiate-invitation-letter", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ref: data.ref }),
-      });
-      const initData = await initRes.json();
-      if (!initRes.ok) throw new Error(initData.error ?? "Could not start payment");
-
-      const form = document.createElement("form");
-      form.method = "POST";
-      form.action = initData.ssoUrl;
-      Object.entries(initData.ssoParams as Record<string, string>).forEach(([k, v]) => {
-        const input = document.createElement("input");
-        input.type = "hidden";
-        input.name = k;
-        input.value = v;
-        form.appendChild(input);
-      });
-      document.body.appendChild(form);
-      form.submit();
+      router.push(`/invitation-letter/${data.ref}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setSubmitting(false);
@@ -244,7 +227,7 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
       )}
 
       <Button type="submit" variant="primary" size="lg" disabled={submitting} className="w-full sm:w-auto">
-        {submitting ? "Redirecting to payment…" : `Pay PKR ${pricePkr.toLocaleString()} & submit`}
+        {submitting ? "Creating request…" : "Submit request"}
       </Button>
     </form>
   );

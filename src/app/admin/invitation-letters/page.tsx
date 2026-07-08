@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { getInvitationLetterPricePkr, INVITATION_LETTER_PRICE_USD } from "@/lib/invitation/config";
 import { updateInvitationLetterPrice } from "./actions";
 
@@ -31,7 +31,7 @@ function fmt(iso: string): string {
 }
 
 async function fetchRows(): Promise<Row[]> {
-  const supabase = await getSupabaseServer();
+  const supabase = getSupabaseAdmin();
   const { data } = await supabase
     .from("invitation_requests" as never)
     .select("ref, status, contact_name, contact_email, contact_phone, embassy_country, embassy_city, amount_paid, amount_pkr, created_at, paid_at, issued_at")
