@@ -1,6 +1,6 @@
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
-export type BookingType = "tour" | "package" | "hotel";
+export type BookingType = "tour" | "package" | "hotel" | "invitation";
 
 export interface UserBookingSummary {
   ref: string;
@@ -18,7 +18,7 @@ export interface UserBookingSummary {
 export async function getBookingsForUser(userId: string): Promise<UserBookingSummary[]> {
   const supabase = getSupabaseAdmin();
 
-  const [pkg, hotel, tour] = await Promise.all([
+  const [pkg, hotel, tour, invitation] = await Promise.all([
     supabase
       .from("package_bookings")
       .select("booking_ref, package_slug, start_date, total_amount, booking_status, payment_status, created_at")
@@ -30,6 +30,10 @@ export async function getBookingsForUser(userId: string): Promise<UserBookingSum
     supabase
       .from("bookings")
       .select("booking_ref, departure_id, total_amount, booking_status, status, created_at")
+      .eq("user_id", userId),
+    supabase
+      .from("invitation_requests" as never)
+      .select("ref, status, amount_pkr, arrival_date, embassy_city, created_at")
       .eq("user_id", userId),
   ]);
 
@@ -71,6 +75,33 @@ export async function getBookingsForUser(userId: string): Promise<UserBookingSum
       status: String(row.booking_status ?? "pending"),
       paymentStatus: row.status === "confirmed" ? "paid" : row.status === "cancelled" ? "failed" : "pending",
       createdAt: String(row.created_at),
+    });
+  }
+
+  for (const raw of (invitation.data as unknown as Array<{ ref: string; status: string; amount_pkr: number; arrival_date: string | null; embassy_city: string | null; created_at: string }>) ?? []) {
+    const statusToBooking: Record<string, string> = {
+      pending_payment: "pending",
+      paid: "active",
+      issued: "completed",
+      failed: "cancelled",
+      cancelled: "cancelled",
+    };
+    const statusToPayment: Record<string, string> = {
+      pending_payment: "pending",
+      paid: "paid",
+      issued: "paid",
+      failed: "failed",
+      cancelled: "failed",
+    };
+    list.push({
+      ref: raw.ref,
+      type: "invitation",
+      title: raw.embassy_city ? `Invitation Letter — ${raw.embassy_city}` : "Invitation Letter",
+      date: raw.arrival_date,
+      amount: Number(raw.amount_pkr),
+      status: statusToBooking[raw.status] ?? "pending",
+      paymentStatus: statusToPayment[raw.status] ?? "pending",
+      createdAt: raw.created_at,
     });
   }
 

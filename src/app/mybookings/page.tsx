@@ -33,9 +33,13 @@ export default async function TripsPage() {
 
   const bookings = await getBookingsForUser(user.id);
 
+  function bookingHref(ref: string): string {
+    return ref.startsWith("INV-") ? `/invitation-letter/${ref}` : `/bookings/${ref}`;
+  }
+
   // 1 booking → land directly on it
   if (bookings.length === 1) {
-    redirect(`/bookings/${bookings[0].ref}`);
+    redirect(bookingHref(bookings[0].ref));
   }
 
   return (
@@ -74,12 +78,12 @@ export default async function TripsPage() {
               return (
                 <Link
                   key={b.ref}
-                  href={`/bookings/${b.ref}`}
+                  href={bookingHref(b.ref)}
                   className="block bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-[var(--radius-md)] p-5 hover:border-[var(--primary)] transition-colors"
                 >
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
-                      {b.type === "hotel" ? "Hotel" : b.type === "package" ? "Package" : "Tour"}
+                      {b.type === "hotel" ? "Hotel" : b.type === "package" ? "Package" : b.type === "invitation" ? "Invitation Letter" : "Tour"}
                     </p>
                     <span
                       className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-[var(--radius-full)]"

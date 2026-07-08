@@ -25,6 +25,7 @@ const companyLinks = [
   { label: "Blog", href: "/blog" },
   { label: "Contact Us", href: "/contact" },
   { label: "Travel Styles", href: "/travel-styles" },
+  { label: "Visa Invitation Letter", href: "/invitation-letter" },
 ];
 
 export function Footer() {
