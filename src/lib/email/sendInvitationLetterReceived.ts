@@ -68,7 +68,7 @@ export async function sendInvitationLetterReceived(input: Input): Promise<void> 
     html: `<div style="font-family:system-ui,-apple-system,sans-serif;line-height:1.5;color:#111827">
       <p>Hi ${esc(input.contact_name)},</p>
       <p>We've received your invitation letter request. Your reference is <strong>${esc(input.ref)}</strong>.</p>
-      <p>Once your payment of <strong>PKR ${input.pricePkr.toLocaleString()}</strong> (equivalent to USD ${INVITATION_LETTER_PRICE_USD}) is confirmed, our team will prepare your letter and email it back within 2–3 business days.</p>
+      <p>Once your payment of <strong>PKR ${input.pricePkr.toLocaleString()}</strong> (equivalent to USD ${INVITATION_LETTER_PRICE_USD}) is confirmed, our team will prepare your letter and email it back within 1 business day.</p>
       ${summary}
       <p style="margin-top:20px">If your plans change, reply to this email and we'll help.</p>
       <p>— Traverse Pakistan</p>

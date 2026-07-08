@@ -34,7 +34,7 @@ export async function sendInvitationLetterPaid(ref: string): Promise<void> {
     html: `<div style="font-family:system-ui,-apple-system,sans-serif;line-height:1.5;color:#111827">
       <p>Hi ${esc(row.contact_name)},</p>
       <p>We've received your payment of <strong>PKR ${Number(row.amount_paid).toLocaleString()}</strong> for invitation letter <strong>${esc(ref)}</strong>.</p>
-      <p>Our team is now preparing your letter addressed to the ${esc(row.embassy_city)} embassy. You'll receive it by email within 2–3 business days.</p>
+      <p>Our team is now preparing your letter addressed to the ${esc(row.embassy_city)} embassy. You'll receive it by email within 1 business day.</p>
       <p>— Traverse Pakistan</p>
     </div>`,
   }).catch((err) => console.error("[invitation paid/user]", err));

@@ -43,7 +43,7 @@ export default async function InvitationLetterStatusPage({ params }: { params: P
     },
     paid: {
       title: "Payment received",
-      body: "Our team is preparing your invitation letter. You'll receive it by email within 2–3 business days.",
+      body: "Our team is preparing your invitation letter. You'll receive it by email within 1 business day.",
       tone: "success",
     },
     issued: {

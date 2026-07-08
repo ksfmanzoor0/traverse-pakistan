@@ -28,7 +28,6 @@ type Props = { priceUsd: number; pricePkr: number };
 
 export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
   const [firstName, setFirstName] = useState("");
-  const [surname, setSurname] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [embassyCountry, setEmbassyCountry] = useState("");
@@ -55,7 +54,7 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
     setError(null);
     setSubmitting(true);
     try {
-      const contactName = `${firstName.trim()} ${surname.trim()}`.trim();
+      const contactName = firstName.trim();
       const mappedTravelers: Traveler[] = travelers.map((t) => ({
         full_name: `${t.first_name.trim()} ${t.surname.trim()}`.trim(),
         date_of_birth: t.date_of_birth,
@@ -120,13 +119,9 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
       <section>
         <h2 className="text-[18px] font-bold text-[var(--text-primary)] mb-4">Your contact details</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className={labelCls}>First name{req}</label>
+          <div className="sm:col-span-2">
+            <label className={labelCls}>Name{req}</label>
             <input required value={firstName} onChange={(e) => setFirstName(e.target.value)} className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>Surname{req}</label>
-            <input required value={surname} onChange={(e) => setSurname(e.target.value)} className={inputCls} />
           </div>
           <div>
             <label className={labelCls}>Email{req}</label>
@@ -231,7 +226,7 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
             PKR {pricePkr.toLocaleString()} <span className="text-[13px] font-medium text-[var(--text-tertiary)]">(≈ USD {priceUsd})</span>
           </span>
         </div>
-        <p className="text-[13px] text-[var(--text-tertiary)]">Non-refundable. Letter delivered to your email within 2–3 business days of payment.</p>
+        <p className="text-[13px] text-[var(--text-tertiary)]">Non-refundable. Letter delivered to your email within 1 business day of payment.</p>
       </div>
 
       {error && (
