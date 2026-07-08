@@ -22,9 +22,9 @@ export type LetterData = {
 };
 
 export function defaultLetterData(row: InvitationRequest): LetterData {
-  const destList = row.destinations.join(", ");
-  const arrivalFmt = formatDate(row.arrival_date);
-  const departureFmt = formatDate(row.departure_date);
+  const destList = (row.destinations ?? []).join(", ") || "[destinations]";
+  const arrivalFmt = row.arrival_date ? formatDate(row.arrival_date) : "[arrival date]";
+  const departureFmt = row.departure_date ? formatDate(row.departure_date) : "[departure date]";
   return {
     header: {
       address_line_1: "Shop 06, Multi Arcade,",
@@ -36,7 +36,7 @@ export function defaultLetterData(row: InvitationRequest): LetterData {
       ntn: "6561399",
     },
     addressee_name: "Visa Counsellor,",
-    embassy_name: `Embassy of Pakistan, ${row.embassy_city}`,
+    embassy_name: `Embassy of Pakistan, ${row.embassy_city ?? "[city]"}`,
     subject: "Issuance of Tourist Visa",
     body_intro: `Please find below participants who are planning to visit Pakistan for sightseeing of ${destList} from ${arrivalFmt} to ${departureFmt}.\n\nM/S Traverse Pak LLP is the Travel agent handling the trip and will provide all logistic services during their stay in Pakistan. All arrangements have been made for their smooth travel in Pakistan.`,
     body_close: "It is requested to issue necessary Tourist VISA for their smooth arrival. We shall be very much appreciative of your support.",

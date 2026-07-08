@@ -87,14 +87,18 @@ export default async function InvitationLetterStatusPage({ params }: { params: P
               <span className="text-[var(--text-tertiary)]">Traveler contact</span>
               <span className="text-[var(--text-primary)]">{row.contact_email}</span>
             </div>
-            <div className="flex justify-between text-[14px]">
-              <span className="text-[var(--text-tertiary)]">Embassy</span>
-              <span className="text-[var(--text-primary)]">{row.embassy_city}, {row.embassy_country}</span>
-            </div>
-            <div className="flex justify-between text-[14px]">
-              <span className="text-[var(--text-tertiary)]">Trip</span>
-              <span className="text-[var(--text-primary)]">{row.arrival_date} → {row.departure_date}</span>
-            </div>
+            {(row.embassy_city || row.embassy_country) && (
+              <div className="flex justify-between text-[14px]">
+                <span className="text-[var(--text-tertiary)]">Embassy</span>
+                <span className="text-[var(--text-primary)]">{[row.embassy_city, row.embassy_country].filter(Boolean).join(", ")}</span>
+              </div>
+            )}
+            {row.arrival_date && row.departure_date && (
+              <div className="flex justify-between text-[14px]">
+                <span className="text-[var(--text-tertiary)]">Trip</span>
+                <span className="text-[var(--text-primary)]">{row.arrival_date} → {row.departure_date}</span>
+              </div>
+            )}
             {row.amount_paid && (
               <div className="flex justify-between text-[14px]">
                 <span className="text-[var(--text-tertiary)]">Paid</span>

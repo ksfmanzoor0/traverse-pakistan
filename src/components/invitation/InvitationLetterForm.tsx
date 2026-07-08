@@ -52,6 +52,10 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (arrivalDate && departureDate && departureDate < arrivalDate) {
+      setError("Departure date must be on or after arrival date.");
+      return;
+    }
     setSubmitting(true);
     try {
       const contactName = firstName.trim();
@@ -135,47 +139,50 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
       </section>
 
       <section>
-        <h2 className="text-[18px] font-bold text-[var(--text-primary)] mb-4">Where should we address the letter?</h2>
+        <h2 className="text-[18px] font-bold text-[var(--text-primary)] mb-1">Where should we address the letter?</h2>
+        <p className="text-[13px] text-[var(--text-tertiary)] mb-4">Optional — you can add these after payment or we&apos;ll follow up by email.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={labelCls}>Country of embassy{req}</label>
-            <select required value={embassyCountry} onChange={(e) => setEmbassyCountry(e.target.value)} className={selectCls} style={chevronBg}>
-              <option value="" disabled>Select country</option>
+            <label className={labelCls}>Country of embassy</label>
+            <select value={embassyCountry} onChange={(e) => setEmbassyCountry(e.target.value)} className={selectCls} style={chevronBg}>
+              <option value="">Select country</option>
               {COUNTRIES.map((c) => (<option key={c} value={c}>{c}</option>))}
             </select>
           </div>
           <div>
-            <label className={labelCls}>City{req}</label>
-            <input required placeholder="Madrid" value={embassyCity} onChange={(e) => setEmbassyCity(e.target.value)} className={inputCls} />
+            <label className={labelCls}>City</label>
+            <input placeholder="Madrid" value={embassyCity} onChange={(e) => setEmbassyCity(e.target.value)} className={inputCls} />
           </div>
         </div>
       </section>
 
       <section>
-        <h2 className="text-[18px] font-bold text-[var(--text-primary)] mb-4">Trip details</h2>
+        <h2 className="text-[18px] font-bold text-[var(--text-primary)] mb-1">Trip details</h2>
+        <p className="text-[13px] text-[var(--text-tertiary)] mb-4">Optional — helpful to include if you already have plans.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={labelCls}>Arrival date{req}</label>
-            <DateField value={arrivalDate} onChange={setArrivalDate} mode="future" required />
+            <label className={labelCls}>Arrival date</label>
+            <DateField value={arrivalDate} onChange={setArrivalDate} mode="future" />
           </div>
           <div>
-            <label className={labelCls}>Departure date{req}</label>
-            <DateField value={departureDate} onChange={setDepartureDate} mode="future" required />
+            <label className={labelCls}>Departure date</label>
+            <DateField value={departureDate} onChange={setDepartureDate} mode="future" />
           </div>
           <div className="sm:col-span-2">
-            <label className={labelCls}>Destinations to visit (comma-separated){req}</label>
-            <input required placeholder="Islamabad, Skardu, Hunza" value={destinations} onChange={(e) => setDestinations(e.target.value)} className={inputCls} />
+            <label className={labelCls}>Destinations to visit (comma-separated)</label>
+            <input placeholder="Islamabad, Skardu, Hunza" value={destinations} onChange={(e) => setDestinations(e.target.value)} className={inputCls} />
           </div>
         </div>
       </section>
 
       <section>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-1">
           <h2 className="text-[18px] font-bold text-[var(--text-primary)]">Travelers</h2>
           <button type="button" onClick={addTraveler} className="text-[13px] font-semibold text-[var(--primary)]">
             + Add traveler
           </button>
         </div>
+        <p className="text-[13px] text-[var(--text-tertiary)] mb-4">Optional — we&apos;ll ask for these details after payment if not provided.</p>
         <div className="space-y-6">
           {travelers.map((t, i) => (
             <div key={i} className="p-4 rounded-[var(--radius-md)] border border-[var(--border-default)]">
@@ -187,31 +194,31 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className={labelCls}>First name (as on passport){req}</label>
-                  <input required value={t.first_name} onChange={(e) => updateTraveler(i, { first_name: e.target.value })} className={inputCls} />
+                  <label className={labelCls}>First name (as on passport)</label>
+                  <input value={t.first_name} onChange={(e) => updateTraveler(i, { first_name: e.target.value })} className={inputCls} />
                 </div>
                 <div>
-                  <label className={labelCls}>Surname{req}</label>
-                  <input required value={t.surname} onChange={(e) => updateTraveler(i, { surname: e.target.value })} className={inputCls} />
+                  <label className={labelCls}>Surname</label>
+                  <input value={t.surname} onChange={(e) => updateTraveler(i, { surname: e.target.value })} className={inputCls} />
                 </div>
                 <div>
-                  <label className={labelCls}>Date of birth{req}</label>
-                  <DateField value={t.date_of_birth} onChange={(v) => updateTraveler(i, { date_of_birth: v })} mode="past" required />
+                  <label className={labelCls}>Date of birth</label>
+                  <DateField value={t.date_of_birth} onChange={(v) => updateTraveler(i, { date_of_birth: v })} mode="past" />
                 </div>
                 <div>
-                  <label className={labelCls}>Nationality{req}</label>
-                  <select required value={t.nationality} onChange={(e) => updateTraveler(i, { nationality: e.target.value })} className={selectCls} style={chevronBg}>
-                    <option value="" disabled>Select nationality</option>
+                  <label className={labelCls}>Nationality</label>
+                  <select value={t.nationality} onChange={(e) => updateTraveler(i, { nationality: e.target.value })} className={selectCls} style={chevronBg}>
+                    <option value="">Select nationality</option>
                     {NATIONALITIES.map((n) => (<option key={n} value={n}>{n}</option>))}
                   </select>
                 </div>
                 <div>
-                  <label className={labelCls}>Passport number{req}</label>
-                  <input required value={t.passport_number} onChange={(e) => updateTraveler(i, { passport_number: e.target.value })} className={inputCls} />
+                  <label className={labelCls}>Passport number</label>
+                  <input value={t.passport_number} onChange={(e) => updateTraveler(i, { passport_number: e.target.value })} className={inputCls} />
                 </div>
                 <div>
-                  <label className={labelCls}>Passport expiry{req}</label>
-                  <DateField value={t.passport_expiry} onChange={(v) => updateTraveler(i, { passport_expiry: v })} mode="future" required />
+                  <label className={labelCls}>Passport expiry</label>
+                  <DateField value={t.passport_expiry} onChange={(v) => updateTraveler(i, { passport_expiry: v })} mode="future" />
                 </div>
               </div>
             </div>

@@ -7,24 +7,27 @@ import { getInvitationLetterPricePkr, generateInvitationRef } from "@/lib/invita
 import { sendInvitationLetterReceived } from "@/lib/email/sendInvitationLetterReceived";
 
 const TravelerSchema = z.object({
-  full_name: z.string().min(2).max(120),
-  date_of_birth: z.string().min(4).max(20),
-  nationality: z.string().min(2).max(60),
-  passport_number: z.string().min(3).max(40),
-  passport_expiry: z.string().min(4).max(20),
+  full_name: z.string().max(120).default(""),
+  date_of_birth: z.string().max(20).default(""),
+  nationality: z.string().max(60).default(""),
+  passport_number: z.string().max(40).default(""),
+  passport_expiry: z.string().max(20).default(""),
 });
 
 const Schema = z.object({
   contact_name: z.string().min(2).max(120),
   contact_email: z.string().email().max(200),
   contact_phone: z.string().min(6).max(40),
-  embassy_country: z.string().min(2).max(80),
-  embassy_city: z.string().min(2).max(80),
-  arrival_date: z.string().min(4).max(20),
-  departure_date: z.string().min(4).max(20),
-  destinations: z.array(z.string().min(2).max(80)).min(1).max(20),
-  travelers: z.array(TravelerSchema).min(1).max(20),
-});
+  embassy_country: z.string().max(80).default(""),
+  embassy_city: z.string().max(80).default(""),
+  arrival_date: z.string().max(20).default(""),
+  departure_date: z.string().max(20).default(""),
+  destinations: z.array(z.string().max(80)).max(20).default([]),
+  travelers: z.array(TravelerSchema).max(20).default([]),
+}).refine(
+  (v) => !v.arrival_date || !v.departure_date || v.departure_date >= v.arrival_date,
+  { message: "Departure date must be on or after arrival date", path: ["departure_date"] },
+);
 
 export async function POST(req: NextRequest) {
   try {
@@ -49,10 +52,10 @@ export async function POST(req: NextRequest) {
         contact_name: input.contact_name,
         contact_email: input.contact_email,
         contact_phone: input.contact_phone,
-        embassy_country: input.embassy_country,
-        embassy_city: input.embassy_city,
-        arrival_date: input.arrival_date,
-        departure_date: input.departure_date,
+        embassy_country: input.embassy_country || null,
+        embassy_city: input.embassy_city || null,
+        arrival_date: input.arrival_date || null,
+        departure_date: input.departure_date || null,
         destinations: input.destinations,
         travelers: input.travelers,
         amount_pkr: pricePkr,
