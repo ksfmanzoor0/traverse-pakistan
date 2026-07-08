@@ -41,6 +41,7 @@ export function DateField({
   mode = "any",
   minYear,
   maxYear,
+  minDate,
 }: {
   value: string;
   onChange: (iso: string) => void;
@@ -49,7 +50,10 @@ export function DateField({
   mode?: Mode;
   minYear?: number;
   maxYear?: number;
+  /** ISO YYYY-MM-DD; dates strictly before this are disabled. */
+  minDate?: string;
 }) {
+  const minDateParsed = minDate ? fromIso(minDate) : null;
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const parsed = fromIso(value);
@@ -152,7 +156,8 @@ export function DateField({
               const isToday = isSameDay(today, d);
               const disabled =
                 (mode === "future" && d < today) ||
-                (mode === "past" && d > today);
+                (mode === "past" && d > today) ||
+                (minDateParsed !== null && d < minDateParsed);
               return (
                 <button
                   key={i}

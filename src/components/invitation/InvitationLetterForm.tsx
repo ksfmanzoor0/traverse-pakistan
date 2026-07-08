@@ -162,11 +162,14 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={labelCls}>Arrival date</label>
-            <DateField value={arrivalDate} onChange={setArrivalDate} mode="future" />
+            <DateField value={arrivalDate} onChange={(v) => {
+              setArrivalDate(v);
+              if (departureDate && v && departureDate < v) setDepartureDate("");
+            }} mode="future" />
           </div>
           <div>
             <label className={labelCls}>Departure date</label>
-            <DateField value={departureDate} onChange={setDepartureDate} mode="future" />
+            <DateField value={departureDate} onChange={setDepartureDate} mode="future" minDate={arrivalDate} />
           </div>
           <div className="sm:col-span-2">
             <label className={labelCls}>Destinations to visit (comma-separated)</label>
