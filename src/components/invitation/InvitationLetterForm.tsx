@@ -2,10 +2,22 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { DateField } from "@/components/ui/DateField";
+import { COUNTRIES, NATIONALITIES } from "@/lib/invitation/countries";
 import type { Traveler } from "@/lib/invitation/types";
 
-const emptyTraveler: Traveler = {
-  full_name: "",
+type TravelerDraft = {
+  first_name: string;
+  surname: string;
+  date_of_birth: string;
+  nationality: string;
+  passport_number: string;
+  passport_expiry: string;
+};
+
+const emptyTraveler: TravelerDraft = {
+  first_name: "",
+  surname: "",
   date_of_birth: "",
   nationality: "",
   passport_number: "",
@@ -15,7 +27,8 @@ const emptyTraveler: Traveler = {
 type Props = { priceUsd: number; pricePkr: number };
 
 export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
-  const [contactName, setContactName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [surname, setSurname] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [embassyCountry, setEmbassyCountry] = useState("");
@@ -23,11 +36,11 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
   const [arrivalDate, setArrivalDate] = useState("");
   const [departureDate, setDepartureDate] = useState("");
   const [destinations, setDestinations] = useState("Islamabad, Skardu, Hunza");
-  const [travelers, setTravelers] = useState<Traveler[]>([{ ...emptyTraveler }]);
+  const [travelers, setTravelers] = useState<TravelerDraft[]>([{ ...emptyTraveler }]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function updateTraveler(i: number, patch: Partial<Traveler>) {
+  function updateTraveler(i: number, patch: Partial<TravelerDraft>) {
     setTravelers((prev) => prev.map((t, idx) => (idx === i ? { ...t, ...patch } : t)));
   }
   function addTraveler() {
@@ -42,16 +55,24 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
     setError(null);
     setSubmitting(true);
     try {
+      const contactName = `${firstName.trim()} ${surname.trim()}`.trim();
+      const mappedTravelers: Traveler[] = travelers.map((t) => ({
+        full_name: `${t.first_name.trim()} ${t.surname.trim()}`.trim(),
+        date_of_birth: t.date_of_birth,
+        nationality: t.nationality,
+        passport_number: t.passport_number,
+        passport_expiry: t.passport_expiry,
+      }));
       const payload = {
-        contact_name: contactName.trim(),
+        contact_name: contactName,
         contact_email: contactEmail.trim(),
         contact_phone: contactPhone.trim(),
-        embassy_country: embassyCountry.trim(),
+        embassy_country: embassyCountry,
         embassy_city: embassyCity.trim(),
         arrival_date: arrivalDate,
         departure_date: departureDate,
         destinations: destinations.split(",").map((s) => s.trim()).filter(Boolean),
-        travelers,
+        travelers: mappedTravelers,
       };
       const res = await fetch("/api/invitation-letter", {
         method: "POST",
@@ -88,8 +109,11 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
   }
 
   const labelCls = "block text-[13px] font-medium text-[var(--text-secondary)] mb-1";
+  const req = <span className="text-[var(--error)] ml-0.5">*</span>;
   const inputCls =
     "w-full h-11 px-3 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-primary)] text-[15px] text-[var(--text-primary)] focus:outline-none focus:border-[var(--primary)]";
+  const selectCls = inputCls + " appearance-none pr-9 bg-no-repeat bg-[right_0.75rem_center] bg-[length:1rem] cursor-pointer";
+  const chevronBg = { backgroundImage: 'url("data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 20 20%27 fill=%27none%27 stroke=%27%23888%27 stroke-width=%272%27><polyline points=%275 8 10 13 15 8%27/></svg>")' };
 
   return (
     <form onSubmit={onSubmit} className="space-y-8 max-w-3xl">
@@ -97,15 +121,19 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
         <h2 className="text-[18px] font-bold text-[var(--text-primary)] mb-4">Your contact details</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={labelCls}>Full name</label>
-            <input required value={contactName} onChange={(e) => setContactName(e.target.value)} className={inputCls} />
+            <label className={labelCls}>First name{req}</label>
+            <input required value={firstName} onChange={(e) => setFirstName(e.target.value)} className={inputCls} />
           </div>
           <div>
-            <label className={labelCls}>Email</label>
+            <label className={labelCls}>Surname{req}</label>
+            <input required value={surname} onChange={(e) => setSurname(e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>Email{req}</label>
             <input required type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className={inputCls} />
           </div>
-          <div className="sm:col-span-2">
-            <label className={labelCls}>Phone (with country code)</label>
+          <div>
+            <label className={labelCls}>Phone (with country code){req}</label>
             <input required type="tel" placeholder="+34 6XX XXX XXX" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className={inputCls} />
           </div>
         </div>
@@ -115,11 +143,14 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
         <h2 className="text-[18px] font-bold text-[var(--text-primary)] mb-4">Where should we address the letter?</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={labelCls}>Country of embassy</label>
-            <input required placeholder="Spain" value={embassyCountry} onChange={(e) => setEmbassyCountry(e.target.value)} className={inputCls} />
+            <label className={labelCls}>Country of embassy{req}</label>
+            <select required value={embassyCountry} onChange={(e) => setEmbassyCountry(e.target.value)} className={selectCls} style={chevronBg}>
+              <option value="" disabled>Select country</option>
+              {COUNTRIES.map((c) => (<option key={c} value={c}>{c}</option>))}
+            </select>
           </div>
           <div>
-            <label className={labelCls}>City</label>
+            <label className={labelCls}>City{req}</label>
             <input required placeholder="Madrid" value={embassyCity} onChange={(e) => setEmbassyCity(e.target.value)} className={inputCls} />
           </div>
         </div>
@@ -129,15 +160,15 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
         <h2 className="text-[18px] font-bold text-[var(--text-primary)] mb-4">Trip details</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={labelCls}>Arrival date</label>
-            <input required type="date" value={arrivalDate} onChange={(e) => setArrivalDate(e.target.value)} className={inputCls} />
+            <label className={labelCls}>Arrival date{req}</label>
+            <DateField value={arrivalDate} onChange={setArrivalDate} mode="future" required />
           </div>
           <div>
-            <label className={labelCls}>Departure date</label>
-            <input required type="date" value={departureDate} onChange={(e) => setDepartureDate(e.target.value)} className={inputCls} />
+            <label className={labelCls}>Departure date{req}</label>
+            <DateField value={departureDate} onChange={setDepartureDate} mode="future" required />
           </div>
           <div className="sm:col-span-2">
-            <label className={labelCls}>Destinations to visit (comma-separated)</label>
+            <label className={labelCls}>Destinations to visit (comma-separated){req}</label>
             <input required placeholder="Islamabad, Skardu, Hunza" value={destinations} onChange={(e) => setDestinations(e.target.value)} className={inputCls} />
           </div>
         </div>
@@ -146,7 +177,7 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-[18px] font-bold text-[var(--text-primary)]">Travelers</h2>
-          <button type="button" onClick={addTraveler} className="text-[13px] font-semibold text-[var(--primary)] inline-flex items-center gap-1">
+          <button type="button" onClick={addTraveler} className="text-[13px] font-semibold text-[var(--primary)]">
             + Add traveler
           </button>
         </div>
@@ -160,25 +191,32 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
                 )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="sm:col-span-2">
-                  <label className={labelCls}>Full name (as on passport)</label>
-                  <input required value={t.full_name} onChange={(e) => updateTraveler(i, { full_name: e.target.value })} className={inputCls} />
+                <div>
+                  <label className={labelCls}>First name (as on passport){req}</label>
+                  <input required value={t.first_name} onChange={(e) => updateTraveler(i, { first_name: e.target.value })} className={inputCls} />
                 </div>
                 <div>
-                  <label className={labelCls}>Date of birth</label>
-                  <input required type="date" value={t.date_of_birth} onChange={(e) => updateTraveler(i, { date_of_birth: e.target.value })} className={inputCls} />
+                  <label className={labelCls}>Surname{req}</label>
+                  <input required value={t.surname} onChange={(e) => updateTraveler(i, { surname: e.target.value })} className={inputCls} />
                 </div>
                 <div>
-                  <label className={labelCls}>Nationality</label>
-                  <input required value={t.nationality} onChange={(e) => updateTraveler(i, { nationality: e.target.value })} className={inputCls} />
+                  <label className={labelCls}>Date of birth{req}</label>
+                  <DateField value={t.date_of_birth} onChange={(v) => updateTraveler(i, { date_of_birth: v })} mode="past" required />
                 </div>
                 <div>
-                  <label className={labelCls}>Passport number</label>
+                  <label className={labelCls}>Nationality{req}</label>
+                  <select required value={t.nationality} onChange={(e) => updateTraveler(i, { nationality: e.target.value })} className={selectCls} style={chevronBg}>
+                    <option value="" disabled>Select nationality</option>
+                    {NATIONALITIES.map((n) => (<option key={n} value={n}>{n}</option>))}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>Passport number{req}</label>
                   <input required value={t.passport_number} onChange={(e) => updateTraveler(i, { passport_number: e.target.value })} className={inputCls} />
                 </div>
                 <div>
-                  <label className={labelCls}>Passport expiry</label>
-                  <input required type="date" value={t.passport_expiry} onChange={(e) => updateTraveler(i, { passport_expiry: e.target.value })} className={inputCls} />
+                  <label className={labelCls}>Passport expiry{req}</label>
+                  <DateField value={t.passport_expiry} onChange={(v) => updateTraveler(i, { passport_expiry: v })} mode="future" required />
                 </div>
               </div>
             </div>
