@@ -9,11 +9,12 @@ const schema = z.object({
   contact: z.string().min(3).max(120),
 });
 
-type BookingTable = "package_bookings" | "hotel_bookings" | "bookings";
+type BookingTable = "package_bookings" | "hotel_bookings" | "bookings" | "invitation_requests";
 
 function tableFromRef(ref: string): BookingTable {
   if (ref.startsWith("PKG-")) return "package_bookings";
   if (ref.startsWith("HTL-")) return "hotel_bookings";
+  if (ref.startsWith("INV-")) return "invitation_requests";
   return "bookings";
 }
 
@@ -30,6 +31,11 @@ async function fetchContact(table: BookingTable, ref: string): Promise<{ email: 
   if (table === "hotel_bookings") {
     const { data } = await supabase.from("hotel_bookings").select("contact_email, contact_phone").eq("booking_ref", ref).maybeSingle();
     return data ? { email: data.contact_email, phone: data.contact_phone } : null;
+  }
+  if (table === "invitation_requests") {
+    const { data } = await supabase.from("invitation_requests" as never).select("contact_email, contact_phone").eq("ref", ref).maybeSingle();
+    const row = data as { contact_email: string | null; contact_phone: string | null } | null;
+    return row ? { email: row.contact_email, phone: row.contact_phone } : null;
   }
   const { data } = await supabase.from("bookings").select("contact_email, contact_phone").eq("booking_ref", ref).maybeSingle();
   return data ? { email: data.contact_email, phone: data.contact_phone } : null;
