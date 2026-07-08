@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import type { InvitationRequest, Traveler } from "@/lib/invitation/types";
+import { defaultLetterData, type LetterData } from "@/lib/invitation/letterData";
+import { InvitationLetterEditor } from "@/components/admin/InvitationLetterEditor";
+import { saveInvitationLetterData, sendInvitationLetter } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -113,6 +116,17 @@ export default async function AdminInvitationLetterDetail({ params }: { params: 
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section>
+        <h2 className="text-[14px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-3">Letter editor</h2>
+        <InvitationLetterEditor
+          ref={row.ref}
+          initialData={(row.letter_data as LetterData | null) ?? defaultLetterData(row)}
+          status={row.status}
+          saveAction={saveInvitationLetterData}
+          sendAction={sendInvitationLetter}
+        />
       </section>
 
       {row.admin_notes && (
