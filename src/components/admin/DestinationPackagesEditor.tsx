@@ -138,10 +138,10 @@ export function DestinationPackagesEditor({ destinationSlug, initial, saveAction
           <button
             type="button"
             onClick={save}
-            disabled={pending || !dirty}
+            disabled={pending}
             className="px-4 py-2 rounded-[var(--radius-sm)] text-[13px] font-medium bg-[var(--primary)] text-[var(--on-primary,#fff)] disabled:opacity-50"
           >
-            {pending ? "Saving…" : "Save changes"}
+            {pending ? "Saving…" : dirty ? "Save changes" : "Save & refresh"}
           </button>
         </div>
       </div>
