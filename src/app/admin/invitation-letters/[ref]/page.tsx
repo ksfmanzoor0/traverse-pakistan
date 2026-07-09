@@ -2,10 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import type { InvitationRequest, Traveler } from "@/lib/invitation/types";
+import { readTravelerName } from "@/lib/invitation/types";
 import { defaultLetterData, type LetterData } from "@/lib/invitation/letterData";
 import { getInvitationSignatureDataUrl } from "@/lib/invitation/config";
 import { InvitationLetterEditor } from "@/components/admin/InvitationLetterEditor";
-import { saveInvitationLetterData, sendInvitationLetter } from "../actions";
+import { DeleteInvitationButton } from "@/components/admin/DeleteInvitationButton";
+import { saveInvitationLetterData, sendInvitationLetter, deleteInvitationRequest } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -38,19 +40,22 @@ export default async function AdminInvitationLetterDetail({ params }: { params: 
 
   return (
     <div className="p-6 sm:p-8 space-y-8 max-w-[1400px]">
-      <div>
-        <Link href="/admin/invitation-letters" className="text-[13px] text-[var(--text-tertiary)]">← All requests</Link>
-        <div className="mt-2 flex items-center gap-3">
-          <h1 className="text-[24px] font-bold text-[var(--text-primary)] font-mono">{row.ref}</h1>
-          <span className={`inline-flex items-center px-2 py-1 rounded text-[12px] font-medium ${
-            row.status === "issued" ? "bg-[var(--success)]/10 text-[var(--success)]" :
-            row.status === "paid" ? "bg-[var(--primary)]/10 text-[var(--primary)]" :
-            row.status === "pending_payment" ? "bg-[var(--warning)]/10 text-[var(--warning)]" :
-            "bg-[var(--bg-subtle)] text-[var(--text-tertiary)]"
-          }`}>
-            {row.status.replace(/_/g, " ")}
-          </span>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <Link href="/admin/invitation-letters" className="text-[13px] text-[var(--text-tertiary)]">← All requests</Link>
+          <div className="mt-2 flex items-center gap-3">
+            <h1 className="text-[24px] font-bold text-[var(--text-primary)] font-mono">{row.ref}</h1>
+            <span className={`inline-flex items-center px-2 py-1 rounded text-[12px] font-medium ${
+              row.status === "issued" ? "bg-[var(--success)]/10 text-[var(--success)]" :
+              row.status === "paid" ? "bg-[var(--primary)]/10 text-[var(--primary)]" :
+              row.status === "pending_payment" ? "bg-[var(--warning)]/10 text-[var(--warning)]" :
+              "bg-[var(--bg-subtle)] text-[var(--text-tertiary)]"
+            }`}>
+              {row.status.replace(/_/g, " ")}
+            </span>
+          </div>
         </div>
+        <DeleteInvitationButton bookingRef={row.ref} deleteAction={deleteInvitationRequest} />
       </div>
 
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -97,7 +102,8 @@ export default async function AdminInvitationLetterDetail({ params }: { params: 
           <table className="min-w-full text-[13px]">
             <thead className="bg-[var(--bg-subtle)] text-[var(--text-secondary)]">
               <tr>
-                <th className="text-left p-2">Name</th>
+                <th className="text-left p-2">Surname</th>
+                <th className="text-left p-2">Given names</th>
                 <th className="text-left p-2">DOB</th>
                 <th className="text-left p-2">Nationality</th>
                 <th className="text-left p-2">Passport #</th>
@@ -105,15 +111,19 @@ export default async function AdminInvitationLetterDetail({ params }: { params: 
               </tr>
             </thead>
             <tbody>
-              {travelers.map((t, i) => (
-                <tr key={i} className="border-t border-[var(--border-default)]">
-                  <td className="p-2 text-[var(--text-primary)]">{t.full_name}</td>
-                  <td className="p-2 text-[var(--text-primary)]">{t.date_of_birth}</td>
-                  <td className="p-2 text-[var(--text-primary)]">{t.nationality}</td>
-                  <td className="p-2 text-[var(--text-primary)] font-mono">{t.passport_number}</td>
-                  <td className="p-2 text-[var(--text-primary)]">{t.passport_expiry}</td>
-                </tr>
-              ))}
+              {travelers.map((t, i) => {
+                const { surname, first_name } = readTravelerName(t);
+                return (
+                  <tr key={i} className="border-t border-[var(--border-default)]">
+                    <td className="p-2 text-[var(--text-primary)]">{surname}</td>
+                    <td className="p-2 text-[var(--text-primary)]">{first_name}</td>
+                    <td className="p-2 text-[var(--text-primary)]">{t.date_of_birth}</td>
+                    <td className="p-2 text-[var(--text-primary)]">{t.nationality}</td>
+                    <td className="p-2 text-[var(--text-primary)] font-mono">{t.passport_number}</td>
+                    <td className="p-2 text-[var(--text-primary)]">{t.passport_expiry}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

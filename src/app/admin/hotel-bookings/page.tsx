@@ -2,6 +2,9 @@ import Link from "next/link";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { getAllHotels } from "@/services/hotel.service";
 import { formatPrice } from "@/lib/utils";
+import { GenericStatusSelect } from "@/components/admin/GenericStatusSelect";
+import { DeleteBookingButton } from "@/components/admin/DeleteBookingButton";
+import { updateHotelBookingStatus, deleteHotelBooking } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -21,8 +24,6 @@ type HotelBookingRow = {
   contact_name: string;
   contact_email: string;
   contact_phone: string;
-  arrival_time: string | null;
-  notes: string | null;
   created_at: string;
 };
 
@@ -34,20 +35,21 @@ const STATUS_FILTERS = [
   { value: "refunded", label: "Refunded" },
 ] as const;
 
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
+const STATUS_OPTIONS = [
+  { value: "pending", label: "Pending" },
+  { value: "confirmed", label: "Confirmed" },
+  { value: "cancelled", label: "Cancelled" },
+  { value: "refunded", label: "Refunded" },
+];
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleString("en-GB", {
+    day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
   });
 }
-function fmtDateTime(iso: string) {
-  return new Date(iso).toLocaleString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
+function formatDateShort(iso: string) {
+  return new Date(iso).toLocaleDateString("en-GB", {
+    day: "2-digit", month: "short", year: "numeric",
   });
 }
 
@@ -70,119 +72,136 @@ export default async function HotelBookingsPage({
   searchParams: Promise<{ status?: string }>;
 }) {
   const { status } = await searchParams;
-  const active = STATUS_FILTERS.find((f) => f.value === status)?.value ?? "all";
+  const activeFilter = STATUS_FILTERS.find((f) => f.value === status)?.value ?? "all";
 
-  const [rows, hotels] = await Promise.all([loadBookings(active), getAllHotels()]);
+  const [rows, hotels] = await Promise.all([loadBookings(activeFilter), getAllHotels()]);
   const hotelNameBySlug = new Map(hotels.map((h) => [h.slug, h.name]));
 
   return (
-    <div className="max-w-6xl">
-      <div className="flex items-baseline justify-between mb-4">
-        <h1 className="text-[24px] font-bold" style={{ color: "var(--text-primary)" }}>Hotel Bookings</h1>
-        <span className="text-[13px]" style={{ color: "var(--text-tertiary)" }}>
-          {rows.length} row{rows.length !== 1 ? "s" : ""}
-        </span>
-      </div>
-
-      <div className="flex rounded-md overflow-hidden border mb-5 w-max" style={{ borderColor: "var(--border-default)" }}>
-        {STATUS_FILTERS.map((f) => (
-          <Link
-            key={f.value}
-            href={f.value === "all" ? "?" : `?status=${f.value}`}
-            className={`px-3 py-1.5 text-[13px] font-medium ${
-              active === f.value
-                ? "bg-[var(--primary)] text-[var(--text-inverse)]"
-                : "hover:bg-[var(--bg-subtle)]"
-            }`}
-            style={{ color: active === f.value ? undefined : "var(--text-secondary)" }}
-          >
-            {f.label}
-          </Link>
-        ))}
-      </div>
-
-      {rows.length === 0 ? (
-        <div className="rounded-md border p-6 text-[14px]" style={{ borderColor: "var(--border-default)", color: "var(--text-tertiary)" }}>
-          No hotel bookings found.
+    <div className="p-8 max-w-7xl mx-auto">
+      <div className="flex items-end justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold" style={{ color: "var(--text-primary)" }}>Hotel bookings</h1>
+          <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>
+            {rows.length} {rows.length === 1 ? "booking" : "bookings"}
+            {activeFilter !== "all" ? ` in "${activeFilter}"` : ""}
+          </p>
         </div>
-      ) : (
-        <div className="rounded-lg border overflow-hidden" style={{ borderColor: "var(--border-default)" }}>
-          <table className="w-full text-[13px]">
-            <thead style={{ background: "var(--bg-subtle)", color: "var(--text-tertiary)" }}>
-              <tr className="text-left">
-                <th className="px-4 py-2 font-medium">Ref</th>
-                <th className="px-4 py-2 font-medium">Hotel</th>
-                <th className="px-4 py-2 font-medium">Check-in → out</th>
-                <th className="px-4 py-2 font-medium">Nights · Guests</th>
-                <th className="px-4 py-2 font-medium">Amount</th>
-                <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2 font-medium">Contact</th>
-                <th className="px-4 py-2 font-medium">Booked</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-t align-top" style={{ borderColor: "var(--border-default)" }}>
-                  <td className="px-4 py-2.5 font-mono text-[12px]">{r.booking_ref}</td>
-                  <td className="px-4 py-2.5">
-                    <Link href={`/hotels/${r.hotel_slug}`} className="hover:underline font-medium">
-                      {hotelNameBySlug.get(r.hotel_slug) ?? r.hotel_slug}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-2.5 tabular-nums">
-                    {fmtDate(r.checkin_date)} → {fmtDate(r.checkout_date)}
-                  </td>
-                  <td className="px-4 py-2.5 tabular-nums">
-                    {r.nights}n · {r.adults + r.children}p
-                    {r.children > 0 && (
-                      <span style={{ color: "var(--text-tertiary)" }}> ({r.children}c)</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2.5 tabular-nums">{formatPrice(r.total_amount)}</td>
-                  <td className="px-4 py-2.5">
-                    <StatusPill s={r.booking_status ?? "pending"} />
-                    {r.payment_status && r.payment_status !== "succeeded" && (
-                      <div className="text-[11px] mt-0.5" style={{ color: "var(--text-tertiary)" }}>
-                        pay: {r.payment_status}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <div className="text-[13px]">{r.contact_name}</div>
-                    <div className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
-                      {r.contact_phone}
-                    </div>
-                    <div className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
-                      {r.contact_email}
-                    </div>
-                  </td>
-                  <td className="px-4 py-2.5 text-[11px] tabular-nums" style={{ color: "var(--text-tertiary)" }}>
-                    {fmtDateTime(r.created_at)}
-                  </td>
+
+        <div className="flex items-center gap-1 flex-wrap">
+          {STATUS_FILTERS.map((f) => {
+            const active = f.value === activeFilter;
+            const href = f.value === "all" ? "/admin/hotel-bookings" : `/admin/hotel-bookings?status=${f.value}`;
+            return (
+              <Link
+                key={f.value}
+                href={href}
+                className="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
+                style={{
+                  color: active ? "var(--text-inverse)" : "var(--text-secondary)",
+                  background: active ? "var(--primary)" : "var(--bg-primary)",
+                  border: `1px solid ${active ? "var(--primary)" : "var(--border-default)"}`,
+                }}
+              >
+                {f.label}
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
+      <div
+        className="mt-6 rounded-2xl overflow-hidden"
+        style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
+      >
+        {rows.length === 0 ? (
+          <div className="p-12 text-center text-sm" style={{ color: "var(--text-tertiary)" }}>
+            No hotel bookings to show.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left" style={{ background: "var(--bg-subtle)", color: "var(--text-tertiary)" }}>
+                  <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Ref</th>
+                  <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Received</th>
+                  <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Hotel</th>
+                  <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Check-in → out</th>
+                  <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Contact</th>
+                  <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Guests</th>
+                  <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-right">Total</th>
+                  <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr
+                    key={row.id}
+                    style={{ borderTop: "1px solid var(--border-default)", color: "var(--text-secondary)" }}
+                  >
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className="font-mono font-semibold" style={{ color: "var(--text-primary)" }}>
+                        {row.booking_ref}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">{formatDate(row.created_at)}</td>
+                    <td className="px-4 py-3">
+                      <Link href={`/hotels/${row.hotel_slug}`} className="font-medium hover:underline" style={{ color: "var(--text-primary)" }}>
+                        {hotelNameBySlug.get(row.hotel_slug) ?? row.hotel_slug}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap tabular-nums">
+                      {formatDateShort(row.checkin_date)} → {formatDateShort(row.checkout_date)}
+                      <div className="text-xs" style={{ color: "var(--text-tertiary)" }}>{row.nights}n</div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="font-medium" style={{ color: "var(--text-primary)" }}>{row.contact_name}</div>
+                      <div className="text-xs" style={{ color: "var(--text-tertiary)" }}>
+                        <a href={`mailto:${row.contact_email}`} className="hover:underline">{row.contact_email}</a>
+                        {" · "}
+                        <a href={`https://wa.me/${row.contact_phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="hover:underline">
+                          {row.contact_phone}
+                        </a>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {row.adults + row.children}
+                      {row.children > 0 ? ` · ${row.children} child` : ""}
+                    </td>
+                    <td
+                      className="px-4 py-3 whitespace-nowrap text-right tabular-nums font-semibold"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {formatPrice(row.total_amount)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <GenericStatusSelect
+                        id={row.id}
+                        initial={row.booking_status ?? "pending"}
+                        options={STATUS_OPTIONS}
+                        updateAction={updateHotelBookingStatus}
+                      />
+                      {row.payment_status && row.payment_status !== "succeeded" && (
+                        <div className="text-[11px] mt-1" style={{ color: "var(--text-tertiary)" }}>
+                          pay: {row.payment_status}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      <DeleteBookingButton
+                        id={row.id}
+                        refLabel={row.booking_ref}
+                        deleteAction={deleteHotelBooking}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
-  );
-}
-
-function StatusPill({ s }: { s: string }) {
-  const map: Record<string, { bg: string; fg: string }> = {
-    confirmed: { bg: "color-mix(in srgb, var(--success) 15%, transparent)", fg: "var(--success)" },
-    pending: { bg: "color-mix(in srgb, var(--accent-warm) 15%, transparent)", fg: "var(--accent-warm)" },
-    cancelled: { bg: "color-mix(in srgb, var(--error) 15%, transparent)", fg: "var(--error)" },
-    refunded: { bg: "var(--bg-subtle)", fg: "var(--text-secondary)" },
-  };
-  const c = map[s] ?? { bg: "var(--bg-subtle)", fg: "var(--text-secondary)" };
-  return (
-    <span
-      className="px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide"
-      style={{ background: c.bg, color: c.fg }}
-    >
-      {s}
-    </span>
   );
 }

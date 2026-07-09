@@ -2,6 +2,7 @@ import { getResend, FROM } from "./resend";
 import type { LetterData } from "@/lib/invitation/letterData";
 import { generateInvitationLetterPdf } from "@/lib/invitation/generatePdf";
 import { getInvitationSignatureDataUrl } from "@/lib/invitation/config";
+import { readTravelerName } from "@/lib/invitation/types";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -28,18 +29,20 @@ async function loadSignatureFileDataUrl(): Promise<string | null> {
 function renderLetterHtml(data: LetterData, signatureDataUrl: string | null): string {
   const site = siteUrl();
   const rows = data.travelers
-    .map(
-      (t) => `<tr>
-        <td style="border:1px solid #e5e7eb;padding:6px 10px;text-transform:uppercase">${esc(t.full_name)}</td>
+    .map((t) => {
+      const { surname, first_name } = readTravelerName(t);
+      return `<tr>
+        <td style="border:1px solid #e5e7eb;padding:6px 10px;text-transform:uppercase">${esc(first_name)}</td>
+        <td style="border:1px solid #e5e7eb;padding:6px 10px;text-transform:uppercase">${esc(surname)}</td>
         <td style="border:1px solid #e5e7eb;padding:6px 10px">${esc(t.date_of_birth)}</td>
         <td style="border:1px solid #e5e7eb;padding:6px 10px">${esc(t.nationality)}</td>
         <td style="border:1px solid #e5e7eb;padding:6px 10px">${esc(t.passport_number)}</td>
         <td style="border:1px solid #e5e7eb;padding:6px 10px">${esc(t.passport_expiry)}</td>
-      </tr>`,
-    )
+      </tr>`;
+    })
     .join("");
 
-  return `<div style="font-family:Georgia,'Times New Roman',serif;color:#111;padding:32px;background:#fff;max-width:820px;margin:0 auto">
+  return `<div style="font-family:Helvetica,Arial,sans-serif;color:#111;padding:32px;background:#fff;max-width:820px;margin:0 auto">
     <div style="border-top:3px solid #1E6A52;padding-top:24px">
       <table width="100%"><tr>
         <td width="50%" valign="top"><img src="${site}/logo-day.png" alt="Traverse Pakistan" style="height:80px" /></td>
@@ -48,6 +51,8 @@ function renderLetterHtml(data: LetterData, signatureDataUrl: string | null): st
           <div>${esc(data.header.address_line_2)}</div>
           <div>${esc(data.header.city)}</div>
           <div>${esc(data.header.phone)}</div>
+          ${data.header.email ? `<div>${esc(data.header.email)}</div>` : ""}
+          ${data.header.website ? `<div>${esc(data.header.website)}</div>` : ""}
           <div style="margin-top:12px"><strong>DTS Licence ID:</strong> ${esc(data.header.dts_licence)}</div>
           <div><strong>SECP Incorporation #:</strong> ${esc(data.header.secp_incorporation)}</div>
           <div style="color:#111"><strong>NTN:</strong> ${esc(data.header.ntn)}</div>
@@ -68,7 +73,8 @@ function renderLetterHtml(data: LetterData, signatureDataUrl: string | null): st
     <table style="width:100%;border-collapse:collapse;margin-top:20px;font-size:13px">
       <thead>
         <tr>
-          <th style="background:#1E6A52;color:#fff;padding:8px;border:1px solid #1E6A52">NAME</th>
+          <th style="background:#1E6A52;color:#fff;padding:8px;border:1px solid #1E6A52">First Name</th>
+          <th style="background:#1E6A52;color:#fff;padding:8px;border:1px solid #1E6A52">Surname</th>
           <th style="background:#1E6A52;color:#fff;padding:8px;border:1px solid #1E6A52">Date of Birth</th>
           <th style="background:#1E6A52;color:#fff;padding:8px;border:1px solid #1E6A52">Nationality</th>
           <th style="background:#1E6A52;color:#fff;padding:8px;border:1px solid #1E6A52">Passport No.</th>
@@ -83,11 +89,13 @@ function renderLetterHtml(data: LetterData, signatureDataUrl: string | null): st
     <div style="margin-top:40px">
       <div>${esc(data.signer_name)}</div>
       <div>${esc(data.signer_title)}</div>
-      <div style="margin-top:24px;display:flex;justify-content:space-between;align-items:flex-end">
-        <div style="display:inline-block;text-align:center">
-          ${signatureDataUrl ? `<img src="${signatureDataUrl}" alt="Signature" style="height:64px;width:auto;max-width:240px;display:block;margin:0 auto -4px" />` : ""}
-          <div style="border-top:1px solid #000;width:240px;${signatureDataUrl ? "" : "margin-top:56px"}"></div>
-          <div style="font-size:12px;text-align:left">Sign</div>
+      <div style="margin-top:24px;display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-size:12px;margin-bottom:4px">Signature:</div>
+          <div style="display:inline-block;text-align:center">
+            ${signatureDataUrl ? `<img src="${signatureDataUrl}" alt="Signature" style="height:64px;width:auto;max-width:240px;display:block;margin:0 auto -4px" />` : ""}
+            <div style="border-top:1px solid #000;width:240px;${signatureDataUrl ? "" : "margin-top:56px"}"></div>
+          </div>
         </div>
         <div style="font-size:13px">Date: ${esc(data.issued_date)}</div>
       </div>

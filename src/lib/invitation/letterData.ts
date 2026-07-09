@@ -6,6 +6,8 @@ export type LetterData = {
     address_line_2: string;
     city: string;
     phone: string;
+    email: string;
+    website: string;
     dts_licence: string;
     secp_incorporation: string;
     ntn: string;
@@ -31,6 +33,8 @@ export function defaultLetterData(row: InvitationRequest): LetterData {
       address_line_2: "MPCHS, E-11/1,",
       city: "Islamabad",
       phone: "92-335-1589132",
+      email: "info@traversepakistan.com",
+      website: "traversepakistan.com",
       dts_licence: "2493",
       secp_incorporation: "0137385",
       ntn: "6561399",
@@ -38,8 +42,8 @@ export function defaultLetterData(row: InvitationRequest): LetterData {
     addressee_name: "Visa Counsellor,",
     embassy_name: `Embassy of Pakistan, ${row.embassy_city ?? "[city]"}`,
     subject: "Issuance of Tourist Visa",
-    body_intro: `Please find below participants who are planning to visit Pakistan for sightseeing of ${destList} from ${arrivalFmt} to ${departureFmt}.\n\nM/S Traverse Pak LLP is the Travel agent handling the trip and will provide all logistic services during their stay in Pakistan. All arrangements have been made for their smooth travel in Pakistan.`,
-    body_close: "It is requested to issue necessary Tourist VISA for their smooth arrival. We shall be very much appreciative of your support.",
+    body_intro: `Traverse Pakistan with official name of "TRAVERSE PAK LLP" is a licensed Travel Agency registered with DTS, Islamabad; is pleased to formally invite the below-listed Participants to the Islamic Republic of Pakistan for a guided tourism experience across the ${destList} regions from ${arrivalFmt} to ${departureFmt}.\n\nM/S Traverse Pak LLP is the Travel agent handling the trip and will provide all logistic services such as accommodation, transportation and domestic air tickets during their stay in Pakistan.\nAll arrangements have been made for their smooth travel within Pakistan.`,
+    body_close: "It is requested to issue necessary Tourist VISA for their smooth arrival in Pakistan. We shall be very much appreciative of your support.",
     travelers: (row.travelers as Traveler[]) ?? [],
     signer_name: "Kashif Manzoor",
     signer_title: "Co-Founder Traverse Pakistan",

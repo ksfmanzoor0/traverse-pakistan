@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { getInvitationLetterPricePkr, getInvitationSignatureDataUrl, INVITATION_LETTER_PRICE_USD } from "@/lib/invitation/config";
-import { updateInvitationLetterPrice, updateInvitationSignature } from "./actions";
+import { updateInvitationLetterPrice, updateInvitationSignature, deleteInvitationRequest } from "./actions";
 import { InvitationSignatureUpload } from "@/components/admin/InvitationSignatureUpload";
+import { DeleteInvitationButton } from "@/components/admin/DeleteInvitationButton";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +51,15 @@ export default async function AdminInvitationLetters() {
 
   return (
     <div className="p-6 sm:p-8">
-      <h1 className="text-[24px] font-bold text-[var(--text-primary)] mb-6">Invitation letters</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-[24px] font-bold text-[var(--text-primary)]">Invitation letters</h1>
+        <Link
+          href="/admin/invitation-letters/new"
+          className="h-10 px-4 inline-flex items-center rounded-[var(--radius-sm)] bg-[var(--primary)] text-white text-[13px] font-semibold"
+        >
+          + New invitation letter
+        </Link>
+      </div>
 
       <div className="mb-6">
         <InvitationSignatureUpload currentDataUrl={signatureDataUrl} saveAction={updateInvitationSignature} />
@@ -86,6 +95,7 @@ export default async function AdminInvitationLetters() {
               <th className="text-left p-3">Status</th>
               <th className="text-right p-3">Paid</th>
               <th className="text-left p-3">Created</th>
+              <th className="text-right p-3"></th>
             </tr>
           </thead>
           <tbody>
@@ -115,11 +125,14 @@ export default async function AdminInvitationLetters() {
                   {r.amount_paid ? `PKR ${Number(r.amount_paid).toLocaleString()}` : "—"}
                 </td>
                 <td className="p-3 text-[var(--text-tertiary)] text-[12px]">{fmt(r.created_at)}</td>
+                <td className="p-3 text-right">
+                  <DeleteInvitationButton bookingRef={r.ref} deleteAction={deleteInvitationRequest} compact />
+                </td>
               </tr>
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-6 text-center text-[var(--text-tertiary)]">No requests yet.</td>
+                <td colSpan={7} className="p-6 text-center text-[var(--text-tertiary)]">No requests yet.</td>
               </tr>
             )}
           </tbody>

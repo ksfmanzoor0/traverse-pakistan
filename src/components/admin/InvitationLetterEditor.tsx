@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import type { LetterData } from "@/lib/invitation/letterData";
 import type { Traveler } from "@/lib/invitation/types";
+import { readTravelerName } from "@/lib/invitation/types";
 
 type Props = {
   bookingRef: string;
@@ -27,7 +28,7 @@ export function InvitationLetterEditor({ bookingRef, initialData, status, signat
   function addTraveler() {
     setData((d) => ({
       ...d,
-      travelers: [...d.travelers, { full_name: "", date_of_birth: "", nationality: "", passport_number: "", passport_expiry: "" }],
+      travelers: [...d.travelers, { surname: "", first_name: "", date_of_birth: "", nationality: "", passport_number: "", passport_expiry: "" }],
     }));
   }
   function removeTraveler(i: number) {
@@ -95,8 +96,9 @@ export function InvitationLetterEditor({ bookingRef, initialData, status, signat
                     <button type="button" onClick={() => removeTraveler(i)} className="text-[11px] text-[var(--error)]">Remove</button>
                   )}
                 </div>
-                <input placeholder="Full name" value={t.full_name} onChange={(e) => updateTraveler(i, { full_name: e.target.value })} className={inputCls} />
                 <div className="grid grid-cols-2 gap-2">
+                  <input placeholder="Surname" value={t.surname} onChange={(e) => updateTraveler(i, { surname: e.target.value })} className={inputCls} />
+                  <input placeholder="Given names" value={t.first_name} onChange={(e) => updateTraveler(i, { first_name: e.target.value })} className={inputCls} />
                   <input placeholder="DOB" value={t.date_of_birth} onChange={(e) => updateTraveler(i, { date_of_birth: e.target.value })} className={inputCls} />
                   <input placeholder="Nationality" value={t.nationality} onChange={(e) => updateTraveler(i, { nationality: e.target.value })} className={inputCls} />
                   <input placeholder="Passport #" value={t.passport_number} onChange={(e) => updateTraveler(i, { passport_number: e.target.value })} className={inputCls} />
@@ -126,6 +128,8 @@ export function InvitationLetterEditor({ bookingRef, initialData, status, signat
             <input value={data.header.address_line_2} onChange={(e) => updateHeader("address_line_2", e.target.value)} className={inputCls} />
             <input value={data.header.city} onChange={(e) => updateHeader("city", e.target.value)} className={inputCls} />
             <input value={data.header.phone} onChange={(e) => updateHeader("phone", e.target.value)} className={inputCls} />
+            <input placeholder="Email" value={data.header.email} onChange={(e) => updateHeader("email", e.target.value)} className={inputCls} />
+            <input placeholder="Website" value={data.header.website} onChange={(e) => updateHeader("website", e.target.value)} className={inputCls} />
             <input value={data.header.dts_licence} onChange={(e) => updateHeader("dts_licence", e.target.value)} className={inputCls} />
             <input value={data.header.secp_incorporation} onChange={(e) => updateHeader("secp_incorporation", e.target.value)} className={inputCls} />
             <input value={data.header.ntn} onChange={(e) => updateHeader("ntn", e.target.value)} className={inputCls} />
@@ -162,7 +166,7 @@ export function InvitationLetterEditor({ bookingRef, initialData, status, signat
 
 export function LetterPreview({ data, signatureDataUrl }: { data: LetterData; signatureDataUrl?: string | null }) {
   return (
-    <div className="p-8 bg-white text-[#111] font-serif text-[14px] leading-relaxed" style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+    <div className="p-8 bg-white text-[#111] text-[14px] leading-relaxed" style={{ fontFamily: "Helvetica, Arial, sans-serif" }}>
       <div className="border-t-[3px] border-[#1E6A52] pt-6">
         <div className="grid grid-cols-2 gap-6 items-start">
           <img src="/logo-day.png" alt="Traverse Pakistan" className="h-24 w-auto" />
@@ -172,6 +176,8 @@ export function LetterPreview({ data, signatureDataUrl }: { data: LetterData; si
               <div>{data.header.address_line_2}</div>
               <div>{data.header.city}</div>
               <div>{data.header.phone}</div>
+              {data.header.email && <div>{data.header.email}</div>}
+              {data.header.website && <div>{data.header.website}</div>}
             </div>
             <div className="text-[#1E6A52]"><strong>DTS Licence ID:</strong> {data.header.dts_licence}</div>
             <div className="text-[#1E6A52]"><strong>SECP Incorporation #:</strong> {data.header.secp_incorporation}</div>
@@ -196,21 +202,25 @@ export function LetterPreview({ data, signatureDataUrl }: { data: LetterData; si
         <table className="w-full border-collapse text-[12px]">
           <thead>
             <tr>
-              {["NAME", "Date of Birth", "Nationality", "Passport No.", "Expiry Date"].map((h) => (
+              {["First Name", "Surname", "Date of Birth", "Nationality", "Passport No.", "Expiry Date"].map((h) => (
                 <th key={h} className="text-white bg-[#1E6A52] border border-[#1E6A52] px-2 py-2 text-center font-semibold">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {data.travelers.map((t, i) => (
-              <tr key={i}>
-                <td className="border border-[#e5e7eb] px-2 py-2 uppercase">{t.full_name}</td>
-                <td className="border border-[#e5e7eb] px-2 py-2">{t.date_of_birth}</td>
-                <td className="border border-[#e5e7eb] px-2 py-2">{t.nationality}</td>
-                <td className="border border-[#e5e7eb] px-2 py-2">{t.passport_number}</td>
-                <td className="border border-[#e5e7eb] px-2 py-2">{t.passport_expiry}</td>
-              </tr>
-            ))}
+            {data.travelers.map((t, i) => {
+              const { surname, first_name } = readTravelerName(t);
+              return (
+                <tr key={i}>
+                  <td className="border border-[#e5e7eb] px-2 py-2 uppercase">{first_name}</td>
+                  <td className="border border-[#e5e7eb] px-2 py-2 uppercase">{surname}</td>
+                  <td className="border border-[#e5e7eb] px-2 py-2">{t.date_of_birth}</td>
+                  <td className="border border-[#e5e7eb] px-2 py-2">{t.nationality}</td>
+                  <td className="border border-[#e5e7eb] px-2 py-2">{t.passport_number}</td>
+                  <td className="border border-[#e5e7eb] px-2 py-2">{t.passport_expiry}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -220,18 +230,20 @@ export function LetterPreview({ data, signatureDataUrl }: { data: LetterData; si
       <div className="mt-10">
         <div>{data.signer_name}</div>
         <div>{data.signer_title}</div>
-        <div className="mt-6 flex items-end gap-2">
-          <div className="flex flex-col items-center">
-            {signatureDataUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={signatureDataUrl} alt="Signature" className="h-24 w-auto max-w-[260px] object-contain mb-1" />
-            ) : (
-              <a href="/admin/invitation-letters" className="block h-14 w-64 border border-dashed border-[#9ca3af] flex items-center justify-center text-[11px] text-[#9ca3af] mb-1 hover:border-[var(--primary)] hover:text-[var(--primary)]">
-                Upload signature on Invitation Letters page →
-              </a>
-            )}
-            <div className="border-t border-black w-64"></div>
-            <div className="text-[12px] self-start">Sign</div>
+        <div className="mt-6 flex items-start gap-2">
+          <div>
+            <div className="text-[12px] mb-1">Signature:</div>
+            <div className="flex flex-col items-center">
+              {signatureDataUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={signatureDataUrl} alt="Signature" className="h-24 w-auto max-w-[260px] object-contain mb-1" />
+              ) : (
+                <a href="/admin/invitation-letters" className="block h-14 w-64 border border-dashed border-[#9ca3af] flex items-center justify-center text-[11px] text-[#9ca3af] mb-1 hover:border-[var(--primary)] hover:text-[var(--primary)]">
+                  Upload signature on Invitation Letters page →
+                </a>
+              )}
+              <div className="border-t border-black w-64"></div>
+            </div>
           </div>
           <div className="ml-auto text-[13px]">
             Date: {data.issued_date}

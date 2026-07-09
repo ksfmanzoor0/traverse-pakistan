@@ -54,6 +54,8 @@ export interface Tour {
   rating: number;
   reviewCount: number;
   maxGroupSize: number;
+  /** Minimum participant age; null = no restriction. If >= 13, children are disallowed. */
+  minAge: number | null;
   languages: string[];
   freeCancellation: boolean;
   reserveNowPayLater: boolean;

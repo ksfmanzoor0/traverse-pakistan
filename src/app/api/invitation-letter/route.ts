@@ -8,7 +8,8 @@ import { sendInvitationLetterReceived } from "@/lib/email/sendInvitationLetterRe
 import { stampBookingWithUser } from "@/lib/auth/stampBookingWithUser";
 
 const TravelerSchema = z.object({
-  full_name: z.string().max(120).default(""),
+  surname: z.string().max(120).default(""),
+  first_name: z.string().max(120).default(""),
   date_of_birth: z.string().max(20).default(""),
   nationality: z.string().max(60).default(""),
   passport_number: z.string().max(40).default(""),
