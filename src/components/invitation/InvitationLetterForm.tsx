@@ -62,7 +62,8 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
     try {
       const contactName = firstName.trim();
       const mappedTravelers: Traveler[] = travelers.map((t) => ({
-        full_name: `${t.first_name.trim()} ${t.surname.trim()}`.trim(),
+        surname: t.surname.trim(),
+        first_name: t.first_name.trim(),
         date_of_birth: t.date_of_birth,
         nationality: t.nationality,
         passport_number: t.passport_number,

@@ -2,6 +2,7 @@ import { getResend, FROM } from "./resend";
 import type { LetterData } from "@/lib/invitation/letterData";
 import { generateInvitationLetterPdf } from "@/lib/invitation/generatePdf";
 import { getInvitationSignatureDataUrl } from "@/lib/invitation/config";
+import { readTravelerName } from "@/lib/invitation/types";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -28,15 +29,17 @@ async function loadSignatureFileDataUrl(): Promise<string | null> {
 function renderLetterHtml(data: LetterData, signatureDataUrl: string | null): string {
   const site = siteUrl();
   const rows = data.travelers
-    .map(
-      (t) => `<tr>
-        <td style="border:1px solid #e5e7eb;padding:6px 10px;text-transform:uppercase">${esc(t.full_name)}</td>
+    .map((t) => {
+      const { surname, first_name } = readTravelerName(t);
+      return `<tr>
+        <td style="border:1px solid #e5e7eb;padding:6px 10px;text-transform:uppercase">${esc(surname)}</td>
+        <td style="border:1px solid #e5e7eb;padding:6px 10px;text-transform:uppercase">${esc(first_name)}</td>
         <td style="border:1px solid #e5e7eb;padding:6px 10px">${esc(t.date_of_birth)}</td>
         <td style="border:1px solid #e5e7eb;padding:6px 10px">${esc(t.nationality)}</td>
         <td style="border:1px solid #e5e7eb;padding:6px 10px">${esc(t.passport_number)}</td>
         <td style="border:1px solid #e5e7eb;padding:6px 10px">${esc(t.passport_expiry)}</td>
-      </tr>`,
-    )
+      </tr>`;
+    })
     .join("");
 
   return `<div style="font-family:Georgia,'Times New Roman',serif;color:#111;padding:32px;background:#fff;max-width:820px;margin:0 auto">
@@ -68,7 +71,8 @@ function renderLetterHtml(data: LetterData, signatureDataUrl: string | null): st
     <table style="width:100%;border-collapse:collapse;margin-top:20px;font-size:13px">
       <thead>
         <tr>
-          <th style="background:#1E6A52;color:#fff;padding:8px;border:1px solid #1E6A52">NAME</th>
+          <th style="background:#1E6A52;color:#fff;padding:8px;border:1px solid #1E6A52">SURNAME</th>
+          <th style="background:#1E6A52;color:#fff;padding:8px;border:1px solid #1E6A52">GIVEN NAMES</th>
           <th style="background:#1E6A52;color:#fff;padding:8px;border:1px solid #1E6A52">Date of Birth</th>
           <th style="background:#1E6A52;color:#fff;padding:8px;border:1px solid #1E6A52">Nationality</th>
           <th style="background:#1E6A52;color:#fff;padding:8px;border:1px solid #1E6A52">Passport No.</th>
