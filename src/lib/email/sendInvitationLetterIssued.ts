@@ -32,8 +32,8 @@ function renderLetterHtml(data: LetterData, signatureDataUrl: string | null): st
     .map((t) => {
       const { surname, first_name } = readTravelerName(t);
       return `<tr>
-        <td style="border:1px solid #e5e7eb;padding:6px 10px;text-transform:uppercase">${esc(surname)}</td>
         <td style="border:1px solid #e5e7eb;padding:6px 10px;text-transform:uppercase">${esc(first_name)}</td>
+        <td style="border:1px solid #e5e7eb;padding:6px 10px;text-transform:uppercase">${esc(surname)}</td>
         <td style="border:1px solid #e5e7eb;padding:6px 10px">${esc(t.date_of_birth)}</td>
         <td style="border:1px solid #e5e7eb;padding:6px 10px">${esc(t.nationality)}</td>
         <td style="border:1px solid #e5e7eb;padding:6px 10px">${esc(t.passport_number)}</td>
@@ -42,7 +42,7 @@ function renderLetterHtml(data: LetterData, signatureDataUrl: string | null): st
     })
     .join("");
 
-  return `<div style="font-family:Georgia,'Times New Roman',serif;color:#111;padding:32px;background:#fff;max-width:820px;margin:0 auto">
+  return `<div style="font-family:Helvetica,Arial,sans-serif;color:#111;padding:32px;background:#fff;max-width:820px;margin:0 auto">
     <div style="border-top:3px solid #1E6A52;padding-top:24px">
       <table width="100%"><tr>
         <td width="50%" valign="top"><img src="${site}/logo-day.png" alt="Traverse Pakistan" style="height:80px" /></td>
@@ -71,8 +71,8 @@ function renderLetterHtml(data: LetterData, signatureDataUrl: string | null): st
     <table style="width:100%;border-collapse:collapse;margin-top:20px;font-size:13px">
       <thead>
         <tr>
-          <th style="background:#1E6A52;color:#fff;padding:8px;border:1px solid #1E6A52">SURNAME</th>
-          <th style="background:#1E6A52;color:#fff;padding:8px;border:1px solid #1E6A52">GIVEN NAMES</th>
+          <th style="background:#1E6A52;color:#fff;padding:8px;border:1px solid #1E6A52">First Name</th>
+          <th style="background:#1E6A52;color:#fff;padding:8px;border:1px solid #1E6A52">Surname</th>
           <th style="background:#1E6A52;color:#fff;padding:8px;border:1px solid #1E6A52">Date of Birth</th>
           <th style="background:#1E6A52;color:#fff;padding:8px;border:1px solid #1E6A52">Nationality</th>
           <th style="background:#1E6A52;color:#fff;padding:8px;border:1px solid #1E6A52">Passport No.</th>
