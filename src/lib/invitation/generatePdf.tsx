@@ -14,7 +14,7 @@ const GREY = "#e5e7eb";
 const BLACK = "#111111";
 
 const styles = StyleSheet.create({
-  page: { paddingTop: 40, paddingBottom: 40, paddingHorizontal: 48, fontFamily: "Times-Roman", fontSize: 11, color: BLACK, lineHeight: 1.4 },
+  page: { paddingTop: 40, paddingBottom: 40, paddingHorizontal: 48, fontFamily: "Helvetica", fontSize: 11, color: BLACK, lineHeight: 1.4 },
   topRule: { borderTopWidth: 2, borderTopColor: GREEN, paddingTop: 16 },
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   logo: { height: 68, width: 200, objectFit: "contain" },
@@ -28,8 +28,8 @@ const styles = StyleSheet.create({
   paragraph: { marginTop: 12 },
   table: { marginTop: 14, borderWidth: 1, borderColor: GREY },
   tr: { flexDirection: "row" },
-  thCell: { flex: 1, padding: 6, backgroundColor: GREEN, color: "#ffffff", fontFamily: "Times-Bold", textAlign: "center", borderRightWidth: 1, borderRightColor: GREEN },
-  thCellLast: { flex: 1, padding: 6, backgroundColor: GREEN, color: "#ffffff", fontFamily: "Times-Bold", textAlign: "center" },
+  thCell: { flex: 1, padding: 6, backgroundColor: GREEN, color: "#ffffff", fontFamily: "Helvetica-Bold", textAlign: "center", borderRightWidth: 1, borderRightColor: GREEN },
+  thCellLast: { flex: 1, padding: 6, backgroundColor: GREEN, color: "#ffffff", fontFamily: "Helvetica-Bold", textAlign: "center" },
   td: { flex: 1, padding: 6, borderRightWidth: 1, borderRightColor: GREY, borderTopWidth: 1, borderTopColor: GREY },
   tdLast: { flex: 1, padding: 6, borderTopWidth: 1, borderTopColor: GREY },
   signBlock: { marginTop: 32 },
@@ -91,7 +91,7 @@ export async function generateInvitationLetterPdf(data: LetterData): Promise<Buf
 
         <View style={styles.subject}>
           <Text>
-            <Text style={{ fontFamily: "Times-Bold" }}>Subject: </Text>
+            <Text style={{ fontFamily: "Helvetica-Bold" }}>Subject: </Text>
             <Text style={styles.subjectValue}>{data.subject}</Text>
           </Text>
         </View>
@@ -102,7 +102,7 @@ export async function generateInvitationLetterPdf(data: LetterData): Promise<Buf
 
         <View style={styles.table}>
           <View style={styles.tr}>
-            {["SURNAME", "GIVEN NAMES", "Date of Birth", "Nationality", "Passport No.", "Expiry Date"].map((h, i, arr) => (
+            {["First Name", "Surname", "Date of Birth", "Nationality", "Passport No.", "Expiry Date"].map((h, i, arr) => (
               <Text key={h} style={i === arr.length - 1 ? styles.thCellLast : styles.thCell}>{h}</Text>
             ))}
           </View>
@@ -110,8 +110,8 @@ export async function generateInvitationLetterPdf(data: LetterData): Promise<Buf
             const { surname, first_name } = readTravelerName(t);
             return (
               <View key={i} style={styles.tr}>
-                <Text style={styles.td}>{surname.toUpperCase()}</Text>
                 <Text style={styles.td}>{first_name.toUpperCase()}</Text>
+                <Text style={styles.td}>{surname.toUpperCase()}</Text>
                 <Text style={styles.td}>{t.date_of_birth}</Text>
                 <Text style={styles.td}>{t.nationality}</Text>
                 <Text style={styles.td}>{t.passport_number}</Text>

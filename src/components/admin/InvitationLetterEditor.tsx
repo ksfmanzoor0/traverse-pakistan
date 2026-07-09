@@ -164,7 +164,7 @@ export function InvitationLetterEditor({ bookingRef, initialData, status, signat
 
 export function LetterPreview({ data, signatureDataUrl }: { data: LetterData; signatureDataUrl?: string | null }) {
   return (
-    <div className="p-8 bg-white text-[#111] font-serif text-[14px] leading-relaxed" style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+    <div className="p-8 bg-white text-[#111] text-[14px] leading-relaxed" style={{ fontFamily: "Helvetica, Arial, sans-serif" }}>
       <div className="border-t-[3px] border-[#1E6A52] pt-6">
         <div className="grid grid-cols-2 gap-6 items-start">
           <img src="/logo-day.png" alt="Traverse Pakistan" className="h-24 w-auto" />
@@ -198,7 +198,7 @@ export function LetterPreview({ data, signatureDataUrl }: { data: LetterData; si
         <table className="w-full border-collapse text-[12px]">
           <thead>
             <tr>
-              {["SURNAME", "GIVEN NAMES", "Date of Birth", "Nationality", "Passport No.", "Expiry Date"].map((h) => (
+              {["First Name", "Surname", "Date of Birth", "Nationality", "Passport No.", "Expiry Date"].map((h) => (
                 <th key={h} className="text-white bg-[#1E6A52] border border-[#1E6A52] px-2 py-2 text-center font-semibold">{h}</th>
               ))}
             </tr>
@@ -208,8 +208,8 @@ export function LetterPreview({ data, signatureDataUrl }: { data: LetterData; si
               const { surname, first_name } = readTravelerName(t);
               return (
                 <tr key={i}>
-                  <td className="border border-[#e5e7eb] px-2 py-2 uppercase">{surname}</td>
                   <td className="border border-[#e5e7eb] px-2 py-2 uppercase">{first_name}</td>
+                  <td className="border border-[#e5e7eb] px-2 py-2 uppercase">{surname}</td>
                   <td className="border border-[#e5e7eb] px-2 py-2">{t.date_of_birth}</td>
                   <td className="border border-[#e5e7eb] px-2 py-2">{t.nationality}</td>
                   <td className="border border-[#e5e7eb] px-2 py-2">{t.passport_number}</td>
