@@ -20,6 +20,7 @@ export type TourRow = {
   rating: number;
   review_count: number;
   max_group_size: number;
+  min_age: number | null;
   languages: string[];
   free_cancellation: boolean;
   reserve_now_pay_later: boolean;

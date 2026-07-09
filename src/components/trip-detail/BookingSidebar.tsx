@@ -217,15 +217,17 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
             onDecrement={() => setAdults(Math.max(1, adults - 1))}
             onIncrement={() => setAdults(Math.min(seatCap - children, adults + 1))}
           />
-          <Stepper
-            label="Children"
-            sub="Ages 2–12 · 50% off"
-            value={children}
-            min={0}
-            max={seatCap - adults}
-            onDecrement={() => setChildren(Math.max(0, children - 1))}
-            onIncrement={() => setChildren(Math.min(seatCap - adults, children + 1))}
-          />
+          {(tour.minAge == null || tour.minAge < 13) && (
+            <Stepper
+              label="Children"
+              sub="Ages 2–12 · 50% off"
+              value={children}
+              min={0}
+              max={seatCap - adults}
+              onDecrement={() => setChildren(Math.max(0, children - 1))}
+              onIncrement={() => setChildren(Math.min(seatCap - adults, children + 1))}
+            />
+          )}
           {tour.pricing.singleSupplement && (
             <Stepper
               label="Single occupancy"
