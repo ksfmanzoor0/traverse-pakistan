@@ -1,7 +1,8 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { setInvitationLetterPricePkr, setInvitationSignatureDataUrl } from "@/lib/invitation/config";
+import { setInvitationLetterPricePkr, setInvitationSignatureDataUrl, generateInvitationRef } from "@/lib/invitation/config";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import type { LetterData } from "@/lib/invitation/letterData";
 import { sendInvitationLetterIssued } from "@/lib/email/sendInvitationLetterIssued";
@@ -38,6 +39,56 @@ export async function saveInvitationLetterData(ref: string, data: LetterData): P
   }
   revalidatePath(`/admin/invitation-letters/${ref}`);
   return { ok: true };
+}
+
+export async function createInvitationRequestAdmin(formData: FormData): Promise<void> {
+  const contact_name = String(formData.get("contact_name") ?? "").trim();
+  const contact_email = String(formData.get("contact_email") ?? "").trim();
+  const contact_phone = String(formData.get("contact_phone") ?? "").trim();
+  const embassy_country = String(formData.get("embassy_country") ?? "").trim();
+  const embassy_city = String(formData.get("embassy_city") ?? "").trim();
+  const arrival_date = String(formData.get("arrival_date") ?? "").trim() || null;
+  const departure_date = String(formData.get("departure_date") ?? "").trim() || null;
+  const destinationsRaw = String(formData.get("destinations") ?? "").trim();
+
+  if (!contact_name || !contact_email) {
+    throw new Error("contact_name and contact_email are required");
+  }
+
+  const destinations = destinationsRaw
+    ? destinationsRaw.split(",").map((s) => s.trim()).filter(Boolean)
+    : [];
+
+  const supabase = getSupabaseAdmin();
+  const ref = generateInvitationRef();
+
+  const { error } = await supabase
+    .from("invitation_requests" as never)
+    .insert({
+      ref,
+      status: "paid",
+      contact_name,
+      contact_email,
+      contact_phone: contact_phone || null,
+      embassy_country: embassy_country || null,
+      embassy_city: embassy_city || null,
+      arrival_date,
+      departure_date,
+      destinations,
+      travelers: [],
+      amount_pkr: 0,
+      amount_paid: 0,
+      payment_attempts: 0,
+      admin_notes: "Admin created — no payment collected",
+    } as never);
+
+  if (error) {
+    console.error("[createInvitationRequestAdmin]", error);
+    throw new Error(`Insert failed: ${error.message}`);
+  }
+
+  revalidatePath("/admin/invitation-letters");
+  redirect(`/admin/invitation-letters/${ref}`);
 }
 
 export async function sendInvitationLetter(ref: string): Promise<{ ok: boolean; error?: string }> {
