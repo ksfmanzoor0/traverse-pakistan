@@ -31,8 +31,9 @@ async function fetchPackages(destinationSlug: string): Promise<PackageRow[]> {
   const supabase = getSupabaseAdmin();
   const slugs = await fetchAncestorSlugs(destinationSlug);
   const slugList = slugs.join(",");
-  // Admin surfaces ALL packages (published + unpublished) so hidden/unpublished
-  // ones are still reachable and manageable.
+  // Admin sees BOTH published and unpublished packages so nothing linked to
+  // this destination is invisible. Unpublished ones get a badge; hidden ones
+  // (destination_rank[slug].hidden) render greyed.
   const { data, error } = await supabase
     .from("packages")
     .select("*")
