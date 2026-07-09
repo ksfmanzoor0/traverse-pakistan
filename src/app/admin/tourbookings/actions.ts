@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/admin/guard";
 import type { BookingStatus } from "@/lib/supabase/types";
 
@@ -22,7 +22,7 @@ export async function updateBookingStatus(
     return { ok: false, error: "Invalid status" };
   }
 
-  const supabase = await getSupabaseServer();
+  const supabase = getSupabaseAdmin();
   const { error } = await supabase
     .from("bookings")
     .update({ status })
@@ -37,7 +37,7 @@ export async function updateBookingStatus(
 
 export async function deleteTourBooking(id: string): Promise<{ ok: boolean; error?: string }> {
   await requireAdmin();
-  const supabase = await getSupabaseServer();
+  const supabase = getSupabaseAdmin();
   const { error } = await supabase.from("bookings").delete().eq("id", id);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/admin/tourbookings");

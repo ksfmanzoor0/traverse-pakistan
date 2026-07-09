@@ -8,6 +8,16 @@ type Props = {
   compact?: boolean;
 };
 
+function TrashIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 6h18" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14" />
+    </svg>
+  );
+}
+
 export function DeleteInvitationButton({ bookingRef, deleteAction, compact }: Props) {
   const [pending, startTransition] = useTransition();
 
@@ -29,8 +39,14 @@ export function DeleteInvitationButton({ bookingRef, deleteAction, compact }: Pr
         onClick={onClick}
         disabled={pending}
         aria-label={`Delete ${bookingRef}`}
-        className="text-[12px] font-medium text-[var(--error)] disabled:opacity-50 hover:underline"
+        className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-full text-[12px] font-semibold transition-colors disabled:opacity-50"
+        style={{
+          color: "var(--error)",
+          background: "color-mix(in srgb, var(--error) 8%, transparent)",
+          border: "1px solid color-mix(in srgb, var(--error) 30%, transparent)",
+        }}
       >
+        <TrashIcon />
         {pending ? "Deleting…" : "Delete"}
       </button>
     );
@@ -41,8 +57,14 @@ export function DeleteInvitationButton({ bookingRef, deleteAction, compact }: Pr
       type="button"
       onClick={onClick}
       disabled={pending}
-      className="h-10 px-4 rounded-[var(--radius-sm)] border border-[var(--error)] text-[13px] font-semibold text-[var(--error)] disabled:opacity-50 hover:bg-[var(--error)]/5"
+      className="inline-flex items-center gap-2 h-10 px-4 rounded-[var(--radius-sm)] text-[13px] font-semibold disabled:opacity-50"
+      style={{
+        color: "var(--error)",
+        background: "color-mix(in srgb, var(--error) 8%, transparent)",
+        border: "1px solid color-mix(in srgb, var(--error) 30%, transparent)",
+      }}
     >
+      <TrashIcon size={16} />
       {pending ? "Deleting…" : "Delete request"}
     </button>
   );
