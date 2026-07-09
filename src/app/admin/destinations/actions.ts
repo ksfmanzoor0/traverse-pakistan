@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 type Entry = { rank?: number; hidden?: boolean; featured?: boolean };
+type PerPackagePayload = { entry: Entry; published: boolean };
 
 function normalizeEntry(entry: Entry): Entry | null {
   const e: Entry = {};
@@ -15,10 +16,10 @@ function normalizeEntry(entry: Entry): Entry | null {
 
 export async function saveDestinationPackageOverrides(
   destinationSlug: string,
-  entries: Record<string, Entry>,
+  payload: Record<string, PerPackagePayload>,
 ): Promise<{ ok: boolean; error?: string }> {
   const supabase = getSupabaseAdmin();
-  const packageSlugs = Object.keys(entries);
+  const packageSlugs = Object.keys(payload);
   if (packageSlugs.length === 0) return { ok: true };
 
   const { data: rows, error: readErr } = await supabase
@@ -27,27 +28,22 @@ export async function saveDestinationPackageOverrides(
     .in("slug", packageSlugs);
   if (readErr) return { ok: false, error: readErr.message };
 
-  const updates: Array<{ slug: string; destination_rank: Record<string, unknown> }> = [];
   for (const row of (rows as Array<{ slug: string; destination_rank: Record<string, unknown> | null }>)) {
     const current = { ...(row.destination_rank ?? {}) };
-    const normalized = normalizeEntry(entries[row.slug]);
-    if (normalized === null) {
-      delete current[destinationSlug];
-    } else {
-      current[destinationSlug] = normalized;
-    }
-    updates.push({ slug: row.slug, destination_rank: current });
-  }
+    const p = payload[row.slug];
+    const normalized = normalizeEntry(p.entry);
+    if (normalized === null) delete current[destinationSlug];
+    else current[destinationSlug] = normalized;
 
-  for (const u of updates) {
     const { error } = await supabase
       .from("packages")
-      .update({ destination_rank: u.destination_rank as never })
-      .eq("slug", u.slug);
+      .update({ destination_rank: current as never, published: p.published })
+      .eq("slug", row.slug);
     if (error) return { ok: false, error: error.message };
   }
 
   revalidatePath(`/destinations/${destinationSlug}`);
   revalidatePath(`/admin/destinations/${destinationSlug}`);
+  revalidatePath("/packages");
   return { ok: true };
 }

@@ -20,7 +20,10 @@ type Props = {
   initial: Row[];
   saveAction: (
     destinationSlug: string,
-    entries: Record<string, { rank?: number; hidden?: boolean; featured?: boolean }>,
+    payload: Record<string, {
+      entry: { rank?: number; hidden?: boolean; featured?: boolean };
+      published: boolean;
+    }>,
   ) => Promise<SaveResult>;
 };
 
@@ -65,7 +68,10 @@ export function DestinationPackagesEditor({ destinationSlug, initial, saveAction
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const visibleCount = useMemo(() => rows.filter((r) => !r.hidden).length, [rows]);
+  const visibleCount = useMemo(
+    () => rows.filter((r) => r.published && !r.hidden).length,
+    [rows],
+  );
 
   function bump(slug: string, patch: Partial<Row>) {
     setRows((prev) => prev.map((r) => (r.slug === slug ? { ...r, ...patch } : r)));
@@ -93,16 +99,19 @@ export function DestinationPackagesEditor({ destinationSlug, initial, saveAction
   }
 
   function save() {
-    const entries: Record<string, { rank?: number; hidden?: boolean; featured?: boolean }> = {};
+    const payload: Record<string, {
+      entry: { rank?: number; hidden?: boolean; featured?: boolean };
+      published: boolean;
+    }> = {};
     for (const r of rows) {
       const e: { rank?: number; hidden?: boolean; featured?: boolean } = {};
       if (typeof r.rank === "number") e.rank = r.rank;
       if (r.hidden) e.hidden = true;
       if (r.featured) e.featured = true;
-      entries[r.slug] = e;
+      payload[r.slug] = { entry: e, published: r.published };
     }
     startTransition(async () => {
-      const res = await saveAction(destinationSlug, entries);
+      const res = await saveAction(destinationSlug, payload);
       if (res.ok) {
         setSaveMsg("Saved.");
         setDirty(false);
@@ -149,6 +158,7 @@ export function DestinationPackagesEditor({ destinationSlug, initial, saveAction
               <th className="text-left p-3 w-24">Order #</th>
               <th className="text-left p-3">Package</th>
               <th className="text-left p-3 w-20">Days</th>
+              <th className="text-center p-3 w-24">Published</th>
               <th className="text-center p-3 w-24">Featured</th>
               <th className="text-center p-3 w-24">Hidden</th>
             </tr>
@@ -213,6 +223,13 @@ export function DestinationPackagesEditor({ destinationSlug, initial, saveAction
                 <td className="p-3 text-[var(--text-secondary)]">{r.duration}</td>
                 <td className="p-3 text-center">
                   <ToggleButton
+                    on={r.published}
+                    onChange={(v) => bump(r.slug, { published: v })}
+                    label="Published"
+                  />
+                </td>
+                <td className="p-3 text-center">
+                  <ToggleButton
                     on={r.featured}
                     onChange={(v) => bump(r.slug, { featured: v })}
                     label="Featured"
@@ -229,7 +246,7 @@ export function DestinationPackagesEditor({ destinationSlug, initial, saveAction
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="p-6 text-center text-[var(--text-tertiary)]">
+                <td colSpan={7} className="p-6 text-center text-[var(--text-tertiary)]">
                   No packages currently link to this destination.
                 </td>
               </tr>
