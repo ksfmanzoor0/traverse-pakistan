@@ -37,6 +37,27 @@ function sortRows(rows: Row[]): Row[] {
   });
 }
 
+function ToggleButton({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      onClick={() => onChange(!on)}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+        on ? "bg-[var(--primary)]" : "bg-[var(--border-default)]"
+      }`}
+    >
+      <span
+        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+          on ? "translate-x-5" : "translate-x-0.5"
+        }`}
+      />
+    </button>
+  );
+}
+
 export function DestinationPackagesEditor({ destinationSlug, initial, saveAction }: Props) {
   const [rows, setRows] = useState<Row[]>(() => sortRows(initial));
   const [dirty, setDirty] = useState(false);
@@ -123,9 +144,10 @@ export function DestinationPackagesEditor({ destinationSlug, initial, saveAction
         <table className="min-w-full text-[13px]">
           <thead className="bg-[var(--bg-subtle)] text-[var(--text-tertiary)] text-[12px] uppercase tracking-wider">
             <tr>
-              <th className="text-left p-3 w-20">Order</th>
+              <th className="text-left p-3 w-20">Move</th>
+              <th className="text-left p-3 w-24">Order #</th>
               <th className="text-left p-3">Package</th>
-              <th className="text-left p-3 w-24">Days</th>
+              <th className="text-left p-3 w-20">Days</th>
               <th className="text-center p-3 w-24">Featured</th>
               <th className="text-center p-3 w-24">Hidden</th>
             </tr>
@@ -159,6 +181,19 @@ export function DestinationPackagesEditor({ destinationSlug, initial, saveAction
                   </div>
                 </td>
                 <td className="p-3">
+                  <input
+                    type="number"
+                    min={1}
+                    value={r.rank ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      bump(r.slug, { rank: v === "" ? null : Math.max(1, Number(v)) });
+                    }}
+                    placeholder="—"
+                    className="w-16 px-2 py-1 rounded border border-[var(--border-default)] bg-[var(--bg-primary)] text-[13px]"
+                  />
+                </td>
+                <td className="p-3">
                   <div className="text-[var(--text-primary)] font-medium">{r.name}</div>
                   <div className="text-[12px] text-[var(--text-tertiary)] font-mono mt-0.5">
                     {r.slug}
@@ -171,17 +206,17 @@ export function DestinationPackagesEditor({ destinationSlug, initial, saveAction
                 </td>
                 <td className="p-3 text-[var(--text-secondary)]">{r.duration}</td>
                 <td className="p-3 text-center">
-                  <input
-                    type="checkbox"
-                    checked={r.featured}
-                    onChange={(e) => bump(r.slug, { featured: e.target.checked })}
+                  <ToggleButton
+                    on={r.featured}
+                    onChange={(v) => bump(r.slug, { featured: v })}
+                    label="Featured"
                   />
                 </td>
                 <td className="p-3 text-center">
-                  <input
-                    type="checkbox"
-                    checked={r.hidden}
-                    onChange={(e) => bump(r.slug, { hidden: e.target.checked })}
+                  <ToggleButton
+                    on={r.hidden}
+                    onChange={(v) => bump(r.slug, { hidden: v })}
+                    label="Hidden"
                   />
                 </td>
               </tr>
