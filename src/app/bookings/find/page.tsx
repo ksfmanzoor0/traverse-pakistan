@@ -22,7 +22,11 @@ export default async function FindBookingPage({ searchParams }: Props) {
 
   if (user && user.user_metadata?.verified_via_otp === true) {
     const bookings = await getBookingsForUser(user.id);
-    if (bookings.length === 1) redirect(`/bookings/${bookings[0].ref}`);
+    if (bookings.length === 1) {
+      const ref = bookings[0].ref;
+      const href = ref.startsWith("INV-") ? `/invitation-letter/${ref}` : `/bookings/${ref}`;
+      redirect(href);
+    }
     if (bookings.length > 1) redirect("/mybookings");
     // 0 bookings → fall through to form (edge case)
   }

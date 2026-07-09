@@ -32,7 +32,8 @@ function FindBookingInner() {
       });
       const data = await res.json();
       if (data.granted) {
-        router.replace(`/bookings/${ref}`);
+        const href = ref.startsWith("INV-") ? `/invitation-letter/${ref}` : `/bookings/${ref}`;
+        router.replace(href);
         return;
       }
       setError("We couldn't find a booking matching that reference and contact. Double-check both and try again.");

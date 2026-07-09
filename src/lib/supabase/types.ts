@@ -233,7 +233,7 @@ export type PackageRow = {
   meals_per_person: number;
   entries_per_person: number;
   jeep_legs: Array<{ name: string; costPerJeep: number; capacity: number }>;
-  destination_rank: Record<string, number>;
+  destination_rank: Record<string, number | { rank?: number; hidden?: boolean; featured?: boolean }>;
   fuel_price_per_litre: number | null;
   profit_percentage: number | null;
   guide_per_day: number | null;

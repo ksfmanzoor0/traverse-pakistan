@@ -41,7 +41,7 @@ export interface Package {
   route: string;
   destinationSlug: string;
   relatedDestinationSlugs?: string[];
-  destinationRank?: Record<string, number>;
+  destinationRank?: Record<string, number | { rank?: number; hidden?: boolean; featured?: boolean }>;
   regionSlug: string;
   rating: number;
   reviewCount: number;

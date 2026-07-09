@@ -1,11 +1,12 @@
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { findOrCreateUserForBooking } from "./findOrCreateUser";
 
-type BookingTable = "package_bookings" | "hotel_bookings" | "bookings";
+type BookingTable = "package_bookings" | "hotel_bookings" | "bookings" | "invitation_requests";
 
 function tableFromRef(bookingRef: string): BookingTable {
   if (bookingRef.startsWith("PKG-")) return "package_bookings";
   if (bookingRef.startsWith("HTL-")) return "hotel_bookings";
+  if (bookingRef.startsWith("INV-")) return "invitation_requests";
   return "bookings";
 }
 
@@ -27,6 +28,16 @@ async function fetchContact(table: BookingTable, bookingRef: string): Promise<{ 
       .maybeSingle();
     return data ? { contact_name: data.contact_name, contact_email: data.contact_email, contact_phone: data.contact_phone, user_id: data.user_id } : null;
   }
+  if (table === "invitation_requests") {
+    const { data } = await supabase
+      .from("invitation_requests" as never)
+      .select("contact_name, contact_email, contact_phone, user_id")
+      .eq("ref", bookingRef)
+      .maybeSingle();
+    if (!data) return null;
+    const row = data as { contact_name: string; contact_email: string; contact_phone: string | null; user_id: string | null };
+    return { contact_name: row.contact_name, contact_email: row.contact_email, contact_phone: row.contact_phone ?? "", user_id: row.user_id };
+  }
   const { data } = await supabase
     .from("bookings")
     .select("contact_name, contact_email, contact_phone, user_id")
@@ -41,6 +52,8 @@ async function updateUserId(table: BookingTable, bookingRef: string, userId: str
     await supabase.from("package_bookings").update({ user_id: userId }).eq("booking_ref", bookingRef);
   } else if (table === "hotel_bookings") {
     await supabase.from("hotel_bookings").update({ user_id: userId }).eq("booking_ref", bookingRef);
+  } else if (table === "invitation_requests") {
+    await supabase.from("invitation_requests" as never).update({ user_id: userId } as never).eq("ref", bookingRef);
   } else {
     await supabase.from("bookings").update({ user_id: userId }).eq("booking_ref", bookingRef);
   }

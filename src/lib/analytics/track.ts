@@ -18,7 +18,7 @@ declare global {
   }
 }
 
-export type BookingType = "tour" | "package" | "hotel";
+export type BookingType = "tour" | "package" | "hotel" | "invitation";
 
 interface ViewItemParams {
   itemId: string;
