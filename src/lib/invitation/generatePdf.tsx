@@ -125,13 +125,13 @@ export async function generateInvitationLetterPdf(data: LetterData): Promise<Buf
 
         <Text style={styles.paragraph}>{data.body_close}</Text>
 
-        <View style={styles.signBlock}>
+        <View style={styles.signBlock} wrap={false}>
           <Text>{data.signer_name}</Text>
           <Text>{data.signer_title}</Text>
-          <View style={{ ...styles.signRow, alignItems: "flex-start" }}>
-            <View style={{ width: 220 }}>
+          <View style={{ ...styles.signRow, alignItems: "flex-start" }} wrap={false}>
+            <View style={{ width: 220 }} wrap={false}>
               <Text style={{ fontSize: 10, marginBottom: 4 }}>Signature:</Text>
-              <View style={{ alignItems: "center", width: 220 }}>
+              <View style={{ alignItems: "center", width: 220 }} wrap={false}>
                 {signatureData && (
                   <Image src={signatureData} style={{ height: 60, width: 200, objectFit: "contain", marginBottom: -4 }} />
                 )}
