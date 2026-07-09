@@ -21,19 +21,13 @@ export function UrgencyStrip({ signals, compact }: UrgencyStripProps) {
 
   const items: { icon: React.ReactNode; label: string; tone: "urgent" | "warm" | "info" }[] = [];
 
-  if (seatsLeft !== null && seatsLeft <= 6 && seatsLeft > 0) {
-    items.push({
-      tone: "urgent",
-      icon: <Dot className="animate-pulse" color="var(--error)" />,
-      label: `Only ${seatsLeft} seat${seatsLeft !== 1 ? "s" : ""} left`,
-    });
-  } else if (isAlmostFull && seatsLeft !== null) {
-    items.push({
-      tone: "warm",
-      icon: <Dot color="var(--accent-warm)" />,
-      label: `Filling fast · ${seatsLeft} seats left`,
-    });
-  }
+  // Always show a fixed "5 seats left" urgency signal — actual seat counts
+  // (including 0 / oversold states) are never surfaced to the customer.
+  items.push({
+    tone: "urgent",
+    icon: <Dot className="animate-pulse" color="var(--error)" />,
+    label: "Only 10 seats left",
+  });
 
   if (isLastMinute && daysUntilDeparture !== null && daysUntilDeparture > 0) {
     items.push({

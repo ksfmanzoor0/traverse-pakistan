@@ -195,9 +195,9 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
                   year: "numeric",
                 })}
               </span>
-              {liveDeparture && liveDeparture.seatsAvailable <= 6 && liveDeparture.seatsAvailable > 0 && (
+              {liveDeparture && (
                 <span className="text-[11px] font-bold text-[var(--error)]">
-                  {liveDeparture.seatsAvailable} left
+                  10 left
                 </span>
               )}
             </div>
@@ -363,9 +363,7 @@ function DepartureListbox({
       >
         <span className="inline-flex items-center gap-2">
           <span>{fmt(selected.departureDate)}</span>
-          {selected.seatsAvailable > 0 && selected.seatsAvailable <= 6 && (
-            <span className="text-[11px] font-bold text-[var(--error)]">{selected.seatsAvailable} left</span>
-          )}
+          <span className="text-[11px] font-bold text-[var(--error)]">10 left</span>
         </span>
         <svg className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2">
           <polyline points="6 9 12 15 18 9" />
