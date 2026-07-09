@@ -37,7 +37,7 @@ export function DeleteBookingButton({ id, refLabel, deleteAction, compact = true
         onClick={onClick}
         disabled={pending}
         aria-label={`Delete ${refLabel}`}
-        className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-full text-[12px] font-semibold transition-colors disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-full text-[12px] font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
         style={{
           color: "var(--error)",
           background: "color-mix(in srgb, var(--error) 8%, transparent)",
@@ -55,7 +55,7 @@ export function DeleteBookingButton({ id, refLabel, deleteAction, compact = true
       type="button"
       onClick={onClick}
       disabled={pending}
-      className="inline-flex items-center gap-2 h-10 px-4 rounded-[var(--radius-sm)] text-[13px] font-semibold disabled:opacity-50"
+      className="inline-flex items-center gap-2 h-10 px-4 rounded-[var(--radius-sm)] text-[13px] font-semibold cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
       style={{
         color: "var(--error)",
         background: "color-mix(in srgb, var(--error) 8%, transparent)",
