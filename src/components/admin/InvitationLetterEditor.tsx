@@ -128,6 +128,8 @@ export function InvitationLetterEditor({ bookingRef, initialData, status, signat
             <input value={data.header.address_line_2} onChange={(e) => updateHeader("address_line_2", e.target.value)} className={inputCls} />
             <input value={data.header.city} onChange={(e) => updateHeader("city", e.target.value)} className={inputCls} />
             <input value={data.header.phone} onChange={(e) => updateHeader("phone", e.target.value)} className={inputCls} />
+            <input placeholder="Email" value={data.header.email} onChange={(e) => updateHeader("email", e.target.value)} className={inputCls} />
+            <input placeholder="Website" value={data.header.website} onChange={(e) => updateHeader("website", e.target.value)} className={inputCls} />
             <input value={data.header.dts_licence} onChange={(e) => updateHeader("dts_licence", e.target.value)} className={inputCls} />
             <input value={data.header.secp_incorporation} onChange={(e) => updateHeader("secp_incorporation", e.target.value)} className={inputCls} />
             <input value={data.header.ntn} onChange={(e) => updateHeader("ntn", e.target.value)} className={inputCls} />
@@ -174,6 +176,8 @@ export function LetterPreview({ data, signatureDataUrl }: { data: LetterData; si
               <div>{data.header.address_line_2}</div>
               <div>{data.header.city}</div>
               <div>{data.header.phone}</div>
+              {data.header.email && <div>{data.header.email}</div>}
+              {data.header.website && <div>{data.header.website}</div>}
             </div>
             <div className="text-[#1E6A52]"><strong>DTS Licence ID:</strong> {data.header.dts_licence}</div>
             <div className="text-[#1E6A52]"><strong>SECP Incorporation #:</strong> {data.header.secp_incorporation}</div>
@@ -226,18 +230,20 @@ export function LetterPreview({ data, signatureDataUrl }: { data: LetterData; si
       <div className="mt-10">
         <div>{data.signer_name}</div>
         <div>{data.signer_title}</div>
-        <div className="mt-6 flex items-end gap-2">
-          <div className="flex flex-col items-center">
-            {signatureDataUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={signatureDataUrl} alt="Signature" className="h-24 w-auto max-w-[260px] object-contain mb-1" />
-            ) : (
-              <a href="/admin/invitation-letters" className="block h-14 w-64 border border-dashed border-[#9ca3af] flex items-center justify-center text-[11px] text-[#9ca3af] mb-1 hover:border-[var(--primary)] hover:text-[var(--primary)]">
-                Upload signature on Invitation Letters page →
-              </a>
-            )}
-            <div className="border-t border-black w-64"></div>
-            <div className="text-[12px] self-start">Sign</div>
+        <div className="mt-6 flex items-start gap-2">
+          <div>
+            <div className="text-[12px] mb-1">Signature:</div>
+            <div className="flex flex-col items-center">
+              {signatureDataUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={signatureDataUrl} alt="Signature" className="h-24 w-auto max-w-[260px] object-contain mb-1" />
+              ) : (
+                <a href="/admin/invitation-letters" className="block h-14 w-64 border border-dashed border-[#9ca3af] flex items-center justify-center text-[11px] text-[#9ca3af] mb-1 hover:border-[var(--primary)] hover:text-[var(--primary)]">
+                  Upload signature on Invitation Letters page →
+                </a>
+              )}
+              <div className="border-t border-black w-64"></div>
+            </div>
           </div>
           <div className="ml-auto text-[13px]">
             Date: {data.issued_date}

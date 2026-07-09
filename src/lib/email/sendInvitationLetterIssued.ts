@@ -51,6 +51,8 @@ function renderLetterHtml(data: LetterData, signatureDataUrl: string | null): st
           <div>${esc(data.header.address_line_2)}</div>
           <div>${esc(data.header.city)}</div>
           <div>${esc(data.header.phone)}</div>
+          ${data.header.email ? `<div>${esc(data.header.email)}</div>` : ""}
+          ${data.header.website ? `<div>${esc(data.header.website)}</div>` : ""}
           <div style="margin-top:12px"><strong>DTS Licence ID:</strong> ${esc(data.header.dts_licence)}</div>
           <div><strong>SECP Incorporation #:</strong> ${esc(data.header.secp_incorporation)}</div>
           <div style="color:#111"><strong>NTN:</strong> ${esc(data.header.ntn)}</div>
@@ -87,11 +89,13 @@ function renderLetterHtml(data: LetterData, signatureDataUrl: string | null): st
     <div style="margin-top:40px">
       <div>${esc(data.signer_name)}</div>
       <div>${esc(data.signer_title)}</div>
-      <div style="margin-top:24px;display:flex;justify-content:space-between;align-items:flex-end">
-        <div style="display:inline-block;text-align:center">
-          ${signatureDataUrl ? `<img src="${signatureDataUrl}" alt="Signature" style="height:64px;width:auto;max-width:240px;display:block;margin:0 auto -4px" />` : ""}
-          <div style="border-top:1px solid #000;width:240px;${signatureDataUrl ? "" : "margin-top:56px"}"></div>
-          <div style="font-size:12px;text-align:left">Sign</div>
+      <div style="margin-top:24px;display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-size:12px;margin-bottom:4px">Signature:</div>
+          <div style="display:inline-block;text-align:center">
+            ${signatureDataUrl ? `<img src="${signatureDataUrl}" alt="Signature" style="height:64px;width:auto;max-width:240px;display:block;margin:0 auto -4px" />` : ""}
+            <div style="border-top:1px solid #000;width:240px;${signatureDataUrl ? "" : "margin-top:56px"}"></div>
+          </div>
         </div>
         <div style="font-size:13px">Date: ${esc(data.issued_date)}</div>
       </div>

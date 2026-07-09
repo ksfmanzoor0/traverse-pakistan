@@ -73,6 +73,8 @@ export async function generateInvitationLetterPdf(data: LetterData): Promise<Buf
                 <Text style={styles.addressLine}>{data.header.address_line_2}</Text>
                 <Text style={styles.addressLine}>{data.header.city}</Text>
                 <Text style={styles.addressLine}>{data.header.phone}</Text>
+                {data.header.email && <Text style={styles.addressLine}>{data.header.email}</Text>}
+                {data.header.website && <Text style={styles.addressLine}>{data.header.website}</Text>}
               </View>
               <View style={styles.metaBlock}>
                 <Text>DTS Licence ID: {data.header.dts_licence}</Text>
@@ -126,13 +128,15 @@ export async function generateInvitationLetterPdf(data: LetterData): Promise<Buf
         <View style={styles.signBlock}>
           <Text>{data.signer_name}</Text>
           <Text>{data.signer_title}</Text>
-          <View style={styles.signRow}>
-            <View style={{ alignItems: "center", width: 220 }}>
-              {signatureData && (
-                <Image src={signatureData} style={{ height: 60, width: 200, objectFit: "contain", marginBottom: -4 }} />
-              )}
-              <View style={{ width: 200, borderTopWidth: 1, borderTopColor: BLACK, marginTop: signatureData ? 0 : 44 }} />
-              <Text style={{ fontSize: 10, marginTop: 2, alignSelf: "flex-start" }}>Sign</Text>
+          <View style={{ ...styles.signRow, alignItems: "flex-start" }}>
+            <View style={{ width: 220 }}>
+              <Text style={{ fontSize: 10, marginBottom: 4 }}>Signature:</Text>
+              <View style={{ alignItems: "center", width: 220 }}>
+                {signatureData && (
+                  <Image src={signatureData} style={{ height: 60, width: 200, objectFit: "contain", marginBottom: -4 }} />
+                )}
+                <View style={{ width: 200, borderTopWidth: 1, borderTopColor: BLACK, marginTop: signatureData ? 0 : 44 }} />
+              </View>
             </View>
             <Text style={styles.dateText}>Date: {data.issued_date}</Text>
           </View>
