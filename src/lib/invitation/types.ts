@@ -1,10 +1,29 @@
 export type Traveler = {
-  full_name: string;
+  surname: string;
+  first_name: string;
   date_of_birth: string;
   nationality: string;
   passport_number: string;
   passport_expiry: string;
 };
+
+/**
+ * Legacy jsonb rows stored a single `full_name` field. Read helper that
+ * accepts either shape and returns split names, so old data doesn't break.
+ */
+export function readTravelerName(t: Traveler | { full_name?: string; first_name?: string; surname?: string }): {
+  surname: string;
+  first_name: string;
+} {
+  const surname = ("surname" in t ? t.surname : "") ?? "";
+  const first_name = ("first_name" in t ? t.first_name : "") ?? "";
+  if (surname || first_name) return { surname, first_name };
+  const legacy = ("full_name" in t ? t.full_name : "") ?? "";
+  if (!legacy) return { surname: "", first_name: "" };
+  const parts = legacy.trim().split(/\s+/);
+  if (parts.length === 1) return { surname: parts[0], first_name: "" };
+  return { surname: parts[parts.length - 1], first_name: parts.slice(0, -1).join(" ") };
+}
 
 export type InvitationRequestInput = {
   contact_name: string;

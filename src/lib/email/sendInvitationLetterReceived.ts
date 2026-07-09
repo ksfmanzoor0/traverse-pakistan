@@ -1,6 +1,7 @@
 import { getResend, FROM } from "./resend";
 import { INVITATION_LETTER_PRICE_USD } from "@/lib/invitation/config";
 import type { InvitationRequestInput } from "@/lib/invitation/types";
+import { readTravelerName } from "@/lib/invitation/types";
 
 const NOTIFY_TO = process.env.QUOTE_NOTIFY_TO?.trim() || "info@traversepakistan.com";
 
@@ -22,13 +23,15 @@ export async function sendInvitationLetterReceived(input: Input): Promise<void> 
 
   const site = siteUrl();
   const travelerRows = input.travelers
-    .map(
-      (t) => `<tr>
-        <td style="padding:6px 10px;border:1px solid #e5e7eb">${esc(t.full_name)}</td>
+    .map((t) => {
+      const { surname, first_name } = readTravelerName(t);
+      const display = [surname, first_name].filter(Boolean).join(", ");
+      return `<tr>
+        <td style="padding:6px 10px;border:1px solid #e5e7eb">${esc(display)}</td>
         <td style="padding:6px 10px;border:1px solid #e5e7eb">${esc(t.nationality)}</td>
         <td style="padding:6px 10px;border:1px solid #e5e7eb">${esc(t.passport_number)}</td>
-      </tr>`,
-    )
+      </tr>`;
+    })
     .join("");
 
   const summary = `<table style="border-collapse:collapse;font-size:14px;margin-top:8px">

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import type { InvitationRequest, Traveler } from "@/lib/invitation/types";
+import { readTravelerName } from "@/lib/invitation/types";
 import { defaultLetterData, type LetterData } from "@/lib/invitation/letterData";
 import { getInvitationSignatureDataUrl } from "@/lib/invitation/config";
 import { InvitationLetterEditor } from "@/components/admin/InvitationLetterEditor";
@@ -97,7 +98,8 @@ export default async function AdminInvitationLetterDetail({ params }: { params: 
           <table className="min-w-full text-[13px]">
             <thead className="bg-[var(--bg-subtle)] text-[var(--text-secondary)]">
               <tr>
-                <th className="text-left p-2">Name</th>
+                <th className="text-left p-2">Surname</th>
+                <th className="text-left p-2">Given names</th>
                 <th className="text-left p-2">DOB</th>
                 <th className="text-left p-2">Nationality</th>
                 <th className="text-left p-2">Passport #</th>
@@ -105,15 +107,19 @@ export default async function AdminInvitationLetterDetail({ params }: { params: 
               </tr>
             </thead>
             <tbody>
-              {travelers.map((t, i) => (
-                <tr key={i} className="border-t border-[var(--border-default)]">
-                  <td className="p-2 text-[var(--text-primary)]">{t.full_name}</td>
-                  <td className="p-2 text-[var(--text-primary)]">{t.date_of_birth}</td>
-                  <td className="p-2 text-[var(--text-primary)]">{t.nationality}</td>
-                  <td className="p-2 text-[var(--text-primary)] font-mono">{t.passport_number}</td>
-                  <td className="p-2 text-[var(--text-primary)]">{t.passport_expiry}</td>
-                </tr>
-              ))}
+              {travelers.map((t, i) => {
+                const { surname, first_name } = readTravelerName(t);
+                return (
+                  <tr key={i} className="border-t border-[var(--border-default)]">
+                    <td className="p-2 text-[var(--text-primary)]">{surname}</td>
+                    <td className="p-2 text-[var(--text-primary)]">{first_name}</td>
+                    <td className="p-2 text-[var(--text-primary)]">{t.date_of_birth}</td>
+                    <td className="p-2 text-[var(--text-primary)]">{t.nationality}</td>
+                    <td className="p-2 text-[var(--text-primary)] font-mono">{t.passport_number}</td>
+                    <td className="p-2 text-[var(--text-primary)]">{t.passport_expiry}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

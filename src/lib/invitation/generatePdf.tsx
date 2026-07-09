@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { LetterData } from "./letterData";
 import { getInvitationSignatureDataUrl } from "./config";
+import { readTravelerName } from "./types";
 
 // Prevent react-pdf's default hyphenation from breaking words like
 // "MANZOOR" across lines with a "-".
@@ -101,19 +102,23 @@ export async function generateInvitationLetterPdf(data: LetterData): Promise<Buf
 
         <View style={styles.table}>
           <View style={styles.tr}>
-            {["NAME", "Date of Birth", "Nationality", "Passport No.", "Expiry Date"].map((h, i, arr) => (
+            {["SURNAME", "GIVEN NAMES", "Date of Birth", "Nationality", "Passport No.", "Expiry Date"].map((h, i, arr) => (
               <Text key={h} style={i === arr.length - 1 ? styles.thCellLast : styles.thCell}>{h}</Text>
             ))}
           </View>
-          {data.travelers.map((t, i) => (
-            <View key={i} style={styles.tr}>
-              <Text style={styles.td}>{t.full_name.toUpperCase()}</Text>
-              <Text style={styles.td}>{t.date_of_birth}</Text>
-              <Text style={styles.td}>{t.nationality}</Text>
-              <Text style={styles.td}>{t.passport_number}</Text>
-              <Text style={styles.tdLast}>{t.passport_expiry}</Text>
-            </View>
-          ))}
+          {data.travelers.map((t, i) => {
+            const { surname, first_name } = readTravelerName(t);
+            return (
+              <View key={i} style={styles.tr}>
+                <Text style={styles.td}>{surname.toUpperCase()}</Text>
+                <Text style={styles.td}>{first_name.toUpperCase()}</Text>
+                <Text style={styles.td}>{t.date_of_birth}</Text>
+                <Text style={styles.td}>{t.nationality}</Text>
+                <Text style={styles.td}>{t.passport_number}</Text>
+                <Text style={styles.tdLast}>{t.passport_expiry}</Text>
+              </View>
+            );
+          })}
         </View>
 
         <Text style={styles.paragraph}>{data.body_close}</Text>
