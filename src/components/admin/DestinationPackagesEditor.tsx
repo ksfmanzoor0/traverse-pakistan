@@ -7,6 +7,7 @@ type Row = {
   name: string;
   duration: number;
   isPrimary: boolean;
+  published: boolean;
   hidden: boolean;
   featured: boolean;
   rank: number | null;
@@ -200,6 +201,11 @@ export function DestinationPackagesEditor({ destinationSlug, initial, saveAction
                     {!r.isPrimary && (
                       <span className="ml-2 inline-block px-1.5 py-0.5 rounded bg-[var(--bg-subtle)] text-[10px] uppercase tracking-wider">
                         related
+                      </span>
+                    )}
+                    {!r.published && (
+                      <span className="ml-2 inline-block px-1.5 py-0.5 rounded bg-[var(--warning)]/10 text-[var(--warning)] text-[10px] uppercase tracking-wider">
+                        unpublished
                       </span>
                     )}
                   </div>

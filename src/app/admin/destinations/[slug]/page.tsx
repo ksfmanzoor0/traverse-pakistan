@@ -31,10 +31,11 @@ async function fetchPackages(destinationSlug: string): Promise<PackageRow[]> {
   const supabase = getSupabaseAdmin();
   const slugs = await fetchAncestorSlugs(destinationSlug);
   const slugList = slugs.join(",");
+  // Admin surfaces ALL packages (published + unpublished) so hidden/unpublished
+  // ones are still reachable and manageable.
   const { data, error } = await supabase
     .from("packages")
     .select("*")
-    .eq("published", true)
     .or(`destination_slug.in.(${slugList}),related_destination_slugs.ov.{${slugList}}`);
   if (error) throw new Error(error.message);
   return (data as unknown as PackageRow[]) ?? [];
@@ -52,6 +53,7 @@ export default async function AdminDestinationDetail({ params }: { params: Promi
       name: row.name,
       duration: row.duration,
       isPrimary: row.destination_slug === slug,
+      published: row.published,
       hidden: !!entry.hidden,
       featured: !!entry.featured,
       rank: typeof entry.rank === "number" ? entry.rank : null,
