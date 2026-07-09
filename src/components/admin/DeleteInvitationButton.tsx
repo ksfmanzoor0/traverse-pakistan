@@ -5,9 +5,10 @@ import { useTransition } from "react";
 type Props = {
   bookingRef: string;
   deleteAction: (ref: string) => Promise<void>;
+  compact?: boolean;
 };
 
-export function DeleteInvitationButton({ bookingRef, deleteAction }: Props) {
+export function DeleteInvitationButton({ bookingRef, deleteAction, compact }: Props) {
   const [pending, startTransition] = useTransition();
 
   function onClick() {
@@ -19,6 +20,20 @@ export function DeleteInvitationButton({ bookingRef, deleteAction }: Props) {
         alert(e instanceof Error ? e.message : "Delete failed");
       }
     });
+  }
+
+  if (compact) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={pending}
+        aria-label={`Delete ${bookingRef}`}
+        className="text-[12px] font-medium text-[var(--error)] disabled:opacity-50 hover:underline"
+      >
+        {pending ? "Deleting…" : "Delete"}
+      </button>
+    );
   }
 
   return (
