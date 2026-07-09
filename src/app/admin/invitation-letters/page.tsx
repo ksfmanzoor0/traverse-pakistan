@@ -50,7 +50,15 @@ export default async function AdminInvitationLetters() {
 
   return (
     <div className="p-6 sm:p-8">
-      <h1 className="text-[24px] font-bold text-[var(--text-primary)] mb-6">Invitation letters</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-[24px] font-bold text-[var(--text-primary)]">Invitation letters</h1>
+        <Link
+          href="/admin/invitation-letters/new"
+          className="h-10 px-4 inline-flex items-center rounded-[var(--radius-sm)] bg-[var(--primary)] text-white text-[13px] font-semibold"
+        >
+          + New invitation letter
+        </Link>
+      </div>
 
       <div className="mb-6">
         <InvitationSignatureUpload currentDataUrl={signatureDataUrl} saveAction={updateInvitationSignature} />
