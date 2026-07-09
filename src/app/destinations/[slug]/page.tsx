@@ -147,23 +147,27 @@ export default async function DestinationDetailPage({ params }: Props) {
       </section>
 
       {/* Packages */}
-      {allPkgs.length > 0 && (
-        <section className="py-16 sm:py-20 bg-[var(--bg-subtle)]">
-          <Container>
-            <SectionHeader
-              title={`Packages in ${dest.name}`}
-              subtitle={`${allPkgs.length} flexible package${allPkgs.length !== 1 ? "s" : ""} — your dates, your tier`}
-              linkText="View all packages"
-              linkHref="/packages"
-            />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sortByDestinationRelevance(allPkgs, dest.slug).map((pkg) => (
-                <PackageCard key={pkg.id} pkg={pkg} variant="grid" />
-              ))}
-            </div>
-          </Container>
-        </section>
-      )}
+      {(() => {
+        const visiblePkgs = sortByDestinationRelevance(allPkgs, dest.slug);
+        if (visiblePkgs.length === 0) return null;
+        return (
+          <section className="py-16 sm:py-20 bg-[var(--bg-subtle)]">
+            <Container>
+              <SectionHeader
+                title={`Packages in ${dest.name}`}
+                subtitle={`${visiblePkgs.length} flexible package${visiblePkgs.length !== 1 ? "s" : ""} — your dates, your tier`}
+                linkText="View all packages"
+                linkHref="/packages"
+              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {visiblePkgs.map((pkg) => (
+                  <PackageCard key={pkg.id} pkg={pkg} variant="grid" />
+                ))}
+              </div>
+            </Container>
+          </section>
+        );
+      })()}
 
       {/* Tours */}
       {allTours.length > 0 && (
