@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { BookingStatusSelect } from "@/components/admin/BookingStatusSelect";
+import { DeleteBookingButton } from "@/components/admin/DeleteBookingButton";
 import { getAllTours } from "@/services/tour.service";
 import { formatPrice } from "@/lib/utils";
 import type { BookingRow, BookingStatus } from "@/lib/supabase/types";
+import { deleteTourBooking } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -162,6 +164,7 @@ export default async function BookingsPage({
                   <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">
                     Status
                   </th>
+                  <th className="px-4 py-3" />
                 </tr>
               </thead>
               <tbody>
@@ -250,6 +253,13 @@ export default async function BookingsPage({
                       </td>
                       <td className="px-4 py-3">
                         <BookingStatusSelect id={row.id} initial={row.status} />
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <DeleteBookingButton
+                          id={row.id}
+                          refLabel={row.booking_ref}
+                          deleteAction={deleteTourBooking}
+                        />
                       </td>
                     </tr>
                   );

@@ -3,8 +3,9 @@
 import { useTransition } from "react";
 
 type Props = {
-  bookingRef: string;
-  deleteAction: (ref: string) => Promise<void>;
+  id: string;
+  refLabel: string;
+  deleteAction: (id: string) => Promise<{ ok: boolean; error?: string }>;
   compact?: boolean;
 };
 
@@ -18,17 +19,14 @@ function TrashIcon({ size = 14 }: { size?: number }) {
   );
 }
 
-export function DeleteInvitationButton({ bookingRef, deleteAction, compact }: Props) {
+export function DeleteBookingButton({ id, refLabel, deleteAction, compact = true }: Props) {
   const [pending, startTransition] = useTransition();
 
   function onClick() {
-    if (!confirm(`Delete invitation letter ${bookingRef}? This cannot be undone.`)) return;
+    if (!confirm(`Delete ${refLabel}? This cannot be undone.`)) return;
     startTransition(async () => {
-      try {
-        await deleteAction(bookingRef);
-      } catch (e) {
-        alert(e instanceof Error ? e.message : "Delete failed");
-      }
+      const res = await deleteAction(id);
+      if (!res.ok) alert(res.error ?? "Delete failed");
     });
   }
 
@@ -38,7 +36,7 @@ export function DeleteInvitationButton({ bookingRef, deleteAction, compact }: Pr
         type="button"
         onClick={onClick}
         disabled={pending}
-        aria-label={`Delete ${bookingRef}`}
+        aria-label={`Delete ${refLabel}`}
         className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-full text-[12px] font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
         style={{
           color: "var(--error)",
@@ -65,7 +63,7 @@ export function DeleteInvitationButton({ bookingRef, deleteAction, compact }: Pr
       }}
     >
       <TrashIcon size={16} />
-      {pending ? "Deleting…" : "Delete request"}
+      {pending ? "Deleting…" : "Delete booking"}
     </button>
   );
 }
