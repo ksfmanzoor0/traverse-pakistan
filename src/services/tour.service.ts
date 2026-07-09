@@ -37,6 +37,7 @@ function toTour(
     rating: Number(row.rating),
     reviewCount: row.review_count,
     maxGroupSize: row.max_group_size,
+    minAge: row.min_age ?? null,
     languages: row.languages,
     freeCancellation: row.free_cancellation,
     reserveNowPayLater: row.reserve_now_pay_later,
