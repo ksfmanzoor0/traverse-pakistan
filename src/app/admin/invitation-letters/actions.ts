@@ -91,6 +91,20 @@ export async function createInvitationRequestAdmin(formData: FormData): Promise<
   redirect(`/admin/invitation-letters/${ref}`);
 }
 
+export async function deleteInvitationRequest(ref: string): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from("invitation_requests" as never)
+    .delete()
+    .eq("ref", ref);
+  if (error) {
+    console.error("[deleteInvitationRequest]", error);
+    throw new Error(`Delete failed: ${error.message}`);
+  }
+  revalidatePath("/admin/invitation-letters");
+  redirect("/admin/invitation-letters");
+}
+
 export async function sendInvitationLetter(ref: string): Promise<{ ok: boolean; error?: string }> {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
