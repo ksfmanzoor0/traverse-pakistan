@@ -6,6 +6,8 @@ export type LetterData = {
     address_line_2: string;
     city: string;
     phone: string;
+    email: string;
+    website: string;
     dts_licence: string;
     secp_incorporation: string;
     ntn: string;
@@ -31,6 +33,8 @@ export function defaultLetterData(row: InvitationRequest): LetterData {
       address_line_2: "MPCHS, E-11/1,",
       city: "Islamabad",
       phone: "92-335-1589132",
+      email: "info@traversepakistan.com",
+      website: "traversepakistan.com",
       dts_licence: "2493",
       secp_incorporation: "0137385",
       ntn: "6561399",
