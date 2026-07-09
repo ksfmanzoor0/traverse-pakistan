@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 type Entry = { rank?: number; hidden?: boolean; featured?: boolean };
@@ -42,6 +42,7 @@ export async function saveDestinationPackageOverrides(
     if (error) return { ok: false, error: error.message };
   }
 
+  revalidateTag("packages", {});
   revalidatePath(`/destinations/${destinationSlug}`);
   revalidatePath(`/admin/destinations/${destinationSlug}`);
   revalidatePath("/packages");
