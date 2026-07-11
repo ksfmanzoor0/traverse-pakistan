@@ -206,6 +206,7 @@ export function PackageEditor({ row, destinationOptions, regionOptions, updateAc
   const [deletePending, startDelete] = useTransition();
   const [r2Msg, setR2Msg] = useState<string | null>(null);
   const [r2Pending, startR2] = useTransition();
+  const [relatedQuery, setRelatedQuery] = useState("");
 
   function onSave() {
     setSaveMsg(null);
@@ -398,26 +399,54 @@ export function PackageEditor({ row, destinationOptions, regionOptions, updateAc
             </select>
           </div>
           <div className="md:col-span-2">
-            <label className={labelCls} style={labelStyle}>Related destinations</label>
+            <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
+              <label className={`${labelCls} mb-0`} style={labelStyle}>Related destinations</label>
+              <span className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+                {related.length} selected
+              </span>
+            </div>
+            <input
+              type="search"
+              value={relatedQuery}
+              onChange={(e) => setRelatedQuery(e.target.value)}
+              placeholder="Search destinations…"
+              className={`${inputCls} mb-3`}
+              style={inputStyle}
+            />
             <div className="flex flex-wrap gap-2">
-              {destinationOptions.map((d) => {
-                const active = related.includes(d.slug);
-                return (
-                  <button
-                    key={d.slug}
-                    type="button"
-                    onClick={() => toggleRelated(d.slug)}
-                    className="px-2.5 py-1 rounded-full text-[12px] cursor-pointer"
-                    style={{
-                      background: active ? "var(--primary)" : "var(--bg-subtle)",
-                      color: active ? "var(--text-inverse)" : "var(--text-secondary)",
-                      border: `1px solid ${active ? "var(--primary)" : "var(--border-default)"}`,
-                    }}
-                  >
-                    {d.name}
-                  </button>
-                );
-              })}
+              {(() => {
+                const q = relatedQuery.trim().toLowerCase();
+                const filtered = destinationOptions.filter((d) => {
+                  if (related.includes(d.slug)) return true;
+                  if (!q) return true;
+                  return d.name.toLowerCase().includes(q) || d.slug.toLowerCase().includes(q);
+                });
+                if (filtered.length === 0) {
+                  return (
+                    <p className="text-[12px]" style={{ color: "var(--text-tertiary)" }}>
+                      No destinations match.
+                    </p>
+                  );
+                }
+                return filtered.map((d) => {
+                  const active = related.includes(d.slug);
+                  return (
+                    <button
+                      key={d.slug}
+                      type="button"
+                      onClick={() => toggleRelated(d.slug)}
+                      className="px-2.5 py-1 rounded-full text-[12px] cursor-pointer"
+                      style={{
+                        background: active ? "var(--primary)" : "var(--bg-subtle)",
+                        color: active ? "var(--text-inverse)" : "var(--text-secondary)",
+                        border: `1px solid ${active ? "var(--primary)" : "var(--border-default)"}`,
+                      }}
+                    >
+                      {d.name}
+                    </button>
+                  );
+                });
+              })()}
             </div>
           </div>
         </div>
