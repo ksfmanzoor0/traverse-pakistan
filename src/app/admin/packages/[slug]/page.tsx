@@ -37,7 +37,7 @@ type Row = {
   destination_rank: Record<string, number> | null;
 };
 
-type DestOption = { slug: string; name: string };
+type DestOption = { slug: string; name: string; region_slug: string | null };
 type RegionOption = { slug: string; name: string };
 
 async function fetchPackage(slug: string): Promise<Row | null> {
@@ -55,13 +55,21 @@ async function fetchPackage(slug: string): Promise<Row | null> {
 async function fetchOptions(): Promise<{ destinations: DestOption[]; regions: RegionOption[] }> {
   const supabase = getSupabaseAdmin();
   const [destRes, regRes] = await Promise.all([
-    supabase.from("destinations").select("slug, name").order("name"),
-    supabase.from("regions").select("slug, name").order("name"),
+    supabase.from("destinations").select("slug, name, region_id").order("name"),
+    supabase.from("regions").select("id, slug, name").order("name"),
   ]);
-  return {
-    destinations: (destRes.data as DestOption[]) ?? [],
-    regions: (regRes.data as RegionOption[]) ?? [],
-  };
+  type RegionRow = { id: string; slug: string; name: string };
+  const regionsRows = (regRes.data as RegionRow[] | null) ?? [];
+  const regionSlugById = new Map(regionsRows.map((r) => [r.id, r.slug]));
+  type DestRawRow = { slug: string; name: string; region_id: string | null };
+  const destRows = (destRes.data as DestRawRow[] | null) ?? [];
+  const destinations: DestOption[] = destRows.map((d) => ({
+    slug: d.slug,
+    name: d.name,
+    region_slug: d.region_id ? regionSlugById.get(d.region_id) ?? null : null,
+  }));
+  const regions: RegionOption[] = regionsRows.map((r) => ({ slug: r.slug, name: r.name }));
+  return { destinations, regions };
 }
 
 export default async function AdminPackageEditPage({ params }: { params: Promise<{ slug: string }> }) {

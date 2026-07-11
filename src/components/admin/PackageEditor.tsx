@@ -56,10 +56,11 @@ function formToTier(f: TierPriceForm): PackagePricing["deluxe"] {
 }
 
 type Option = { slug: string; name: string };
+type DestOption = { slug: string; name: string; region_slug?: string | null };
 
 type Props = {
   row: Row;
-  destinationOptions: Option[];
+  destinationOptions: DestOption[];
   regionOptions: Option[];
   updateAction: (slug: string, patch: PackagePatch) => Promise<{ ok: boolean; error?: string }>;
   deleteAction: (slug: string) => Promise<{ ok: boolean; error?: string }>;
@@ -207,6 +208,7 @@ export function PackageEditor({ row, destinationOptions, regionOptions, updateAc
   const [r2Msg, setR2Msg] = useState<string | null>(null);
   const [r2Pending, startR2] = useTransition();
   const [relatedQuery, setRelatedQuery] = useState("");
+  const [bulkRegion, setBulkRegion] = useState("");
 
   function onSave() {
     setSaveMsg(null);
@@ -269,6 +271,23 @@ export function PackageEditor({ row, destinationOptions, regionOptions, updateAc
 
   function toggleRelated(slug: string) {
     setRelated((prev) => (prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]));
+  }
+
+  function addAllInRegion(regionSlugKey: string) {
+    if (!regionSlugKey) return;
+    const slugsInRegion = destinationOptions
+      .filter((d) => d.region_slug === regionSlugKey && d.slug !== destinationSlug)
+      .map((d) => d.slug);
+    if (slugsInRegion.length === 0) return;
+    setRelated((prev) => Array.from(new Set([...prev, ...slugsInRegion])));
+  }
+
+  function removeAllInRegion(regionSlugKey: string) {
+    if (!regionSlugKey) return;
+    const slugsInRegion = new Set(
+      destinationOptions.filter((d) => d.region_slug === regionSlugKey).map((d) => d.slug),
+    );
+    setRelated((prev) => prev.filter((s) => !slugsInRegion.has(s)));
   }
 
   function toggleCity(c: CityKey) {
@@ -404,6 +423,42 @@ export function PackageEditor({ row, destinationOptions, regionOptions, updateAc
               <span className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
                 {related.length} selected
               </span>
+            </div>
+            <div className="flex items-stretch gap-2 mb-2">
+              <select
+                value={bulkRegion}
+                onChange={(e) => setBulkRegion(e.target.value)}
+                className={`${inputCls} flex-1`}
+                style={inputStyle}
+              >
+                <option value="">Bulk-add by region…</option>
+                {regionOptions.map((r) => {
+                  const count = destinationOptions.filter((d) => d.region_slug === r.slug).length;
+                  return (
+                    <option key={r.slug} value={r.slug}>
+                      {r.name} ({count})
+                    </option>
+                  );
+                })}
+              </select>
+              <button
+                type="button"
+                onClick={() => addAllInRegion(bulkRegion)}
+                disabled={!bulkRegion}
+                className="h-10 px-3 rounded-[var(--radius-sm)] text-[12px] font-semibold cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap"
+                style={{ background: "var(--primary)", color: "var(--text-inverse)" }}
+              >
+                Add all
+              </button>
+              <button
+                type="button"
+                onClick={() => removeAllInRegion(bulkRegion)}
+                disabled={!bulkRegion}
+                className="h-10 px-3 rounded-[var(--radius-sm)] border text-[12px] font-semibold cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap"
+                style={{ borderColor: "var(--border-default)", color: "var(--text-secondary)" }}
+              >
+                Remove all
+              </button>
             </div>
             <input
               type="search"
