@@ -26,6 +26,15 @@ type Row = {
   meta_title: string | null;
   meta_description: string | null;
   updated_at: string | null;
+  pricing: {
+    deluxe?: { islamabad?: number; lahore?: number; karachi?: number; singleSupplement?: number };
+    luxury?: { islamabad?: number; lahore?: number; karachi?: number; singleSupplement?: number };
+  } | null;
+  starting_cities: string[] | null;
+  total_distance_km: number | null;
+  meals_per_person: number | null;
+  entries_per_person: number | null;
+  destination_rank: Record<string, number> | null;
 };
 
 type DestOption = { slug: string; name: string };
@@ -36,7 +45,7 @@ async function fetchPackage(slug: string): Promise<Row | null> {
   const { data } = await supabase
     .from("packages")
     .select(
-      "slug, name, description, badge, duration, route, destination_slug, related_destination_slugs, region_slug, highlights, inclusions, exclusions, know_before_you_go, max_group_size, languages, published, meta_title, meta_description, updated_at",
+      "slug, name, description, badge, duration, route, destination_slug, related_destination_slugs, region_slug, highlights, inclusions, exclusions, know_before_you_go, max_group_size, languages, published, meta_title, meta_description, updated_at, pricing, starting_cities, total_distance_km, meals_per_person, entries_per_person, destination_rank",
     )
     .eq("slug", slug)
     .maybeSingle();

@@ -5,6 +5,18 @@ import { redirect } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/admin/guard";
 
+export type TierPricing = {
+  islamabad: number | null;
+  lahore: number | null;
+  karachi: number | null;
+  singleSupplement: number | null;
+};
+
+export type PackagePricing = {
+  deluxe: TierPricing;
+  luxury: TierPricing;
+};
+
 export type PackagePatch = {
   name?: string;
   description?: string;
@@ -23,6 +35,12 @@ export type PackagePatch = {
   published?: boolean;
   meta_title?: string | null;
   meta_description?: string | null;
+  pricing?: PackagePricing | null;
+  starting_cities?: string[];
+  total_distance_km?: number | null;
+  meals_per_person?: number;
+  entries_per_person?: number;
+  destination_rank?: Record<string, number>;
 };
 
 export async function updatePackage(

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { PackagePatch } from "@/app/admin/packages/actions";
+import type { PackagePatch, PackagePricing } from "@/app/admin/packages/actions";
+
+type TierPricingIn = { islamabad?: number; lahore?: number; karachi?: number; singleSupplement?: number };
 
 type Row = {
   slug: string;
@@ -23,7 +25,35 @@ type Row = {
   meta_title: string | null;
   meta_description: string | null;
   updated_at: string | null;
+  pricing: { deluxe?: TierPricingIn; luxury?: TierPricingIn } | null;
+  starting_cities: string[] | null;
+  total_distance_km: number | null;
+  meals_per_person: number | null;
+  entries_per_person: number | null;
+  destination_rank: Record<string, number> | null;
 };
+
+const CITY_KEYS = ["KDU", "ISB", "LHE", "KHI"] as const;
+type CityKey = (typeof CITY_KEYS)[number];
+
+type TierPriceForm = { islamabad: string; lahore: string; karachi: string; singleSupplement: string };
+function pricingToForm(p: TierPricingIn | undefined): TierPriceForm {
+  return {
+    islamabad: p?.islamabad?.toString() ?? "",
+    lahore: p?.lahore?.toString() ?? "",
+    karachi: p?.karachi?.toString() ?? "",
+    singleSupplement: p?.singleSupplement?.toString() ?? "",
+  };
+}
+function formToTier(f: TierPriceForm): PackagePricing["deluxe"] {
+  const n = (s: string) => (s.trim() === "" ? null : Number(s));
+  return {
+    islamabad: n(f.islamabad),
+    lahore: n(f.lahore),
+    karachi: n(f.karachi),
+    singleSupplement: n(f.singleSupplement),
+  };
+}
 
 type Option = { slug: string; name: string };
 
@@ -157,6 +187,18 @@ export function PackageEditor({ row, destinationOptions, regionOptions, updateAc
   const [published, setPublished] = useState(row.published);
   const [metaTitle, setMetaTitle] = useState(row.meta_title ?? "");
   const [metaDescription, setMetaDescription] = useState(row.meta_description ?? "");
+  const [deluxePricing, setDeluxePricing] = useState<TierPriceForm>(() => pricingToForm(row.pricing?.deluxe));
+  const [luxuryPricing, setLuxuryPricing] = useState<TierPriceForm>(() => pricingToForm(row.pricing?.luxury));
+  const [startingCities, setStartingCities] = useState<Set<CityKey>>(
+    () => new Set(((row.starting_cities ?? []) as string[]).filter((c): c is CityKey => (CITY_KEYS as readonly string[]).includes(c))),
+  );
+  const [totalDistanceKm, setTotalDistanceKm] = useState(row.total_distance_km?.toString() ?? "");
+  const [mealsPerPerson, setMealsPerPerson] = useState((row.meals_per_person ?? 0).toString());
+  const [entriesPerPerson, setEntriesPerPerson] = useState((row.entries_per_person ?? 0).toString());
+  const [destinationRank, setDestinationRank] = useState<Record<string, string>>(() => {
+    const src = row.destination_rank ?? {};
+    return Object.fromEntries(Object.entries(src).map(([k, v]) => [k, String(v)]));
+  });
 
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [savePending, startSave] = useTransition();
@@ -182,6 +224,19 @@ export function PackageEditor({ row, destinationOptions, regionOptions, updateAc
       published,
       meta_title: metaTitle.trim() || null,
       meta_description: metaDescription.trim() || null,
+      pricing: {
+        deluxe: formToTier(deluxePricing),
+        luxury: formToTier(luxuryPricing),
+      },
+      starting_cities: Array.from(startingCities),
+      total_distance_km: totalDistanceKm.trim() ? Number(totalDistanceKm) : null,
+      meals_per_person: Math.max(0, Number(mealsPerPerson) || 0),
+      entries_per_person: Math.max(0, Number(entriesPerPerson) || 0),
+      destination_rank: Object.fromEntries(
+        Object.entries(destinationRank)
+          .filter(([, v]) => v.trim() !== "" && !Number.isNaN(Number(v)))
+          .map(([k, v]) => [k, Number(v)]),
+      ),
     };
     startSave(async () => {
       const res = await updateAction(row.slug, patch);
@@ -201,6 +256,28 @@ export function PackageEditor({ row, destinationOptions, regionOptions, updateAc
   function toggleRelated(slug: string) {
     setRelated((prev) => (prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]));
   }
+
+  function toggleCity(c: CityKey) {
+    setStartingCities((prev) => {
+      const next = new Set(prev);
+      if (next.has(c)) next.delete(c);
+      else next.add(c);
+      return next;
+    });
+  }
+
+  function updateDeluxe(key: keyof TierPriceForm, value: string) {
+    setDeluxePricing((prev) => ({ ...prev, [key]: value }));
+  }
+  function updateLuxury(key: keyof TierPriceForm, value: string) {
+    setLuxuryPricing((prev) => ({ ...prev, [key]: value }));
+  }
+  function updateRank(slug: string, value: string) {
+    setDestinationRank((prev) => ({ ...prev, [slug]: value }));
+  }
+
+  const rankSlugs = Array.from(new Set([destinationSlug, ...related].filter(Boolean)));
+  const destinationNameBySlug = Object.fromEntries(destinationOptions.map((d) => [d.slug, d.name]));
 
   return (
     <div className="space-y-6">
@@ -345,6 +422,146 @@ export function PackageEditor({ row, destinationOptions, regionOptions, updateAc
         <StringListEditor label="Exclusions" items={exclusions} onChange={setExclusions} placeholder="What's not included" />
         <StringListEditor label="Know before you go" items={knowBefore} onChange={setKnowBefore} placeholder="Practical tip" />
         <StringListEditor label="Languages" items={languages} onChange={setLanguages} placeholder="English" />
+      </section>
+
+      <section
+        className="p-5 rounded-2xl space-y-5"
+        style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
+      >
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <h2 className="text-[14px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>
+            Pricing (PKR per person)
+          </h2>
+          <span className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+            Leave blank for cities where this package isn&apos;t offered.
+          </span>
+        </div>
+        {(["deluxe", "luxury"] as const).map((tier) => {
+          const form = tier === "deluxe" ? deluxePricing : luxuryPricing;
+          const set = tier === "deluxe" ? updateDeluxe : updateLuxury;
+          return (
+            <div key={tier}>
+              <div className="text-[12px] font-semibold capitalize mb-2" style={{ color: "var(--text-secondary)" }}>
+                {tier} tier
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {(["islamabad", "lahore", "karachi", "singleSupplement"] as const).map((k) => (
+                  <div key={k}>
+                    <label className={labelCls} style={labelStyle}>
+                      {k === "singleSupplement" ? "Single supp." : k}
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={form[k]}
+                      onChange={(e) => set(k, e.target.value)}
+                      placeholder="—"
+                      className={inputCls}
+                      style={inputStyle}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </section>
+
+      <section
+        className="p-5 rounded-2xl space-y-5"
+        style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
+      >
+        <h2 className="text-[14px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>
+          Engine
+        </h2>
+        <div>
+          <label className={labelCls} style={labelStyle}>Starting cities (departures offered)</label>
+          <div className="flex flex-wrap gap-2">
+            {CITY_KEYS.map((c) => {
+              const active = startingCities.has(c);
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => toggleCity(c)}
+                  className="px-3 py-1 rounded-full text-[12px] font-semibold cursor-pointer"
+                  style={{
+                    background: active ? "var(--primary)" : "var(--bg-subtle)",
+                    color: active ? "var(--text-inverse)" : "var(--text-secondary)",
+                    border: `1px solid ${active ? "var(--primary)" : "var(--border-default)"}`,
+                  }}
+                >
+                  {c}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label className={labelCls} style={labelStyle}>Total distance (km)</label>
+            <input
+              type="number"
+              min={0}
+              value={totalDistanceKm}
+              onChange={(e) => setTotalDistanceKm(e.target.value)}
+              placeholder="e.g. 1126"
+              className={inputCls}
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label className={labelCls} style={labelStyle}>Meals / person</label>
+            <input
+              type="number"
+              min={0}
+              value={mealsPerPerson}
+              onChange={(e) => setMealsPerPerson(e.target.value)}
+              className={inputCls}
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label className={labelCls} style={labelStyle}>Entries / person</label>
+            <input
+              type="number"
+              min={0}
+              value={entriesPerPerson}
+              onChange={(e) => setEntriesPerPerson(e.target.value)}
+              className={inputCls}
+              style={inputStyle}
+            />
+          </div>
+        </div>
+        <div>
+          <label className={labelCls} style={labelStyle}>Destination rank</label>
+          <p className="text-[11px] mb-2" style={{ color: "var(--text-tertiary)" }}>
+            Lower shows this package earlier on the destination page. Set per destination you want it to appear under.
+          </p>
+          {rankSlugs.length === 0 && (
+            <p className="text-[12px]" style={{ color: "var(--text-tertiary)" }}>
+              Pick a primary or related destination first.
+            </p>
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {rankSlugs.map((slug) => (
+              <div key={slug} className="flex items-center gap-2">
+                <div className="flex-1 text-[13px] truncate" style={{ color: "var(--text-secondary)" }}>
+                  {destinationNameBySlug[slug] ?? slug}
+                  <span className="ml-1 text-[11px] font-mono" style={{ color: "var(--text-tertiary)" }}>({slug})</span>
+                </div>
+                <input
+                  type="number"
+                  value={destinationRank[slug] ?? ""}
+                  onChange={(e) => updateRank(slug, e.target.value)}
+                  placeholder="rank"
+                  className="w-24 h-9 px-2 rounded-[var(--radius-sm)] border text-[13px] tabular-nums"
+                  style={inputStyle}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
       <section
