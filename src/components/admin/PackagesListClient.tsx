@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState, useTransition } from "react";
 
 type Row = {
   slug: string;
@@ -26,9 +27,33 @@ function fmt(iso: string | null): string {
   return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export function PackagesListClient({ rows }: { rows: Row[] }) {
+type Props = {
+  rows: Row[];
+  duplicateAction: (sourceSlug: string, newSlug: string) => Promise<{ ok: boolean; slug?: string; error?: string }>;
+};
+
+export function PackagesListClient({ rows, duplicateAction }: Props) {
+  const router = useRouter();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [dupPending, startDup] = useTransition();
+  const [dupSlug, setDupSlug] = useState<string | null>(null);
+
+  function onDuplicate(sourceSlug: string) {
+    const suggestion = `${sourceSlug}-copy`;
+    const newSlug = window.prompt(`Duplicate "${sourceSlug}" — enter a new slug:`, suggestion);
+    if (!newSlug) return;
+    setDupSlug(sourceSlug);
+    startDup(async () => {
+      const res = await duplicateAction(sourceSlug, newSlug);
+      setDupSlug(null);
+      if (!res.ok) {
+        alert(res.error ?? "Duplicate failed");
+        return;
+      }
+      router.push(`/admin/packages/${res.slug}`);
+    });
+  }
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -140,14 +165,25 @@ export function PackagesListClient({ rows }: { rows: Row[] }) {
                   <td className="px-4 py-3 text-[12px]" style={{ color: "var(--text-tertiary)" }}>
                     {fmt(r.updated_at)}
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/admin/packages/${r.slug}`}
-                      className="text-[13px] font-semibold"
-                      style={{ color: "var(--primary)" }}
-                    >
-                      Edit →
-                    </Link>
+                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                    <div className="inline-flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => onDuplicate(r.slug)}
+                        disabled={dupPending}
+                        className="text-[12px] font-semibold cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
+                        {dupPending && dupSlug === r.slug ? "Duplicating…" : "Duplicate"}
+                      </button>
+                      <Link
+                        href={`/admin/packages/${r.slug}`}
+                        className="text-[13px] font-semibold"
+                        style={{ color: "var(--primary)" }}
+                      >
+                        Edit →
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}
