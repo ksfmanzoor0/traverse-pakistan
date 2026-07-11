@@ -82,6 +82,13 @@ export default async function AdminPackageEditPage({ params }: { params: Promise
           >
             View live →
           </a>
+          <Link
+            href={`/admin/packages/${row.slug}/itinerary`}
+            className="text-[12px] underline"
+            style={{ color: "var(--primary)" }}
+          >
+            Edit itinerary →
+          </Link>
         </div>
       </div>
 

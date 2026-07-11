@@ -138,6 +138,64 @@ export async function duplicatePackage(
   return { ok: true, slug: cleanSlug };
 }
 
+export type ItineraryStop = { name: string; detail: string };
+
+export type ItineraryDayInput = {
+  day_number: number;
+  title: string;
+  description: string;
+  hotel_deluxe: string | null;
+  hotel_luxury: string | null;
+  stops: ItineraryStop[];
+  driving_time: string | null;
+  overnight: string | null;
+  city_only: string[] | null;
+};
+
+export async function saveItinerary(
+  packageSlug: string,
+  days: ItineraryDayInput[],
+): Promise<{ ok: boolean; error?: string }> {
+  await requireAdmin();
+  const supabase = getSupabaseAdmin();
+
+  const cleaned = days
+    .map((d, idx) => ({
+      package_slug: packageSlug,
+      day_number: idx + 1,
+      title: (d.title ?? "").trim(),
+      description: (d.description ?? "").trim(),
+      hotel_deluxe: d.hotel_deluxe?.trim() || null,
+      hotel_luxury: d.hotel_luxury?.trim() || null,
+      stops: (d.stops ?? [])
+        .map((s) => ({ name: (s.name ?? "").trim(), detail: (s.detail ?? "").trim() }))
+        .filter((s) => s.name || s.detail),
+      driving_time: d.driving_time?.trim() || null,
+      overnight: d.overnight?.trim() || null,
+      city_only: d.city_only && d.city_only.length > 0 ? d.city_only : null,
+    }))
+    .filter((d) => d.title || d.description || d.stops.length > 0);
+
+  const { error: delErr } = await supabase
+    .from("package_itinerary_days")
+    .delete()
+    .eq("package_slug", packageSlug);
+  if (delErr) return { ok: false, error: delErr.message };
+
+  if (cleaned.length > 0) {
+    const { error: insErr } = await supabase
+      .from("package_itinerary_days")
+      .insert(cleaned as never);
+    if (insErr) return { ok: false, error: insErr.message };
+  }
+
+  revalidateTag("packages", {});
+  revalidatePath(`/admin/packages/${packageSlug}`);
+  revalidatePath(`/admin/packages/${packageSlug}/itinerary`);
+  revalidatePath(`/packages/${packageSlug}`);
+  return { ok: true };
+}
+
 export async function deletePackage(slug: string): Promise<{ ok: boolean; error?: string }> {
   await requireAdmin();
   const supabase = getSupabaseAdmin();
