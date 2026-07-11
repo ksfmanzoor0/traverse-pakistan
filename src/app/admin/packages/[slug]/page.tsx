@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { PackageEditor } from "@/components/admin/PackageEditor";
-import { updatePackage, deletePackage } from "../actions";
+import { updatePackage, deletePackage, provisionR2Folder } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -107,6 +107,7 @@ export default async function AdminPackageEditPage({ params }: { params: Promise
         regionOptions={options.regions}
         updateAction={updatePackage}
         deleteAction={deletePackage}
+        provisionR2Action={provisionR2Folder}
       />
     </div>
   );

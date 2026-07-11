@@ -63,6 +63,7 @@ type Props = {
   regionOptions: Option[];
   updateAction: (slug: string, patch: PackagePatch) => Promise<{ ok: boolean; error?: string }>;
   deleteAction: (slug: string) => Promise<{ ok: boolean; error?: string }>;
+  provisionR2Action?: (slug: string) => Promise<{ ok: boolean; key?: string; error?: string }>;
 };
 
 const BADGES = ["", "new", "popular", "bestseller", "editors-pick"];
@@ -169,7 +170,7 @@ function StringListEditor({
   );
 }
 
-export function PackageEditor({ row, destinationOptions, regionOptions, updateAction, deleteAction }: Props) {
+export function PackageEditor({ row, destinationOptions, regionOptions, updateAction, deleteAction, provisionR2Action }: Props) {
   const [name, setName] = useState(row.name);
   const [description, setDescription] = useState(row.description);
   const [badge, setBadge] = useState(row.badge ?? "");
@@ -203,6 +204,8 @@ export function PackageEditor({ row, destinationOptions, regionOptions, updateAc
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [savePending, startSave] = useTransition();
   const [deletePending, startDelete] = useTransition();
+  const [r2Msg, setR2Msg] = useState<string | null>(null);
+  const [r2Pending, startR2] = useTransition();
 
   function onSave() {
     setSaveMsg(null);
@@ -250,6 +253,16 @@ export function PackageEditor({ row, destinationOptions, regionOptions, updateAc
     startDelete(async () => {
       const res = await deleteAction(row.slug);
       if (!res.ok) alert(res.error ?? "Delete failed");
+    });
+  }
+
+  function onProvisionR2() {
+    if (!provisionR2Action) return;
+    setR2Msg(null);
+    startR2(async () => {
+      const res = await provisionR2Action(row.slug);
+      if (res.ok) setR2Msg(`Created packages/${row.slug}/`);
+      else setR2Msg(res.error ?? "R2 provision failed");
     });
   }
 
@@ -471,9 +484,30 @@ export function PackageEditor({ row, destinationOptions, regionOptions, updateAc
         className="p-5 rounded-2xl space-y-5"
         style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
       >
-        <h2 className="text-[14px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>
-          Engine
-        </h2>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <h2 className="text-[14px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>
+            Engine
+          </h2>
+          {provisionR2Action && (
+            <div className="flex items-center gap-3">
+              {r2Msg && (
+                <span className="text-[12px]" style={{ color: r2Msg.startsWith("Created") ? "var(--success)" : "var(--error)" }}>
+                  {r2Msg}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={onProvisionR2}
+                disabled={r2Pending}
+                className="h-8 px-3 rounded-[var(--radius-sm)] border text-[12px] font-semibold cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                style={{ borderColor: "var(--border-default)", color: "var(--text-secondary)" }}
+                title={`Create packages/${row.slug}/ marker in R2`}
+              >
+                {r2Pending ? "Creating…" : "Provision R2 folder"}
+              </button>
+            </div>
+          )}
+        </div>
         <div>
           <label className={labelCls} style={labelStyle}>Starting cities (departures offered)</label>
           <div className="flex flex-wrap gap-2">

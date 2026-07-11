@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/admin/guard";
+import { putR2Marker } from "@/lib/r2";
 
 export type TierPricing = {
   islamabad: number | null;
@@ -212,6 +213,16 @@ export async function saveItinerary(
   revalidatePath(`/admin/packages/${packageSlug}/itinerary`);
   revalidatePath(`/packages/${packageSlug}`);
   return { ok: true };
+}
+
+export async function provisionR2Folder(slug: string): Promise<{ ok: boolean; key?: string; error?: string }> {
+  await requireAdmin();
+  const cleanSlug = slug.trim();
+  if (!cleanSlug) return { ok: false, error: "Slug required" };
+  const key = `packages/${cleanSlug}/.keep`;
+  const res = await putR2Marker(key);
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true, key };
 }
 
 export async function deletePackage(slug: string): Promise<{ ok: boolean; error?: string }> {
