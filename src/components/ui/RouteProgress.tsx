@@ -13,6 +13,7 @@ export function RouteProgress() {
   const search = useSearchParams();
   const [visible, setVisible] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [slowVisible, setSlowVisible] = useState(false);
   const timers = useRef<number[]>([]);
 
   const clearTimers = () => {
@@ -23,17 +24,20 @@ export function RouteProgress() {
   const start = () => {
     clearTimers();
     setVisible(true);
-    setProgress(12);
+    setProgress(18);
     timers.current.push(window.setTimeout(() => setProgress(45), 180));
     timers.current.push(window.setTimeout(() => setProgress(72), 500));
+    // Slow-connection reassurance: after 700ms, show a small centered spinner.
+    timers.current.push(window.setTimeout(() => setSlowVisible(true), 700));
     timers.current.push(window.setTimeout(() => setProgress(88), 1100));
     // Safety — if route never changes, clean up.
-    timers.current.push(window.setTimeout(() => finish(), 6000));
+    timers.current.push(window.setTimeout(() => finish(), 15000));
   };
 
   const finish = () => {
     clearTimers();
     setProgress(100);
+    setSlowVisible(false);
     timers.current.push(
       window.setTimeout(() => {
         setVisible(false);
@@ -87,14 +91,21 @@ export function RouteProgress() {
   useEffect(() => () => clearTimers(), []);
 
   return (
-    <div
-      role="progressbar"
-      aria-hidden={!visible}
-      className="route-progress-bar"
-      style={{
-        transform: `scaleX(${progress / 100})`,
-        opacity: visible ? 1 : 0,
-      }}
-    />
+    <>
+      <div
+        role="progressbar"
+        aria-hidden={!visible}
+        className="route-progress-bar"
+        style={{
+          transform: `scaleX(${progress / 100})`,
+          opacity: visible ? 1 : 0,
+        }}
+      />
+      {slowVisible && (
+        <div className="route-progress-slow" aria-hidden="true">
+          <div className="route-progress-slow-spinner" />
+        </div>
+      )}
+    </>
   );
 }
