@@ -88,24 +88,54 @@ export function InvitationLetterEditor({ bookingRef, initialData, status, signat
             <button type="button" onClick={addTraveler} className="text-[12px] font-semibold text-[var(--primary)]">+ Add</button>
           </div>
           <div className="space-y-3">
-            {data.travelers.map((t, i) => (
-              <div key={i} className="p-3 rounded bg-[var(--bg-subtle)] space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-[var(--text-tertiary)]">Traveler {i + 1}</span>
-                  {data.travelers.length > 1 && (
-                    <button type="button" onClick={() => removeTraveler(i)} className="text-[11px] text-[var(--error)]">Remove</button>
+            {data.travelers.map((t, i) => {
+              const singleName = typeof t.name === "string" && t.name.length > 0;
+              return (
+                <div key={i} className="p-3 rounded bg-[var(--bg-subtle)] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-[var(--text-tertiary)]">Traveler {i + 1}</span>
+                    <div className="flex items-center gap-3">
+                      <label className="text-[11px] text-[var(--text-secondary)] inline-flex items-center gap-1 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={singleName}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              const combined = [t.first_name, t.surname].filter(Boolean).join(" ").trim();
+                              updateTraveler(i, { name: combined, surname: "", first_name: "" });
+                            } else {
+                              updateTraveler(i, { name: "" });
+                            }
+                          }}
+                        />
+                        Single Name field
+                      </label>
+                      {data.travelers.length > 1 && (
+                        <button type="button" onClick={() => removeTraveler(i)} className="text-[11px] text-[var(--error)]">Remove</button>
+                      )}
+                    </div>
+                  </div>
+                  {singleName ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <input placeholder="Name (as printed on passport)" value={t.name ?? ""} onChange={(e) => updateTraveler(i, { name: e.target.value })} className={`${inputCls} col-span-2`} />
+                      <input placeholder="DOB" value={t.date_of_birth} onChange={(e) => updateTraveler(i, { date_of_birth: e.target.value })} className={inputCls} />
+                      <input placeholder="Nationality" value={t.nationality} onChange={(e) => updateTraveler(i, { nationality: e.target.value })} className={inputCls} />
+                      <input placeholder="Passport #" value={t.passport_number} onChange={(e) => updateTraveler(i, { passport_number: e.target.value })} className={inputCls} />
+                      <input placeholder="Expiry" value={t.passport_expiry} onChange={(e) => updateTraveler(i, { passport_expiry: e.target.value })} className={inputCls} />
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      <input placeholder="Surname" value={t.surname} onChange={(e) => updateTraveler(i, { surname: e.target.value })} className={inputCls} />
+                      <input placeholder="Given names" value={t.first_name} onChange={(e) => updateTraveler(i, { first_name: e.target.value })} className={inputCls} />
+                      <input placeholder="DOB" value={t.date_of_birth} onChange={(e) => updateTraveler(i, { date_of_birth: e.target.value })} className={inputCls} />
+                      <input placeholder="Nationality" value={t.nationality} onChange={(e) => updateTraveler(i, { nationality: e.target.value })} className={inputCls} />
+                      <input placeholder="Passport #" value={t.passport_number} onChange={(e) => updateTraveler(i, { passport_number: e.target.value })} className={inputCls} />
+                      <input placeholder="Expiry" value={t.passport_expiry} onChange={(e) => updateTraveler(i, { passport_expiry: e.target.value })} className={inputCls} />
+                    </div>
                   )}
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <input placeholder="Surname" value={t.surname} onChange={(e) => updateTraveler(i, { surname: e.target.value })} className={inputCls} />
-                  <input placeholder="Given names" value={t.first_name} onChange={(e) => updateTraveler(i, { first_name: e.target.value })} className={inputCls} />
-                  <input placeholder="DOB" value={t.date_of_birth} onChange={(e) => updateTraveler(i, { date_of_birth: e.target.value })} className={inputCls} />
-                  <input placeholder="Nationality" value={t.nationality} onChange={(e) => updateTraveler(i, { nationality: e.target.value })} className={inputCls} />
-                  <input placeholder="Passport #" value={t.passport_number} onChange={(e) => updateTraveler(i, { passport_number: e.target.value })} className={inputCls} />
-                  <input placeholder="Expiry" value={t.passport_expiry} onChange={(e) => updateTraveler(i, { passport_expiry: e.target.value })} className={inputCls} />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -199,30 +229,45 @@ export function LetterPreview({ data, signatureDataUrl }: { data: LetterData; si
       <div className="mt-4 whitespace-pre-wrap">{data.body_intro}</div>
 
       <div className="mt-6">
-        <table className="w-full border-collapse text-[12px]">
-          <thead>
-            <tr>
-              {["First Name", "Surname", "Date of Birth", "Nationality", "Passport No.", "Expiry Date"].map((h) => (
-                <th key={h} className="text-white bg-[#1E6A52] border border-[#1E6A52] px-2 py-2 text-center font-semibold">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.travelers.map((t, i) => {
-              const { surname, first_name } = readTravelerName(t);
-              return (
-                <tr key={i}>
-                  <td className="border border-[#e5e7eb] px-2 py-2 uppercase">{first_name}</td>
-                  <td className="border border-[#e5e7eb] px-2 py-2 uppercase">{surname}</td>
-                  <td className="border border-[#e5e7eb] px-2 py-2">{t.date_of_birth}</td>
-                  <td className="border border-[#e5e7eb] px-2 py-2">{t.nationality}</td>
-                  <td className="border border-[#e5e7eb] px-2 py-2">{t.passport_number}</td>
-                  <td className="border border-[#e5e7eb] px-2 py-2">{t.passport_expiry}</td>
+        {(() => {
+          const useSingleName =
+            data.travelers.length > 0 && data.travelers.every((t) => Boolean(readTravelerName(t).name));
+          const headers = useSingleName
+            ? ["Name", "Date of Birth", "Nationality", "Passport No.", "Expiry Date"]
+            : ["First Name", "Surname", "Date of Birth", "Nationality", "Passport No.", "Expiry Date"];
+          return (
+            <table className="w-full border-collapse text-[12px]">
+              <thead>
+                <tr>
+                  {headers.map((h) => (
+                    <th key={h} className="text-white bg-[#1E6A52] border border-[#1E6A52] px-2 py-2 text-center font-semibold">{h}</th>
+                  ))}
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                {data.travelers.map((t, i) => {
+                  const parsed = readTravelerName(t);
+                  return (
+                    <tr key={i}>
+                      {useSingleName ? (
+                        <td className="border border-[#e5e7eb] px-2 py-2 uppercase">{parsed.name}</td>
+                      ) : (
+                        <>
+                          <td className="border border-[#e5e7eb] px-2 py-2 uppercase">{parsed.first_name}</td>
+                          <td className="border border-[#e5e7eb] px-2 py-2 uppercase">{parsed.surname}</td>
+                        </>
+                      )}
+                      <td className="border border-[#e5e7eb] px-2 py-2">{t.date_of_birth}</td>
+                      <td className="border border-[#e5e7eb] px-2 py-2">{t.nationality}</td>
+                      <td className="border border-[#e5e7eb] px-2 py-2">{t.passport_number}</td>
+                      <td className="border border-[#e5e7eb] px-2 py-2">{t.passport_expiry}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          );
+        })()}
       </div>
 
       <div className="mt-6">{data.body_close}</div>

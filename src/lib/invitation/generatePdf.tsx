@@ -102,26 +102,41 @@ export async function generateInvitationLetterPdf(data: LetterData): Promise<Buf
           <Text key={i} style={styles.paragraph}>{para}</Text>
         ))}
 
-        <View style={styles.table}>
-          <View style={styles.tr}>
-            {["First Name", "Surname", "Date of Birth", "Nationality", "Passport No.", "Expiry Date"].map((h, i, arr) => (
-              <Text key={h} style={i === arr.length - 1 ? styles.thCellLast : styles.thCell}>{h}</Text>
-            ))}
-          </View>
-          {data.travelers.map((t, i) => {
-            const { surname, first_name } = readTravelerName(t);
-            return (
-              <View key={i} style={styles.tr}>
-                <Text style={styles.td}>{first_name.toUpperCase()}</Text>
-                <Text style={styles.td}>{surname.toUpperCase()}</Text>
-                <Text style={styles.td}>{t.date_of_birth}</Text>
-                <Text style={styles.td}>{t.nationality}</Text>
-                <Text style={styles.td}>{t.passport_number}</Text>
-                <Text style={styles.tdLast}>{t.passport_expiry}</Text>
+        {(() => {
+          const useSingleName =
+            data.travelers.length > 0 && data.travelers.every((t) => Boolean(readTravelerName(t).name));
+          const headers = useSingleName
+            ? ["Name", "Date of Birth", "Nationality", "Passport No.", "Expiry Date"]
+            : ["First Name", "Surname", "Date of Birth", "Nationality", "Passport No.", "Expiry Date"];
+          return (
+            <View style={styles.table}>
+              <View style={styles.tr}>
+                {headers.map((h, i, arr) => (
+                  <Text key={h} style={i === arr.length - 1 ? styles.thCellLast : styles.thCell}>{h}</Text>
+                ))}
               </View>
-            );
-          })}
-        </View>
+              {data.travelers.map((t, i) => {
+                const parsed = readTravelerName(t);
+                return (
+                  <View key={i} style={styles.tr}>
+                    {useSingleName ? (
+                      <Text style={styles.td}>{parsed.name.toUpperCase()}</Text>
+                    ) : (
+                      <>
+                        <Text style={styles.td}>{parsed.first_name.toUpperCase()}</Text>
+                        <Text style={styles.td}>{parsed.surname.toUpperCase()}</Text>
+                      </>
+                    )}
+                    <Text style={styles.td}>{t.date_of_birth}</Text>
+                    <Text style={styles.td}>{t.nationality}</Text>
+                    <Text style={styles.td}>{t.passport_number}</Text>
+                    <Text style={styles.tdLast}>{t.passport_expiry}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          );
+        })()}
 
         <Text style={styles.paragraph}>{data.body_close}</Text>
 
