@@ -74,8 +74,34 @@ const nextConfig: NextConfig = {
   ...(!isGitHubPages && {
     async redirects() {
       return [
+        // Original WP plugin (Support Tour): /st_tour/{slug} → /grouptours/{slug}
         { source: "/st_tour/:slug", destination: "/grouptours/:slug", permanent: true },
         { source: "/st_tour/:slug/", destination: "/grouptours/:slug", permanent: true },
+
+        // Other WP plugin slugs — no 1:1 mapping to current slugs, so route each
+        // family to its category landing page. 301s pass ~90% of the backlink
+        // equity Google was still crediting to the dead URLs.
+        { source: "/st_hotel/:slug*", destination: "/hotels", permanent: true },
+        { source: "/st_activity/:slug*", destination: "/grouptours", permanent: true },
+        { source: "/st_location/:slug*", destination: "/destinations", permanent: true },
+        { source: "/st_room/:slug*", destination: "/hotels", permanent: true },
+
+        // Singular WP taxonomy paths shared with any old third-party listings.
+        { source: "/tour/:slug*", destination: "/grouptours", permanent: true },
+        { source: "/hotel/:slug*", destination: "/hotels", permanent: true },
+        { source: "/destination/:slug*", destination: "/destinations", permanent: true },
+        { source: "/package/:slug*", destination: "/packages", permanent: true },
+
+        // WP blog taxonomy pages.
+        { source: "/category/:slug*", destination: "/blog", permanent: true },
+        { source: "/tag/:slug*", destination: "/blog", permanent: true },
+
+        // WP date-archived blog posts: /YYYY/MM/slug → /blog
+        {
+          source: "/:yyyy(2\\d{3})/:mm(\\d{2})/:slug*",
+          destination: "/blog",
+          permanent: true,
+        },
       ];
     },
     async headers() {
