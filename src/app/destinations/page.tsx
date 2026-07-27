@@ -9,6 +9,7 @@ import { formatPrice } from "@/lib/utils";
 import { getAllDestinations } from "@/services/destination.service";
 import { getAllPackages } from "@/services/package.service";
 import { getAllTours } from "@/services/tour.service";
+import { countDestinationOfferings } from "@/lib/destinations/countOfferings";
 
 export const metadata: Metadata = buildMetadata({
   title: "Pakistan Destinations — Hunza, Skardu, Chitral, Kalash & More",
@@ -25,20 +26,11 @@ export default async function DestinationsPage() {
     getAllTours(),
   ]);
 
-  // Build slug → package count map covering primary + related destinations.
-  const packageCountBySlug = new Map<string, number>();
-  for (const pkg of allPackages) {
-    const slugs = new Set<string>([pkg.destinationSlug, ...(pkg.relatedDestinationSlugs ?? [])]);
-    for (const s of slugs) {
-      if (!s) continue;
-      packageCountBySlug.set(s, (packageCountBySlug.get(s) ?? 0) + 1);
-    }
-  }
-  const tourCountBySlug = new Map<string, number>();
-  for (const t of allTours) {
-    if (!t.destinationSlug) continue;
-    tourCountBySlug.set(t.destinationSlug, (tourCountBySlug.get(t.destinationSlug) ?? 0) + 1);
-  }
+  const { packageCountBySlug, tourCountBySlug } = countDestinationOfferings(
+    destinations,
+    allPackages,
+    allTours,
+  );
 
   return (
     <div className="py-8 sm:py-12">
