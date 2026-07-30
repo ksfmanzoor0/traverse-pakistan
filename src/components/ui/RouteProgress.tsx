@@ -77,8 +77,8 @@ export function RouteProgress() {
       }
       start();
     };
-    document.addEventListener("click", onClick);
-    return () => document.removeEventListener("click", onClick);
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
   }, []);
 
   // When the route actually changes, finish the bar.
