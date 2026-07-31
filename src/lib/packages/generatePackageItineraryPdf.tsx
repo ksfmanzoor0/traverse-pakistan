@@ -1,0 +1,216 @@
+import { Document, Page, Text, View, Image, StyleSheet, Font, renderToBuffer } from "@react-pdf/renderer";
+import fs from "node:fs/promises";
+import path from "node:path";
+import type { Package, PackageItinerary } from "@/types/package";
+import type { Hotel } from "@/types/hotel";
+
+Font.registerHyphenationCallback((word) => [word]);
+
+const GREEN = "#1E6A52";
+const GREEN_SOFT = "#F1F7F4";
+const GREY_BORDER = "#e5e7eb";
+const GREY_TEXT = "#6b7280";
+const BLACK = "#111111";
+
+const styles = StyleSheet.create({
+  page: {
+    paddingTop: 32, paddingBottom: 40, paddingHorizontal: 40,
+    fontFamily: "Helvetica", fontSize: 10, color: BLACK, lineHeight: 1.4,
+  },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", borderBottomWidth: 2, borderBottomColor: GREEN, paddingBottom: 10 },
+  logo: { height: 40, width: 150, objectFit: "contain" },
+  brandMeta: { textAlign: "right", fontSize: 9, color: GREEN, lineHeight: 1.5 },
+
+  coverBlock: { marginTop: 22 },
+  eyebrow: { fontSize: 9, fontFamily: "Helvetica-Bold", color: GREEN, letterSpacing: 1.2 },
+  title: { fontSize: 22, fontFamily: "Helvetica-Bold", color: BLACK, marginTop: 6, lineHeight: 1.2 },
+  route: { fontSize: 11, color: GREY_TEXT, marginTop: 6 },
+
+  metaGrid: { flexDirection: "row", marginTop: 18, backgroundColor: GREEN_SOFT, borderRadius: 4, padding: 12 },
+  metaCell: { flex: 1 },
+  metaLabel: { fontSize: 8, color: GREY_TEXT, letterSpacing: 0.8, textTransform: "uppercase" },
+  metaValue: { fontSize: 11, color: BLACK, marginTop: 3, fontFamily: "Helvetica-Bold" },
+
+  section: { marginTop: 22 },
+  sectionTitle: { fontSize: 13, fontFamily: "Helvetica-Bold", color: GREEN, borderBottomWidth: 1, borderBottomColor: GREEN, paddingBottom: 4 },
+
+  day: { marginTop: 14, paddingLeft: 44, position: "relative" },
+  dayBadge: { position: "absolute", left: 0, top: 0, width: 34, height: 34, borderRadius: 17, backgroundColor: GREEN, alignItems: "center", justifyContent: "center" },
+  dayBadgeNum: { color: "#ffffff", fontSize: 11, fontFamily: "Helvetica-Bold" },
+  dayBadgeLbl: { color: "#ffffff", fontSize: 6, letterSpacing: 0.5 },
+  dayTitle: { fontSize: 12, fontFamily: "Helvetica-Bold", color: BLACK },
+  dayMeta: { fontSize: 9, color: GREY_TEXT, marginTop: 2 },
+  dayDesc: { fontSize: 10, marginTop: 6, color: BLACK },
+
+  hotelRow: { flexDirection: "row", marginTop: 8, gap: 8 },
+  hotelCard: { flex: 1, borderWidth: 1, borderColor: GREY_BORDER, borderRadius: 3, padding: 8 },
+  hotelTier: { fontSize: 8, fontFamily: "Helvetica-Bold", color: GREEN, letterSpacing: 0.8 },
+  hotelName: { fontSize: 10, color: BLACK, marginTop: 2, fontFamily: "Helvetica-Bold" },
+  hotelLoc: { fontSize: 8, color: GREY_TEXT, marginTop: 1 },
+
+  listItem: { flexDirection: "row", marginTop: 5 },
+  listBullet: { width: 12, color: GREEN, fontFamily: "Helvetica-Bold" },
+  listText: { flex: 1, color: BLACK },
+
+  footer: { position: "absolute", bottom: 20, left: 40, right: 40, borderTopWidth: 1, borderTopColor: GREY_BORDER, paddingTop: 8, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  footerText: { fontSize: 8, color: GREY_TEXT },
+  footerBrand: { fontSize: 8, color: GREEN, fontFamily: "Helvetica-Bold" },
+  pageNumber: { fontSize: 8, color: GREY_TEXT },
+});
+
+async function loadPublicImage(rel: string): Promise<string | null> {
+  try {
+    const abs = path.join(process.cwd(), "public", rel);
+    const buf = await fs.readFile(abs);
+    const b64 = buf.toString("base64");
+    const ext = rel.split(".").pop()?.toLowerCase() ?? "png";
+    const mime = ext === "jpg" || ext === "jpeg" ? "image/jpeg" : "image/png";
+    return `data:${mime};base64,${b64}`;
+  } catch {
+    return null;
+  }
+}
+
+function formatCityLabel(city: string): string {
+  return city.charAt(0).toUpperCase() + city.slice(1);
+}
+
+interface PdfArgs {
+  pkg: Package;
+  itinerary: PackageItinerary | null;
+  hotelsBySlug: Map<string, Hotel>;
+}
+
+export async function generatePackageItineraryPdf({ pkg, itinerary, hotelsBySlug }: PdfArgs): Promise<Buffer> {
+  const logoData = await loadPublicImage("logo-day.png");
+  const days = itinerary?.days ?? [];
+  const tierPricing = pkg.tiers?.deluxe ?? pkg.tiers?.luxury;
+  const startingCities = (
+    ["islamabad", "lahore", "karachi"] as const
+  )
+    .filter((city) => tierPricing?.[city] != null)
+    .map(formatCityLabel)
+    .join(" · ") || "Islamabad";
+
+  const doc = (
+    <Document title={`${pkg.name} — Itinerary`} author="Traverse Pakistan">
+      <Page size="A4" style={styles.page}>
+        {/* Header */}
+        <View style={styles.header}>
+          {logoData ? (
+            <Image src={logoData} style={styles.logo} />
+          ) : (
+            <Text style={{ fontSize: 14, fontFamily: "Helvetica-Bold", color: GREEN }}>TRAVERSE PAKISTAN</Text>
+          )}
+          <View style={styles.brandMeta}>
+            <Text>traversepakistan.com</Text>
+            <Text>+92-321-6650670 · WhatsApp</Text>
+            <Text>Office E-11/1, Islamabad</Text>
+          </View>
+        </View>
+
+        {/* Cover */}
+        <View style={styles.coverBlock}>
+          <Text style={styles.eyebrow}>PACKAGE ITINERARY</Text>
+          <Text style={styles.title}>{pkg.name}</Text>
+          {pkg.route && <Text style={styles.route}>{pkg.route}</Text>}
+        </View>
+
+        {/* Trip meta grid */}
+        <View style={styles.metaGrid}>
+          <View style={styles.metaCell}>
+            <Text style={styles.metaLabel}>Duration</Text>
+            <Text style={styles.metaValue}>{pkg.duration} {pkg.duration === 1 ? "day" : "days"}</Text>
+          </View>
+          <View style={styles.metaCell}>
+            <Text style={styles.metaLabel}>Starting cities</Text>
+            <Text style={styles.metaValue}>{startingCities}</Text>
+          </View>
+          <View style={styles.metaCell}>
+            <Text style={styles.metaLabel}>Tiers available</Text>
+            <Text style={styles.metaValue}>Deluxe · Luxury</Text>
+          </View>
+        </View>
+
+        {/* Day-by-day itinerary */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Day-by-day itinerary</Text>
+          {days.length === 0 ? (
+            <Text style={{ marginTop: 12, color: GREY_TEXT, fontStyle: "italic" }}>
+              Detailed day-by-day itinerary will be shared on request. WhatsApp us for the full plan.
+            </Text>
+          ) : (
+            days.map((day) => {
+              const deluxeHotel = hotelsBySlug.get(day.hotels?.deluxe ?? "");
+              const luxuryHotel = hotelsBySlug.get(day.hotels?.luxury ?? "");
+              return (
+                <View key={day.dayNumber} style={styles.day} wrap={false}>
+                  <View style={styles.dayBadge}>
+                    <Text style={styles.dayBadgeLbl}>DAY</Text>
+                    <Text style={styles.dayBadgeNum}>{day.dayNumber}</Text>
+                  </View>
+                  <Text style={styles.dayTitle}>{day.title}</Text>
+                  {(day.overnight || day.drivingTime) && (
+                    <Text style={styles.dayMeta}>
+                      {[day.overnight && `Overnight: ${day.overnight}`, day.drivingTime && `Drive: ${day.drivingTime}`].filter(Boolean).join("   ·   ")}
+                    </Text>
+                  )}
+                  {day.description && <Text style={styles.dayDesc}>{day.description}</Text>}
+                  {(deluxeHotel || luxuryHotel) && (
+                    <View style={styles.hotelRow}>
+                      <View style={styles.hotelCard}>
+                        <Text style={styles.hotelTier}>DELUXE STAY</Text>
+                        <Text style={styles.hotelName}>{deluxeHotel?.name ?? "TBD"}</Text>
+                        {deluxeHotel?.location && <Text style={styles.hotelLoc}>{deluxeHotel.location}</Text>}
+                      </View>
+                      <View style={styles.hotelCard}>
+                        <Text style={styles.hotelTier}>LUXURY STAY</Text>
+                        <Text style={styles.hotelName}>{luxuryHotel?.name ?? "TBD"}</Text>
+                        {luxuryHotel?.location && <Text style={styles.hotelLoc}>{luxuryHotel.location}</Text>}
+                      </View>
+                    </View>
+                  )}
+                </View>
+              );
+            })
+          )}
+        </View>
+
+        {/* Inclusions */}
+        {pkg.inclusions && pkg.inclusions.length > 0 && (
+          <View style={styles.section} wrap={false}>
+            <Text style={styles.sectionTitle}>What&apos;s included</Text>
+            {pkg.inclusions.map((line, i) => (
+              <View key={i} style={styles.listItem}>
+                <Text style={styles.listBullet}>✓</Text>
+                <Text style={styles.listText}>{line}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Exclusions */}
+        {pkg.exclusions && pkg.exclusions.length > 0 && (
+          <View style={styles.section} wrap={false}>
+            <Text style={styles.sectionTitle}>What&apos;s not included</Text>
+            {pkg.exclusions.map((line, i) => (
+              <View key={i} style={styles.listItem}>
+                <Text style={{ ...styles.listBullet, color: GREY_TEXT }}>×</Text>
+                <Text style={styles.listText}>{line}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Footer */}
+        <View style={styles.footer} fixed>
+          <Text style={styles.footerBrand}>Traverse Pakistan · 4.9★ · 1,300+ reviews</Text>
+          <Text style={styles.footerText}>WhatsApp: +92-321-6650670</Text>
+          <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
+        </View>
+      </Page>
+    </Document>
+  );
+
+  return renderToBuffer(doc);
+}
