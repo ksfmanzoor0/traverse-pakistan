@@ -337,14 +337,24 @@ h1, h2, h3, h4, h5, h6 { letter-spacing: -0.025em; line-height: 1.15; }
   display: block;
   animation: route-progress-slow-in 220ms ease-out;
 }
-/* Brand mountain emblem — full logo mark, breathing opacity pulse */
+/* Brand mountain emblem — silhouette, breathing opacity pulse.
+   Uses currentColor so light/dark themes each get a readable fill. */
 .route-progress-emblem {
   display: block;
   width: 56px;
   height: 56px;
+  color: #3E7A6E;
   transform-origin: center;
   animation: route-progress-emblem-pulse 1.6s ease-in-out infinite;
   filter: drop-shadow(0 4px 12px rgb(0 0 0 / 0.15));
+}
+:root[data-theme="dark"] .route-progress-emblem {
+  color: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .route-progress-emblem {
+    color: #ffffff;
+  }
 }
 @keyframes route-progress-emblem-pulse {
   0%, 100% { opacity: 0.35; transform: scale(0.95); }

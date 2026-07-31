@@ -27,8 +27,8 @@ export function RouteProgress() {
     setProgress(18);
     timers.current.push(window.setTimeout(() => setProgress(45), 180));
     timers.current.push(window.setTimeout(() => setProgress(72), 500));
-    // TEMP: fire spinner immediately for fast-connection testing (revert to 700 before merge).
-    timers.current.push(window.setTimeout(() => setSlowVisible(true), 0));
+    // Slow-connection reassurance: after 700ms, show the brand emblem.
+    timers.current.push(window.setTimeout(() => setSlowVisible(true), 700));
     timers.current.push(window.setTimeout(() => setProgress(88), 1100));
     // Safety — if route never changes, clean up.
     timers.current.push(window.setTimeout(() => finish(), 15000));
@@ -103,14 +103,21 @@ export function RouteProgress() {
       />
       {slowVisible && (
         <div className="route-progress-slow" aria-hidden="true">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/logo-mark.svg"
-            alt=""
+          <svg
+            className="route-progress-emblem"
+            viewBox="0 0 80 80"
             width="56"
             height="56"
-            className="route-progress-emblem"
-          />
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <polygon points="40,11 7,67 73,67" />
+            <polygon points="40,11 52,30 66,56 73,67 53,67" />
+            <polygon points="40,11 37,22 38,34 42,50 45,67 40,67 37,48 36,32 38,20" />
+            <polygon points="34,67 38,50 43,51 46,67" />
+            <polygon points="7,67 16,52 24,60 22,67" />
+            <polygon points="57,67 60,53 68,60 73,67" />
+          </svg>
         </div>
       )}
     </>
