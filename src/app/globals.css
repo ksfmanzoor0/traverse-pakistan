@@ -325,48 +325,30 @@ h1, h2, h3, h4, h5, h6 { letter-spacing: -0.025em; line-height: 1.15; }
   .route-progress-bar { box-shadow: none; transition: opacity var(--duration-fast) linear; }
 }
 
-/* Slow-connection reassurance spinner — appears after ~700ms of navigation */
+/* Slow-connection reassurance — appears after ~700ms of navigation.
+   Just the brand emblem, no pill, no text — quiet and on-brand. */
 .route-progress-slow {
   position: fixed;
-  bottom: 20px;
+  bottom: 32px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 9998;
   pointer-events: none;
-  padding: 10px 16px;
-  border-radius: 999px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-default);
-  box-shadow: 0 6px 24px rgb(0 0 0 / 0.14);
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 12px;
-  color: var(--text-secondary);
-  animation: route-progress-slow-in 180ms ease-out;
+  display: block;
+  animation: route-progress-slow-in 220ms ease-out;
 }
-.route-progress-slow::after {
-  content: "Loading…";
-}
-/* Brand mountain emblem — simplified logo mark with a gentle breathing pulse */
+/* Brand mountain emblem — full logo mark, breathing opacity pulse */
 .route-progress-emblem {
   display: block;
+  width: 56px;
+  height: 56px;
   transform-origin: center;
   animation: route-progress-emblem-pulse 1.6s ease-in-out infinite;
-}
-.route-progress-emblem-bg {
-  fill: var(--primary);
-}
-.route-progress-emblem-peak {
-  fill: #ffffff;
-}
-.route-progress-emblem-shadow {
-  fill: color-mix(in srgb, var(--primary) 55%, black);
-  opacity: 0.55;
+  filter: drop-shadow(0 4px 12px rgb(0 0 0 / 0.15));
 }
 @keyframes route-progress-emblem-pulse {
-  0%, 100% { transform: scale(1);    opacity: 0.85; }
-  50%      { transform: scale(1.08); opacity: 1; }
+  0%, 100% { opacity: 0.35; transform: scale(0.95); }
+  50%      { opacity: 1;    transform: scale(1.02); }
 }
 @keyframes route-progress-slow-in {
   from { opacity: 0; transform: translate(-50%, 6px); }
@@ -374,7 +356,7 @@ h1, h2, h3, h4, h5, h6 { letter-spacing: -0.025em; line-height: 1.15; }
 }
 @media (prefers-reduced-motion: reduce) {
   .route-progress-slow { animation: none; }
-  .route-progress-emblem { animation: none; opacity: 1; }
+  .route-progress-emblem { animation: none; opacity: 0.7; transform: none; }
 }
 
 /* ── Button spinner (pending state) ── */
