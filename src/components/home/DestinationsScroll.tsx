@@ -5,6 +5,9 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Carousel } from "@/components/ui/Carousel";
 import { formatPrice } from "@/lib/utils";
 import { getAllDestinations } from "@/services/destination.service";
+import { getAllPackages } from "@/services/package.service";
+import { getAllTours } from "@/services/tour.service";
+import { countDestinationOfferings } from "@/lib/destinations/countOfferings";
 
 const FEATURED_ORDER = [
   "hunza", "skardu", "chitral", "fairy-meadows",
@@ -12,7 +15,11 @@ const FEATURED_ORDER = [
 ];
 
 export async function DestinationsScroll() {
-  const all = await getAllDestinations();
+  const [all, allPackages, allTours] = await Promise.all([
+    getAllDestinations(),
+    getAllPackages(),
+    getAllTours(),
+  ]);
   const destinations = all
     .filter((d) => !d.parentSlug && d.heroImage)
     .sort((a, b) => {
@@ -24,6 +31,11 @@ export async function DestinationsScroll() {
       return (b.startingPrice ?? 0) - (a.startingPrice ?? 0);
     })
     .slice(0, 8);
+  const { packageCountBySlug, tourCountBySlug } = countDestinationOfferings(
+    destinations,
+    allPackages,
+    allTours,
+  );
   return (
     <section className="bg-[var(--bg-primary)] py-20 sm:py-24">
       <Container wide>
@@ -34,7 +46,14 @@ export async function DestinationsScroll() {
           linkHref="/destinations"
         />
         <Carousel>
-          {destinations.map((dest) => (
+          {destinations.map((dest) => {
+            const pkgCount = packageCountBySlug.get(dest.slug) ?? 0;
+            const tourCount = tourCountBySlug.get(dest.slug) ?? 0;
+            const metaParts: string[] = [];
+            if (dest.startingPrice > 0) metaParts.push(`From ${formatPrice(dest.startingPrice)}`);
+            if (pkgCount > 0) metaParts.push(`${pkgCount} package${pkgCount !== 1 ? "s" : ""}`);
+            if (tourCount > 0) metaParts.push(`${tourCount} group tour${tourCount !== 1 ? "s" : ""}`);
+            return (
             <Link
               key={dest.id}
               href={`/destinations/${dest.slug}`}
@@ -69,12 +88,14 @@ export async function DestinationsScroll() {
                 </h3>
 
                 {/* Meta with clear contrast */}
-                <p
-                  className="text-[14px] text-[var(--on-dark)] mt-2 font-medium"
-                  style={{ textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}
-                >
-                  From {formatPrice(dest.startingPrice)} &middot; {dest.tourCount} tours
-                </p>
+                {metaParts.length > 0 && (
+                  <p
+                    className="text-[14px] text-[var(--on-dark)] mt-2 font-medium"
+                    style={{ textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}
+                  >
+                    {metaParts.join(" · ")}
+                  </p>
+                )}
 
                 {/* Explore CTA with animated arrow */}
                 <span className="inline-flex items-center gap-1.5 mt-4 text-[13px] font-semibold text-[var(--primary-muted)] group-hover:gap-3 transition-all duration-300">
@@ -88,7 +109,8 @@ export async function DestinationsScroll() {
               {/* Hover glow effect */}
               <div className="absolute inset-0 ring-1 ring-inset ring-transparent group-hover:ring-[var(--on-dark-glass-hover)] transition-all duration-500 rounded-[var(--radius-lg)]" />
             </Link>
-          ))}
+            );
+          })}
         </Carousel>
       </Container>
     </section>

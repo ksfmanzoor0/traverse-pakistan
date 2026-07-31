@@ -102,6 +102,10 @@ export default async function DestinationDetailPage({ params }: Props) {
     faqs.length > 0 ? faqPageSchema(faqs) : null
   );
 
+  const visiblePkgs = sortByDestinationRelevance(allPkgs, dest.slug);
+  const packageCount = visiblePkgs.length;
+  const tourCount = allTours.length;
+
   return (
     <>
       <JsonLd data={schema} id={`destination-${dest.slug}-jsonld`} />
@@ -131,12 +135,22 @@ export default async function DestinationDetailPage({ params }: Props) {
           </h1>
           <p className="text-lg text-[var(--on-dark-secondary)] mt-2 max-w-xl">{dest.subtitle}</p>
           <div className="flex items-center gap-x-5 gap-y-2 flex-wrap mt-4 text-[14px] text-[var(--on-dark-secondary)]">
-            <span>{dest.tourCount} tours available</span>
+            {packageCount > 0 && (
+              <span>{packageCount} package{packageCount !== 1 ? "s" : ""}</span>
+            )}
+            {tourCount > 0 && (
+              <span>{tourCount} group tour{tourCount !== 1 ? "s" : ""}</span>
+            )}
+            {packageCount === 0 && tourCount === 0 && (
+              <span>Trips coming soon</span>
+            )}
             <span className="inline-flex items-center gap-1.5">
               <Icon name="star" size="sm" weight="fill" color="var(--primary-muted)" />
               <span>{dest.rating} rating</span>
             </span>
-            <span>From {formatPrice(dest.startingPrice)}</span>
+            {dest.startingPrice > 0 && (
+              <span>From {formatPrice(dest.startingPrice)}</span>
+            )}
           </div>
           {dest.description && (
             <div className="mt-5 pt-5 border-t border-white/20 max-w-2xl">
@@ -147,27 +161,23 @@ export default async function DestinationDetailPage({ params }: Props) {
       </section>
 
       {/* Packages */}
-      {(() => {
-        const visiblePkgs = sortByDestinationRelevance(allPkgs, dest.slug);
-        if (visiblePkgs.length === 0) return null;
-        return (
-          <section className="py-16 sm:py-20 bg-[var(--bg-subtle)]">
-            <Container>
-              <SectionHeader
-                title={`Packages in ${dest.name}`}
-                subtitle={`${visiblePkgs.length} flexible package${visiblePkgs.length !== 1 ? "s" : ""} — your dates, your tier`}
-                linkText="View all packages"
-                linkHref="/packages"
-              />
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {visiblePkgs.map((pkg) => (
-                  <PackageCard key={pkg.id} pkg={pkg} variant="grid" />
-                ))}
-              </div>
-            </Container>
-          </section>
-        );
-      })()}
+      {visiblePkgs.length > 0 && (
+        <section className="py-16 sm:py-20 bg-[var(--bg-subtle)]">
+          <Container>
+            <SectionHeader
+              title={`Packages in ${dest.name}`}
+              subtitle={`${visiblePkgs.length} flexible package${visiblePkgs.length !== 1 ? "s" : ""} — your dates, your tier`}
+              linkText="View all packages"
+              linkHref="/packages"
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {visiblePkgs.map((pkg) => (
+                <PackageCard key={pkg.id} pkg={pkg} variant="grid" />
+              ))}
+            </div>
+          </Container>
+        </section>
+      )}
 
       {/* Tours */}
       {allTours.length > 0 && (

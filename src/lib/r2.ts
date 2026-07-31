@@ -50,6 +50,23 @@ async function awsSigV4Headers(
   };
 }
 
+export async function putR2Marker(key: string): Promise<{ ok: boolean; error?: string }> {
+  const endpoint = process.env.R2_ENDPOINT;
+  const accessKey = process.env.R2_ACCESS_KEY_ID;
+  const secretKey = process.env.R2_SECRET_ACCESS_KEY;
+  if (!endpoint || !accessKey || !secretKey) {
+    return { ok: false, error: "R2 credentials not configured" };
+  }
+  const url = new URL(`${endpoint}/${BUCKET}/${encodeURI(key)}`);
+  const headers = await awsSigV4Headers("PUT", url, accessKey, secretKey);
+  const res = await fetch(url.toString(), { method: "PUT", headers, body: "" });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    return { ok: false, error: `R2 PUT ${res.status}: ${text.slice(0, 200)}` };
+  }
+  return { ok: true };
+}
+
 export function buildImagesFromR2(urls: string[], alt: string): { url: string; alt: string }[] {
   const cover = urls.find((u) => COVER_RE.test(u));
   const gallery = urls.filter((u) => !COVER_RE.test(u));
