@@ -27,8 +27,8 @@ export function RouteProgress() {
     setProgress(18);
     timers.current.push(window.setTimeout(() => setProgress(45), 180));
     timers.current.push(window.setTimeout(() => setProgress(72), 500));
-    // Slow-connection reassurance: after 700ms, show a small centered spinner.
-    timers.current.push(window.setTimeout(() => setSlowVisible(true), 700));
+    // TEMP: fire spinner immediately for fast-connection testing (revert to 700 before merge).
+    timers.current.push(window.setTimeout(() => setSlowVisible(true), 0));
     timers.current.push(window.setTimeout(() => setProgress(88), 1100));
     // Safety — if route never changes, clean up.
     timers.current.push(window.setTimeout(() => finish(), 15000));
