@@ -8,48 +8,20 @@
   <!-- Outer ring -->
   <circle cx="40" cy="40" r="37.5" stroke="#3E7A6E" stroke-width="2.5" fill="white"/>
 
-  <!-- Purple/indigo sky background -->
-  <circle cx="40" cy="40" r="34.5" fill="#6264A8"/>
-
-  <!-- Stars scattered across sky -->
-  <circle cx="14" cy="14" r="0.9"  fill="white" opacity="0.9"/>
-  <circle cx="28" cy="10" r="0.7"  fill="white" opacity="0.85"/>
-  <circle cx="50" cy="13" r="0.8"  fill="white" opacity="0.8"/>
-  <circle cx="64" cy="18" r="0.6"  fill="white" opacity="0.85"/>
-  <circle cx="22" cy="22" r="0.55" fill="white" opacity="0.7"/>
-  <circle cx="57" cy="10" r="0.65" fill="white" opacity="0.75"/>
-  <circle cx="10" cy="26" r="0.5"  fill="white" opacity="0.65"/>
-  <circle cx="68" cy="24" r="0.55" fill="white" opacity="0.7"/>
-  <circle cx="9"  cy="19" r="0.6"  fill="white" opacity="0.6"/>
-  <circle cx="71" cy="15" r="0.5"  fill="white" opacity="0.65"/>
-  <circle cx="36" cy="7"  r="0.6"  fill="white" opacity="0.8"/>
-  <circle cx="44" cy="9"  r="0.5"  fill="white" opacity="0.7"/>
-  <circle cx="18" cy="32" r="0.45" fill="white" opacity="0.5"/>
-  <circle cx="66" cy="32" r="0.45" fill="white" opacity="0.5"/>
+  <!-- Solid green background -->
+  <circle cx="40" cy="40" r="34.5" fill="#3E7A6E"/>
 
   <!-- Mountain — white snow body -->
   <polygon points="40,11 7,67 73,67"
            fill="white" clip-path="url(#mc)"/>
 
-  <!-- Right-side shadow face -->
+  <!-- Right-side shadow face (white with lower opacity so green shows through) -->
   <polygon points="40,11 52,30 66,56 73,67 53,67"
-           fill="#3E7A6E" clip-path="url(#mc)" opacity="0.82"/>
+           fill="white" clip-path="url(#mc)" opacity="0.35"/>
 
-  <!-- Central crevice / rock shadow -->
-  <polygon points="40,11 37,22 38,34 42,50 45,67 40,67 37,48 36,32 38,20"
-           fill="#2C5C52" clip-path="url(#mc)" opacity="0.9"/>
-
-  <!-- Rock face block centre-lower -->
-  <polygon points="34,67 38,50 43,51 46,67"
-           fill="#3E7A6E" clip-path="url(#mc)" opacity="0.75"/>
-
-  <!-- Rock outcrop lower-left -->
-  <polygon points="7,67 16,52 24,60 22,67"
-           fill="#3E7A6E" clip-path="url(#mc)" opacity="0.65"/>
-
-  <!-- Rock outcrop lower-right -->
-  <polygon points="57,67 60,53 68,60 73,67"
-           fill="#2C5C52" clip-path="url(#mc)" opacity="0.55"/>
+  <!-- Central ridge line (subtle depth) -->
+  <polygon points="40,11 38,26 40,44 42,44 42,26"
+           fill="white" clip-path="url(#mc)" opacity="0.55"/>
 
   <!-- Snow ground field at base -->
   <rect x="0" y="63" width="80" height="12" fill="white" clip-path="url(#mc)"/>
