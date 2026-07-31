@@ -387,6 +387,22 @@ export function BookingDetail({ bookingRef, data, canManage, needsEmail = false 
         </div>
       )}
 
+      {/* Download tailored itinerary PDF — packages only for now */}
+      {type === "package" && (
+        <a
+          href={`/api/bookings/${encodeURIComponent(bookingRef)}/package-pdf`}
+          download
+          className="w-full h-11 flex items-center justify-center gap-2 border border-[var(--border-default)] text-[14px] font-semibold text-[var(--text-primary)] rounded-[var(--radius-sm)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          Download my itinerary (PDF)
+        </a>
+      )}
+
       {/* WhatsApp help button */}
       <a
         href={whatsappUrl}
