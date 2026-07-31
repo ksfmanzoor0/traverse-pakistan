@@ -10,6 +10,7 @@ import { PayButton } from "@/components/payments/PayButton";
 import { formatPrice } from "@/lib/utils";
 import { after } from "next/server";
 import { stampBookingWithUser } from "@/lib/auth/stampBookingWithUser";
+import { snapshotOriginalIfMissing } from "@/lib/packages/bookingSnapshot";
 import { sendBookingConfirmation } from "@/lib/email/sendBookingConfirmation";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
@@ -48,11 +49,13 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
   let summary: Awaited<ReturnType<typeof getBookingSummary>> = null;
 
   if (ref) {
-    // Silent signup (idempotent) + fire booking-received email/WhatsApp.
-    // The send is deferred via after() — runs after the page response is
-    // sent but keeps the lambda alive until it completes. Bare fire-and-
-    // forget was being killed mid-flight by the serverless runtime.
+    // Silent signup (idempotent) + freeze the "as booked" itinerary +
+    // fire booking-received email/WhatsApp. The send is deferred via
+    // after() — runs after the page response is sent but keeps the
+    // lambda alive until it completes. Bare fire-and-forget was being
+    // killed mid-flight by the serverless runtime.
     await stampBookingWithUser(ref);
+    await snapshotOriginalIfMissing(ref);
     after(async () => {
       try {
         await sendBookingConfirmation(ref);

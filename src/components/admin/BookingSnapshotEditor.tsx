@@ -21,6 +21,30 @@ function copyDay(d: BookingSnapshotDay): BookingSnapshotDay {
   return { ...d, stops: d.stops.map((s) => ({ ...s })) };
 }
 
+// Stops <-> textarea round-trip. Line format: `Name — Detail` (em dash),
+// but we also accept ` - ` / ` – `. Blank lines are dropped. If a line has
+// no separator, the whole thing becomes the stop name and detail stays "".
+const STOP_SEP_RE = /\s+[—–-]\s+/;
+function serializeStops(stops: { name: string; detail: string }[]): string {
+  return stops
+    .map((s) => (s.detail ? `${s.name} — ${s.detail}` : s.name))
+    .join("\n");
+}
+function parseStops(text: string): { name: string; detail: string }[] {
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const m = line.match(STOP_SEP_RE);
+      if (!m || m.index === undefined) return { name: line, detail: "" };
+      return {
+        name: line.slice(0, m.index).trim(),
+        detail: line.slice(m.index + m[0].length).trim(),
+      };
+    });
+}
+
 function copySnapshot(s: PackageBookingSnapshot): PackageBookingSnapshot {
   return {
     days: s.days.map(copyDay),
@@ -32,6 +56,13 @@ function copySnapshot(s: PackageBookingSnapshot): PackageBookingSnapshot {
 
 export function BookingSnapshotEditor({ bookingRef, initialSnapshot, hotels }: Props) {
   const [snapshot, setSnapshot] = useState<PackageBookingSnapshot>(() => copySnapshot(initialSnapshot));
+  // Freeform stops textarea per day. Parsed back into stops[] on save so
+  // users can type freely without every keystroke re-parsing.
+  const [stopsText, setStopsText] = useState<Record<number, string>>(() => {
+    const map: Record<number, string> = {};
+    for (const d of initialSnapshot.days) map[d.dayNumber] = serializeStops(d.stops);
+    return map;
+  });
   const [isSaving, startSaving] = useTransition();
   const [flash, setFlash] = useState<{ kind: "success" | "error"; msg: string } | null>(null);
 
@@ -43,36 +74,6 @@ export function BookingSnapshotEditor({ bookingRef, initialSnapshot, hotels }: P
   const updateDay = (idx: number, patch: Partial<BookingSnapshotDay>) => {
     setSnapshot((prev) => {
       const days = prev.days.map((d, i) => (i === idx ? { ...d, ...patch } : d));
-      return { ...prev, days };
-    });
-  };
-
-  const addStop = (dayIdx: number) => {
-    setSnapshot((prev) => {
-      const days = prev.days.map((d, i) =>
-        i === dayIdx ? { ...d, stops: [...d.stops, { name: "", detail: "" }] } : d,
-      );
-      return { ...prev, days };
-    });
-  };
-
-  const updateStop = (dayIdx: number, stopIdx: number, patch: Partial<{ name: string; detail: string }>) => {
-    setSnapshot((prev) => {
-      const days = prev.days.map((d, i) => {
-        if (i !== dayIdx) return d;
-        const stops = d.stops.map((s, j) => (j === stopIdx ? { ...s, ...patch } : s));
-        return { ...d, stops };
-      });
-      return { ...prev, days };
-    });
-  };
-
-  const removeStop = (dayIdx: number, stopIdx: number) => {
-    setSnapshot((prev) => {
-      const days = prev.days.map((d, i) => {
-        if (i !== dayIdx) return d;
-        return { ...d, stops: d.stops.filter((_, j) => j !== stopIdx) };
-      });
       return { ...prev, days };
     });
   };
@@ -97,14 +98,16 @@ export function BookingSnapshotEditor({ bookingRef, initialSnapshot, hotels }: P
 
   const onSave = () => {
     setFlash(null);
-    // Trim empties so the DB stays clean.
+    // Trim empties and parse each day's stops textarea back into
+    // { name, detail } pairs so the PDF renderer keeps its bold-name
+    // formatting.
     const cleaned: PackageBookingSnapshot = {
       ...snapshot,
       inclusions: snapshot.inclusions.map((s) => s.trim()).filter(Boolean),
       exclusions: snapshot.exclusions.map((s) => s.trim()).filter(Boolean),
       days: snapshot.days.map((d) => ({
         ...d,
-        stops: d.stops.filter((s) => s.name.trim() || s.detail.trim()),
+        stops: parseStops(stopsText[d.dayNumber] ?? ""),
       })),
     };
     startSaving(async () => {
@@ -175,41 +178,17 @@ export function BookingSnapshotEditor({ bookingRef, initialSnapshot, hotels }: P
                     className="w-full px-3 py-2 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-primary)] text-[13px] resize-y"
                   />
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] mb-2">Stops</p>
-                    <div className="space-y-2">
-                      {day.stops.map((stop, sidx) => (
-                        <div key={sidx} className="flex gap-2">
-                          <input
-                            type="text"
-                            value={stop.name}
-                            onChange={(e) => updateStop(idx, sidx, { name: e.target.value })}
-                            placeholder="Stop name"
-                            className="w-52 px-3 py-1.5 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-primary)] text-[13px]"
-                          />
-                          <input
-                            type="text"
-                            value={stop.detail}
-                            onChange={(e) => updateStop(idx, sidx, { detail: e.target.value })}
-                            placeholder="Detail"
-                            className="flex-1 px-3 py-1.5 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-primary)] text-[13px]"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeStop(idx, sidx)}
-                            className="text-[12px] text-[var(--text-tertiary)] hover:text-red-600 px-2"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => addStop(idx)}
-                        className="text-[12px] font-semibold text-[var(--primary)] hover:underline"
-                      >
-                        + Add stop
-                      </button>
+                    <div className="flex items-baseline justify-between mb-2">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">Stops</p>
+                      <p className="text-[11px] text-[var(--text-tertiary)]">One stop per line. Format: <span className="font-mono">Name — Detail</span></p>
                     </div>
+                    <textarea
+                      value={stopsText[day.dayNumber] ?? ""}
+                      onChange={(e) => setStopsText((prev) => ({ ...prev, [day.dayNumber]: e.target.value }))}
+                      rows={Math.max(3, (stopsText[day.dayNumber] ?? "").split("\n").length + 1)}
+                      placeholder={"Attabad Lake — Boat ride and photo stop\nPassu Cathedral — Iconic peak viewpoint"}
+                      className="w-full px-3 py-2 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-primary)] text-[13px] font-mono resize-y"
+                    />
                   </div>
                 </div>
               </div>

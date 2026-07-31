@@ -79,19 +79,29 @@ export default async function AdminPackageBookingDetail({
               {booking.contact_name ?? "-"} · {booking.contact_email ?? "-"} · {booking.contact_phone ?? "-"}
             </p>
           </div>
-          <a
-            href={`/api/bookings/${booking.booking_ref}/package-pdf`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 h-10 px-4 rounded-[var(--radius-sm)] border border-[var(--border-default)] text-[13px] font-semibold text-[var(--text-primary)] hover:border-[var(--primary)] hover:text-[var(--primary)]"
-          >
-            Preview current PDF
-          </a>
+          <div className="flex items-center gap-2 flex-wrap">
+            <a
+              href={`/api/bookings/${booking.booking_ref}/package-pdf-original`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-[var(--radius-sm)] border border-[var(--border-default)] text-[13px] font-semibold text-[var(--text-secondary)] hover:border-[var(--text-primary)] hover:text-[var(--text-primary)]"
+            >
+              Download original PDF
+            </a>
+            <a
+              href={`/api/bookings/${booking.booking_ref}/package-pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-[var(--radius-sm)] border border-[var(--border-default)] text-[13px] font-semibold text-[var(--text-primary)] hover:border-[var(--primary)] hover:text-[var(--primary)]"
+            >
+              Preview current PDF
+            </a>
+          </div>
         </div>
         <p className="mt-3 text-[12px] text-[var(--text-tertiary)]">
           {hasSnapshot
-            ? `Custom itinerary in effect (last edited ${new Date(initialSnapshot.updatedAt).toLocaleString("en-GB")}). PDF uses this snapshot.`
-            : `No custom edits yet — currently loading from the standard package itinerary. Saving below will freeze this booking's copy.`}
+            ? `Custom itinerary in effect (last edited ${new Date(initialSnapshot.updatedAt).toLocaleString("en-GB")}). Customer PDF uses these edits. Original as-booked PDF is always downloadable via the button above.`
+            : `No custom edits yet — customer PDF is the original as booked. Any changes below will show only on the customer PDF; the original PDF stays frozen.`}
         </p>
       </div>
 
