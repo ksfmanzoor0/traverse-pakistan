@@ -1,8 +1,18 @@
 import { Document, Page, Text, View, Image, StyleSheet, Font, renderToBuffer } from "@react-pdf/renderer";
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { Package, PackageItinerary } from "@/types/package";
+import type { Package, PackageItinerary, PackageTier } from "@/types/package";
 import type { Hotel } from "@/types/hotel";
+
+export interface PdfBookingContext {
+  bookingRef: string;
+  contactName?: string | null;
+  tier: PackageTier;
+  departureCity: string;
+  startDate?: string | null;
+  adults: number;
+  rooms: number;
+}
 
 Font.registerHyphenationCallback((word) => [word]);
 
@@ -79,9 +89,17 @@ interface PdfArgs {
   pkg: Package;
   itinerary: PackageItinerary | null;
   hotelsBySlug: Map<string, Hotel>;
+  booking?: PdfBookingContext;
 }
 
-export async function generatePackageItineraryPdf({ pkg, itinerary, hotelsBySlug }: PdfArgs): Promise<Buffer> {
+function formatBookingDate(iso?: string | null): string {
+  if (!iso) return "TBD";
+  return new Date(iso).toLocaleDateString("en-US", {
+    weekday: "short", month: "long", day: "numeric", year: "numeric",
+  });
+}
+
+export async function generatePackageItineraryPdf({ pkg, itinerary, hotelsBySlug, booking }: PdfArgs): Promise<Buffer> {
   const logoData = await loadPublicImage("logo-day.png");
   const days = itinerary?.days ?? [];
   const tierPricing = pkg.tiers?.deluxe ?? pkg.tiers?.luxury;
@@ -111,26 +129,58 @@ export async function generatePackageItineraryPdf({ pkg, itinerary, hotelsBySlug
 
         {/* Cover */}
         <View style={styles.coverBlock}>
-          <Text style={styles.eyebrow}>PACKAGE ITINERARY</Text>
+          <Text style={styles.eyebrow}>{booking ? "YOUR ITINERARY" : "PACKAGE ITINERARY"}</Text>
           <Text style={styles.title}>{pkg.name}</Text>
           {pkg.route && <Text style={styles.route}>{pkg.route}</Text>}
         </View>
 
         {/* Trip meta grid */}
-        <View style={styles.metaGrid}>
-          <View style={styles.metaCell}>
-            <Text style={styles.metaLabel}>Duration</Text>
-            <Text style={styles.metaValue}>{pkg.duration} {pkg.duration === 1 ? "day" : "days"}</Text>
+        {booking ? (
+          <View style={styles.metaGrid}>
+            <View style={styles.metaCell}>
+              <Text style={styles.metaLabel}>Start date</Text>
+              <Text style={styles.metaValue}>{formatBookingDate(booking.startDate)}</Text>
+            </View>
+            <View style={styles.metaCell}>
+              <Text style={styles.metaLabel}>Duration</Text>
+              <Text style={styles.metaValue}>{pkg.duration} {pkg.duration === 1 ? "day" : "days"}</Text>
+            </View>
+            <View style={styles.metaCell}>
+              <Text style={styles.metaLabel}>Tier</Text>
+              <Text style={styles.metaValue}>{booking.tier.charAt(0).toUpperCase() + booking.tier.slice(1)}</Text>
+            </View>
+            <View style={styles.metaCell}>
+              <Text style={styles.metaLabel}>Departure</Text>
+              <Text style={styles.metaValue}>{formatCityLabel(booking.departureCity)}</Text>
+            </View>
+            <View style={styles.metaCell}>
+              <Text style={styles.metaLabel}>Travellers</Text>
+              <Text style={styles.metaValue}>{booking.adults} adults · {booking.rooms} rooms</Text>
+            </View>
           </View>
-          <View style={styles.metaCell}>
-            <Text style={styles.metaLabel}>Starting cities</Text>
-            <Text style={styles.metaValue}>{startingCities}</Text>
+        ) : (
+          <View style={styles.metaGrid}>
+            <View style={styles.metaCell}>
+              <Text style={styles.metaLabel}>Duration</Text>
+              <Text style={styles.metaValue}>{pkg.duration} {pkg.duration === 1 ? "day" : "days"}</Text>
+            </View>
+            <View style={styles.metaCell}>
+              <Text style={styles.metaLabel}>Starting cities</Text>
+              <Text style={styles.metaValue}>{startingCities}</Text>
+            </View>
+            <View style={styles.metaCell}>
+              <Text style={styles.metaLabel}>Tiers available</Text>
+              <Text style={styles.metaValue}>Deluxe · Luxury</Text>
+            </View>
           </View>
-          <View style={styles.metaCell}>
-            <Text style={styles.metaLabel}>Tiers available</Text>
-            <Text style={styles.metaValue}>Deluxe · Luxury</Text>
+        )}
+
+        {booking && (
+          <View style={{ marginTop: 10, flexDirection: "row", justifyContent: "space-between", fontSize: 9, color: GREY_TEXT }}>
+            <Text>Booking ref: <Text style={{ color: BLACK, fontFamily: "Helvetica-Bold" }}>{booking.bookingRef}</Text></Text>
+            {booking.contactName && <Text>Prepared for: <Text style={{ color: BLACK, fontFamily: "Helvetica-Bold" }}>{booking.contactName}</Text></Text>}
           </View>
-        </View>
+        )}
 
         {/* Day-by-day itinerary */}
         <View style={styles.section}>
@@ -156,20 +206,49 @@ export async function generatePackageItineraryPdf({ pkg, itinerary, hotelsBySlug
                     </Text>
                   )}
                   {day.description && <Text style={styles.dayDesc}>{day.description}</Text>}
-                  {(deluxeHotel || luxuryHotel) && (
-                    <View style={styles.hotelRow}>
-                      <View style={styles.hotelCard}>
-                        <Text style={styles.hotelTier}>DELUXE STAY</Text>
-                        <Text style={styles.hotelName}>{deluxeHotel?.name ?? "TBD"}</Text>
-                        {deluxeHotel?.location && <Text style={styles.hotelLoc}>{deluxeHotel.location}</Text>}
-                      </View>
-                      <View style={styles.hotelCard}>
-                        <Text style={styles.hotelTier}>LUXURY STAY</Text>
-                        <Text style={styles.hotelName}>{luxuryHotel?.name ?? "TBD"}</Text>
-                        {luxuryHotel?.location && <Text style={styles.hotelLoc}>{luxuryHotel.location}</Text>}
-                      </View>
+                  {day.stops && day.stops.length > 0 && (
+                    <View style={{ marginTop: 6 }}>
+                      {day.stops.map((stop, i) => (
+                        <View key={i} style={styles.listItem}>
+                          <Text style={styles.listBullet}>•</Text>
+                          <Text style={styles.listText}>
+                            <Text style={{ fontFamily: "Helvetica-Bold" }}>{stop.name}</Text>
+                            {stop.detail ? ` — ${stop.detail}` : ""}
+                          </Text>
+                        </View>
+                      ))}
                     </View>
                   )}
+                  {(() => {
+                    if (booking) {
+                      const bookedHotel = booking.tier === "luxury" ? luxuryHotel : deluxeHotel;
+                      if (!bookedHotel) return null;
+                      return (
+                        <View style={styles.hotelRow}>
+                          <View style={styles.hotelCard}>
+                            <Text style={styles.hotelTier}>{booking.tier.toUpperCase()} STAY</Text>
+                            <Text style={styles.hotelName}>{bookedHotel.name}</Text>
+                            {bookedHotel.location && <Text style={styles.hotelLoc}>{bookedHotel.location}</Text>}
+                          </View>
+                        </View>
+                      );
+                    }
+                    if (!deluxeHotel && !luxuryHotel) return null;
+                    return (
+                      <View style={styles.hotelRow}>
+                        <View style={styles.hotelCard}>
+                          <Text style={styles.hotelTier}>DELUXE STAY</Text>
+                          <Text style={styles.hotelName}>{deluxeHotel?.name ?? "TBD"}</Text>
+                          {deluxeHotel?.location && <Text style={styles.hotelLoc}>{deluxeHotel.location}</Text>}
+                        </View>
+                        <View style={styles.hotelCard}>
+                          <Text style={styles.hotelTier}>LUXURY STAY</Text>
+                          <Text style={styles.hotelName}>{luxuryHotel?.name ?? "TBD"}</Text>
+                          {luxuryHotel?.location && <Text style={styles.hotelLoc}>{luxuryHotel.location}</Text>}
+                        </View>
+                      </View>
+                    );
+                  })()}
                 </View>
               );
             })
