@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { Package, PackageItinerary, PackageTier } from "@/types/package";
 import type { Hotel } from "@/types/hotel";
+import type { PackageBookingSnapshot } from "@/types/packageBookingSnapshot";
 
 export interface PdfBookingContext {
   bookingRef: string;
@@ -12,6 +13,7 @@ export interface PdfBookingContext {
   startDate?: string | null;
   adults: number;
   rooms: number;
+  snapshot?: PackageBookingSnapshot | null;
 }
 
 Font.registerHyphenationCallback((word) => [word]);
@@ -99,9 +101,22 @@ function formatBookingDate(iso?: string | null): string {
   });
 }
 
+interface RenderDay {
+  dayNumber: number;
+  title: string;
+  description: string;
+  stops: { name: string; detail: string }[];
+  overnight: string;
+  drivingTime: string;
+  hotelMode: "dual" | "single";
+  deluxeHotelSlug: string;
+  luxuryHotelSlug: string;
+  bookedHotelSlug: string;
+}
+
 export async function generatePackageItineraryPdf({ pkg, itinerary, hotelsBySlug, booking }: PdfArgs): Promise<Buffer> {
   const logoData = await loadPublicImage("logo-day.png");
-  const days = itinerary?.days ?? [];
+  const snapshot = booking?.snapshot ?? null;
   const tierPricing = pkg.tiers?.deluxe ?? pkg.tiers?.luxury;
   const startingCities = (
     ["islamabad", "lahore", "karachi"] as const
@@ -109,6 +124,39 @@ export async function generatePackageItineraryPdf({ pkg, itinerary, hotelsBySlug
     .filter((city) => tierPricing?.[city] != null)
     .map(formatCityLabel)
     .join(" · ") || "Islamabad";
+
+  // Days come from snapshot when present (booked + admin-tweakable),
+  // else standard package itinerary. Normalize into RenderDay shape so
+  // the loop below is agnostic.
+  const renderDays: RenderDay[] = snapshot
+    ? snapshot.days.map((d) => ({
+        dayNumber: d.dayNumber,
+        title: d.title,
+        description: d.description,
+        stops: d.stops ?? [],
+        overnight: d.overnight,
+        drivingTime: d.drivingTime,
+        hotelMode: "single",
+        deluxeHotelSlug: "",
+        luxuryHotelSlug: "",
+        bookedHotelSlug: d.hotelSlug,
+      }))
+    : (itinerary?.days ?? []).map((d) => ({
+        dayNumber: d.dayNumber,
+        title: d.title,
+        description: d.description,
+        stops: d.stops ?? [],
+        overnight: d.overnight,
+        drivingTime: d.drivingTime,
+        hotelMode: booking ? "single" : "dual",
+        deluxeHotelSlug: d.hotels?.deluxe ?? "",
+        luxuryHotelSlug: d.hotels?.luxury ?? "",
+        bookedHotelSlug: booking?.tier === "luxury" ? (d.hotels?.luxury ?? "") : (d.hotels?.deluxe ?? ""),
+      }));
+
+  // Inclusions / exclusions come from snapshot when present, else package.
+  const inclusions = snapshot?.inclusions ?? pkg.inclusions ?? [];
+  const exclusions = snapshot?.exclusions ?? pkg.exclusions ?? [];
 
   const doc = (
     <Document title={`${pkg.name} — Itinerary`} author="Traverse Pakistan">
@@ -185,14 +233,15 @@ export async function generatePackageItineraryPdf({ pkg, itinerary, hotelsBySlug
         {/* Day-by-day itinerary */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Day-by-day itinerary</Text>
-          {days.length === 0 ? (
+          {renderDays.length === 0 ? (
             <Text style={{ marginTop: 12, color: GREY_TEXT, fontStyle: "italic" }}>
               Detailed day-by-day itinerary will be shared on request. WhatsApp us for the full plan.
             </Text>
           ) : (
-            days.map((day) => {
-              const deluxeHotel = hotelsBySlug.get(day.hotels?.deluxe ?? "");
-              const luxuryHotel = hotelsBySlug.get(day.hotels?.luxury ?? "");
+            renderDays.map((day) => {
+              const deluxeHotel = hotelsBySlug.get(day.deluxeHotelSlug);
+              const luxuryHotel = hotelsBySlug.get(day.luxuryHotelSlug);
+              const bookedHotel = hotelsBySlug.get(day.bookedHotelSlug);
               return (
                 <View key={day.dayNumber} style={styles.day} wrap={false}>
                   <View style={styles.dayBadge}>
@@ -219,36 +268,29 @@ export async function generatePackageItineraryPdf({ pkg, itinerary, hotelsBySlug
                       ))}
                     </View>
                   )}
-                  {(() => {
-                    if (booking) {
-                      const bookedHotel = booking.tier === "luxury" ? luxuryHotel : deluxeHotel;
-                      if (!bookedHotel) return null;
-                      return (
-                        <View style={styles.hotelRow}>
-                          <View style={styles.hotelCard}>
-                            <Text style={styles.hotelTier}>{booking.tier.toUpperCase()} STAY</Text>
-                            <Text style={styles.hotelName}>{bookedHotel.name}</Text>
-                            {bookedHotel.location && <Text style={styles.hotelLoc}>{bookedHotel.location}</Text>}
-                          </View>
-                        </View>
-                      );
-                    }
-                    if (!deluxeHotel && !luxuryHotel) return null;
-                    return (
-                      <View style={styles.hotelRow}>
-                        <View style={styles.hotelCard}>
-                          <Text style={styles.hotelTier}>DELUXE STAY</Text>
-                          <Text style={styles.hotelName}>{deluxeHotel?.name ?? "TBD"}</Text>
-                          {deluxeHotel?.location && <Text style={styles.hotelLoc}>{deluxeHotel.location}</Text>}
-                        </View>
-                        <View style={styles.hotelCard}>
-                          <Text style={styles.hotelTier}>LUXURY STAY</Text>
-                          <Text style={styles.hotelName}>{luxuryHotel?.name ?? "TBD"}</Text>
-                          {luxuryHotel?.location && <Text style={styles.hotelLoc}>{luxuryHotel.location}</Text>}
-                        </View>
+                  {day.hotelMode === "single" && bookedHotel && (
+                    <View style={styles.hotelRow}>
+                      <View style={styles.hotelCard}>
+                        <Text style={styles.hotelTier}>{(booking?.tier ?? "").toUpperCase()} STAY</Text>
+                        <Text style={styles.hotelName}>{bookedHotel.name}</Text>
+                        {bookedHotel.location && <Text style={styles.hotelLoc}>{bookedHotel.location}</Text>}
                       </View>
-                    );
-                  })()}
+                    </View>
+                  )}
+                  {day.hotelMode === "dual" && (deluxeHotel || luxuryHotel) && (
+                    <View style={styles.hotelRow}>
+                      <View style={styles.hotelCard}>
+                        <Text style={styles.hotelTier}>DELUXE STAY</Text>
+                        <Text style={styles.hotelName}>{deluxeHotel?.name ?? "TBD"}</Text>
+                        {deluxeHotel?.location && <Text style={styles.hotelLoc}>{deluxeHotel.location}</Text>}
+                      </View>
+                      <View style={styles.hotelCard}>
+                        <Text style={styles.hotelTier}>LUXURY STAY</Text>
+                        <Text style={styles.hotelName}>{luxuryHotel?.name ?? "TBD"}</Text>
+                        {luxuryHotel?.location && <Text style={styles.hotelLoc}>{luxuryHotel.location}</Text>}
+                      </View>
+                    </View>
+                  )}
                 </View>
               );
             })
@@ -256,10 +298,10 @@ export async function generatePackageItineraryPdf({ pkg, itinerary, hotelsBySlug
         </View>
 
         {/* Inclusions */}
-        {pkg.inclusions && pkg.inclusions.length > 0 && (
+        {inclusions.length > 0 && (
           <View style={styles.section} wrap={false}>
             <Text style={styles.sectionTitle}>What&apos;s included</Text>
-            {pkg.inclusions.map((line, i) => (
+            {inclusions.map((line, i) => (
               <View key={i} style={styles.listItem}>
                 <Text style={styles.listBullet}>✓</Text>
                 <Text style={styles.listText}>{line}</Text>
@@ -269,10 +311,10 @@ export async function generatePackageItineraryPdf({ pkg, itinerary, hotelsBySlug
         )}
 
         {/* Exclusions */}
-        {pkg.exclusions && pkg.exclusions.length > 0 && (
+        {exclusions.length > 0 && (
           <View style={styles.section} wrap={false}>
             <Text style={styles.sectionTitle}>What&apos;s not included</Text>
-            {pkg.exclusions.map((line, i) => (
+            {exclusions.map((line, i) => (
               <View key={i} style={styles.listItem}>
                 <Text style={{ ...styles.listBullet, color: GREY_TEXT }}>×</Text>
                 <Text style={styles.listText}>{line}</Text>
