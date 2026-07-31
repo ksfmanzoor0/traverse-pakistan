@@ -348,16 +348,25 @@ h1, h2, h3, h4, h5, h6 { letter-spacing: -0.025em; line-height: 1.15; }
 .route-progress-slow::after {
   content: "Loading…";
 }
-.route-progress-slow-spinner {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2px solid color-mix(in srgb, var(--primary) 25%, transparent);
-  border-top-color: var(--primary);
-  animation: route-progress-slow-spin 800ms linear infinite;
+/* Brand mountain emblem — simplified logo mark with a gentle breathing pulse */
+.route-progress-emblem {
+  display: block;
+  transform-origin: center;
+  animation: route-progress-emblem-pulse 1.6s ease-in-out infinite;
 }
-@keyframes route-progress-slow-spin {
-  to { transform: rotate(360deg); }
+.route-progress-emblem-bg {
+  fill: var(--primary);
+}
+.route-progress-emblem-peak {
+  fill: #ffffff;
+}
+.route-progress-emblem-shadow {
+  fill: color-mix(in srgb, var(--primary) 55%, black);
+  opacity: 0.55;
+}
+@keyframes route-progress-emblem-pulse {
+  0%, 100% { transform: scale(1);    opacity: 0.85; }
+  50%      { transform: scale(1.08); opacity: 1; }
 }
 @keyframes route-progress-slow-in {
   from { opacity: 0; transform: translate(-50%, 6px); }
@@ -365,7 +374,7 @@ h1, h2, h3, h4, h5, h6 { letter-spacing: -0.025em; line-height: 1.15; }
 }
 @media (prefers-reduced-motion: reduce) {
   .route-progress-slow { animation: none; }
-  .route-progress-slow-spinner { animation: none; border-top-color: color-mix(in srgb, var(--primary) 25%, transparent); background: var(--primary); }
+  .route-progress-emblem { animation: none; opacity: 1; }
 }
 
 /* ── Button spinner (pending state) ── */

@@ -103,7 +103,20 @@ export function RouteProgress() {
       />
       {slowVisible && (
         <div className="route-progress-slow" aria-hidden="true">
-          <div className="route-progress-slow-spinner" />
+          <svg
+            className="route-progress-emblem"
+            viewBox="0 0 80 80"
+            width="22"
+            height="22"
+            aria-hidden="true"
+          >
+            <circle cx="40" cy="40" r="37" className="route-progress-emblem-bg" />
+            <polygon points="40,18 62,62 18,62" className="route-progress-emblem-peak" />
+            <polygon
+              points="40,18 47,32 55,62 45,62"
+              className="route-progress-emblem-shadow"
+            />
+          </svg>
         </div>
       )}
     </>
