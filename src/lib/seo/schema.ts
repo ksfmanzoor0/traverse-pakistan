@@ -288,6 +288,41 @@ export function packageSchema(pkg: Package): SchemaNode {
     .map((img) => imageUrl(img.url))
     .filter(Boolean) as string[];
 
+  // Min/max across all non-null tier × departure-city cells so packages with
+  // KHI/LHE-only pricing (e.g. Makran, Sindh) show the correct range.
+  const priceCells: number[] = [];
+  for (const tier of [pkg.tiers.deluxe, pkg.tiers.luxury]) {
+    for (const city of ["islamabad", "lahore", "karachi"] as const) {
+      const p = tier[city];
+      if (typeof p === "number" && p > 0) priceCells.push(p);
+    }
+  }
+  const lowPrice = priceCells.length ? Math.min(...priceCells) : undefined;
+  const highPrice = priceCells.length ? Math.max(...priceCells) : undefined;
+
+  const tierOffers: SchemaNode[] = [];
+  for (const [tierName, tier] of [
+    ["Deluxe", pkg.tiers.deluxe],
+    ["Luxury", pkg.tiers.luxury],
+  ] as const) {
+    for (const [cityKey, cityLabel] of [
+      ["islamabad", "Islamabad"],
+      ["lahore", "Lahore"],
+      ["karachi", "Karachi"],
+    ] as const) {
+      const price = tier[cityKey];
+      if (typeof price !== "number" || price <= 0) continue;
+      tierOffers.push({
+        "@type": "Offer",
+        name: `${tierName} tier — ${cityLabel} departure`,
+        price,
+        priceCurrency: CURRENCY_PKR,
+        availability: "https://schema.org/InStock",
+        url,
+      });
+    }
+  }
+
   return {
     "@context": "https://schema.org",
     "@type": ["TouristTrip", "Product"],
@@ -301,27 +336,10 @@ export function packageSchema(pkg: Package): SchemaNode {
       "@type": "AggregateOffer",
       url,
       priceCurrency: CURRENCY_PKR,
-      lowPrice: pkg.tiers.deluxe.islamabad,
-      highPrice: pkg.tiers.luxury.islamabad,
-      offerCount: 2,
-      offers: [
-        {
-          "@type": "Offer",
-          name: "Deluxe tier",
-          price: pkg.tiers.deluxe.islamabad,
-          priceCurrency: CURRENCY_PKR,
-          availability: "https://schema.org/InStock",
-          url,
-        },
-        {
-          "@type": "Offer",
-          name: "Luxury tier",
-          price: pkg.tiers.luxury.islamabad,
-          priceCurrency: CURRENCY_PKR,
-          availability: "https://schema.org/InStock",
-          url,
-        },
-      ],
+      lowPrice,
+      highPrice,
+      offerCount: tierOffers.length,
+      offers: tierOffers,
     },
     aggregateRating:
       pkg.reviewCount > 0
@@ -361,7 +379,7 @@ function hotelReviewSchema(review: HotelReview): SchemaNode {
   };
 }
 
-export function hotelSchema(hotel: Hotel): SchemaNode {
+export function hotelSchema(hotel: Hotel, regionName?: string): SchemaNode {
   const url = absoluteUrl(`/hotels/${hotel.slug}`);
   const images = hotel.images.slice(0, 8).map((i) => imageUrl(i)).filter(Boolean) as string[];
 
@@ -388,7 +406,7 @@ export function hotelSchema(hotel: Hotel): SchemaNode {
     address: {
       "@type": "PostalAddress",
       addressLocality: hotel.location.split(",")[0]?.trim(),
-      addressRegion: "Gilgit-Baltistan",
+      ...(regionName ? { addressRegion: regionName } : {}),
       addressCountry: SITE.country,
     },
     containsPlace: hotel.rooms.map((r) => ({
@@ -449,16 +467,6 @@ export function destinationSchema(dest: Destination): SchemaNode {
       name: c.title,
       description: c.description,
     })),
-    aggregateRating:
-      dest.rating > 0
-        ? {
-            "@type": "AggregateRating",
-            ratingValue: dest.rating,
-            reviewCount: Math.max(dest.tourCount * 20, 10),
-            bestRating: 5,
-            worstRating: 1,
-          }
-        : undefined,
     subjectOf: dest.seasons.map((s) => ({
       "@type": "CreativeWork",
       name: `${dest.name} in ${s.season}`,
