@@ -15,6 +15,8 @@ import {
 } from "@/lib/seo/schema";
 import { formatPrice, slugify } from "@/lib/utils";
 import { getHotelBySlug, getAllHotels, getHotelsByDestination } from "@/services/hotel.service";
+import { getDestinationBySlug } from "@/services/destination.service";
+import { getRegionBySlug } from "@/services/region.service";
 import { TrackView } from "@/components/analytics/TrackView";
 import { listR2Images } from "@/lib/r2";
 import Link from "next/link";
@@ -91,8 +93,11 @@ export default async function HotelDetailPage({ params }: Props) {
   });
 
 
+  const dest = await getDestinationBySlug(hotel.destinationSlug);
+  const region = dest?.regionSlug ? await getRegionBySlug(dest.regionSlug) : null;
+
   const schema = combineSchemas(
-    hotelSchema(hotel),
+    hotelSchema(hotel, region?.name),
     breadcrumbSchema([
       { name: "Home", url: "/" },
       { name: "Hotels", url: "/hotels" },
