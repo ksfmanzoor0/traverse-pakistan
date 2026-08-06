@@ -14,6 +14,41 @@ interface PageMetaInput {
   authors?: string[];
   tags?: string[];
   noIndex?: boolean;
+  ctr?: CtrEnhancements;
+}
+
+/**
+ * CTR-driven title enhancements: appends " · 2026 · 4.9★" style suffix to the
+ * base title so the SERP snippet signals freshness + social proof. Skipped
+ * when a token is already present in the base (idempotent across rebuilds
+ * and safe if the DB metaTitle already carries a year/rating).
+ */
+export interface CtrEnhancements {
+  year?: number;   // e.g. 2026 → " · 2026"
+  rating?: number; // e.g. 4.9  → " · 4.9★"
+}
+
+const BRAND_TAIL = ` | ${SITE.name}`;
+
+// The root layout applies a "%s | Traverse Pakistan" title template.
+// Some DB meta_title rows already end with " | Traverse Pakistan", which
+// makes Next render the brand twice. Strip once here so the template can
+// re-add it cleanly.
+function stripBrandTail(title: string): string {
+  return title.endsWith(BRAND_TAIL) ? title.slice(0, -BRAND_TAIL.length) : title;
+}
+
+export function polishTitleForCtr(title: string, e: CtrEnhancements | undefined): string {
+  if (!e || (!e.year && !e.rating)) return title;
+  const parts: string[] = [];
+  if (e.year && !/\b(20\d{2})\b/.test(title)) parts.push(String(e.year));
+  if (e.rating && !title.includes("★")) parts.push(`${e.rating.toFixed(1)}★`);
+  if (!parts.length) return title;
+  const polished = `${title} · ${parts.join(" · ")}`;
+  // Template adds " | Traverse Pakistan" (~20 chars). Google truncates
+  // around 60. Roll the polish back if it pushes the final over ~65.
+  if (polished.length + BRAND_TAIL.length > 65) return title;
+  return polished;
 }
 
 const OG_DEFAULTS = {
@@ -34,7 +69,7 @@ function absoluteImage(img: string | null | undefined): string {
  */
 export function buildMetadata(input: PageMetaInput): Metadata {
   const {
-    title,
+    title: rawTitle,
     description,
     path,
     image,
@@ -45,8 +80,10 @@ export function buildMetadata(input: PageMetaInput): Metadata {
     authors,
     tags,
     noIndex,
+    ctr,
   } = input;
 
+  const title = rawTitle ? polishTitleForCtr(stripBrandTail(rawTitle), ctr) : rawTitle;
   const canonical = absoluteUrl(path);
   const ogImage = absoluteImage(image);
   const finalDescription = description || SITE.description;

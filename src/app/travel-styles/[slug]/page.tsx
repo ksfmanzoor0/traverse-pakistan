@@ -34,6 +34,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: `${style.description} Browse Pakistan ${style.name.toLowerCase()} tours with dual-city departures, expert guides, and 4.9-star reviews.`.slice(0, 160),
     path: `/travel-styles/${style.slug}`,
     tags: [style.name, "Pakistan tours", style.slug],
+    ctr: { year: new Date().getFullYear(), rating: 4.9 },
   });
 }
 

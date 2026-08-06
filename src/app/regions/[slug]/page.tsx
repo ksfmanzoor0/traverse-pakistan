@@ -44,6 +44,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     image: region.heroImage,
     imageAlt: `${region.name}, Pakistan`,
     tags: [region.name, "Pakistan", "tourism"],
+    ctr: { year: new Date().getFullYear() },
   });
 }
 

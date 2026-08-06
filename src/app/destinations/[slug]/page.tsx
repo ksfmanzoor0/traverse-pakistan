@@ -58,6 +58,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     image: dest.heroImage,
     imageAlt: `${dest.name} — ${dest.subtitle}`,
     tags: [dest.name, dest.regionSlug, "Pakistan tourism"],
+    ctr: { year: new Date().getFullYear(), rating: dest.rating || undefined },
   });
 }
 
