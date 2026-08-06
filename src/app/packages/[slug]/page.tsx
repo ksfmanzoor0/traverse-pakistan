@@ -40,6 +40,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     imageAlt: pkg.images[0]?.alt || pkg.name,
     type: "product",
     tags: [pkg.destinationSlug, pkg.regionSlug, "Pakistan holiday package"],
+    ctr: { year: new Date().getFullYear(), rating: pkg.rating || undefined },
   });
 }
 

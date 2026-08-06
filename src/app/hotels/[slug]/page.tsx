@@ -46,7 +46,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       noIndex: true,
     });
   }
-  const title = `${hotel.name} — ${hotel.location}`;
+  const tierLabel = hotel.tier.charAt(0).toUpperCase() + hotel.tier.slice(1);
+  const destLabel = hotel.location.split(",")[0]?.trim() || hotel.location;
+  const title = `${hotel.name} — ${tierLabel} Stay in ${destLabel}`;
   const description = `${hotel.description.slice(0, 150)}${hotel.description.length > 150 ? "…" : ""}`;
   return buildMetadata({
     title,
@@ -56,6 +58,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     imageAlt: `${hotel.name} — ${hotel.location}`,
     type: "product",
     tags: [hotel.tier, hotel.propertyType, hotel.destinationSlug],
+    ctr: { year: new Date().getFullYear(), rating: hotel.rating || undefined },
   });
 }
 
