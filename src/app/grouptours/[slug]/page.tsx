@@ -54,6 +54,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     imageAlt: tour.images[0]?.alt,
     type: "product",
     tags: [...tour.travelStyleSlugs, tour.destinationSlug, tour.regionSlug],
+    ctr: { year: new Date().getFullYear(), rating: tour.rating || undefined },
   });
 }
 
