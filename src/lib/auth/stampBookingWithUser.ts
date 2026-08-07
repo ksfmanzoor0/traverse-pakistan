@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { findOrCreateUserForBooking } from "./findOrCreateUser";
+import { mintPromoCodeForUser } from "@/lib/promo/mint";
 
 type BookingTable = "package_bookings" | "hotel_bookings" | "bookings" | "invitation_requests";
 
@@ -70,15 +71,19 @@ export async function stampBookingWithUser(bookingRef: string): Promise<void> {
       console.warn(`[stampBookingWithUser] booking not found: ${bookingRef}`);
       return;
     }
-    if (record.user_id) return; // Already stamped.
+    let userId = record.user_id;
+    if (!userId) {
+      const result = await findOrCreateUserForBooking({
+        name: record.contact_name,
+        email: record.contact_email || null,
+        phone: record.contact_phone,
+      });
+      userId = result.userId;
+      await updateUserId(table, bookingRef, userId);
+    }
 
-    const result = await findOrCreateUserForBooking({
-      name: record.contact_name,
-      email: record.contact_email || null,
-      phone: record.contact_phone,
-    });
-
-    await updateUserId(table, bookingRef, result.userId);
+    // Idempotent: mints the user's Traverse-NN code on first booking, no-op after
+    await mintPromoCodeForUser(userId);
   } catch (err) {
     console.error(`[stampBookingWithUser] exception for ${bookingRef}:`, err);
   }

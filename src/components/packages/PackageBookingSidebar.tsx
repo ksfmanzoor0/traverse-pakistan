@@ -5,6 +5,7 @@ import Link from "next/link";
 import { formatPrice, getWhatsAppUrl } from "@/lib/utils";
 import { StarRating } from "@/components/ui/StarRating";
 import type { Package, PackageTier } from "@/types/package";
+import { PromoTeaser } from "./PromoTeaser";
 
 function toIsoDate(d: Date | null) {
   if (!d) return undefined;
@@ -607,6 +608,9 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
             Pick a start date above to continue.
           </p>
         )}
+
+        {/* Traverser promo teaser — logged-out: sign-in nudge, logged-in-unused: code reminder */}
+        <PromoTeaser />
 
         {/* Guarantees */}
         <div className="mt-5 space-y-2">
