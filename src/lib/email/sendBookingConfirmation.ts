@@ -36,11 +36,28 @@ async function loadBooking(bookingRef: string): Promise<BookingRecord | null> {
   const supabase = getSupabaseAdmin();
 
   if (bookingRef.startsWith("PKG-")) {
-    const { data } = await supabase
+    const { data: raw } = await supabase
       .from("package_bookings")
-      .select("contact_name, contact_email, contact_phone, total_amount, amount_paid, package_slug, tier, departure_city, start_date, adults, user_id, payment_status, confirmation_sent_at")
+      .select("contact_name, contact_email, contact_phone, total_amount, amount_paid, package_slug, tier, departure_city, start_date, adults, user_id, payment_status, confirmation_sent_at, promo_code, promo_discount_amount")
       .eq("booking_ref", bookingRef)
       .single();
+    const data = raw as unknown as {
+      contact_name: string;
+      contact_email: string;
+      contact_phone: string;
+      total_amount: number;
+      amount_paid: number | null;
+      package_slug: string;
+      tier: string;
+      departure_city: string;
+      start_date: string | null;
+      adults: number;
+      user_id: string | null;
+      payment_status: string | null;
+      confirmation_sent_at: string | null;
+      promo_code: string | null;
+      promo_discount_amount: number | null;
+    } | null;
     if (!data) return null;
     return {
       contactName: data.contact_name,
@@ -48,17 +65,20 @@ async function loadBooking(bookingRef: string): Promise<BookingRecord | null> {
       contactPhone: data.contact_phone,
       totalAmount: data.total_amount,
       amountPaid: Number(data.amount_paid ?? 0),
-      userId: (data.user_id as string | null) ?? null,
+      userId: data.user_id,
       bookingType: "package",
       itemName: data.package_slug,
-      paymentStatus: ((data.payment_status as string) ?? "pending") as BookingRecord["paymentStatus"],
-      confirmationSentAt: (data.confirmation_sent_at as string | null) ?? null,
+      paymentStatus: (data.payment_status ?? "pending") as BookingRecord["paymentStatus"],
+      confirmationSentAt: data.confirmation_sent_at,
       details: {
         Package: data.package_slug.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
         Tier: data.tier.charAt(0).toUpperCase() + data.tier.slice(1),
         "Departure City": data.departure_city.charAt(0).toUpperCase() + data.departure_city.slice(1),
         ...(data.start_date ? { "Start Date": new Date(data.start_date).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" }) } : {}),
         Adults: String(data.adults),
+        ...(data.promo_code && data.promo_discount_amount
+          ? { "Promo Applied": `${data.promo_code} — PKR ${Number(data.promo_discount_amount).toLocaleString()} off` }
+          : {}),
       },
     };
   }

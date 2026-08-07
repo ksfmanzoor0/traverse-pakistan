@@ -29,14 +29,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: pkg ? `Booking received — ${pkg.name}` : "Booking received" };
 }
 
-async function getBookingSummary(ref: string) {
+interface PackageBookingSummary {
+  contact_name: string;
+  contact_email: string | null;
+  contact_phone: string | null;
+  tier: string;
+  departure_city: string;
+  start_date: string | null;
+  adults: number;
+  rooms: number;
+  total_amount: number;
+  payment_status: string | null;
+  payment_plan: string | null;
+  deposit_amount: number | null;
+  promo_code: string | null;
+  promo_discount_amount: number | null;
+}
+
+async function getBookingSummary(ref: string): Promise<PackageBookingSummary | null> {
   const supabase = getSupabaseAdmin();
   const { data } = await supabase
     .from("package_bookings")
-    .select("contact_name, contact_email, contact_phone, tier, departure_city, start_date, adults, rooms, total_amount, payment_status, payment_plan, deposit_amount")
+    .select("contact_name, contact_email, contact_phone, tier, departure_city, start_date, adults, rooms, total_amount, payment_status, payment_plan, deposit_amount, promo_code, promo_discount_amount")
     .eq("booking_ref", ref)
     .maybeSingle();
-  return data;
+  return (data as unknown as PackageBookingSummary) ?? null;
 }
 
 export default async function PackageCheckoutSuccessPage({ params, searchParams }: Props) {
@@ -102,6 +119,12 @@ export default async function PackageCheckoutSuccessPage({ params, searchParams 
           <p className="mt-3 text-[15px] text-[var(--text-secondary)] max-w-[480px] mx-auto">
             Pay now to secure your spot. Booking details have been sent to your email and WhatsApp.
           </p>
+          {summary && summary.promo_code && summary.promo_discount_amount ? (
+            <p className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-sm)] bg-[var(--primary-light)] text-[13px] text-[var(--primary-deep)]">
+              <span className="inline-block w-2 h-2 rounded-full bg-[var(--primary)]" />
+              You saved <span className="font-bold">{formatPrice(Number(summary.promo_discount_amount))}</span> with <span className="font-mono font-semibold">{summary.promo_code}</span>
+            </p>
+          ) : null}
         </div>
 
         {/* Your trip widget */}

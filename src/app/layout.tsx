@@ -5,6 +5,7 @@ import { Providers } from "@/components/providers/Providers";
 import { NavbarWrapper } from "@/components/layout/NavbarWrapper";
 import { Footer } from "@/components/layout/Footer";
 import { WhatsAppFAB } from "@/components/layout/WhatsAppFAB";
+import { PromoWelcomeToast } from "@/components/promo/PromoWelcomeToast";
 import { AwardStrip } from "@/components/layout/AwardStrip";
 import { RouteProgress } from "@/components/ui/RouteProgress";
 import { JsonLd } from "@/components/seo/JsonLd";
@@ -183,6 +184,7 @@ export default function RootLayout({
           <main className="flex-1">{children}</main>
           <Footer />
           <WhatsAppFAB />
+          <PromoWelcomeToast />
         </Providers>
         <GoogleAnalytics />
       </body>
