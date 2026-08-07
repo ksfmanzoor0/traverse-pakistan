@@ -237,7 +237,47 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
   }, [pkg.slug, state.tier, state.city, state.adults, state.rooms, state.startDate]);
 
   const pricePerPerson = engineQuote?.perPerson ?? staticPerPerson;
-  const total = engineQuote?.total ?? staticTotal;
+  const subtotal = engineQuote?.total ?? staticTotal;
+
+  // Personal Traverse-NN promo code — one code per user, one-time use, PKR
+  // flat off the package subtotal. Applied client-side only for display; the
+  // server re-validates ownership + consumes on payment success.
+  const [promoInput, setPromoInput] = useState("");
+  const [promoState, setPromoState] = useState<{
+    status: "idle" | "checking" | "applied" | "error";
+    code?: string;
+    discount?: number;
+    error?: string;
+  }>({ status: "idle" });
+
+  const promoDiscount = promoState.status === "applied" ? Math.min(promoState.discount ?? 0, subtotal) : 0;
+  const total = Math.max(0, subtotal - promoDiscount);
+
+  async function applyPromo() {
+    const code = promoInput.trim();
+    if (!code) return;
+    setPromoState({ status: "checking" });
+    try {
+      const r = await fetch("/api/promo/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      const j = (await r.json()) as { ok: boolean; discount?: number; code?: string; error?: string };
+      if (!r.ok || !j.ok) {
+        setPromoState({ status: "error", error: j.error ?? "Could not apply code" });
+        return;
+      }
+      setPromoState({ status: "applied", code: j.code, discount: j.discount });
+    } catch {
+      setPromoState({ status: "error", error: "Network error — please try again" });
+    }
+  }
+
+  function removePromo() {
+    setPromoState({ status: "idle" });
+    setPromoInput("");
+  }
 
   const endDate = state.startDate
     ? new Date(state.startDate.getFullYear(), state.startDate.getMonth(), state.startDate.getDate() + pkg.duration - 1)
@@ -302,6 +342,20 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const result = await createPackageBooking(input);
+        // Attach promo code to the booking so IPN-side consumption on payment
+        // success can find + burn it. Non-fatal — if this fails the booking
+        // still goes through, just without the discount recorded.
+        if (promoState.status === "applied" && promoState.code) {
+          try {
+            await fetch(`/api/bookings/${result.bookingRef}/promo`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ code: promoState.code }),
+            });
+          } catch (err) {
+            console.error("[wizard] promo attach failed:", err);
+          }
+        }
         trackAddToCart({
           bookingRef: result.bookingRef,
           bookingType: "package",
@@ -521,10 +575,57 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
               {roomSurcharge > 0 && (
                 <SummaryRow label={`${extraRooms} extra room supplement`} value={`+${formatPrice(roomSurcharge)}`} />
               )}
+              {promoDiscount > 0 && (
+                <SummaryRow label={`Promo ${promoState.code}`} value={`− ${formatPrice(promoDiscount)}`} />
+              )}
               <div className="flex justify-between text-[15px] font-bold pt-2 border-t border-[var(--border-default)]">
                 <span className="text-[var(--text-primary)]">Total</span>
                 <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(total)}</span>
               </div>
+            </div>
+
+            {/* Traverse promo code — self-use, one code per user */}
+            <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] p-5">
+              <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--text-secondary)] mb-3">Traverse promo code</p>
+              {promoState.status === "applied" ? (
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[13px] font-bold text-[var(--primary)] font-mono">{promoState.code}</p>
+                    <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">− {formatPrice(promoState.discount ?? 0)} applied</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={removePromo}
+                    className="text-[12px] font-semibold text-[var(--text-tertiary)] hover:text-[var(--text-primary)] underline"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={promoInput}
+                      onChange={(e) => setPromoInput(e.target.value)}
+                      placeholder="TraverseNN"
+                      className="flex-1 h-11 px-3 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-primary)] text-[14px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--primary)]"
+                    />
+                    <button
+                      type="button"
+                      onClick={applyPromo}
+                      disabled={promoState.status === "checking" || !promoInput.trim()}
+                      className="h-11 px-4 rounded-[var(--radius-sm)] border border-[var(--border-default)] text-[13px] font-bold text-[var(--text-primary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      {promoState.status === "checking" ? "Checking…" : "Apply"}
+                    </button>
+                  </div>
+                  {promoState.status === "error" && (
+                    <p className="text-[11px] text-[var(--error)]">{promoState.error}</p>
+                  )}
+                  <p className="text-[11px] text-[var(--text-tertiary)]">Find your code on the Account page. One-time use per account.</p>
+                </div>
+              )}
             </div>
 
             {/* Payment plan */}

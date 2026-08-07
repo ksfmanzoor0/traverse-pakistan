@@ -101,11 +101,17 @@ export async function markBooking(
   }
 
   if (bookingRef.startsWith("PKG-")) {
-    const { data: before } = await supabase
+    const { data: beforeRaw } = await supabase
       .from("package_bookings")
-      .select("payment_status, total_amount, amount_paid")
+      .select("payment_status, total_amount, amount_paid, promo_code")
       .eq("booking_ref", bookingRef)
       .maybeSingle();
+    const before = beforeRaw as unknown as {
+      payment_status: string | null;
+      total_amount: number | null;
+      amount_paid: number | null;
+      promo_code: string | null;
+    } | null;
 
     if (!before) return;
 
@@ -145,6 +151,18 @@ export async function markBooking(
         ...(isFirstPositivePayment ? { payment_confirmed_via: source } : {}),
       })
       .eq("booking_ref", bookingRef);
+
+    // Burn the promo code atomically the first time this booking sees money.
+    // Conditional update guards against duplicate IPN delivery double-burning.
+    const promoCode = before.promo_code;
+    if (isFirstPositivePayment && promoCode) {
+      const { error: promoErr } = await supabase
+        .from("promo_codes" as never)
+        .update({ used_at: new Date().toISOString(), used_on_booking_ref: bookingRef } as never)
+        .eq("code", promoCode)
+        .is("used_at", null);
+      if (promoErr) console.error(`[markBooking] promo consume failed for ${bookingRef}:`, promoErr);
+    }
   } else if (bookingRef.startsWith("HTL-")) {
     // Hotels have no deposit-plan toggle in UI — every charge is the full
     // total, so we keep the simpler legacy behaviour.
