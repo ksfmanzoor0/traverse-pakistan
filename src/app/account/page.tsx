@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { AccountGreeting } from "@/components/account/AccountGreeting";
+import { PromoCodeCard } from "@/components/account/PromoCodeCard";
 import { Icon, type IconName } from "@/components/ui/Icon";
 
 export const metadata: Metadata = {
@@ -23,6 +24,7 @@ export default function AccountPage() {
       <Container>
         <Breadcrumb items={[{ label: "Account" }]} />
         <AccountGreeting />
+        <PromoCodeCard />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-[800px]">
           {menuItems.map((item) => (
             <Link
