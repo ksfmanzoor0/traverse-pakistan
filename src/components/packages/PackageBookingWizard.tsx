@@ -608,7 +608,7 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
                       type="text"
                       value={promoInput}
                       onChange={(e) => setPromoInput(e.target.value)}
-                      placeholder="TraverseNN"
+                      placeholder="TraverserNN"
                       className="flex-1 h-11 px-3 rounded-[var(--radius-sm)] border border-[var(--border-default)] bg-[var(--bg-primary)] text-[14px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--primary)]"
                     />
                     <button
