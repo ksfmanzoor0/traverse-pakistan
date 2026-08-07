@@ -58,6 +58,27 @@ export async function POST(req: Request, { params }: { params: Promise<{ ref: st
     return NextResponse.json({ ok: false, error: "Promo already attached" }, { status: 409 });
   }
 
+  // Reject if the code is already sitting on ANOTHER of this user's bookings.
+  // Prevents applying the same one-time code to multiple pending bookings
+  // and then paying for each independently. If the user wants to move the
+  // code to a different booking, they need to cancel the existing one first.
+  const { data: existing } = await admin
+    .from("package_bookings")
+    .select("booking_ref")
+    .eq("promo_code" as never, promoRow.code as never)
+    .neq("booking_ref", ref)
+    .limit(1);
+  const otherAttached = (existing as unknown as Array<{ booking_ref: string }> | null) ?? [];
+  if (otherAttached.length > 0) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: `Promo already applied to booking ${otherAttached[0].booking_ref}. Cancel that booking to reuse the code.`,
+      },
+      { status: 409 }
+    );
+  }
+
   await admin
     .from("package_bookings")
     .update({ promo_code: promoRow.code, promo_discount_amount: promoRow.discount_amount } as never)
