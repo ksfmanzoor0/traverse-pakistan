@@ -67,6 +67,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ ref: st
     .select("booking_ref")
     .eq("promo_code" as never, promoRow.code as never)
     .neq("booking_ref", ref)
+    .neq("booking_status", "cancelled")
     .limit(1);
   const otherAttached = (existing as unknown as Array<{ booking_ref: string }> | null) ?? [];
   if (otherAttached.length > 0) {
