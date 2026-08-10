@@ -595,11 +595,15 @@ function StepDates({
   selectedDepartureId: string | null;
   onDepartureIdChange: (id: string) => void;
 }) {
-  const CITY_TO_CODE = { islamabad: "ISB", lahore: "LHE", karachi: "KHI", skardu: "KDU" } as const;
-  const addonSet = new Set(tour.addonCities ?? []);
-  const availableCities = (["islamabad", "lahore", "karachi", "skardu"] as const).filter(
-    (c) => addonSet.has(CITY_TO_CODE[c]) || tour.anchorCity === CITY_TO_CODE[c],
-  );
+  // Cities come from the tour (anchor + addon coverage) — no hardcoded universe.
+  const CODE_TO_CITY = { ISB: "islamabad", LHE: "lahore", KHI: "karachi", KDU: "skardu" } as const;
+  const codesInOrder: Array<"ISB" | "LHE" | "KHI" | "KDU"> = [];
+  if (tour.anchorCity) codesInOrder.push(tour.anchorCity);
+  for (const c of tour.addonCities ?? []) {
+    const code = c as "ISB" | "LHE" | "KHI" | "KDU";
+    if (!codesInOrder.includes(code)) codesInOrder.push(code);
+  }
+  const availableCities = codesInOrder.map((code) => CODE_TO_CITY[code]);
 
   return (
     <section className="space-y-4">

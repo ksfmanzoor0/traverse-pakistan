@@ -177,11 +177,16 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
         {(() => {
           // A city is bookable only if the addon layer covers it OR it is the
           // tour's anchor city (base ground price, no addon required).
-          const CITY_TO_CODE = { islamabad: "ISB", lahore: "LHE", karachi: "KHI", skardu: "KDU" } as const;
-          const addonSet = new Set(tour.addonCities ?? []);
-          const availableCities = (["islamabad", "lahore", "karachi", "skardu"] as const).filter(
-            (c) => addonSet.has(CITY_TO_CODE[c]) || tour.anchorCity === CITY_TO_CODE[c],
-          );
+          // Cities come straight from the tour data: anchor + addon coverage.
+          // No hardcoded universe list — adding a new home city to a tour is
+          // purely a DB change (insert tour_addons row + optionally set anchor).
+          const codesInOrder: Array<"ISB" | "LHE" | "KHI" | "KDU"> = [];
+          if (tour.anchorCity) codesInOrder.push(tour.anchorCity);
+          for (const c of tour.addonCities ?? []) {
+            const code = c as "ISB" | "LHE" | "KHI" | "KDU";
+            if (!codesInOrder.includes(code)) codesInOrder.push(code);
+          }
+          const availableCities = codesInOrder.map((code) => CODE_TO_CITY[code]);
           if (availableCities.length === 0) return null;
           if (availableCities.length < 2) return null;
           return (

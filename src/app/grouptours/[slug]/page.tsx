@@ -126,15 +126,17 @@ export default async function TripDetailPage({ params }: Props) {
                 const byCity = new Map<string, typeof upcomingDepartures>();
                 // Fan the single (NULL-city) row out into one pill per city
                 // that either the anchor covers or an addon covers.
+                // Iterate the tour's own city list — anchor first, then addons.
+                // Adding a new home city to a tour is purely a DB change.
                 const CODE_TO_CITY = { ISB: "islamabad", LHE: "lahore", KHI: "karachi", KDU: "skardu" } as const;
-                const supportedCities = new Set<string>();
-                if (tour.anchorCity) supportedCities.add(CODE_TO_CITY[tour.anchorCity]);
+                const codes: Array<"ISB" | "LHE" | "KHI" | "KDU"> = [];
+                if (tour.anchorCity) codes.push(tour.anchorCity);
                 for (const c of tour.addonCities ?? []) {
-                  const key = CODE_TO_CITY[c as "ISB" | "LHE" | "KHI" | "KDU"];
-                  if (key) supportedCities.add(key);
+                  const code = c as "ISB" | "LHE" | "KHI" | "KDU";
+                  if (!codes.includes(code)) codes.push(code);
                 }
-                for (const city of CITY_ORDER) {
-                  if (!supportedCities.has(city)) continue;
+                for (const code of codes) {
+                  const city = CODE_TO_CITY[code];
                   byCity.set(city, upcomingDepartures.map((d) => ({ ...d, departureCity: city as typeof d.departureCity })));
                 }
                 const cityKeys = Array.from(byCity.keys()).sort(
