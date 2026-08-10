@@ -121,16 +121,16 @@ export default async function TripDetailPage({ params }: Props) {
               {upcomingDepartures.length > 0 && (() => {
                 // Group by city so the strip shows one pill per city with all
                 // upcoming dates for that city inline, e.g. "ISB · Jul 18, Aug 14".
-                const CITY_CODE: Record<string, string> = { islamabad: "ISB", lahore: "LHE", karachi: "KHI" };
-                const CITY_ORDER = ["islamabad", "lahore", "karachi"];
+                const CITY_CODE: Record<string, string> = { islamabad: "ISB", lahore: "LHE", karachi: "KHI", skardu: "KDU" };
+                const CITY_ORDER = ["islamabad", "lahore", "karachi", "skardu"];
                 const byCity = new Map<string, typeof upcomingDepartures>();
                 // Fan the single (NULL-city) row out into one pill per city
                 // that either the anchor covers or an addon covers.
-                const CODE_TO_CITY = { ISB: "islamabad", LHE: "lahore", KHI: "karachi" } as const;
+                const CODE_TO_CITY = { ISB: "islamabad", LHE: "lahore", KHI: "karachi", KDU: "skardu" } as const;
                 const supportedCities = new Set<string>();
                 if (tour.anchorCity) supportedCities.add(CODE_TO_CITY[tour.anchorCity]);
                 for (const c of tour.addonCities ?? []) {
-                  const key = CODE_TO_CITY[c as "ISB" | "LHE" | "KHI"];
+                  const key = CODE_TO_CITY[c as "ISB" | "LHE" | "KHI" | "KDU"];
                   if (key) supportedCities.add(key);
                 }
                 for (const city of CITY_ORDER) {

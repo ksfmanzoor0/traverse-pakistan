@@ -15,7 +15,7 @@ function toTour(
   r2Images?: TourImage[],
   hasAddons?: boolean,
   addonCities?: string[],
-  addonCostByCity?: Partial<Record<"ISB" | "LHE" | "KHI", number>>,
+  addonCostByCity?: Partial<Record<"ISB" | "LHE" | "KHI" | "KDU", number>>,
 ): Tour {
   const prices = priceMap?.get(row.slug);
   return {
@@ -72,7 +72,7 @@ function toTour(
 interface AddonCoverage {
   hasAddons: boolean;
   cities: string[];
-  costByCity: Partial<Record<"ISB" | "LHE" | "KHI", number>>;
+  costByCity: Partial<Record<"ISB" | "LHE" | "KHI" | "KDU", number>>;
 }
 
 async function fetchAddonCoverage(

@@ -27,9 +27,9 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
   const [children, setChildren] = useState(0);
   const [singleRooms, setSingleRooms] = useState(0);
   const [singleOccupancyRooms, setSingleOccupancyRooms] = useState(0);
-  const CODE_TO_CITY = { ISB: "islamabad", LHE: "lahore", KHI: "karachi" } as const;
-  const firstAddonCode = (tour.addonCities?.[0] ?? null) as "ISB" | "LHE" | "KHI" | null;
-  const initialDeparture: "islamabad" | "lahore" | "karachi" =
+  const CODE_TO_CITY = { ISB: "islamabad", LHE: "lahore", KHI: "karachi", KDU: "skardu" } as const;
+  const firstAddonCode = (tour.addonCities?.[0] ?? null) as "ISB" | "LHE" | "KHI" | "KDU" | null;
+  const initialDeparture: "islamabad" | "lahore" | "karachi" | "skardu" =
     (tour.anchorCity ? CODE_TO_CITY[tour.anchorCity] : null)
     ?? (firstAddonCode ? CODE_TO_CITY[firstAddonCode] : null)
     ?? "islamabad";
@@ -102,8 +102,8 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
   // Live transport-addon cost for the currently selected city, so the total
   // already reflects the flight/bus delta before the wizard opens.
   const [addonPerPerson, setAddonPerPerson] = useState(0);
-  const cityToHome: Record<"islamabad" | "lahore" | "karachi", "ISB" | "LHE" | "KHI"> = {
-    islamabad: "ISB", lahore: "LHE", karachi: "KHI",
+  const cityToHome: Record<"islamabad" | "lahore" | "karachi" | "skardu", "ISB" | "LHE" | "KHI" | "KDU"> = {
+    islamabad: "ISB", lahore: "LHE", karachi: "KHI", skardu: "KDU",
   };
   const homeCityCode = cityToHome[departure];
   const startDateForQuote = liveDeparture?.departureDate ?? tour.departureDate;
@@ -177,9 +177,9 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
         {(() => {
           // A city is bookable only if the addon layer covers it OR it is the
           // tour's anchor city (base ground price, no addon required).
-          const CITY_TO_CODE = { islamabad: "ISB", lahore: "LHE", karachi: "KHI" } as const;
+          const CITY_TO_CODE = { islamabad: "ISB", lahore: "LHE", karachi: "KHI", skardu: "KDU" } as const;
           const addonSet = new Set(tour.addonCities ?? []);
-          const availableCities = (["islamabad", "lahore", "karachi"] as const).filter(
+          const availableCities = (["islamabad", "lahore", "karachi", "skardu"] as const).filter(
             (c) => addonSet.has(CITY_TO_CODE[c]) || tour.anchorCity === CITY_TO_CODE[c],
           );
           if (availableCities.length === 0) return null;
@@ -189,7 +189,7 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
               <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-2">
                 Departure city
               </label>
-              <div className={`grid gap-2 ${availableCities.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+              <div className={`grid gap-2 ${availableCities.length >= 4 ? "grid-cols-2" : availableCities.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
                 {availableCities.map((city) => (
                   <button
                     key={city}

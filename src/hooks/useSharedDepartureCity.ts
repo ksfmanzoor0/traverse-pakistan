@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 // different tour doesn't inherit a stale value (e.g. LHE picked on tour A
 // wouldn't leak into tour B whose anchor is KHI).
 
-export type SharedDepartureCity = "islamabad" | "lahore" | "karachi";
+export type SharedDepartureCity = "islamabad" | "lahore" | "karachi" | "skardu";
 
 const EVENT = "tp-departure-city-change";
 

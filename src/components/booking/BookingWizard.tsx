@@ -146,13 +146,13 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
 
   // All cities point at the same shared departure inventory now.
   const firstDeparture = allDepartures[0] ?? null;
-  const cityDepartures = { islamabad: firstDeparture, lahore: firstDeparture, karachi: firstDeparture };
+  const cityDepartures = { islamabad: firstDeparture, lahore: firstDeparture, karachi: firstDeparture, skardu: firstDeparture };
 
   // Transport add-on cost (flight or bus) for the chosen home city.
   const [addonPerPerson, setAddonPerPerson] = useState(0);
 
-  const cityToHome: Record<DepartureCity, "ISB" | "LHE" | "KHI"> = {
-    islamabad: "ISB", lahore: "LHE", karachi: "KHI",
+  const cityToHome: Record<DepartureCity, "ISB" | "LHE" | "KHI" | "KDU"> = {
+    islamabad: "ISB", lahore: "LHE", karachi: "KHI", skardu: "KDU",
   };
   const homeCityCode = cityToHome[draft.departureCity];
   const startDateForQuote = allDepartures[0]?.departureDate ?? tour.departureDate;
@@ -585,7 +585,7 @@ function StepDates({
 }: {
   tour: Tour;
   liveDeparture: Departure | null;
-  cityDepartures: { islamabad: Departure | null; lahore: Departure | null; karachi: Departure | null };
+  cityDepartures: { islamabad: Departure | null; lahore: Departure | null; karachi: Departure | null; skardu: Departure | null };
   departuresLoaded: boolean;
   departureCity: DepartureCity;
   onCityChange: (city: DepartureCity) => void;
@@ -595,9 +595,9 @@ function StepDates({
   selectedDepartureId: string | null;
   onDepartureIdChange: (id: string) => void;
 }) {
-  const CITY_TO_CODE = { islamabad: "ISB", lahore: "LHE", karachi: "KHI" } as const;
+  const CITY_TO_CODE = { islamabad: "ISB", lahore: "LHE", karachi: "KHI", skardu: "KDU" } as const;
   const addonSet = new Set(tour.addonCities ?? []);
-  const availableCities = (["islamabad", "lahore", "karachi"] as const).filter(
+  const availableCities = (["islamabad", "lahore", "karachi", "skardu"] as const).filter(
     (c) => addonSet.has(CITY_TO_CODE[c]) || tour.anchorCity === CITY_TO_CODE[c],
   );
 
@@ -608,7 +608,7 @@ function StepDates({
           <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-2">
             Departure city
           </label>
-          <div className={`grid gap-3 ${availableCities.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+          <div className={`grid gap-3 ${availableCities.length >= 4 ? "grid-cols-2" : availableCities.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
             {availableCities.map((city) => {
               const active = departureCity === city;
               const dep = cityDepartures[city];
