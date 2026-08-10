@@ -122,7 +122,6 @@ export default async function TripDetailPage({ params }: Props) {
                 // Group by city so the strip shows one pill per city with all
                 // upcoming dates for that city inline, e.g. "ISB · Jul 18, Aug 14".
                 const CITY_CODE: Record<string, string> = { islamabad: "ISB", lahore: "LHE", karachi: "KHI", skardu: "KDU" };
-                const CITY_ORDER = ["islamabad", "lahore", "karachi", "skardu"];
                 const byCity = new Map<string, typeof upcomingDepartures>();
                 // Fan the single (NULL-city) row out into one pill per city
                 // that either the anchor covers or an addon covers.
@@ -139,9 +138,9 @@ export default async function TripDetailPage({ params }: Props) {
                   const city = CODE_TO_CITY[code];
                   byCity.set(city, upcomingDepartures.map((d) => ({ ...d, departureCity: city as typeof d.departureCity })));
                 }
-                const cityKeys = Array.from(byCity.keys()).sort(
-                  (a, b) => (CITY_ORDER.indexOf(a) - CITY_ORDER.indexOf(b)),
-                );
+                // Map preserves insertion order — anchor was inserted first,
+                // then addonCities in the order returned by the tour service.
+                const cityKeys = Array.from(byCity.keys());
                 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
                 return (
                   <div className="mt-4">

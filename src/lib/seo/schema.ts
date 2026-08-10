@@ -186,7 +186,7 @@ export function breadcrumbSchema(items: BreadcrumbItem[]): SchemaNode {
 
 // ── TouristTrip (group tour) ──
 
-const CITY_LABEL: Record<"ISB" | "LHE" | "KHI" | "KDU" | "KDU", string> = {
+const CITY_LABEL: Record<"ISB" | "LHE" | "KHI" | "KDU", string> = {
   ISB: "Islamabad", LHE: "Lahore", KHI: "Karachi", KDU: "Skardu",
 };
 
@@ -204,10 +204,12 @@ function buildTourOffers(tour: Tour, url: string): SchemaNode {
   // Anchor city pays exactly base with no addon.
   if (tour.anchorCity) cityTotals.push({ city: tour.anchorCity, total: base });
 
-  for (const c of ["ISB", "LHE", "KHI", "KDU"] as const) {
-    if (tour.anchorCity === c) continue;
-    const cost = perCity[c];
-    if (typeof cost === "number") cityTotals.push({ city: c, total: base + cost });
+  // Iterate the tour's own addon coverage — no hardcoded city universe.
+  for (const c of tour.addonCities ?? []) {
+    const code = c as "ISB" | "LHE" | "KHI" | "KDU";
+    if (tour.anchorCity === code) continue;
+    const cost = perCity[code];
+    if (typeof cost === "number") cityTotals.push({ city: code, total: base + cost });
   }
 
   if (cityTotals.length < 2) {
