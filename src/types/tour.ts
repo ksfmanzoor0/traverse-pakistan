@@ -83,4 +83,10 @@ export interface Tour {
   /** Home-city codes ({"ISB","LHE","KHI"}) that at least one addon covers.
    * Derived from tour_addons.applies_to_departures. */
   addonCities?: string[];
+  /** Statically-computable per-home-city transport add-on totals (PKR).
+   * Only populated when EVERY relevant addon leg carries a farePerPerson
+   * (bus and locked-fare flight cases). Scraper-driven flight addons don't
+   * populate this — their price changes daily and would go stale in caches
+   * or JSON-LD. Consumers: SEO schema AggregateOffer + rich price signals. */
+  addonCostByCity?: Record<"ISB" | "LHE" | "KHI", number>;
 }
