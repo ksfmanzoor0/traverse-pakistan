@@ -57,7 +57,7 @@ export function PromoAnnouncementBar() {
       href={signInHref}
       role="banner"
       aria-label="Sign up free to unlock PKR 14,000 off your first package"
-      className="relative flex items-center justify-center gap-2 h-9 sm:h-11 px-10 sm:px-12 bg-[var(--primary)] text-[var(--text-inverse)] text-[12px] sm:text-[13px] font-semibold hover:bg-[var(--primary-hover)] transition-colors"
+      className="relative flex items-center justify-center gap-2 h-9 px-10 sm:px-12 bg-[var(--primary)] text-[var(--text-inverse)] text-[12px] sm:text-[13px] font-semibold hover:bg-[var(--primary-hover)] transition-colors"
     >
       <span aria-hidden className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--text-inverse)] opacity-80" />
       <span className="sm:hidden truncate">
