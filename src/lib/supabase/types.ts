@@ -40,6 +40,10 @@ export type TourRow = {
     pickupDescription: string;
   };
   featured: boolean;
+  // City that pays the ground base with no addon required (e.g. "ISB" for
+  // most legacy tours; "KHI" for the Gwadar coastal tour). null when every
+  // home city needs a transport addon (e.g. the Skardu fly-in tour).
+  anchor_city: "ISB" | "LHE" | "KHI" | null;
   meta_title: string;
   meta_description: string;
   created_at: string;

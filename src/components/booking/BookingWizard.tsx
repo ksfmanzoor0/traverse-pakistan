@@ -616,8 +616,10 @@ function StepDates({
   selectedDepartureId: string | null;
   onDepartureIdChange: (id: string) => void;
 }) {
-  const availableCities = (["islamabad", "lahore", "karachi"] as const).filter((c) =>
-    departuresLoaded ? cityDepartures[c] !== null : c !== "karachi" && !!tour.pricing.lahore,
+  const CITY_TO_CODE = { islamabad: "ISB", lahore: "LHE", karachi: "KHI" } as const;
+  const addonSet = new Set(tour.addonCities ?? []);
+  const availableCities = (["islamabad", "lahore", "karachi"] as const).filter(
+    (c) => addonSet.has(CITY_TO_CODE[c]) || tour.anchorCity === CITY_TO_CODE[c],
   );
 
   return (

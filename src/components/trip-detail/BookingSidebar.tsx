@@ -27,7 +27,13 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
   const [children, setChildren] = useState(0);
   const [singleRooms, setSingleRooms] = useState(0);
   const [singleOccupancyRooms, setSingleOccupancyRooms] = useState(0);
-  const [departure, setDeparture] = useSharedDepartureCity("islamabad");
+  const CODE_TO_CITY = { ISB: "islamabad", LHE: "lahore", KHI: "karachi" } as const;
+  const firstAddonCode = (tour.addonCities?.[0] ?? null) as "ISB" | "LHE" | "KHI" | null;
+  const initialDeparture: "islamabad" | "lahore" | "karachi" =
+    (tour.anchorCity ? CODE_TO_CITY[tour.anchorCity] : null)
+    ?? (firstAddonCode ? CODE_TO_CITY[firstAddonCode] : null)
+    ?? "islamabad";
+  const [departure, setDeparture] = useSharedDepartureCity(initialDeparture);
   const [allDepartures, setAllDepartures] = useState<Departure[]>([]);
   const [selectedDepartureId, setSelectedDepartureId] = useState<string | null>(null);
   const [departuresLoaded, setDeparturesLoaded] = useState(false);
@@ -166,8 +172,14 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
         <hr className="my-5 border-[var(--border-default)]" />
 
         {(() => {
-          // Every tour is now addon-driven; surface all three city chips.
-          const availableCities = (["islamabad", "lahore", "karachi"] as const);
+          // A city is bookable only if the addon layer covers it OR it is the
+          // tour's anchor city (base ground price, no addon required).
+          const CITY_TO_CODE = { islamabad: "ISB", lahore: "LHE", karachi: "KHI" } as const;
+          const addonSet = new Set(tour.addonCities ?? []);
+          const availableCities = (["islamabad", "lahore", "karachi"] as const).filter(
+            (c) => addonSet.has(CITY_TO_CODE[c]) || tour.anchorCity === CITY_TO_CODE[c],
+          );
+          if (availableCities.length === 0) return null;
           if (availableCities.length < 2) return null;
           return (
             <div className="mb-4">

@@ -74,6 +74,12 @@ export interface Tour {
   metaDescription: string;
   updatedAt?: string;
   /** True when the tour has tour_addons rows (flight/bus pickers at checkout).
-   * Card price shows base + "+ flights" chip instead of the bare number. */
+   * Card price shows base + "+ transport" chip instead of the bare number. */
   hasAddons?: boolean;
+  /** City that pays the ground base with no addon (e.g. "ISB" for most tours,
+   * "KHI" for Gwadar). null when every home city requires a transport addon. */
+  anchorCity?: "ISB" | "LHE" | "KHI" | null;
+  /** Home-city codes ({"ISB","LHE","KHI"}) that at least one addon covers.
+   * Derived from tour_addons.applies_to_departures. */
+  addonCities?: string[];
 }

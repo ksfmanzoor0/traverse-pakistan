@@ -13,6 +13,7 @@ function toTour(
   priceMap?: Map<string, { islamabad: number; lahore: number | null; earliestDate: string | null; singleSupplement: number | null }>,
   r2Images?: TourImage[],
   hasAddons?: boolean,
+  addonCities?: string[],
 ): Tour {
   const prices = priceMap?.get(row.slug);
   return {
@@ -55,20 +56,32 @@ function toTour(
     metaDescription: row.meta_description,
     updatedAt: row.updated_at ?? undefined,
     hasAddons,
+    anchorCity: row.anchor_city,
+    addonCities,
   };
 }
 
-// One roundtrip to derive which of the given slugs have any tour_addons rows.
-// Kept as a set so the caller can lookup by slug in O(1).
-async function fetchAddonSlugs(supabase: ReturnType<typeof getSupabaseAnon>, slugs: string[]): Promise<Set<string>> {
-  if (slugs.length === 0) return new Set();
+// One roundtrip to derive addon coverage per slug. Returns a map slug →
+// { hasAddons, cities } where cities is the union of applies_to_departures
+// across every addon row for that tour.
+async function fetchAddonCoverage(
+  supabase: ReturnType<typeof getSupabaseAnon>,
+  slugs: string[],
+): Promise<Map<string, { hasAddons: boolean; cities: string[] }>> {
+  const map = new Map<string, { hasAddons: boolean; cities: string[] }>();
+  if (slugs.length === 0) return map;
   const { data } = await supabase
     .from("tour_addons")
-    .select("tour_slug")
+    .select("tour_slug, applies_to_departures")
     .in("tour_slug", slugs);
-  const set = new Set<string>();
-  for (const r of (data ?? []) as { tour_slug: string }[]) set.add(r.tour_slug);
-  return set;
+  for (const r of (data ?? []) as { tour_slug: string; applies_to_departures: string[] }[]) {
+    const entry = map.get(r.tour_slug) ?? { hasAddons: true, cities: [] as string[] };
+    for (const c of r.applies_to_departures ?? []) {
+      if (!entry.cities.includes(c)) entry.cities.push(c);
+    }
+    map.set(r.tour_slug, entry);
+  }
+  return map;
 }
 
 function toItinerary(tourSlug: string, rows: TourItineraryDayRow[]): TourItinerary {
@@ -143,8 +156,11 @@ const _fetchAllTours = unstable_cache(
     if (error) throw new Error(`getAllTours: ${error.message}`);
     const rows = data as TourRow[];
     const priceMap = await buildPriceMap(supabase, rows.map((r) => r.slug));
-    const addonSlugs = await fetchAddonSlugs(supabase, rows.map((r) => r.slug));
-    return rows.map((r) => toTour(r, priceMap, undefined, addonSlugs.has(r.slug)));
+    const coverage = await fetchAddonCoverage(supabase, rows.map((r) => r.slug));
+    return rows.map((r) => {
+      const c = coverage.get(r.slug);
+      return toTour(r, priceMap, undefined, !!c, c?.cities);
+    });
   },
   ["all-tours"],
   { tags: ["tours"], revalidate: 3600 }
@@ -154,17 +170,18 @@ export const getAllTours = cache(_fetchAllTours);
 
 export const getTourBySlug = cache(async (slug: string): Promise<Tour | null> => {
   const supabase = getSupabaseAnon();
-  const [{ data, error }, r2Urls, priceMap, addonSlugs] = await Promise.all([
+  const [{ data, error }, r2Urls, priceMap, coverage] = await Promise.all([
     supabase.from("tours").select("*").eq("slug", slug).single(),
     listR2Images(`tours/${slug}/`),
     buildPriceMap(supabase, [slug]),
-    fetchAddonSlugs(supabase, [slug]),
+    fetchAddonCoverage(supabase, [slug]),
   ]);
   if (error?.code === "PGRST116") return null;
   if (error) throw new Error(`getTourBySlug: ${error.message}`);
   const row = data as TourRow;
   const r2Images = r2Urls.length ? buildImagesFromR2(r2Urls, row.name) : undefined;
-  return toTour(row, priceMap, r2Images, addonSlugs.has(row.slug));
+  const c = coverage.get(row.slug);
+  return toTour(row, priceMap, r2Images, !!c, c?.cities);
 });
 
 export const getToursByDestination = cache(async (destinationSlug: string): Promise<Tour[]> => {
