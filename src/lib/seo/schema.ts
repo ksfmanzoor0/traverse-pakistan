@@ -186,8 +186,8 @@ export function breadcrumbSchema(items: BreadcrumbItem[]): SchemaNode {
 
 // ── TouristTrip (group tour) ──
 
-const CITY_LABEL: Record<"ISB" | "LHE" | "KHI", string> = {
-  ISB: "Islamabad", LHE: "Lahore", KHI: "Karachi",
+const CITY_LABEL: Record<"ISB" | "LHE" | "KHI" | "KDU", string> = {
+  ISB: "Islamabad", LHE: "Lahore", KHI: "Karachi", KDU: "Skardu",
 };
 
 // If we have statically-computable per-city addon totals, emit an
@@ -198,16 +198,18 @@ const CITY_LABEL: Record<"ISB" | "LHE" | "KHI", string> = {
 function buildTourOffers(tour: Tour, url: string): SchemaNode {
   const base = tour.pricing.base;
   const validFrom = new Date().toISOString().slice(0, 10);
-  const perCity: Partial<Record<"ISB" | "LHE" | "KHI", number>> = tour.addonCostByCity ?? {};
-  const cityTotals: Array<{ city: "ISB" | "LHE" | "KHI"; total: number }> = [];
+  const perCity: Partial<Record<"ISB" | "LHE" | "KHI" | "KDU", number>> = tour.addonCostByCity ?? {};
+  const cityTotals: Array<{ city: "ISB" | "LHE" | "KHI" | "KDU"; total: number }> = [];
 
   // Anchor city pays exactly base with no addon.
   if (tour.anchorCity) cityTotals.push({ city: tour.anchorCity, total: base });
 
-  for (const c of ["ISB", "LHE", "KHI"] as const) {
-    if (tour.anchorCity === c) continue;
-    const cost = perCity[c];
-    if (typeof cost === "number") cityTotals.push({ city: c, total: base + cost });
+  // Iterate the tour's own addon coverage — no hardcoded city universe.
+  for (const c of tour.addonCities ?? []) {
+    const code = c as "ISB" | "LHE" | "KHI" | "KDU";
+    if (tour.anchorCity === code) continue;
+    const cost = perCity[code];
+    if (typeof cost === "number") cityTotals.push({ city: code, total: base + cost });
   }
 
   if (cityTotals.length < 2) {

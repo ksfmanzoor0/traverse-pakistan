@@ -3,7 +3,7 @@ import { quoteTourAddons, type HomeCity } from "@/services/addon-cost.service";
 
 export const dynamic = "force-dynamic";
 
-const VALID_HOMES: HomeCity[] = ["ISB", "LHE", "KHI"];
+const VALID_HOMES: HomeCity[] = ["ISB", "LHE", "KHI", "KDU"];
 
 export async function GET(req: NextRequest) {
   const tourSlug = req.nextUrl.searchParams.get("tourSlug");

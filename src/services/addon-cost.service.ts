@@ -2,7 +2,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import type { FlightAirline, FlightRouteType } from "@/types/flight";
 import type { PackageAddonRow, TourAddonRow } from "@/lib/supabase/types";
 
-export type HomeCity = "ISB" | "LHE" | "KHI";
+export type HomeCity = "ISB" | "LHE" | "KHI" | "KDU";
 
 export interface FlightLegConfig {
   from: string;             // "{home}" or fixed airport code

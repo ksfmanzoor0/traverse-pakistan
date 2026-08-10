@@ -1,6 +1,6 @@
 import type { TourImage } from "./tour";
 
-export type DepartureCity = "islamabad" | "lahore" | "karachi";
+export type DepartureCity = "islamabad" | "lahore" | "karachi" | "skardu";
 
 export interface ItineraryStop {
   name: string;

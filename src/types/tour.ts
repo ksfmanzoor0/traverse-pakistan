@@ -79,7 +79,7 @@ export interface Tour {
   hasAddons?: boolean;
   /** City that pays the ground base with no addon (e.g. "ISB" for most tours,
    * "KHI" for Gwadar). null when every home city requires a transport addon. */
-  anchorCity?: "ISB" | "LHE" | "KHI" | null;
+  anchorCity?: "ISB" | "LHE" | "KHI" | "KDU" | null;
   /** Home-city codes ({"ISB","LHE","KHI"}) that at least one addon covers.
    * Derived from tour_addons.applies_to_departures. */
   addonCities?: string[];
@@ -88,5 +88,5 @@ export interface Tour {
    * (bus and locked-fare flight cases). Scraper-driven flight addons don't
    * populate this — their price changes daily and would go stale in caches
    * or JSON-LD. Consumers: SEO schema AggregateOffer + rich price signals. */
-  addonCostByCity?: Record<"ISB" | "LHE" | "KHI", number>;
+  addonCostByCity?: Record<"ISB" | "LHE" | "KHI" | "KDU", number>;
 }

@@ -1,7 +1,7 @@
 export type DepartureStatus = "open" | "closed" | "cancelled";
 export type BookingStatus = "pending" | "confirmed" | "cancelled" | "refunded" | "deposit_paid";
 export type PaymentStatus = "initiated" | "succeeded" | "failed" | "refunded";
-export type DepartureCity = "islamabad" | "lahore" | "karachi";
+export type DepartureCity = "islamabad" | "lahore" | "karachi" | "skardu";
 
 export type TourRow = {
   id: string;
@@ -43,7 +43,7 @@ export type TourRow = {
   // City that pays the ground base with no addon required (e.g. "ISB" for
   // most legacy tours; "KHI" for the Gwadar coastal tour). null when every
   // home city needs a transport addon (e.g. the Skardu fly-in tour).
-  anchor_city: "ISB" | "LHE" | "KHI" | null;
+  anchor_city: "ISB" | "LHE" | "KHI" | "KDU" | null;
   meta_title: string;
   meta_description: string;
   created_at: string;
@@ -101,7 +101,7 @@ export type BookingRow = {
   amount_paid: number;
   payment_confirmed_via: "ipn" | "polling" | null;
   payment_attempts: number;
-  home_city: "ISB" | "LHE" | "KHI" | null;
+  home_city: "ISB" | "LHE" | "KHI" | "KDU" | null;
   resolved_addons: unknown | null;
 };
 

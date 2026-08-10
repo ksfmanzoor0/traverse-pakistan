@@ -301,8 +301,11 @@ function addDays(iso: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-type HomeCity = "ISB" | "LHE" | "KHI";
-const HOME_TO_CITY_ONLY: Record<HomeCity, string> = {
+// Package-hotel allocation only cares about the three package-supported
+// home cities. KDU (Skardu) is a tour-only home city; callers passing
+// KDU should not reach this function.
+type HomeCity = "ISB" | "LHE" | "KHI" | "KDU";
+const HOME_TO_CITY_ONLY: Partial<Record<HomeCity, string>> = {
   ISB: "islamabad",
   LHE: "lahore",
   KHI: "karachi",
@@ -357,7 +360,7 @@ export async function quotePackageHotels(args: {
   // ISB-via-Babusar row and an LHE-via-KKH row, each tagged via city_only).
   // Without this filter the engine would sum hotel cost on both rows and
   // double-count the night. Rows with city_only IS NULL apply to every home.
-  const homeCity = args.homeCity ? HOME_TO_CITY_ONLY[args.homeCity] : null;
+  const homeCity = args.homeCity ? HOME_TO_CITY_ONLY[args.homeCity] ?? null : null;
   const rows = allRows.filter((r) =>
     !r.city_only || r.city_only.length === 0 || (homeCity !== null && r.city_only.includes(homeCity)),
   );

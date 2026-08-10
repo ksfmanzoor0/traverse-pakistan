@@ -300,7 +300,9 @@ export const quotePackage = unstable_cache(
 
 const HOMES_REPRICE: HomeCity[] = ["ISB", "LHE", "KHI"];
 const TIERS_REPRICE: Tier[] = ["deluxe", "luxury"];
-const HOME_TO_PRICING_KEY: Record<HomeCity, "islamabad" | "lahore" | "karachi"> = {
+// Package pricing engine still stores per-city figures under ISB/LHE/KHI.
+// KDU has no package-pricing key today; treat it as unmapped and skip.
+const HOME_TO_PRICING_KEY: Partial<Record<HomeCity, "islamabad" | "lahore" | "karachi">> = {
   ISB: "islamabad",
   LHE: "lahore",
   KHI: "karachi",
@@ -370,7 +372,9 @@ async function repriceOnePackage(slug: string, startDate: string): Promise<Repri
         skipped.push({ tier, home, reason: `non-positive perPerson (${quote.perPerson})` });
         continue;
       }
-      tierBlock[HOME_TO_PRICING_KEY[home]] = quote.perPerson;
+      const key = HOME_TO_PRICING_KEY[home];
+      if (!key) { skipped.push({ tier, home, reason: `home ${home} has no package pricing key` }); continue; }
+      tierBlock[key] = quote.perPerson;
       written += 1;
     }
     if (Object.keys(tierBlock).length > 0) next[tier] = tierBlock;
