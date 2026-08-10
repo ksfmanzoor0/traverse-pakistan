@@ -62,7 +62,7 @@ function AnimatedNumber({ value, suffix, isDecimal }: { value: number; suffix: s
 
 export function StatsBar() {
   return (
-    <section className="py-5 sm:py-6 bg-[var(--bg-primary)] border-b border-[var(--border-default)]">
+    <section className="py-3 sm:py-4 bg-[var(--bg-primary)] border-b border-[var(--border-default)]">
       <Container>
         <div className="flex items-center justify-between gap-6 overflow-x-auto no-scrollbar">
           <div className="flex flex-col items-center text-center min-w-[160px]">
@@ -70,7 +70,7 @@ export function StatsBar() {
               <Icon name="shield-check" size="xl" color="var(--primary)" />
               2025
             </span>
-            <span className="text-[12px] font-medium text-[var(--text-tertiary)] mt-2 whitespace-nowrap tracking-[0.02em]">
+            <span className="text-[12px] font-medium text-[var(--text-tertiary)] mt-1.5 whitespace-nowrap tracking-[0.02em]">
               TripAdvisor Travelers&apos; Choice Award
             </span>
           </div>
@@ -90,7 +90,7 @@ export function StatsBar() {
                   />
                 )}
               </span>
-              <span className="text-[12px] font-medium text-[var(--text-tertiary)] mt-2 whitespace-nowrap tracking-[0.02em]">
+              <span className="text-[12px] font-medium text-[var(--text-tertiary)] mt-1.5 whitespace-nowrap tracking-[0.02em]">
                 {stat.label}
               </span>
             </div>
