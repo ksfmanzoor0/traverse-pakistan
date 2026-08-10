@@ -150,7 +150,7 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
 
         <div className="mt-3 flex items-baseline gap-2 flex-wrap">
           <span className="text-[26px] font-bold text-[var(--text-primary)] tabular-nums leading-none">
-            {formatPrice(pricing.basePrice)}
+            {formatPrice(pricing.basePrice + pricing.addonPerPerson)}
           </span>
           {tour.originalPrice && (
             <span className="text-base text-[var(--text-tertiary)] line-through tabular-nums">
@@ -307,6 +307,12 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
             <div className="flex items-center justify-between text-[12px] text-[var(--text-secondary)]">
               <span>Private rooms</span>
               <span className="tabular-nums">{formatPrice(pricing.singleSupplementTotal)}</span>
+            </div>
+          )}
+          {pricing.addonSubtotal > 0 && (
+            <div className="flex items-center justify-between text-[12px] text-[var(--text-secondary)]">
+              <span>Transport ({homeCityCode}) × {pricing.totalTravelers}</span>
+              <span className="tabular-nums">{formatPrice(pricing.addonSubtotal)}</span>
             </div>
           )}
           <div className="flex items-center justify-between pt-2 border-t border-[var(--border-default)]">
