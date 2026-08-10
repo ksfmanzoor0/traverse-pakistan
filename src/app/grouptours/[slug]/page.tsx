@@ -222,7 +222,7 @@ export default async function TripDetailPage({ params }: Props) {
                 <h2 className="text-xl font-bold text-[var(--text-primary)] mb-6">
                   Day-by-Day Itinerary
                 </h2>
-                <ItineraryAccordion days={itinerary.days} />
+                <ItineraryAccordion days={itinerary.days} tourSlug={tour.slug} />
               </section>
             )}
 

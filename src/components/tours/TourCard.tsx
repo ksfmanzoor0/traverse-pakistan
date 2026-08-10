@@ -159,7 +159,9 @@ export function TourCard({ tour, variant = "carousel", className }: TourCardProp
                   )}
                 </span>
               )}
-              {tour.hasAddons && (
+              {/* Only surface when the tour actually has an addon that would
+                  add cost on top for at least one non-anchor city. */}
+              {tour.hasAddons && (tour.addonCities?.length ?? 0) > 0 && (
                 <span className="text-[11px] font-medium text-[var(--text-tertiary)]">
                   + transport
                 </span>

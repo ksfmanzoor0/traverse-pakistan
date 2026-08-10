@@ -7,17 +7,19 @@ import { useSharedDepartureCity } from "@/hooks/useSharedDepartureCity";
 
 interface ItineraryAccordionProps {
   days: ItineraryDay[];
+  tourSlug: string;
 }
 
 function formatDescription(text: string): string[] {
   return text.split('\n').map((l) => l.trim()).filter(Boolean);
 }
 
-export function ItineraryAccordion({ days }: ItineraryAccordionProps) {
+export function ItineraryAccordion({ days, tourSlug }: ItineraryAccordionProps) {
   // Read the shared departure-city selection (written by BookingSidebar).
   // Stops without cityOnly show for everyone; stops with cityOnly show only
-  // when it matches the selection.
-  const [city] = useSharedDepartureCity("islamabad");
+  // when it matches the selection. Scoped by tourSlug so navigating between
+  // tours doesn't inherit a stale city from a previous page.
+  const [city] = useSharedDepartureCity("islamabad", tourSlug);
 
   return (
     <div className="border border-[var(--border-default)] rounded-xl overflow-hidden">

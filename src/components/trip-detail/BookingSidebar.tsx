@@ -33,7 +33,7 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
     (tour.anchorCity ? CODE_TO_CITY[tour.anchorCity] : null)
     ?? (firstAddonCode ? CODE_TO_CITY[firstAddonCode] : null)
     ?? "islamabad";
-  const [departure, setDeparture] = useSharedDepartureCity(initialDeparture);
+  const [departure, setDeparture] = useSharedDepartureCity(initialDeparture, tour.slug);
   const [allDepartures, setAllDepartures] = useState<Departure[]>([]);
   const [selectedDepartureId, setSelectedDepartureId] = useState<string | null>(null);
   const [departuresLoaded, setDeparturesLoaded] = useState(false);
@@ -99,23 +99,26 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
 
   const liveDeparture = departuresForCity.find((d) => d.id === selectedDepartureId) ?? departuresForCity[0] ?? null;
 
-  // Live flight-addon cost for the currently selected city, so the sidebar
-  // total already reflects the "+ flights" delta before the wizard opens.
+  // Live transport-addon cost for the currently selected city, so the total
+  // already reflects the flight/bus delta before the wizard opens.
   const [addonPerPerson, setAddonPerPerson] = useState(0);
   const cityToHome: Record<"islamabad" | "lahore" | "karachi", "ISB" | "LHE" | "KHI"> = {
     islamabad: "ISB", lahore: "LHE", karachi: "KHI",
   };
   const homeCityCode = cityToHome[departure];
   const startDateForQuote = liveDeparture?.departureDate ?? tour.departureDate;
+  // Skip the fetch for the anchor city — no addon applies (perf B).
+  const shouldFetchAddon = tour.anchorCity !== homeCityCode;
   useEffect(() => {
     if (!startDateForQuote) return;
-    let cancelled = false;
-    fetch(`/api/tours/quote-addons?tourSlug=${encodeURIComponent(tour.slug)}&homeCity=${homeCityCode}&startDate=${startDateForQuote}`)
+    if (!shouldFetchAddon) { setAddonPerPerson(0); return; }
+    const ctrl = new AbortController();
+    fetch(`/api/tours/quote-addons?tourSlug=${encodeURIComponent(tour.slug)}&homeCity=${homeCityCode}&startDate=${startDateForQuote}`, { signal: ctrl.signal })
       .then((r) => (r.ok ? r.json() : null))
-      .then((q) => { if (!cancelled && q) setAddonPerPerson(q.addonCostPerPerson ?? 0); })
-      .catch(() => { if (!cancelled) setAddonPerPerson(0); });
-    return () => { cancelled = true; };
-  }, [tour.slug, tour.hasAddons, homeCityCode, startDateForQuote]);
+      .then((q) => { if (q) setAddonPerPerson(q.addonCostPerPerson ?? 0); })
+      .catch((e) => { if (e?.name !== "AbortError") console.error("[sidebar addon fetch]", e); });
+    return () => ctrl.abort();
+  }, [tour.slug, homeCityCode, startDateForQuote, shouldFetchAddon]);
 
   const pricing = calculatePricing({
     tour,

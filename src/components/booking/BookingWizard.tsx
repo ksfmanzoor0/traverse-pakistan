@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { formatPrice, getWhatsAppUrl } from "@/lib/utils";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { createBooking, getUpcomingOpenDepartures } from "@/services/booking.service";
+import { getUpcomingOpenDepartures } from "@/services/booking.service";
 import type { Departure, DepartureCity } from "@/types/booking";
 import type { Tour } from "@/types/tour";
 import type { Review } from "@/types/review";
@@ -148,44 +148,29 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
   const firstDeparture = allDepartures[0] ?? null;
   const cityDepartures = { islamabad: firstDeparture, lahore: firstDeparture, karachi: firstDeparture };
 
-  // Flight add-on cost for the chosen home city. Fetched from
-  // /api/tours/quote-addons when the tour has tour_addons rows; noop otherwise.
+  // Transport add-on cost (flight or bus) for the chosen home city.
   const [addonPerPerson, setAddonPerPerson] = useState(0);
-  const [addonResolved, setAddonResolved] = useState<{
-    label: string;
-    perPerson: number;
-    homeCity: string;
-    legs: unknown[];
-  } | null>(null);
-  const [tourHasAddons, setTourHasAddons] = useState<boolean | null>(null);
 
   const cityToHome: Record<DepartureCity, "ISB" | "LHE" | "KHI"> = {
     islamabad: "ISB", lahore: "LHE", karachi: "KHI",
   };
   const homeCityCode = cityToHome[draft.departureCity];
-  // Fall back to the tour's own advertised departure date until departures load.
   const startDateForQuote = allDepartures[0]?.departureDate ?? tour.departureDate;
+
+  // Skip the network round-trip when the picked city is the tour's anchor —
+  // by definition it costs 0 (perf optimisation B).
+  const shouldFetchAddon = tour.anchorCity !== homeCityCode;
 
   useEffect(() => {
     if (!startDateForQuote) return;
-    let cancelled = false;
-    fetch(`/api/tours/quote-addons?tourSlug=${encodeURIComponent(tour.slug)}&homeCity=${homeCityCode}&startDate=${startDateForQuote}`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((q) => {
-        if (cancelled || !q) return;
-        setTourHasAddons(!!q.hasAddons);
-        setAddonPerPerson(q.addonCostPerPerson ?? 0);
-        const first = (q.addons ?? [])[0];
-        setAddonResolved(first ? {
-          label: first.label,
-          perPerson: first.perPerson,
-          homeCity: q.homeCity,
-          legs: first.flightLegs ?? [],
-        } : null);
-      })
-      .catch(() => { if (!cancelled) setTourHasAddons(false); });
-    return () => { cancelled = true; };
-  }, [tour.slug, homeCityCode, startDateForQuote]);
+    if (!shouldFetchAddon) { setAddonPerPerson(0); return; }
+    const ctrl = new AbortController();
+    fetch(`/api/tours/quote-addons?tourSlug=${encodeURIComponent(tour.slug)}&homeCity=${homeCityCode}&startDate=${startDateForQuote}`, { signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((q) => { if (q) setAddonPerPerson(q.addonCostPerPerson ?? 0); })
+      .catch((e) => { if (e?.name !== "AbortError") console.error("[wizard addon fetch]", e); });
+    return () => ctrl.abort();
+  }, [tour.slug, homeCityCode, startDateForQuote, shouldFetchAddon]);
 
   useEffect(() => {
     setDraft((d) => ({
@@ -353,21 +338,15 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
           paymentPlan: draft.paymentPlan,
         };
 
-        // Tours with tour_addons rows must go through the server route so the
-        // flight cost is re-quoted server-side and appended to total_amount.
-        // Direct-RPC path stays for legacy tours without addons.
-        let result: { bookingId: string; bookingRef: string; totalAmount: number };
-        if (tourHasAddons) {
-          const res = await fetch("/api/tours/create-booking", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ ...bookingPayload, homeCity: homeCityCode }),
-          });
-          if (!res.ok) throw new Error(`create-booking failed (${res.status})`);
-          result = await res.json();
-        } else {
-          result = await createBooking(bookingPayload);
-        }
+        // Every tour goes through the server route so addon cost is re-quoted
+        // server-side and appended to total_amount (trust boundary).
+        const res = await fetch("/api/tours/create-booking", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ ...bookingPayload, homeCity: homeCityCode }),
+        });
+        if (!res.ok) throw new Error(`create-booking failed (${res.status})`);
+        const result: { bookingId: string; bookingRef: string; totalAmount: number } = await res.json();
         trackAddToCart({
           bookingRef: result.bookingRef,
           bookingType: "tour",
