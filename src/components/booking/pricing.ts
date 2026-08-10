@@ -12,6 +12,10 @@ export interface PricingInput {
   singleRooms: number; // couple/twin private rooms
   singleOccupancyRooms?: number; // solo travelers taking a private single room
   paymentPlan: PaymentPlan;
+  // Per-person flight (or bus) add-on cost resolved from tour_addons for the
+  // chosen home city. Charged equally to adults + children (per seat, not
+  // per-adult) and does not receive the group discount.
+  addonPerPerson?: number;
 }
 
 export interface PricingBreakdown {
@@ -22,6 +26,8 @@ export interface PricingBreakdown {
   singleSupplementTotal: number;
   groupDiscountPct: number;
   groupDiscountAmount: number;
+  addonPerPerson: number;
+  addonSubtotal: number;
   total: number;
   dueNow: number;
   dueLater: number;
@@ -42,13 +48,11 @@ export function getGroupDiscountPct(adults: number): number {
 }
 
 export function calculatePricing(input: PricingInput): PricingBreakdown {
-  const { tour, liveDeparture, departureCity, adults, childCount, singleRooms, paymentPlan } = input;
+  const { tour, liveDeparture, adults, childCount, singleRooms, paymentPlan } = input;
   const singleOccupancyRooms = input.singleOccupancyRooms ?? 0;
+  const addonPerPerson = input.addonPerPerson ?? 0;
 
-  const basePrice = liveDeparture?.price
-    ?? (departureCity === "lahore"
-      ? (tour.pricing.lahore ?? tour.pricing.islamabad)
-      : tour.pricing.islamabad);
+  const basePrice = liveDeparture?.price ?? tour.pricing.base;
 
   const singleSupplement = liveDeparture?.singleSupplement ?? tour.pricing.singleSupplement ?? 0;
 
@@ -71,7 +75,9 @@ export function calculatePricing(input: PricingInput): PricingBreakdown {
   const groupDiscountPct = getGroupDiscountPct(adults);
   const groupDiscountAmount = Math.round(adultsSubtotal * groupDiscountPct);
 
-  const total = subtotal - groupDiscountAmount + singleSupplementTotal;
+  const addonSubtotal = addonPerPerson * totalTravelers;
+
+  const total = subtotal - groupDiscountAmount + singleSupplementTotal + addonSubtotal;
   const dueNow = paymentPlan === "installments" ? Math.round(total * TOUR_DEPOSIT_PCT) : total;
   const dueLater = total - dueNow;
 
@@ -83,10 +89,12 @@ export function calculatePricing(input: PricingInput): PricingBreakdown {
     singleSupplementTotal,
     groupDiscountPct,
     groupDiscountAmount,
+    addonPerPerson,
+    addonSubtotal,
     total,
     dueNow,
     dueLater,
     totalTravelers,
-    currency: liveDeparture ? "PKR" : "PKR",
+    currency: "PKR",
   };
 }

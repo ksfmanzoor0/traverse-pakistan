@@ -22,7 +22,7 @@ export function TourCard({ tour, variant = "carousel", className }: TourCardProp
     : `${startingCity} to ${endCity}`;
 
   const discount = tour.originalPrice
-    ? Math.round((1 - tour.pricing.islamabad / tour.originalPrice) * 100)
+    ? Math.round((1 - tour.pricing.base / tour.originalPrice) * 100)
     : null;
 
   const savedCount = getSavedCountForSlug(
@@ -147,7 +147,7 @@ export function TourCard({ tour, variant = "carousel", className }: TourCardProp
           <div>
             <div className="flex items-baseline gap-1.5 flex-wrap">
               <span className="text-[18px] font-bold text-[var(--text-primary)] tabular-nums tracking-tight">
-                {formatPrice(tour.pricing.islamabad)}
+                {formatPrice(tour.pricing.base)}
               </span>
               {tour.originalPrice && (
                 <span className="text-[12px] text-[var(--text-tertiary)]">
@@ -157,6 +157,13 @@ export function TourCard({ tour, variant = "carousel", className }: TourCardProp
                       -{discount}%
                     </span>
                   )}
+                </span>
+              )}
+              {/* Only surface when the tour actually has an addon that would
+                  add cost on top for at least one non-anchor city. */}
+              {tour.hasAddons && (tour.addonCities?.length ?? 0) > 0 && (
+                <span className="text-[11px] font-medium text-[var(--text-tertiary)]">
+                  + transport
                 </span>
               )}
             </div>

@@ -1,17 +1,21 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
+import { quoteTourAddons, type HomeCity } from "@/services/addon-cost.service";
 
 const todayISO = () => new Date().toISOString().split("T")[0];
 import { getSupabaseAnon } from "@/lib/supabase/server";
 import { listR2Images, buildImagesFromR2 } from "@/lib/r2";
 import type { TourRow, TourItineraryDayRow } from "@/lib/supabase/types";
 import type { Tour, TourCategory, TourImage } from "@/types/tour";
-import type { TourItinerary } from "@/types/itinerary";
+import type { TourItinerary, ItineraryDay } from "@/types/itinerary";
 
 function toTour(
   row: TourRow,
-  priceMap?: Map<string, { islamabad: number; lahore: number | null; earliestDate: string | null; singleSupplement: number | null }>,
-  r2Images?: TourImage[]
+  priceMap?: Map<string, { base: number; earliestDate: string | null; singleSupplement: number | null }>,
+  r2Images?: TourImage[],
+  hasAddons?: boolean,
+  addonCities?: string[],
+  addonCostByCity?: Partial<Record<"ISB" | "LHE" | "KHI", number>>,
 ): Tour {
   const prices = priceMap?.get(row.slug);
   return {
@@ -24,11 +28,10 @@ function toTour(
     duration: row.duration,
     route: row.route,
     pricing: {
-      islamabad: prices?.islamabad ?? 0,
-      lahore: prices?.lahore ?? null,
+      base: prices?.base ?? 0,
       singleSupplement: prices?.singleSupplement ?? null,
     },
-    price: prices?.islamabad ?? 0,
+    price: prices?.base ?? 0,
     originalPrice: null,
     departureDate: prices?.earliestDate ?? row.departure_date ?? "",
     destinationSlug: row.destination_slug,
@@ -53,7 +56,70 @@ function toTour(
     metaTitle: row.meta_title,
     metaDescription: row.meta_description,
     updatedAt: row.updated_at ?? undefined,
+    hasAddons,
+    anchorCity: row.anchor_city,
+    addonCities,
+    addonCostByCity: addonCostByCity as Tour["addonCostByCity"],
   };
+}
+
+// Derive addon coverage per slug. Returns a map slug →
+// { hasAddons, cities, costByCity }. costByCity covers every home city an
+// addon touches — bus/manual legs are summed directly from farePerPerson,
+// scraper-driven flight legs are resolved via quoteTourAddons against the
+// tour's earliest upcoming departure date. Result flows into the Tour type
+// and lets JSON-LD emit an AggregateOffer with real per-city totals.
+interface AddonCoverage {
+  hasAddons: boolean;
+  cities: string[];
+  costByCity: Partial<Record<"ISB" | "LHE" | "KHI", number>>;
+}
+
+async function fetchAddonCoverage(
+  supabase: ReturnType<typeof getSupabaseAnon>,
+  slugs: string[],
+  earliestDatesBySlug: Map<string, string | null>,
+): Promise<Map<string, AddonCoverage>> {
+  const map = new Map<string, AddonCoverage>();
+  if (slugs.length === 0) return map;
+
+  const { data } = await supabase
+    .from("tour_addons")
+    .select("tour_slug, applies_to_departures")
+    .in("tour_slug", slugs);
+  const citiesBySlug = new Map<string, Set<string>>();
+  for (const r of (data ?? []) as { tour_slug: string; applies_to_departures: string[] }[]) {
+    const set = citiesBySlug.get(r.tour_slug) ?? new Set<string>();
+    for (const c of r.applies_to_departures ?? []) set.add(c);
+    citiesBySlug.set(r.tour_slug, set);
+  }
+
+  // For each (slug, city) combo, quote once so scraper legs resolve too.
+  // Parallelised: at 23 tours × up to 3 cities this is ~70 SQL reads,
+  // cached by unstable_cache for an hour per _fetchAllTours call.
+  const jobs: Array<Promise<void>> = [];
+  for (const slug of slugs) {
+    const cities = citiesBySlug.get(slug);
+    if (!cities || cities.size === 0) continue;
+    const startDate = earliestDatesBySlug.get(slug);
+    if (!startDate) continue;
+    const entry: AddonCoverage = {
+      hasAddons: true,
+      cities: Array.from(cities),
+      costByCity: {},
+    };
+    map.set(slug, entry);
+    for (const cityCode of cities) {
+      const c = cityCode as HomeCity;
+      jobs.push(
+        quoteTourAddons({ tourSlug: slug, homeCity: c, startDate })
+          .then((q) => { if (q) entry.costByCity[c] = q.addonCostPerPerson; })
+          .catch((e) => { console.error(`[fetchAddonCoverage] ${slug}/${c}:`, e); }),
+      );
+    }
+  }
+  await Promise.all(jobs);
+  return map;
 }
 
 function toItinerary(tourSlug: string, rows: TourItineraryDayRow[]): TourItinerary {
@@ -70,7 +136,7 @@ function toItinerary(tourSlug: string, rows: TourItineraryDayRow[]): TourItinera
             ? { url: r.image, alt: r.title }
             : (r.image as { url: string; alt: string })
           : null,
-        stops: r.stops,
+        stops: r.stops as ItineraryDay["stops"],
         drivingTime: r.driving_time,
         overnight: r.overnight,
       })),
@@ -85,11 +151,14 @@ async function buildPriceMap(supabase: ReturnType<typeof getSupabaseAnon>, slugs
     .gte("departure_date", todayISO());
   if (slugs?.length) query = query.in("tour_slug", slugs);
   const { data } = await query;
-  const map = new Map<string, { islamabad: number; lahore: number | null; earliestDate: string | null; singleSupplement: number | null }>();
-  for (const row of (data ?? []) as { tour_slug: string; departure_city: string; price: number; departure_date: string; single_supplement: number | null }[]) {
-    const entry = map.get(row.tour_slug) ?? { islamabad: 0, lahore: null, earliestDate: null, singleSupplement: null };
-    if (row.departure_city === "islamabad") entry.islamabad = row.price;
-    else if (row.departure_city === "lahore") entry.lahore = row.price;
+  // Every tour has NULL-city departure rows (addon-driven model). The base
+  // price is city-agnostic; per-home-city delta is layered on at checkout
+  // via quoteTourAddons. We keep the earliest single-supplement seen across
+  // all departure rows so the sidebar can offer private-room pricing.
+  const map = new Map<string, { base: number; earliestDate: string | null; singleSupplement: number | null }>();
+  for (const row of (data ?? []) as { tour_slug: string; price: number; departure_date: string; single_supplement: number | null }[]) {
+    const entry = map.get(row.tour_slug) ?? { base: 0, earliestDate: null, singleSupplement: null };
+    if (entry.base === 0) entry.base = row.price;
     if (!entry.earliestDate || row.departure_date < entry.earliestDate) {
       entry.earliestDate = row.departure_date;
     }
@@ -124,7 +193,13 @@ const _fetchAllTours = unstable_cache(
     if (error) throw new Error(`getAllTours: ${error.message}`);
     const rows = data as TourRow[];
     const priceMap = await buildPriceMap(supabase, rows.map((r) => r.slug));
-    return rows.map((r) => toTour(r, priceMap));
+    const earliestBySlug = new Map<string, string | null>();
+    for (const r of rows) earliestBySlug.set(r.slug, priceMap.get(r.slug)?.earliestDate ?? r.departure_date);
+    const coverage = await fetchAddonCoverage(supabase, rows.map((r) => r.slug), earliestBySlug);
+    return rows.map((r) => {
+      const c = coverage.get(r.slug);
+      return toTour(r, priceMap, undefined, !!c, c?.cities, c?.costByCity);
+    });
   },
   ["all-tours"],
   { tags: ["tours"], revalidate: 3600 }
@@ -142,8 +217,13 @@ export const getTourBySlug = cache(async (slug: string): Promise<Tour | null> =>
   if (error?.code === "PGRST116") return null;
   if (error) throw new Error(`getTourBySlug: ${error.message}`);
   const row = data as TourRow;
+  const earliestBySlug = new Map<string, string | null>([
+    [slug, priceMap.get(slug)?.earliestDate ?? row.departure_date],
+  ]);
+  const coverage = await fetchAddonCoverage(supabase, [slug], earliestBySlug);
   const r2Images = r2Urls.length ? buildImagesFromR2(r2Urls, row.name) : undefined;
-  return toTour(row, priceMap, r2Images);
+  const c = coverage.get(row.slug);
+  return toTour(row, priceMap, r2Images, !!c, c?.cities, c?.costByCity);
 });
 
 export const getToursByDestination = cache(async (destinationSlug: string): Promise<Tour[]> => {

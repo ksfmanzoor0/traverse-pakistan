@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { formatPrice, getWhatsAppUrl } from "@/lib/utils";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { createBooking, getUpcomingOpenDepartures } from "@/services/booking.service";
+import { getUpcomingOpenDepartures } from "@/services/booking.service";
 import type { Departure, DepartureCity } from "@/types/booking";
 import type { Tour } from "@/types/tour";
 import type { Review } from "@/types/review";
@@ -128,9 +128,10 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
     return () => { cancelled = true; };
   }, [tour.slug]);
 
-  const departuresForCity = allDepartures.filter((d) => d.departureCity === draft.departureCity);
-  // Auto-select the earliest departure for the city when the city changes or
-  // when the currently-selected id doesn't belong to the visible list.
+  // Every tour now uses NULL departure_city rows; per-home-city variance is
+  // supplied by the tour_addons layer. The city picker no longer filters
+  // inventory — it just selects the home city for addon quoting.
+  const departuresForCity = allDepartures;
   useEffect(() => {
     if (departuresForCity.length === 0) {
       if (selectedDepartureId !== null) setSelectedDepartureId(null);
@@ -143,12 +144,33 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
   }, [draft.departureCity, allDepartures.length]);
   const liveDeparture = departuresForCity.find((d) => d.id === selectedDepartureId) ?? departuresForCity[0] ?? null;
 
-  // Also expose cityDepartures-shaped map for the StepDates picker below.
-  const cityDepartures = {
-    islamabad: allDepartures.find((d) => d.departureCity === "islamabad") ?? null,
-    lahore: allDepartures.find((d) => d.departureCity === "lahore") ?? null,
-    karachi: allDepartures.find((d) => d.departureCity === "karachi") ?? null,
+  // All cities point at the same shared departure inventory now.
+  const firstDeparture = allDepartures[0] ?? null;
+  const cityDepartures = { islamabad: firstDeparture, lahore: firstDeparture, karachi: firstDeparture };
+
+  // Transport add-on cost (flight or bus) for the chosen home city.
+  const [addonPerPerson, setAddonPerPerson] = useState(0);
+
+  const cityToHome: Record<DepartureCity, "ISB" | "LHE" | "KHI"> = {
+    islamabad: "ISB", lahore: "LHE", karachi: "KHI",
   };
+  const homeCityCode = cityToHome[draft.departureCity];
+  const startDateForQuote = allDepartures[0]?.departureDate ?? tour.departureDate;
+
+  // Skip the network round-trip when the picked city is the tour's anchor —
+  // by definition it costs 0 (perf optimisation B).
+  const shouldFetchAddon = tour.anchorCity !== homeCityCode;
+
+  useEffect(() => {
+    if (!startDateForQuote) return;
+    if (!shouldFetchAddon) { setAddonPerPerson(0); return; }
+    const ctrl = new AbortController();
+    fetch(`/api/tours/quote-addons?tourSlug=${encodeURIComponent(tour.slug)}&homeCity=${homeCityCode}&startDate=${startDateForQuote}`, { signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((q) => { if (q) setAddonPerPerson(q.addonCostPerPerson ?? 0); })
+      .catch((e) => { if (e?.name !== "AbortError") console.error("[wizard addon fetch]", e); });
+    return () => ctrl.abort();
+  }, [tour.slug, homeCityCode, startDateForQuote, shouldFetchAddon]);
 
   useEffect(() => {
     setDraft((d) => ({
@@ -178,8 +200,9 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
       singleRooms: draft.singleRooms,
       singleOccupancyRooms: draft.singleOccupancyRooms,
       paymentPlan: draft.paymentPlan,
+      addonPerPerson,
     }),
-    [tour, liveDeparture, draft.departureCity, draft.adults, draft.childCount, draft.singleRooms, draft.singleOccupancyRooms, draft.paymentPlan],
+    [tour, liveDeparture, draft.departureCity, draft.adults, draft.childCount, draft.singleRooms, draft.singleOccupancyRooms, draft.paymentPlan, addonPerPerson],
   );
 
   const urgency = useMemo(() => deriveUrgency(tour, liveDeparture), [tour, liveDeparture]);
@@ -294,7 +317,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
     if (isSupabaseConfigured && liveDeparture && hasCapacity) {
       setSubmitting(true);
       try {
-        const result = await createBooking({
+        const bookingPayload = {
           departureId: liveDeparture.id,
           seats: totalTravelers,
           singleRooms: draft.singleRooms + draft.singleOccupancyRooms,
@@ -313,7 +336,17 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
           notes: draft.specialRequests || undefined,
           submitUuid: submitUuidRef.current,
           paymentPlan: draft.paymentPlan,
+        };
+
+        // Every tour goes through the server route so addon cost is re-quoted
+        // server-side and appended to total_amount (trust boundary).
+        const res = await fetch("/api/tours/create-booking", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ ...bookingPayload, homeCity: homeCityCode }),
         });
+        if (!res.ok) throw new Error(`create-booking failed (${res.status})`);
+        const result: { bookingId: string; bookingRef: string; totalAmount: number } = await res.json();
         trackAddToCart({
           bookingRef: result.bookingRef,
           bookingType: "tour",
@@ -450,6 +483,12 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
                 <span className="tabular-nums">{formatPrice(tour.pricing.singleSupplement * 2 * draft.singleRooms)}</span>
               </div>
             )}
+            {pricing.addonSubtotal > 0 && (
+              <div className="flex justify-between text-[var(--text-secondary)]">
+                <span>Flights ({homeCityCode}) × {pricing.totalTravelers}</span>
+                <span className="tabular-nums">{formatPrice(pricing.addonSubtotal)}</span>
+              </div>
+            )}
             <div className="flex justify-between pt-1.5 border-t border-[var(--border-default)] text-[14px] font-bold text-[var(--text-primary)]">
               <span>Total</span>
               <span className="tabular-nums">{formatPrice(pricing.total)}</span>
@@ -556,8 +595,10 @@ function StepDates({
   selectedDepartureId: string | null;
   onDepartureIdChange: (id: string) => void;
 }) {
-  const availableCities = (["islamabad", "lahore", "karachi"] as const).filter((c) =>
-    departuresLoaded ? cityDepartures[c] !== null : c !== "karachi" && !!tour.pricing.lahore,
+  const CITY_TO_CODE = { islamabad: "ISB", lahore: "LHE", karachi: "KHI" } as const;
+  const addonSet = new Set(tour.addonCities ?? []);
+  const availableCities = (["islamabad", "lahore", "karachi"] as const).filter(
+    (c) => addonSet.has(CITY_TO_CODE[c]) || tour.anchorCity === CITY_TO_CODE[c],
   );
 
   return (
@@ -571,7 +612,7 @@ function StepDates({
             {availableCities.map((city) => {
               const active = departureCity === city;
               const dep = cityDepartures[city];
-              const price = dep?.price ?? (city === "lahore" ? (tour.pricing.lahore ?? tour.pricing.islamabad) : tour.pricing.islamabad);
+              const price = dep?.price ?? tour.pricing.base;
               return (
                 <button
                   key={city}

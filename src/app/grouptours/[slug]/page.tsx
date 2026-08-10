@@ -124,10 +124,18 @@ export default async function TripDetailPage({ params }: Props) {
                 const CITY_CODE: Record<string, string> = { islamabad: "ISB", lahore: "LHE", karachi: "KHI" };
                 const CITY_ORDER = ["islamabad", "lahore", "karachi"];
                 const byCity = new Map<string, typeof upcomingDepartures>();
-                for (const d of upcomingDepartures) {
-                  const key = (d.departureCity ?? "").toLowerCase();
-                  if (!byCity.has(key)) byCity.set(key, [] as typeof upcomingDepartures);
-                  byCity.get(key)!.push(d);
+                // Fan the single (NULL-city) row out into one pill per city
+                // that either the anchor covers or an addon covers.
+                const CODE_TO_CITY = { ISB: "islamabad", LHE: "lahore", KHI: "karachi" } as const;
+                const supportedCities = new Set<string>();
+                if (tour.anchorCity) supportedCities.add(CODE_TO_CITY[tour.anchorCity]);
+                for (const c of tour.addonCities ?? []) {
+                  const key = CODE_TO_CITY[c as "ISB" | "LHE" | "KHI"];
+                  if (key) supportedCities.add(key);
+                }
+                for (const city of CITY_ORDER) {
+                  if (!supportedCities.has(city)) continue;
+                  byCity.set(city, upcomingDepartures.map((d) => ({ ...d, departureCity: city as typeof d.departureCity })));
                 }
                 const cityKeys = Array.from(byCity.keys()).sort(
                   (a, b) => (CITY_ORDER.indexOf(a) - CITY_ORDER.indexOf(b)),
@@ -214,7 +222,7 @@ export default async function TripDetailPage({ params }: Props) {
                 <h2 className="text-xl font-bold text-[var(--text-primary)] mb-6">
                   Day-by-Day Itinerary
                 </h2>
-                <ItineraryAccordion days={itinerary.days} />
+                <ItineraryAccordion days={itinerary.days} tourSlug={tour.slug} />
               </section>
             )}
 

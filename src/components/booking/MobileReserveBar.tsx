@@ -34,7 +34,7 @@ export function MobileReserveBar({ tour, reviews }: MobileReserveBarProps) {
     return () => { cancelled = true; };
   }, [tour.slug]);
 
-  const basePrice = tour.pricing.islamabad;
+  const basePrice = tour.pricing.base;
   const seatsLeft = liveDeparture?.seatsAvailable ?? null;
 
   return (

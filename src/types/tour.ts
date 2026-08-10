@@ -17,8 +17,9 @@ export interface TourImage {
 }
 
 export interface TourPricing {
-  islamabad: number;
-  lahore: number | null;
+  // Ground-only price per person (city-agnostic). Per-city variance is layered
+  // on at runtime via tour_addons — see quoteTourAddons in addon-cost.service.
+  base: number;
   singleSupplement: number | null;
   international?: number | null;
 }
@@ -43,7 +44,7 @@ export interface Tour {
   duration: number;
   route: string;
   pricing: TourPricing;
-  /** @deprecated Use pricing.islamabad instead */
+  /** @deprecated Use pricing.base instead */
   price: number;
   /** @deprecated Use pricing difference for sale calc */
   originalPrice: number | null;
@@ -73,4 +74,19 @@ export interface Tour {
   metaTitle: string;
   metaDescription: string;
   updatedAt?: string;
+  /** True when the tour has tour_addons rows (flight/bus pickers at checkout).
+   * Card price shows base + "+ transport" chip instead of the bare number. */
+  hasAddons?: boolean;
+  /** City that pays the ground base with no addon (e.g. "ISB" for most tours,
+   * "KHI" for Gwadar). null when every home city requires a transport addon. */
+  anchorCity?: "ISB" | "LHE" | "KHI" | null;
+  /** Home-city codes ({"ISB","LHE","KHI"}) that at least one addon covers.
+   * Derived from tour_addons.applies_to_departures. */
+  addonCities?: string[];
+  /** Statically-computable per-home-city transport add-on totals (PKR).
+   * Only populated when EVERY relevant addon leg carries a farePerPerson
+   * (bus and locked-fare flight cases). Scraper-driven flight addons don't
+   * populate this — their price changes daily and would go stale in caches
+   * or JSON-LD. Consumers: SEO schema AggregateOffer + rich price signals. */
+  addonCostByCity?: Record<"ISB" | "LHE" | "KHI", number>;
 }

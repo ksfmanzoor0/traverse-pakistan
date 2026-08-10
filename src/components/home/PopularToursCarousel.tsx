@@ -8,7 +8,7 @@ import { getAllTours } from "@/services/tour.service";
 const PINNED_POSITIONS: Record<number, string> = {
   0: "trip-to-hunza-naltar-khunjerab",
   1: "trip-to-minimarg",
-  2: "trip-to-skardu-basho-deosai-khaplu",
+  2: "skardu-khaplu-deosai-5day-flight",
   3: "k2-base-camp-trek",
 };
 
