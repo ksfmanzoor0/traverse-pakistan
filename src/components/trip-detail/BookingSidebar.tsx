@@ -99,9 +99,10 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
 
   const liveDeparture = departuresForCity.find((d) => d.id === selectedDepartureId) ?? departuresForCity[0] ?? null;
 
-  // Live transport-addon cost for the currently selected city, so the total
-  // already reflects the flight/bus delta before the wizard opens.
+  // Live transport-addon cost + display label ("Return Flight" | "Bus" |
+  // "Transport" for mixed) — driven by tour_addons.type via quoteTourAddons.
   const [addonPerPerson, setAddonPerPerson] = useState(0);
+  const [addonKind, setAddonKind] = useState<"flight" | "bus" | "mixed" | null>(null);
   const cityToHome: Record<"islamabad" | "lahore" | "karachi" | "skardu", "ISB" | "LHE" | "KHI" | "KDU"> = {
     islamabad: "ISB", lahore: "LHE", karachi: "KHI", skardu: "KDU",
   };
@@ -111,14 +112,21 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
   const shouldFetchAddon = tour.anchorCity !== homeCityCode;
   useEffect(() => {
     if (!startDateForQuote) return;
-    if (!shouldFetchAddon) { setAddonPerPerson(0); return; }
+    if (!shouldFetchAddon) { setAddonPerPerson(0); setAddonKind(null); return; }
     const ctrl = new AbortController();
     fetch(`/api/tours/quote-addons?tourSlug=${encodeURIComponent(tour.slug)}&homeCity=${homeCityCode}&startDate=${startDateForQuote}`, { signal: ctrl.signal })
       .then((r) => (r.ok ? r.json() : null))
-      .then((q) => { if (q) setAddonPerPerson(q.addonCostPerPerson ?? 0); })
+      .then((q) => {
+        if (!q) return;
+        setAddonPerPerson(q.addonCostPerPerson ?? 0);
+        const types = new Set(((q.addons ?? []) as Array<{ type: string }>).map((a) => a.type));
+        setAddonKind(types.size === 0 ? null : types.size > 1 ? "mixed" : (types.values().next().value as "flight" | "bus"));
+      })
       .catch((e) => { if (e?.name !== "AbortError") console.error("[sidebar addon fetch]", e); });
     return () => ctrl.abort();
   }, [tour.slug, homeCityCode, startDateForQuote, shouldFetchAddon]);
+
+  const addonLineLabel = addonKind === "flight" ? "Return Flight" : addonKind === "bus" ? "Bus" : "Transport";
 
   const pricing = calculatePricing({
     tour,
@@ -319,7 +327,7 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
           )}
           {pricing.addonSubtotal > 0 && (
             <div className="flex items-center justify-between text-[12px] text-[var(--text-secondary)]">
-              <span>Return Flight ({homeCityCode}) × {pricing.totalTravelers}</span>
+              <span>{addonLineLabel} ({homeCityCode}) × {pricing.totalTravelers}</span>
               <span className="tabular-nums">{formatPrice(pricing.addonSubtotal)}</span>
             </div>
           )}
