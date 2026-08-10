@@ -65,13 +65,13 @@ export function StatsBar() {
     <section className="py-5 sm:py-6 bg-[var(--bg-primary)] border-b border-[var(--border-default)]">
       <Container>
         <div className="flex items-center justify-between gap-6 overflow-x-auto no-scrollbar">
-          <div className="flex flex-col items-center text-center min-w-[110px]">
+          <div className="flex flex-col items-center text-center min-w-[160px]">
             <span className="inline-flex items-center gap-1.5 text-[clamp(20px,2.2vw,24px)] font-extrabold text-[var(--primary)] leading-none tracking-[-0.02em]">
               <Icon name="shield-check" size="xl" color="var(--primary)" />
               2025
             </span>
             <span className="text-[12px] font-medium text-[var(--text-tertiary)] mt-2 whitespace-nowrap tracking-[0.02em]">
-              Travelers&apos; Choice
+              TripAdvisor Travelers&apos; Choice Award
             </span>
           </div>
           {stats.map((stat) => (
