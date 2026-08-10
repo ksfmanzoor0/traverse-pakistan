@@ -53,7 +53,7 @@ export type TourItineraryDayRow = {
   title: string;
   description: string;
   image: { url: string; alt: string } | null;
-  stops: Array<{ name: string; detail: string }>;
+  stops: Array<{ name: string; detail: string; cityOnly?: string }>;
   driving_time: string;
   overnight: string;
 };

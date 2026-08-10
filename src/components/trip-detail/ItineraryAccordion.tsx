@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { AccordionItem } from "@/components/ui/Accordion";
 import type { ItineraryDay } from "@/types/itinerary";
+import { useSharedDepartureCity } from "@/hooks/useSharedDepartureCity";
 
 interface ItineraryAccordionProps {
   days: ItineraryDay[];
@@ -13,6 +14,11 @@ function formatDescription(text: string): string[] {
 }
 
 export function ItineraryAccordion({ days }: ItineraryAccordionProps) {
+  // Read the shared departure-city selection (written by BookingSidebar).
+  // Stops without cityOnly show for everyone; stops with cityOnly show only
+  // when it matches the selection.
+  const [city] = useSharedDepartureCity("islamabad");
+
   return (
     <div className="border border-[var(--border-default)] rounded-xl overflow-hidden">
       {days.map((day) => (
@@ -52,22 +58,27 @@ export function ItineraryAccordion({ days }: ItineraryAccordionProps) {
               ))}
             </div>
 
-            {/* Stops timeline */}
-            {day.stops.length > 0 && (
-              <div className="relative pl-6 border-l-2 border-[var(--primary)]/20 space-y-4 mb-4">
-                {day.stops.map((stop, i) => (
-                  <div key={i} className="relative">
-                    <div className="absolute -left-[27px] top-0.5 w-3 h-3 rounded-full bg-[var(--primary)] border-2 border-white" />
-                    <p className="text-[14px] font-semibold text-[var(--text-primary)]">
-                      {stop.name}
-                    </p>
-                    <p className="text-[13px] text-[var(--text-tertiary)]">
-                      {stop.detail}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
+            {/* Stops timeline — cityOnly stops appear only when the traveller's
+                selected departure city matches (e.g. LHE-return-via-ISB details). */}
+            {(() => {
+              const visibleStops = day.stops.filter((s) => !s.cityOnly || s.cityOnly === city);
+              if (visibleStops.length === 0) return null;
+              return (
+                <div className="relative pl-6 border-l-2 border-[var(--primary)]/20 space-y-4 mb-4">
+                  {visibleStops.map((stop, i) => (
+                    <div key={i} className="relative">
+                      <div className="absolute -left-[27px] top-0.5 w-3 h-3 rounded-full bg-[var(--primary)] border-2 border-white" />
+                      <p className="text-[14px] font-semibold text-[var(--text-primary)]">
+                        {stop.name}
+                      </p>
+                      <p className="text-[13px] text-[var(--text-tertiary)]">
+                        {stop.detail}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
 
             {/* Meta */}
             <div className="flex flex-wrap gap-4 text-[13px] text-[var(--text-tertiary)]">

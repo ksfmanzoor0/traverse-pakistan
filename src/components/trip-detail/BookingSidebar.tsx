@@ -15,6 +15,7 @@ import { calculatePricing } from "@/components/booking/pricing";
 import { deriveUrgency } from "@/components/booking/urgency";
 import { Stepper } from "@/components/booking/Stepper";
 import { hasResumableDraft } from "@/hooks/useCheckoutDraft";
+import { useSharedDepartureCity } from "@/hooks/useSharedDepartureCity";
 
 interface BookingSidebarProps {
   tour: Tour;
@@ -26,7 +27,7 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
   const [children, setChildren] = useState(0);
   const [singleRooms, setSingleRooms] = useState(0);
   const [singleOccupancyRooms, setSingleOccupancyRooms] = useState(0);
-  const [departure, setDeparture] = useState<"islamabad" | "lahore" | "karachi">("islamabad");
+  const [departure, setDeparture] = useSharedDepartureCity("islamabad");
   const [allDepartures, setAllDepartures] = useState<Departure[]>([]);
   const [selectedDepartureId, setSelectedDepartureId] = useState<string | null>(null);
   const [departuresLoaded, setDeparturesLoaded] = useState(false);

@@ -6,7 +6,7 @@ import { getSupabaseAnon } from "@/lib/supabase/server";
 import { listR2Images, buildImagesFromR2 } from "@/lib/r2";
 import type { TourRow, TourItineraryDayRow } from "@/lib/supabase/types";
 import type { Tour, TourCategory, TourImage } from "@/types/tour";
-import type { TourItinerary } from "@/types/itinerary";
+import type { TourItinerary, ItineraryDay } from "@/types/itinerary";
 
 function toTour(
   row: TourRow,
@@ -85,7 +85,7 @@ function toItinerary(tourSlug: string, rows: TourItineraryDayRow[]): TourItinera
             ? { url: r.image, alt: r.title }
             : (r.image as { url: string; alt: string })
           : null,
-        stops: r.stops,
+        stops: r.stops as ItineraryDay["stops"],
         drivingTime: r.driving_time,
         overnight: r.overnight,
       })),
