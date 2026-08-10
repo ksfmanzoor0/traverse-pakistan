@@ -6,7 +6,7 @@ import { NavbarWrapper } from "@/components/layout/NavbarWrapper";
 import { Footer } from "@/components/layout/Footer";
 import { WhatsAppFAB } from "@/components/layout/WhatsAppFAB";
 import { PromoWelcomeToast } from "@/components/promo/PromoWelcomeToast";
-import { AwardStrip } from "@/components/layout/AwardStrip";
+import { PromoAnnouncementBar } from "@/components/promo/PromoAnnouncementBar";
 import { RouteProgress } from "@/components/ui/RouteProgress";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
@@ -177,7 +177,7 @@ export default function RootLayout({
           <RouteProgress />
         </Suspense>
         <Providers>
-          <AwardStrip />
+          <PromoAnnouncementBar />
           <Suspense fallback={null}>
             <NavbarWrapper />
           </Suspense>
