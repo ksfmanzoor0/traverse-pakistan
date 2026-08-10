@@ -101,9 +101,15 @@ async function buildPriceMap(supabase: ReturnType<typeof getSupabaseAnon>, slugs
   if (slugs?.length) query = query.in("tour_slug", slugs);
   const { data } = await query;
   const map = new Map<string, { islamabad: number; lahore: number | null; earliestDate: string | null; singleSupplement: number | null }>();
-  for (const row of (data ?? []) as { tour_slug: string; departure_city: string; price: number; departure_date: string; single_supplement: number | null }[]) {
+  for (const row of (data ?? []) as { tour_slug: string; departure_city: string | null; price: number; departure_date: string; single_supplement: number | null }[]) {
     const entry = map.get(row.tour_slug) ?? { islamabad: 0, lahore: null, earliestDate: null, singleSupplement: null };
-    if (row.departure_city === "islamabad") entry.islamabad = row.price;
+    // NULL departure_city = ground-only departure (addon-driven tours). Treat
+    // the price as the base for every home city; the flight addon layer
+    // supplies the city-specific delta at quote time.
+    if (row.departure_city == null) {
+      if (entry.islamabad === 0) entry.islamabad = row.price;
+      if (entry.lahore == null) entry.lahore = row.price;
+    } else if (row.departure_city === "islamabad") entry.islamabad = row.price;
     else if (row.departure_city === "lahore") entry.lahore = row.price;
     if (!entry.earliestDate || row.departure_date < entry.earliestDate) {
       entry.earliestDate = row.departure_date;
