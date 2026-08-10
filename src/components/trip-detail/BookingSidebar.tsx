@@ -173,9 +173,13 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
         <hr className="my-5 border-[var(--border-default)]" />
 
         {(() => {
-          const availableCities = (["islamabad", "lahore", "karachi"] as const).filter(
-            (c) => departuresLoaded ? allDepartures.some((d) => d.departureCity === c) : c !== "karachi" && !!tour.pricing.lahore,
-          );
+          const availableCities = (["islamabad", "lahore", "karachi"] as const).filter((c) => {
+            if (!departuresLoaded) return c !== "karachi" && !!tour.pricing.lahore;
+            // Addon-driven tours have a single NULL-city departure that serves
+            // every home city — surface all 3 chips.
+            if (isAddonDrivenDepartures) return true;
+            return allDepartures.some((d) => d.departureCity === c);
+          });
           if (availableCities.length < 2) return null;
           return (
             <div className="mb-4">
