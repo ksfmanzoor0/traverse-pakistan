@@ -128,14 +128,10 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
     return () => { cancelled = true; };
   }, [tour.slug]);
 
-  // Addon-driven tours have a single ground-only departure row with a NULL
-  // departure_city — the flight addon layer supplies the home-city variance.
-  // For those tours every visible city maps to the same departure inventory.
-  const isAddonDrivenDepartures =
-    allDepartures.length > 0 && allDepartures.every((d) => !d.departureCity);
-  const departuresForCity = isAddonDrivenDepartures
-    ? allDepartures
-    : allDepartures.filter((d) => d.departureCity === draft.departureCity);
+  // Every tour now uses NULL departure_city rows; per-home-city variance is
+  // supplied by the tour_addons layer. The city picker no longer filters
+  // inventory — it just selects the home city for addon quoting.
+  const departuresForCity = allDepartures;
   useEffect(() => {
     if (departuresForCity.length === 0) {
       if (selectedDepartureId !== null) setSelectedDepartureId(null);
@@ -148,17 +144,9 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
   }, [draft.departureCity, allDepartures.length]);
   const liveDeparture = departuresForCity.find((d) => d.id === selectedDepartureId) ?? departuresForCity[0] ?? null;
 
-  const cityDepartures = {
-    islamabad: isAddonDrivenDepartures
-      ? allDepartures[0]
-      : allDepartures.find((d) => d.departureCity === "islamabad") ?? null,
-    lahore: isAddonDrivenDepartures
-      ? allDepartures[0]
-      : allDepartures.find((d) => d.departureCity === "lahore") ?? null,
-    karachi: isAddonDrivenDepartures
-      ? allDepartures[0]
-      : allDepartures.find((d) => d.departureCity === "karachi") ?? null,
-  };
+  // All cities point at the same shared departure inventory now.
+  const firstDeparture = allDepartures[0] ?? null;
+  const cityDepartures = { islamabad: firstDeparture, lahore: firstDeparture, karachi: firstDeparture };
 
   // Flight add-on cost for the chosen home city. Fetched from
   // /api/tours/quote-addons when the tour has tour_addons rows; noop otherwise.

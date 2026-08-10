@@ -124,18 +124,10 @@ export default async function TripDetailPage({ params }: Props) {
                 const CITY_CODE: Record<string, string> = { islamabad: "ISB", lahore: "LHE", karachi: "KHI" };
                 const CITY_ORDER = ["islamabad", "lahore", "karachi"];
                 const byCity = new Map<string, typeof upcomingDepartures>();
-                // Addon-driven tours have NULL departure_city — the single row
-                // serves every home city. Fan it out into 3 pills so the strip
-                // isn't a naked date without a city label.
-                const isAddonDriven = tour.hasAddons && upcomingDepartures.every((d) => !d.departureCity);
-                if (isAddonDriven) {
-                  for (const city of CITY_ORDER) {
-                    byCity.set(city, upcomingDepartures.map((d) => ({ ...d, departureCity: city as typeof d.departureCity })));
-                  }
-                } else for (const d of upcomingDepartures) {
-                  const key = (d.departureCity ?? "").toLowerCase();
-                  if (!byCity.has(key)) byCity.set(key, [] as typeof upcomingDepartures);
-                  byCity.get(key)!.push(d);
+                // Every tour now uses NULL departure_city rows; fan the single
+                // row (or set of dates) out into one pill per home city.
+                for (const city of CITY_ORDER) {
+                  byCity.set(city, upcomingDepartures.map((d) => ({ ...d, departureCity: city as typeof d.departureCity })));
                 }
                 const cityKeys = Array.from(byCity.keys()).sort(
                   (a, b) => (CITY_ORDER.indexOf(a) - CITY_ORDER.indexOf(b)),

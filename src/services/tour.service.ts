@@ -100,17 +100,15 @@ async function buildPriceMap(supabase: ReturnType<typeof getSupabaseAnon>, slugs
     .gte("departure_date", todayISO());
   if (slugs?.length) query = query.in("tour_slug", slugs);
   const { data } = await query;
+  // Every tour has NULL-city departure rows now (addon-driven model). We keep
+  // the islamabad/lahore fields on the Tour type for backwards-compat with
+  // the TourCard "from PKR" surface — both hold the same ground base price;
+  // per-home-city variance is layered on at checkout via quoteTourAddons.
   const map = new Map<string, { islamabad: number; lahore: number | null; earliestDate: string | null; singleSupplement: number | null }>();
-  for (const row of (data ?? []) as { tour_slug: string; departure_city: string | null; price: number; departure_date: string; single_supplement: number | null }[]) {
+  for (const row of (data ?? []) as { tour_slug: string; price: number; departure_date: string; single_supplement: number | null }[]) {
     const entry = map.get(row.tour_slug) ?? { islamabad: 0, lahore: null, earliestDate: null, singleSupplement: null };
-    // NULL departure_city = ground-only departure (addon-driven tours). Treat
-    // the price as the base for every home city; the flight addon layer
-    // supplies the city-specific delta at quote time.
-    if (row.departure_city == null) {
-      if (entry.islamabad === 0) entry.islamabad = row.price;
-      if (entry.lahore == null) entry.lahore = row.price;
-    } else if (row.departure_city === "islamabad") entry.islamabad = row.price;
-    else if (row.departure_city === "lahore") entry.lahore = row.price;
+    if (entry.islamabad === 0) entry.islamabad = row.price;
+    if (entry.lahore == null) entry.lahore = row.price;
     if (!entry.earliestDate || row.departure_date < entry.earliestDate) {
       entry.earliestDate = row.departure_date;
     }

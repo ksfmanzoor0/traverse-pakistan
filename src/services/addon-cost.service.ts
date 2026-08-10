@@ -9,6 +9,11 @@ export interface FlightLegConfig {
   to: string;
   routeType: FlightRouteType;
   day: number | "last";
+  // When set, skip the scraper and use this figure as-is. Used for bus legs
+  // (Daewoo LHE↔ISB) and for tours where the operator has a locked contract
+  // price rather than a market-tracked fare. Applies to any leg type.
+  farePerPerson?: number;
+  carrier?: string;         // Purely descriptive; e.g. "Daewoo", "AirBlue".
 }
 
 export interface ResolvedFlightLeg {
@@ -176,6 +181,20 @@ async function resolveFlightAddon(
     const from = substituteHome(leg.from, home);
     const to = substituteHome(leg.to, home);
     const targetDate = legDate(leg, startDate, duration);
+
+    // Manual / flat fare — skip scraper (used for bus legs like Daewoo LHE↔ISB
+    // or for tours where the operator has a locked contract price).
+    if (typeof leg.farePerPerson === "number") {
+      resolved.push({
+        from, to, routeType: leg.routeType, departDate: targetDate,
+        perPerson: leg.farePerPerson,
+        source: "manual",
+        carriers: [],
+        manualOverride: { airline: leg.carrier ?? "manual", fare: leg.farePerPerson, notes: null },
+      });
+      continue;
+    }
+
     const pair = `${from}-${to}`;
     const candidates = await fetchLegCandidates(from, to, leg.routeType, targetDate);
     const r = resolveSingleLeg(candidates, pair, targetDate);
@@ -349,11 +368,11 @@ export async function quoteTourAddons(args: TourQuoteArgs): Promise<TourQuote | 
   const unresolved: ResolvedFlightLeg[] = [];
 
   for (const addon of matching) {
-    if (addon.type !== "flight") continue;
+    if (addon.type !== "flight" && addon.type !== "bus") continue;
     const { perPerson, legs } = await resolveFlightAddon(addon, args.homeCity, args.startDate, tour.duration);
     resolved.push({
       addonId: addon.id,
-      type: "flight",
+      type: addon.type,
       label: addon.label,
       groupKey: addon.group_key,
       isRequired: addon.is_required,

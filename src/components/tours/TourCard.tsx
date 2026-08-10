@@ -161,7 +161,7 @@ export function TourCard({ tour, variant = "carousel", className }: TourCardProp
               )}
               {tour.hasAddons && (
                 <span className="text-[11px] font-medium text-[var(--text-tertiary)]">
-                  + flights
+                  + transport
                 </span>
               )}
             </div>

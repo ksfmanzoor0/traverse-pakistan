@@ -78,12 +78,8 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
     return () => { cancelled = true; };
   }, [tour.slug]);
 
-  // Addon-driven tours use a single ground-only departure row (NULL city).
-  // Match the wizard's treatment: one row serves every home city.
-  const isAddonDrivenDepartures = allDepartures.length > 0 && allDepartures.every((d) => !d.departureCity);
-  const departuresForCity = isAddonDrivenDepartures
-    ? allDepartures
-    : allDepartures.filter((d) => d.departureCity === departure);
+  // All tours use NULL departure_city rows; city variance handled by addons.
+  const departuresForCity = allDepartures;
   useEffect(() => {
     if (departuresForCity.length === 0) {
       setSelectedDepartureId(null);
@@ -106,10 +102,7 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
   const homeCityCode = cityToHome[departure];
   const startDateForQuote = liveDeparture?.departureDate ?? tour.departureDate;
   useEffect(() => {
-    if (!tour.hasAddons || !startDateForQuote) {
-      setAddonPerPerson(0);
-      return;
-    }
+    if (!startDateForQuote) return;
     let cancelled = false;
     fetch(`/api/tours/quote-addons?tourSlug=${encodeURIComponent(tour.slug)}&homeCity=${homeCityCode}&startDate=${startDateForQuote}`)
       .then((r) => (r.ok ? r.json() : null))
@@ -173,13 +166,8 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
         <hr className="my-5 border-[var(--border-default)]" />
 
         {(() => {
-          const availableCities = (["islamabad", "lahore", "karachi"] as const).filter((c) => {
-            if (!departuresLoaded) return c !== "karachi" && !!tour.pricing.lahore;
-            // Addon-driven tours have a single NULL-city departure that serves
-            // every home city — surface all 3 chips.
-            if (isAddonDrivenDepartures) return true;
-            return allDepartures.some((d) => d.departureCity === c);
-          });
+          // Every tour is now addon-driven; surface all three city chips.
+          const availableCities = (["islamabad", "lahore", "karachi"] as const);
           if (availableCities.length < 2) return null;
           return (
             <div className="mb-4">
