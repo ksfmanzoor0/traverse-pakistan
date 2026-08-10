@@ -128,9 +128,14 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
     return () => { cancelled = true; };
   }, [tour.slug]);
 
-  const departuresForCity = allDepartures.filter((d) => d.departureCity === draft.departureCity);
-  // Auto-select the earliest departure for the city when the city changes or
-  // when the currently-selected id doesn't belong to the visible list.
+  // Addon-driven tours have a single ground-only departure row with a NULL
+  // departure_city — the flight addon layer supplies the home-city variance.
+  // For those tours every visible city maps to the same departure inventory.
+  const isAddonDrivenDepartures =
+    allDepartures.length > 0 && allDepartures.every((d) => !d.departureCity);
+  const departuresForCity = isAddonDrivenDepartures
+    ? allDepartures
+    : allDepartures.filter((d) => d.departureCity === draft.departureCity);
   useEffect(() => {
     if (departuresForCity.length === 0) {
       if (selectedDepartureId !== null) setSelectedDepartureId(null);
@@ -143,12 +148,56 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
   }, [draft.departureCity, allDepartures.length]);
   const liveDeparture = departuresForCity.find((d) => d.id === selectedDepartureId) ?? departuresForCity[0] ?? null;
 
-  // Also expose cityDepartures-shaped map for the StepDates picker below.
   const cityDepartures = {
-    islamabad: allDepartures.find((d) => d.departureCity === "islamabad") ?? null,
-    lahore: allDepartures.find((d) => d.departureCity === "lahore") ?? null,
-    karachi: allDepartures.find((d) => d.departureCity === "karachi") ?? null,
+    islamabad: isAddonDrivenDepartures
+      ? allDepartures[0]
+      : allDepartures.find((d) => d.departureCity === "islamabad") ?? null,
+    lahore: isAddonDrivenDepartures
+      ? allDepartures[0]
+      : allDepartures.find((d) => d.departureCity === "lahore") ?? null,
+    karachi: isAddonDrivenDepartures
+      ? allDepartures[0]
+      : allDepartures.find((d) => d.departureCity === "karachi") ?? null,
   };
+
+  // Flight add-on cost for the chosen home city. Fetched from
+  // /api/tours/quote-addons when the tour has tour_addons rows; noop otherwise.
+  const [addonPerPerson, setAddonPerPerson] = useState(0);
+  const [addonResolved, setAddonResolved] = useState<{
+    label: string;
+    perPerson: number;
+    homeCity: string;
+    legs: unknown[];
+  } | null>(null);
+  const [tourHasAddons, setTourHasAddons] = useState<boolean | null>(null);
+
+  const cityToHome: Record<DepartureCity, "ISB" | "LHE" | "KHI"> = {
+    islamabad: "ISB", lahore: "LHE", karachi: "KHI",
+  };
+  const homeCityCode = cityToHome[draft.departureCity];
+  // Fall back to the tour's own advertised departure date until departures load.
+  const startDateForQuote = allDepartures[0]?.departureDate ?? tour.departureDate;
+
+  useEffect(() => {
+    if (!startDateForQuote) return;
+    let cancelled = false;
+    fetch(`/api/tours/quote-addons?tourSlug=${encodeURIComponent(tour.slug)}&homeCity=${homeCityCode}&startDate=${startDateForQuote}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((q) => {
+        if (cancelled || !q) return;
+        setTourHasAddons(!!q.hasAddons);
+        setAddonPerPerson(q.addonCostPerPerson ?? 0);
+        const first = (q.addons ?? [])[0];
+        setAddonResolved(first ? {
+          label: first.label,
+          perPerson: first.perPerson,
+          homeCity: q.homeCity,
+          legs: first.flightLegs ?? [],
+        } : null);
+      })
+      .catch(() => { if (!cancelled) setTourHasAddons(false); });
+    return () => { cancelled = true; };
+  }, [tour.slug, homeCityCode, startDateForQuote]);
 
   useEffect(() => {
     setDraft((d) => ({
@@ -178,8 +227,9 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
       singleRooms: draft.singleRooms,
       singleOccupancyRooms: draft.singleOccupancyRooms,
       paymentPlan: draft.paymentPlan,
+      addonPerPerson,
     }),
-    [tour, liveDeparture, draft.departureCity, draft.adults, draft.childCount, draft.singleRooms, draft.singleOccupancyRooms, draft.paymentPlan],
+    [tour, liveDeparture, draft.departureCity, draft.adults, draft.childCount, draft.singleRooms, draft.singleOccupancyRooms, draft.paymentPlan, addonPerPerson],
   );
 
   const urgency = useMemo(() => deriveUrgency(tour, liveDeparture), [tour, liveDeparture]);
@@ -294,7 +344,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
     if (isSupabaseConfigured && liveDeparture && hasCapacity) {
       setSubmitting(true);
       try {
-        const result = await createBooking({
+        const bookingPayload = {
           departureId: liveDeparture.id,
           seats: totalTravelers,
           singleRooms: draft.singleRooms + draft.singleOccupancyRooms,
@@ -313,7 +363,23 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
           notes: draft.specialRequests || undefined,
           submitUuid: submitUuidRef.current,
           paymentPlan: draft.paymentPlan,
-        });
+        };
+
+        // Tours with tour_addons rows must go through the server route so the
+        // flight cost is re-quoted server-side and appended to total_amount.
+        // Direct-RPC path stays for legacy tours without addons.
+        let result: { bookingId: string; bookingRef: string; totalAmount: number };
+        if (tourHasAddons) {
+          const res = await fetch("/api/tours/create-booking", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ ...bookingPayload, homeCity: homeCityCode }),
+          });
+          if (!res.ok) throw new Error(`create-booking failed (${res.status})`);
+          result = await res.json();
+        } else {
+          result = await createBooking(bookingPayload);
+        }
         trackAddToCart({
           bookingRef: result.bookingRef,
           bookingType: "tour",
@@ -448,6 +514,12 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
               <div className="flex justify-between text-[var(--text-secondary)]">
                 <span>Couple private room × {draft.singleRooms}</span>
                 <span className="tabular-nums">{formatPrice(tour.pricing.singleSupplement * 2 * draft.singleRooms)}</span>
+              </div>
+            )}
+            {pricing.addonSubtotal > 0 && (
+              <div className="flex justify-between text-[var(--text-secondary)]">
+                <span>Flights ({homeCityCode}) × {pricing.totalTravelers}</span>
+                <span className="tabular-nums">{formatPrice(pricing.addonSubtotal)}</span>
               </div>
             )}
             <div className="flex justify-between pt-1.5 border-t border-[var(--border-default)] text-[14px] font-bold text-[var(--text-primary)]">

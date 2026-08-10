@@ -11,7 +11,8 @@ import type { TourItinerary } from "@/types/itinerary";
 function toTour(
   row: TourRow,
   priceMap?: Map<string, { islamabad: number; lahore: number | null; earliestDate: string | null; singleSupplement: number | null }>,
-  r2Images?: TourImage[]
+  r2Images?: TourImage[],
+  hasAddons?: boolean,
 ): Tour {
   const prices = priceMap?.get(row.slug);
   return {
@@ -53,7 +54,21 @@ function toTour(
     metaTitle: row.meta_title,
     metaDescription: row.meta_description,
     updatedAt: row.updated_at ?? undefined,
+    hasAddons,
   };
+}
+
+// One roundtrip to derive which of the given slugs have any tour_addons rows.
+// Kept as a set so the caller can lookup by slug in O(1).
+async function fetchAddonSlugs(supabase: ReturnType<typeof getSupabaseAnon>, slugs: string[]): Promise<Set<string>> {
+  if (slugs.length === 0) return new Set();
+  const { data } = await supabase
+    .from("tour_addons")
+    .select("tour_slug")
+    .in("tour_slug", slugs);
+  const set = new Set<string>();
+  for (const r of (data ?? []) as { tour_slug: string }[]) set.add(r.tour_slug);
+  return set;
 }
 
 function toItinerary(tourSlug: string, rows: TourItineraryDayRow[]): TourItinerary {
@@ -124,7 +139,8 @@ const _fetchAllTours = unstable_cache(
     if (error) throw new Error(`getAllTours: ${error.message}`);
     const rows = data as TourRow[];
     const priceMap = await buildPriceMap(supabase, rows.map((r) => r.slug));
-    return rows.map((r) => toTour(r, priceMap));
+    const addonSlugs = await fetchAddonSlugs(supabase, rows.map((r) => r.slug));
+    return rows.map((r) => toTour(r, priceMap, undefined, addonSlugs.has(r.slug)));
   },
   ["all-tours"],
   { tags: ["tours"], revalidate: 3600 }
@@ -134,16 +150,17 @@ export const getAllTours = cache(_fetchAllTours);
 
 export const getTourBySlug = cache(async (slug: string): Promise<Tour | null> => {
   const supabase = getSupabaseAnon();
-  const [{ data, error }, r2Urls, priceMap] = await Promise.all([
+  const [{ data, error }, r2Urls, priceMap, addonSlugs] = await Promise.all([
     supabase.from("tours").select("*").eq("slug", slug).single(),
     listR2Images(`tours/${slug}/`),
     buildPriceMap(supabase, [slug]),
+    fetchAddonSlugs(supabase, [slug]),
   ]);
   if (error?.code === "PGRST116") return null;
   if (error) throw new Error(`getTourBySlug: ${error.message}`);
   const row = data as TourRow;
   const r2Images = r2Urls.length ? buildImagesFromR2(r2Urls, row.name) : undefined;
-  return toTour(row, priceMap, r2Images);
+  return toTour(row, priceMap, r2Images, addonSlugs.has(row.slug));
 });
 
 export const getToursByDestination = cache(async (destinationSlug: string): Promise<Tour[]> => {

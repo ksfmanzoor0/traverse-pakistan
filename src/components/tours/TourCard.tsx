@@ -159,6 +159,11 @@ export function TourCard({ tour, variant = "carousel", className }: TourCardProp
                   )}
                 </span>
               )}
+              {tour.hasAddons && (
+                <span className="text-[11px] font-medium text-[var(--text-tertiary)]">
+                  + flights
+                </span>
+              )}
             </div>
             {departureDate && (
               <p className="text-[11px] text-[var(--text-tertiary)] italic mt-0.5">

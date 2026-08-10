@@ -1,6 +1,6 @@
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import type { FlightAirline, FlightRouteType } from "@/types/flight";
-import type { PackageAddonRow } from "@/lib/supabase/types";
+import type { PackageAddonRow, TourAddonRow } from "@/lib/supabase/types";
 
 export type HomeCity = "ISB" | "LHE" | "KHI";
 
@@ -164,7 +164,7 @@ function resolveSingleLeg(
 }
 
 async function resolveFlightAddon(
-  addon: PackageAddonRow,
+  addon: Pick<PackageAddonRow, "config">,
   home: HomeCity,
   startDate: string,
   duration: number,
@@ -299,4 +299,90 @@ export async function listPackagesWithAddons(): Promise<PackageWithAddons[]> {
     });
   }
   return out;
+}
+
+// -------------------- Tour flight addons --------------------
+// Mirrors quotePackageAddons but reads from tour_addons + tours.
+// Group tours don't have a starting_cities concept — the tour is offered
+// from wherever addons exist. `homeInStartingCities` in the response is
+// true iff no required addons fire for the chosen home.
+
+export interface TourQuoteArgs {
+  tourSlug: string;
+  homeCity: HomeCity;
+  startDate: string;
+}
+
+export interface TourQuote {
+  tourSlug: string;
+  homeCity: HomeCity;
+  startDate: string;
+  duration: number;
+  addonCostPerPerson: number;
+  addons: ResolvedAddon[];
+  unresolvedLegs: ResolvedFlightLeg[];
+  hasAddons: boolean;
+}
+
+export async function quoteTourAddons(args: TourQuoteArgs): Promise<TourQuote | null> {
+  const supabase = getSupabaseAdmin();
+  const { data: tourRow, error: tourErr } = await supabase
+    .from("tours")
+    .select("slug, duration")
+    .eq("slug", args.tourSlug)
+    .maybeSingle();
+  if (tourErr) throw new Error(`quoteTourAddons: ${tourErr.message}`);
+  if (!tourRow) return null;
+  const tour = tourRow as { slug: string; duration: number };
+
+  const { data: addonRows, error: addonErr } = await supabase
+    .from("tour_addons")
+    .select("*")
+    .eq("tour_slug", args.tourSlug)
+    .order("priority", { ascending: true });
+  if (addonErr) throw new Error(`quoteTourAddons: ${addonErr.message}`);
+
+  const allAddons = (addonRows ?? []) as unknown as TourAddonRow[];
+  const matching = allAddons.filter((a) => a.applies_to_departures.includes(args.homeCity));
+
+  const resolved: ResolvedAddon[] = [];
+  const unresolved: ResolvedFlightLeg[] = [];
+
+  for (const addon of matching) {
+    if (addon.type !== "flight") continue;
+    const { perPerson, legs } = await resolveFlightAddon(addon, args.homeCity, args.startDate, tour.duration);
+    resolved.push({
+      addonId: addon.id,
+      type: "flight",
+      label: addon.label,
+      groupKey: addon.group_key,
+      isRequired: addon.is_required,
+      priority: addon.priority,
+      perPerson,
+      flightLegs: legs,
+    });
+    for (const l of legs) if (l.source === "unresolved") unresolved.push(l);
+  }
+
+  const totalPerPerson = resolved.filter((a) => a.isRequired).reduce((s, a) => s + a.perPerson, 0);
+
+  return {
+    tourSlug: args.tourSlug,
+    homeCity: args.homeCity,
+    startDate: args.startDate,
+    duration: tour.duration,
+    addonCostPerPerson: totalPerPerson,
+    addons: resolved,
+    unresolvedLegs: unresolved,
+    hasAddons: allAddons.length > 0,
+  };
+}
+
+export async function tourHasAddons(tourSlug: string): Promise<boolean> {
+  const supabase = getSupabaseAdmin();
+  const { count } = await supabase
+    .from("tour_addons")
+    .select("id", { count: "exact", head: true })
+    .eq("tour_slug", tourSlug);
+  return (count ?? 0) > 0;
 }

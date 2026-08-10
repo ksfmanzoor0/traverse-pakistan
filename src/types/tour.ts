@@ -73,4 +73,7 @@ export interface Tour {
   metaTitle: string;
   metaDescription: string;
   updatedAt?: string;
+  /** True when the tour has tour_addons rows (flight/bus pickers at checkout).
+   * Card price shows base + "+ flights" chip instead of the bare number. */
+  hasAddons?: boolean;
 }

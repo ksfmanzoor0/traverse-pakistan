@@ -97,6 +97,30 @@ export type BookingRow = {
   amount_paid: number;
   payment_confirmed_via: "ipn" | "polling" | null;
   payment_attempts: number;
+  home_city: "ISB" | "LHE" | "KHI" | null;
+  resolved_addons: unknown | null;
+};
+
+export type TourAddonRow = {
+  id: string;
+  tour_slug: string;
+  type: "flight" | "bus";
+  label: string;
+  applies_to_departures: string[];
+  group_key: string | null;
+  is_required: boolean;
+  priority: number;
+  config: {
+    legs?: Array<{
+      from: string;
+      to: string;
+      routeType: "ONEWAY" | "RETURN";
+      day: number | "last";
+    }>;
+    [k: string]: unknown;
+  };
+  created_at: string | null;
+  updated_at: string | null;
 };
 
 export type BookingParticipantRow = {
@@ -326,6 +350,13 @@ export type Database = {
         Insert: Omit<DepartureRow, "id" | "created_at" | "seats_booked" | "status"> &
           Partial<Pick<DepartureRow, "id" | "created_at" | "seats_booked" | "status">>;
         Update: Partial<DepartureRow>;
+        Relationships: [];
+      };
+      tour_addons: {
+        Row: TourAddonRow;
+        Insert: Omit<TourAddonRow, "id" | "created_at" | "updated_at"> &
+          Partial<Pick<TourAddonRow, "id" | "created_at" | "updated_at">>;
+        Update: Partial<TourAddonRow>;
         Relationships: [];
       };
       bookings: {
