@@ -319,7 +319,7 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
           )}
           {pricing.addonSubtotal > 0 && (
             <div className="flex items-center justify-between text-[12px] text-[var(--text-secondary)]">
-              <span>Transport ({homeCityCode}) × {pricing.totalTravelers}</span>
+              <span>Return Flight ({homeCityCode}) × {pricing.totalTravelers}</span>
               <span className="tabular-nums">{formatPrice(pricing.addonSubtotal)}</span>
             </div>
           )}

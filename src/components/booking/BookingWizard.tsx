@@ -485,7 +485,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
             )}
             {pricing.addonSubtotal > 0 && (
               <div className="flex justify-between text-[var(--text-secondary)]">
-                <span>Flights ({homeCityCode}) × {pricing.totalTravelers}</span>
+                <span>Return Flight ({homeCityCode}) × {pricing.totalTravelers}</span>
                 <span className="tabular-nums">{formatPrice(pricing.addonSubtotal)}</span>
               </div>
             )}
