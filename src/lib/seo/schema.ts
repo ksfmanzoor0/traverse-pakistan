@@ -215,7 +215,10 @@ export function tourSchema(tour: Tour): SchemaNode {
     offers: {
       "@type": "Offer",
       url,
-      price: tour.pricing.islamabad,
+      // Ground-only "from" price. Per-home-city transport add-ons layer on
+      // top at checkout via tour_addons and aren't reflected in the JSON-LD
+      // (Google would flag them as inconsistent with the visible sticker).
+      price: tour.pricing.base,
       priceCurrency: CURRENCY_PKR,
       availability: "https://schema.org/InStock",
       validFrom: new Date().toISOString().slice(0, 10),
@@ -224,20 +227,10 @@ export function tourSchema(tour: Tour): SchemaNode {
       priceSpecification: [
         {
           "@type": "UnitPriceSpecification",
-          name: "Islamabad departure",
-          price: tour.pricing.islamabad,
+          name: "Ground base (transport add-ons quoted at checkout)",
+          price: tour.pricing.base,
           priceCurrency: CURRENCY_PKR,
         },
-        ...(tour.pricing.lahore
-          ? [
-              {
-                "@type": "UnitPriceSpecification",
-                name: "Lahore departure",
-                price: tour.pricing.lahore,
-                priceCurrency: CURRENCY_PKR,
-              },
-            ]
-          : []),
       ],
     },
     aggregateRating:

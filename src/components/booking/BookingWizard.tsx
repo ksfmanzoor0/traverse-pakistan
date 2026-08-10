@@ -612,7 +612,7 @@ function StepDates({
             {availableCities.map((city) => {
               const active = departureCity === city;
               const dep = cityDepartures[city];
-              const price = dep?.price ?? (city === "lahore" ? (tour.pricing.lahore ?? tour.pricing.islamabad) : tour.pricing.islamabad);
+              const price = dep?.price ?? tour.pricing.base;
               return (
                 <button
                   key={city}

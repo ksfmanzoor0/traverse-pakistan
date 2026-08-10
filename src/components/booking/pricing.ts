@@ -48,14 +48,11 @@ export function getGroupDiscountPct(adults: number): number {
 }
 
 export function calculatePricing(input: PricingInput): PricingBreakdown {
-  const { tour, liveDeparture, departureCity, adults, childCount, singleRooms, paymentPlan } = input;
+  const { tour, liveDeparture, adults, childCount, singleRooms, paymentPlan } = input;
   const singleOccupancyRooms = input.singleOccupancyRooms ?? 0;
   const addonPerPerson = input.addonPerPerson ?? 0;
 
-  const basePrice = liveDeparture?.price
-    ?? (departureCity === "lahore"
-      ? (tour.pricing.lahore ?? tour.pricing.islamabad)
-      : tour.pricing.islamabad);
+  const basePrice = liveDeparture?.price ?? tour.pricing.base;
 
   const singleSupplement = liveDeparture?.singleSupplement ?? tour.pricing.singleSupplement ?? 0;
 

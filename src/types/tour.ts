@@ -17,8 +17,9 @@ export interface TourImage {
 }
 
 export interface TourPricing {
-  islamabad: number;
-  lahore: number | null;
+  // Ground-only price per person (city-agnostic). Per-city variance is layered
+  // on at runtime via tour_addons — see quoteTourAddons in addon-cost.service.
+  base: number;
   singleSupplement: number | null;
   international?: number | null;
 }
@@ -43,7 +44,7 @@ export interface Tour {
   duration: number;
   route: string;
   pricing: TourPricing;
-  /** @deprecated Use pricing.islamabad instead */
+  /** @deprecated Use pricing.base instead */
   price: number;
   /** @deprecated Use pricing difference for sale calc */
   originalPrice: number | null;
