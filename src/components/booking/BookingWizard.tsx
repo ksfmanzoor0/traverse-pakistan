@@ -148,8 +148,10 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
   const firstDeparture = allDepartures[0] ?? null;
   const cityDepartures = { islamabad: firstDeparture, lahore: firstDeparture, karachi: firstDeparture, skardu: firstDeparture };
 
-  // Transport add-on cost (flight or bus) for the chosen home city.
+  // Transport add-on cost + display label ("Return Flight" | "Bus" |
+  // "Transport") derived from tour_addons.type via the quote endpoint.
   const [addonPerPerson, setAddonPerPerson] = useState(0);
+  const [addonKind, setAddonKind] = useState<"flight" | "bus" | "mixed" | null>(null);
 
   const cityToHome: Record<DepartureCity, "ISB" | "LHE" | "KHI" | "KDU"> = {
     islamabad: "ISB", lahore: "LHE", karachi: "KHI", skardu: "KDU",
@@ -163,14 +165,21 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
 
   useEffect(() => {
     if (!startDateForQuote) return;
-    if (!shouldFetchAddon) { setAddonPerPerson(0); return; }
+    if (!shouldFetchAddon) { setAddonPerPerson(0); setAddonKind(null); return; }
     const ctrl = new AbortController();
     fetch(`/api/tours/quote-addons?tourSlug=${encodeURIComponent(tour.slug)}&homeCity=${homeCityCode}&startDate=${startDateForQuote}`, { signal: ctrl.signal })
       .then((r) => (r.ok ? r.json() : null))
-      .then((q) => { if (q) setAddonPerPerson(q.addonCostPerPerson ?? 0); })
+      .then((q) => {
+        if (!q) return;
+        setAddonPerPerson(q.addonCostPerPerson ?? 0);
+        const types = new Set(((q.addons ?? []) as Array<{ type: string }>).map((a) => a.type));
+        setAddonKind(types.size === 0 ? null : types.size > 1 ? "mixed" : (types.values().next().value as "flight" | "bus"));
+      })
       .catch((e) => { if (e?.name !== "AbortError") console.error("[wizard addon fetch]", e); });
     return () => ctrl.abort();
   }, [tour.slug, homeCityCode, startDateForQuote, shouldFetchAddon]);
+
+  const addonLineLabel = addonKind === "flight" ? "Return Flight" : addonKind === "bus" ? "Bus" : "Transport";
 
   useEffect(() => {
     setDraft((d) => ({
@@ -485,7 +494,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
             )}
             {pricing.addonSubtotal > 0 && (
               <div className="flex justify-between text-[var(--text-secondary)]">
-                <span>Flights ({homeCityCode}) × {pricing.totalTravelers}</span>
+                <span>{addonLineLabel} ({homeCityCode}) × {pricing.totalTravelers}</span>
                 <span className="tabular-nums">{formatPrice(pricing.addonSubtotal)}</span>
               </div>
             )}
