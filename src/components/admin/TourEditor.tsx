@@ -9,6 +9,7 @@ import { StringList } from "./tour-editor/StringList";
 import { CityAwareList } from "./tour-editor/CityAwareList";
 import { CityChips } from "./tour-editor/CityChips";
 import { AddonConfigForm } from "./tour-editor/AddonConfigForm";
+import { GalleryEditor, type GalleryImage } from "./tour-editor/GalleryEditor";
 
 type Home = "ISB" | "LHE" | "KHI" | "KDU";
 
@@ -24,7 +25,7 @@ interface Actions {
   deleteDeparture: (id: string, tourSlug: string) => Promise<{ ok: boolean; error?: string }>;
 }
 
-const TABS = ["Basics", "Highlights", "Inclusions", "Meeting Point", "Itinerary", "Addons", "Departures", "Preview"] as const;
+const TABS = ["Basics", "Gallery", "Highlights", "Inclusions", "Meeting Point", "Itinerary", "Addons", "Departures", "Preview"] as const;
 
 export function TourEditor({
   tour,
@@ -90,6 +91,12 @@ export function TourEditor({
           })}
           pending={pending}
         />
+      )}
+      {tab === "Gallery" && (
+        <GallerySection tour={tour} onSave={(patch) => startTransition(async () => {
+          const r = await actions.updateTour(tour.slug, patch);
+          announce(r.ok, r.ok ? "Saved" : r.error ?? "Failed");
+        })} pending={pending} />
       )}
       {tab === "Highlights" && (
         <HighlightsSection tour={tour} onSave={(patch) => startTransition(async () => {
@@ -237,6 +244,22 @@ function BasicsSection({ tour, onSave, pending }: { tour: TourRow; onSave: (p: T
 }
 
 /* ============================ Highlights ============================ */
+
+/* ============================ Gallery ============================ */
+
+function GallerySection({ tour, onSave, pending }: { tour: TourRow; onSave: (p: TourPatch) => void; pending: boolean }) {
+  const [images, setImages] = useState<GalleryImage[]>(tour.images ?? []);
+  return (
+    <div className="space-y-4">
+      <p className="text-[12px] text-[var(--text-tertiary)]">
+        First image is the cover on listings + Open Graph. Reorder with ↑ / ↓. Uploads land in R2 at
+        <code className="mx-1">tours/{tour.slug}/</code>. Save persists the order to the DB (which takes priority over R2 auto-listing).
+      </p>
+      <GalleryEditor tourSlug={tour.slug} images={images} onChange={setImages} />
+      <SaveBar pending={pending} onSave={() => onSave({ images })} />
+    </div>
+  );
+}
 
 function HighlightsSection({ tour, onSave, pending }: { tour: TourRow; onSave: (p: TourPatch) => void; pending: boolean }) {
   const [highlights, setHighlights] = useState<string[]>(tour.highlights);

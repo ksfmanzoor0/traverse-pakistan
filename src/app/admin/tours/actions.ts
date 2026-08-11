@@ -37,6 +37,7 @@ export type TourPatch = {
   meta_title?: string;
   meta_description?: string;
   featured?: boolean;
+  images?: Array<{ url: string; alt: string }>;
 };
 
 function bust(slug: string) {
