@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
 import { StarRating } from "@/components/ui/StarRating";
@@ -16,6 +16,11 @@ import { deriveUrgency } from "@/components/booking/urgency";
 import { Stepper } from "@/components/booking/Stepper";
 import { hasResumableDraft } from "@/hooks/useCheckoutDraft";
 import { useSharedDepartureCity } from "@/hooks/useSharedDepartureCity";
+import {
+  AddonPicker,
+  defaultSelectedIds,
+  sumSelectedAddons,
+} from "@/components/booking/AddonPicker";
 
 interface BookingSidebarProps {
   tour: Tour;
@@ -99,16 +104,33 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
 
   const liveDeparture = departuresForCity.find((d) => d.id === selectedDepartureId) ?? departuresForCity[0] ?? null;
 
-  // Transport-addon cost + display label — read straight from the Tour
-  // object (tour.service.ts precomputes both server-side per 1h `tours`
-  // cache tick). No client fetch, no city-switch delay.
+  // Addon list + selection state — read straight from the Tour object
+  // (tour.service.ts precomputes it server-side per 1h `tours` cache tick).
+  // No client fetch = instant city switch. Selection state is per-city so
+  // switching back preserves what the user picked.
   const cityToHome: Record<"islamabad" | "lahore" | "karachi" | "skardu", "ISB" | "LHE" | "KHI" | "KDU"> = {
     islamabad: "ISB", lahore: "LHE", karachi: "KHI", skardu: "KDU",
   };
   const homeCityCode = cityToHome[departure];
-  const addonPerPerson = tour.addonCostByCity?.[homeCityCode] ?? 0;
-  const addonKind = tour.addonKindByCity?.[homeCityCode] ?? null;
-  const addonLineLabel = addonKind === "flight" ? "Return Flight" : addonKind === "bus" ? "Bus" : "Transport";
+  const cityAddons = useMemo(() => tour.addonsByCity?.[homeCityCode] ?? [], [tour.addonsByCity, homeCityCode]);
+  const [selectedByCity, setSelectedByCity] = useState<Record<string, Set<string>>>({});
+  const selectedIds = selectedByCity[homeCityCode] ?? defaultSelectedIds(cityAddons);
+  useEffect(() => {
+    setSelectedByCity((prev) => (prev[homeCityCode] ? prev : { ...prev, [homeCityCode]: defaultSelectedIds(cityAddons) }));
+  }, [homeCityCode, cityAddons]);
+  const setSelected = (next: Set<string>) => setSelectedByCity((prev) => ({ ...prev, [homeCityCode]: next }));
+  const onToggle = (id: string) => {
+    const next = new Set(selectedIds);
+    next.has(id) ? next.delete(id) : next.add(id);
+    setSelected(next);
+  };
+  const onRadioSelect = (groupKey: string, id: string) => {
+    const next = new Set(selectedIds);
+    for (const a of cityAddons) if (a.groupKey === groupKey) next.delete(a.id);
+    next.add(id);
+    setSelected(next);
+  };
+  const addonPerPerson = sumSelectedAddons(cityAddons, selectedIds);
 
   const pricing = calculatePricing({
     tour,
@@ -127,7 +149,8 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
   const maxSeats = liveDeparture?.maxSeats ?? tour.maxGroupSize;
   const seatCap = liveDeparture ? Math.min(maxSeats, liveDeparture.seatsAvailable) : maxSeats;
 
-  const checkoutHref = `/grouptours/${tour.slug}/checkout?departure=${departure}&adults=${adults}&children=${children}&singleRooms=${singleRooms}&singleOccupancy=${singleOccupancyRooms}${liveDeparture ? `&departureId=${liveDeparture.id}` : ""}`;
+  const addonQuery = selectedIds.size > 0 ? `&addons=${Array.from(selectedIds).join(",")}` : "";
+  const checkoutHref = `/grouptours/${tour.slug}/checkout?departure=${departure}&adults=${adults}&children=${children}&singleRooms=${singleRooms}&singleOccupancy=${singleOccupancyRooms}${liveDeparture ? `&departureId=${liveDeparture.id}` : ""}${addonQuery}`;
 
   // Clamp private-room selections when adults changes
   const maxSingles = Math.max(0, adults - 2 * singleRooms);
@@ -281,6 +304,17 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
           )}
         </div>
 
+        {cityAddons.length > 0 && (
+          <div className="mt-5 pt-4 border-t border-[var(--border-default)]">
+            <AddonPicker
+              addons={cityAddons}
+              selectedIds={selectedIds}
+              onToggle={onToggle}
+              onRadioSelect={onRadioSelect}
+            />
+          </div>
+        )}
+
         {pricing.groupDiscountPct > 0 && (
           <p className="mt-4 text-[11px] font-semibold text-[var(--success)] flex items-center gap-1.5">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
@@ -309,7 +343,7 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
           )}
           {pricing.addonSubtotal > 0 && (
             <div className="flex items-center justify-between text-[12px] text-[var(--text-secondary)]">
-              <span>{addonLineLabel} ({homeCityCode}) × {pricing.totalTravelers}</span>
+              <span>Add-ons ({homeCityCode}) × {pricing.totalTravelers}</span>
               <span className="tabular-nums">{formatPrice(pricing.addonSubtotal)}</span>
             </div>
           )}

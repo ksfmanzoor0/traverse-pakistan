@@ -23,6 +23,11 @@ import type { TravelerProfile } from "./types";
 import { useCheckoutDraft } from "@/hooks/useCheckoutDraft";
 import { InlineAlert } from "@/components/ui/InlineAlert";
 import { trackAddToCart } from "@/lib/analytics/track";
+import {
+  AddonPicker,
+  defaultSelectedIds,
+  sumSelectedAddons,
+} from "@/components/booking/AddonPicker";
 
 const STEP_LABELS = ["Dates & Travellers", "Your details", "Review"];
 
@@ -148,16 +153,32 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
   const firstDeparture = allDepartures[0] ?? null;
   const cityDepartures = { islamabad: firstDeparture, lahore: firstDeparture, karachi: firstDeparture, skardu: firstDeparture };
 
-  // Transport add-on cost + display label — read directly from the Tour
-  // object (tour.service.ts precomputes both server-side per 1h `tours`
-  // cache tick). No fetch = instant city-switch response.
+  // Addon list + selection — read from the precomputed per-city breakdown
+  // on the Tour object. Selection state is per-city so switching back
+  // preserves what the user picked.
   const cityToHome: Record<DepartureCity, "ISB" | "LHE" | "KHI" | "KDU"> = {
     islamabad: "ISB", lahore: "LHE", karachi: "KHI", skardu: "KDU",
   };
   const homeCityCode = cityToHome[draft.departureCity];
-  const addonPerPerson = tour.addonCostByCity?.[homeCityCode] ?? 0;
-  const addonKind = tour.addonKindByCity?.[homeCityCode] ?? null;
-  const addonLineLabel = addonKind === "flight" ? "Return Flight" : addonKind === "bus" ? "Bus" : "Transport";
+  const cityAddons = useMemo(() => tour.addonsByCity?.[homeCityCode] ?? [], [tour.addonsByCity, homeCityCode]);
+  const [selectedByCity, setSelectedByCity] = useState<Record<string, Set<string>>>({});
+  const selectedIds = selectedByCity[homeCityCode] ?? defaultSelectedIds(cityAddons);
+  useEffect(() => {
+    setSelectedByCity((prev) => (prev[homeCityCode] ? prev : { ...prev, [homeCityCode]: defaultSelectedIds(cityAddons) }));
+  }, [homeCityCode, cityAddons]);
+  const setSelected = (next: Set<string>) => setSelectedByCity((prev) => ({ ...prev, [homeCityCode]: next }));
+  const onAddonToggle = (id: string) => {
+    const next = new Set(selectedIds);
+    next.has(id) ? next.delete(id) : next.add(id);
+    setSelected(next);
+  };
+  const onAddonRadio = (groupKey: string, id: string) => {
+    const next = new Set(selectedIds);
+    for (const a of cityAddons) if (a.groupKey === groupKey) next.delete(a.id);
+    next.add(id);
+    setSelected(next);
+  };
+  const addonPerPerson = sumSelectedAddons(cityAddons, selectedIds);
 
   useEffect(() => {
     setDraft((d) => ({
@@ -330,7 +351,11 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
         const res = await fetch("/api/tours/create-booking", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ ...bookingPayload, homeCity: homeCityCode }),
+          body: JSON.stringify({
+            ...bookingPayload,
+            homeCity: homeCityCode,
+            selectedAddonIds: Array.from(selectedIds),
+          }),
         });
         if (!res.ok) throw new Error(`create-booking failed (${res.status})`);
         const result: { bookingId: string; bookingRef: string; totalAmount: number } = await res.json();
@@ -408,6 +433,16 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
               onSingleRooms={(n) => patch({ singleRooms: n })}
               onSingleOccupancyRooms={(n) => patch({ singleOccupancyRooms: n })}
             />
+            {cityAddons.length > 0 && (
+              <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] px-4 py-4">
+                <AddonPicker
+                  addons={cityAddons}
+                  selectedIds={selectedIds}
+                  onToggle={onAddonToggle}
+                  onRadioSelect={onAddonRadio}
+                />
+              </div>
+            )}
           </div>
         )}
 
@@ -472,7 +507,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
             )}
             {pricing.addonSubtotal > 0 && (
               <div className="flex justify-between text-[var(--text-secondary)]">
-                <span>{addonLineLabel} ({homeCityCode}) × {pricing.totalTravelers}</span>
+                <span>Add-ons ({homeCityCode}) × {pricing.totalTravelers}</span>
                 <span className="tabular-nums">{formatPrice(pricing.addonSubtotal)}</span>
               </div>
             )}
@@ -600,10 +635,13 @@ function StepDates({
             Departure city
           </label>
           <div className={`grid gap-3 ${availableCities.length >= 4 ? "grid-cols-2" : availableCities.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
-            {availableCities.map((city) => {
+            {codesInOrder.map((code) => {
+              const city = CODE_TO_CITY[code];
               const active = departureCity === city;
               const dep = cityDepartures[city];
-              const price = dep?.price ?? tour.pricing.base;
+              // Show the "from" price the traveler will actually see:
+              // base + baseline addon cost for the city (required + default-on).
+              const price = (dep?.price ?? tour.pricing.base) + (tour.addonCostByCity?.[code] ?? 0);
               return (
                 <button
                   key={city}
