@@ -21,9 +21,15 @@ export function ItineraryAccordion({ days, tourSlug }: ItineraryAccordionProps) 
   // tours doesn't inherit a stale city from a previous page.
   const [city] = useSharedDepartureCity("islamabad", tourSlug);
 
+  // A day may declare cityOnly to hide itself unless the traveler's home city
+  // is in the list. Renumbered after filtering so Day 1/2/3 remain contiguous.
+  const visibleDays = days
+    .filter((d) => !d.cityOnly || d.cityOnly.length === 0 || d.cityOnly.includes(city))
+    .map((d, i) => ({ ...d, dayNumber: i + 1 }));
+
   return (
     <div className="border border-[var(--border-default)] rounded-xl overflow-hidden">
-      {days.map((day) => (
+      {visibleDays.map((day) => (
         <AccordionItem
           key={day.dayNumber}
           defaultOpen={day.dayNumber === 1}

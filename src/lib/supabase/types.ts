@@ -27,8 +27,8 @@ export type TourRow = {
   images: Array<{ url: string; alt: string }>;
   guide: { name: string; yearsGuiding: number; photo?: string } | null;
   highlights: string[];
-  inclusions: string[];
-  exclusions: string[];
+  inclusions: Array<{ text: string; cityOnly?: Array<"ISB" | "LHE" | "KHI" | "KDU"> }>;
+  exclusions: Array<{ text: string; cityOnly?: Array<"ISB" | "LHE" | "KHI" | "KDU"> }>;
   know_before_you_go: string[];
   meeting_point: {
     address: string;
@@ -60,6 +60,7 @@ export type TourItineraryDayRow = {
   stops: Array<{ name: string; detail: string; cityOnly?: string }>;
   driving_time: string;
   overnight: string;
+  city_only: string[] | null;
 };
 
 export type DepartureRow = {

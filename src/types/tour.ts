@@ -18,6 +18,13 @@ export interface TourImage {
   alt: string;
 }
 
+/** Inclusion / exclusion list item. `cityOnly` limits the item to travelers
+ * whose home city (ISB/LHE/KHI/KDU) is in the list. Undefined = all cities. */
+export interface TourListItem {
+  text: string;
+  cityOnly?: Array<"ISB" | "LHE" | "KHI" | "KDU">;
+}
+
 export interface TourPricing {
   // Ground-only price per person (city-agnostic). Per-city variance is layered
   // on at runtime via tour_addons — see quoteTourAddons in addon-cost.service.
@@ -69,8 +76,8 @@ export interface Tour {
     photo?: string;
   };
   highlights: string[];
-  inclusions: string[];
-  exclusions: string[];
+  inclusions: TourListItem[];
+  exclusions: TourListItem[];
   knowBeforeYouGo: string[];
   meetingPoint: MeetingPoint;
   metaTitle: string;

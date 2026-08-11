@@ -51,8 +51,8 @@ function toTour(
     ),
     guide: row.guide ?? undefined,
     highlights: row.highlights,
-    inclusions: row.inclusions,
-    exclusions: row.exclusions,
+    inclusions: (row.inclusions ?? []) as Tour["inclusions"],
+    exclusions: (row.exclusions ?? []) as Tour["exclusions"],
     knowBeforeYouGo: row.know_before_you_go,
     meetingPoint: row.meeting_point,
     metaTitle: row.meta_title,
@@ -159,6 +159,7 @@ function toItinerary(tourSlug: string, rows: TourItineraryDayRow[]): TourItinera
         stops: r.stops as ItineraryDay["stops"],
         drivingTime: r.driving_time,
         overnight: r.overnight,
+        cityOnly: (r.city_only ?? undefined) as ItineraryDay["cityOnly"],
       })),
   };
 }
