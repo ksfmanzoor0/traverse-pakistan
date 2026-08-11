@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { TourRow, TourItineraryDayRow, TourAddonRow } from "@/lib/supabase/types";
+import type { TourRow, TourItineraryDayRow, TourAddonRow, DepartureRow } from "@/lib/supabase/types";
 import type { AddonType } from "@/types/tour-addon";
-import type { TourPatch, ItineraryDayPatch, TourAddonPatch } from "@/app/admin/tours/actions";
+import type { TourPatch, ItineraryDayPatch, TourAddonPatch, DeparturePatch } from "@/app/admin/tours/actions";
+import { formatPrice } from "@/lib/utils";
 import { StringList } from "./tour-editor/StringList";
 import { CityAwareList } from "./tour-editor/CityAwareList";
 import { CityChips } from "./tour-editor/CityChips";
@@ -19,19 +20,23 @@ interface Actions {
   deleteItineraryDay: (id: string, tourSlug: string) => Promise<{ ok: boolean; error?: string }>;
   upsertTourAddon: (addon: TourAddonPatch) => Promise<{ ok: boolean; id?: string; error?: string }>;
   deleteTourAddon: (id: string, tourSlug: string) => Promise<{ ok: boolean; error?: string }>;
+  upsertDeparture: (row: DeparturePatch) => Promise<{ ok: boolean; id?: string; error?: string }>;
+  deleteDeparture: (id: string, tourSlug: string) => Promise<{ ok: boolean; error?: string }>;
 }
 
-const TABS = ["Basics", "Highlights", "Inclusions", "Meeting Point", "Itinerary", "Addons"] as const;
+const TABS = ["Basics", "Highlights", "Inclusions", "Meeting Point", "Itinerary", "Addons", "Departures", "Preview"] as const;
 
 export function TourEditor({
   tour,
   days,
   addons,
+  departures,
   actions,
 }: {
   tour: TourRow;
   days: TourItineraryDayRow[];
   addons: TourAddonRow[];
+  departures: DepartureRow[];
   actions: Actions;
 }) {
   const [tab, setTab] = useState<(typeof TABS)[number]>("Basics");
@@ -123,6 +128,20 @@ export function TourEditor({
           announce={announce}
           startTransition={startTransition}
         />
+      )}
+      {tab === "Departures" && (
+        <DeparturesSection
+          tourSlug={tour.slug}
+          duration={tour.duration}
+          initialDepartures={departures}
+          actions={actions}
+          pending={pending}
+          announce={announce}
+          startTransition={startTransition}
+        />
+      )}
+      {tab === "Preview" && (
+        <PreviewSection tourSlug={tour.slug} anchorCity={tour.anchor_city as Home | null} />
       )}
     </div>
   );
@@ -638,6 +657,225 @@ function AddonsSection({
       >
         + Add addon
       </button>
+    </div>
+  );
+}
+
+/* ============================ Departures ============================ */
+
+function addDaysISO(iso: string, days: number): string {
+  if (!iso) return "";
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function DeparturesSection({
+  tourSlug,
+  duration,
+  initialDepartures,
+  actions,
+  pending,
+  announce,
+  startTransition,
+}: {
+  tourSlug: string;
+  duration: number;
+  initialDepartures: DepartureRow[];
+  actions: Actions;
+  pending: boolean;
+  announce: (ok: boolean, msg: string) => void;
+  startTransition: React.TransitionStartFunction;
+}) {
+  const [rows, setRows] = useState(initialDepartures);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  function update(i: number, patch: Partial<DepartureRow>) {
+    setRows((prev) => {
+      const next = prev.slice();
+      next[i] = { ...next[i], ...patch };
+      // Keep end_date pinned to departure_date + (duration - 1) unless the
+      // admin explicitly overrides it (i.e. when duration or date changes).
+      if ((patch.departure_date || patch.max_seats === undefined) && next[i].departure_date && !patch.end_date) {
+        next[i] = { ...next[i], end_date: addDaysISO(next[i].departure_date, Math.max(0, duration - 1)) };
+      }
+      return next;
+    });
+  }
+
+  function save(row: DepartureRow) {
+    startTransition(async () => {
+      const r = await actions.upsertDeparture({
+        id: row.id || undefined,
+        tour_slug: tourSlug,
+        departure_date: row.departure_date,
+        end_date: row.end_date,
+        max_seats: row.max_seats,
+        price: row.price,
+        single_supplement: row.single_supplement,
+        status: row.status,
+      });
+      if (r.ok && r.id && !row.id) {
+        setRows((prev) => prev.map((x) => (x === row ? { ...x, id: r.id! } : x)));
+      }
+      announce(r.ok, r.ok ? "Departure saved" : r.error ?? "Save failed");
+    });
+  }
+
+  function remove(i: number) {
+    const row = rows[i];
+    if (!confirm(`Delete departure on ${row.departure_date}?`)) return;
+    if (row.id) {
+      startTransition(async () => {
+        const r = await actions.deleteDeparture(row.id, tourSlug);
+        if (r.ok) setRows((prev) => prev.filter((_, idx) => idx !== i));
+        announce(r.ok, r.ok ? "Departure deleted" : r.error ?? "Delete failed");
+      });
+    } else {
+      setRows((prev) => prev.filter((_, idx) => idx !== i));
+    }
+  }
+
+  function addRow() {
+    const last = rows[rows.length - 1];
+    const seed: DepartureRow = {
+      id: "",
+      tour_slug: tourSlug,
+      departure_date: last?.departure_date ?? new Date().toISOString().slice(0, 10),
+      end_date: last?.end_date ?? null,
+      departure_city: null,
+      max_seats: last?.max_seats ?? 12,
+      seats_booked: 0,
+      status: "open",
+      price: last?.price ?? 0,
+      single_supplement: last?.single_supplement ?? null,
+      created_at: "",
+    };
+    setRows((prev) => [...prev, seed]);
+    setEditingId(seed.id || `new-${rows.length}`);
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-[12px] text-[var(--text-tertiary)]">
+        Base ground price + seat inventory per date. Per-home-city variance is layered on via the Addons tab.
+        End date defaults to departure + {duration - 1} day{duration - 1 === 1 ? "" : "s"}.
+      </p>
+      {rows.map((r, i) => {
+        const seatsLeft = r.max_seats - r.seats_booked;
+        const key = r.id || `new-${i}`;
+        const editing = editingId === key;
+        return (
+          <div key={key} className="border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] font-semibold text-[var(--text-primary)]">
+                  {r.departure_date || "(no date)"} → {r.end_date || "—"}
+                </div>
+                <div className="text-[11px] text-[var(--text-tertiary)]">
+                  {formatPrice(r.price)} · {r.seats_booked}/{r.max_seats} seats booked ({seatsLeft} left) · {r.status}
+                  {r.single_supplement ? ` · single supp ${formatPrice(r.single_supplement)}` : ""}
+                </div>
+              </div>
+              <button type="button" onClick={() => setEditingId(editing ? null : key)} className="text-[12px] font-semibold text-[var(--primary)] hover:underline">
+                {editing ? "Close" : "Edit"}
+              </button>
+              <button type="button" onClick={() => remove(i)} className="text-[12px] font-semibold text-[var(--error)] hover:underline">Delete</button>
+            </div>
+
+            {editing && (
+              <div className="mt-3 space-y-3 border-t border-[var(--border-default)] pt-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Departure date">
+                    <input type="date" value={r.departure_date} onChange={(e) => update(i, { departure_date: e.target.value })} className={inputCls} />
+                  </Field>
+                  <Field label="End date">
+                    <input type="date" value={r.end_date ?? ""} onChange={(e) => update(i, { end_date: e.target.value || null })} className={inputCls} />
+                  </Field>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <Field label="Price / person (PKR)">
+                    <input type="number" value={r.price} onChange={(e) => update(i, { price: Number(e.target.value) || 0 })} className={inputCls} />
+                  </Field>
+                  <Field label="Single supplement (PKR)">
+                    <input type="number" value={r.single_supplement ?? ""} onChange={(e) => update(i, { single_supplement: e.target.value ? Number(e.target.value) : null })} className={inputCls} />
+                  </Field>
+                  <Field label="Max seats">
+                    <input type="number" value={r.max_seats} onChange={(e) => update(i, { max_seats: Number(e.target.value) || 0 })} className={inputCls} />
+                  </Field>
+                </div>
+                <Field label="Status">
+                  <div className="flex gap-1.5">
+                    {(["open", "closed", "cancelled"] as const).map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => update(i, { status: s })}
+                        className={r.status === s ? chipActive : chip}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </Field>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => save(r)}
+                    className="h-9 px-4 text-[13px] font-semibold bg-[var(--primary)] text-[var(--text-inverse)] rounded-[var(--radius-sm)] disabled:opacity-60"
+                  >
+                    {pending ? "Saving…" : r.id ? "Save departure" : "Create departure"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <button
+        type="button"
+        onClick={addRow}
+        className="h-9 px-3 text-[12px] font-semibold text-[var(--primary)] border border-dashed border-[var(--primary)]/40 rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)]"
+      >
+        + Add departure
+      </button>
+    </div>
+  );
+}
+
+/* ============================ Preview ============================ */
+
+// Renders the live tour page in an iframe, forcing the initial home city via
+// ?preview=CITY. Lets admins verify inclusions/exclusions/itinerary filters
+// without re-implementing anything editor-side.
+function PreviewSection({ tourSlug, anchorCity }: { tourSlug: string; anchorCity: Home | null }) {
+  const [city, setCity] = useState<Home>(anchorCity ?? "ISB");
+  const src = `/grouptours/${tourSlug}?preview=${city}`;
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="text-[13px] text-[var(--text-secondary)]">Viewing as a traveler from:</div>
+        <div className="flex gap-1.5">
+          {(["ISB", "LHE", "KHI", "KDU"] as Home[]).map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setCity(c)}
+              className={city === c ? chipActive : chip}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+        <a href={src} target="_blank" rel="noreferrer" className="text-[12px] font-semibold text-[var(--primary)] hover:underline">
+          Open in new tab ↗
+        </a>
+      </div>
+      <div className="border border-[var(--border-default)] rounded-[var(--radius-sm)] overflow-hidden bg-[var(--bg-primary)]" style={{ height: "80vh" }}>
+        {/* key forces reload on city change so the initial-departure prop takes effect */}
+        <iframe key={city} src={src} title={`Preview ${tourSlug} as ${city}`} className="w-full h-full" />
+      </div>
     </div>
   );
 }

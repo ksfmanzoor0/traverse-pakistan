@@ -302,3 +302,62 @@ export async function createTourAndRedirect(input: NewTourInput) {
   if (!r.ok || !r.slug) return r;
   redirect(`/admin/tours/${r.slug}`);
 }
+
+/* ============================ Departures ============================ */
+
+export type DeparturePatch = {
+  id?: string;
+  tour_slug: string;
+  departure_date: string;
+  end_date: string | null;
+  max_seats: number;
+  price: number;
+  single_supplement: number | null;
+  status: "open" | "closed" | "cancelled";
+};
+
+export async function upsertDeparture(row: DeparturePatch): Promise<{ ok: boolean; id?: string; error?: string }> {
+  await requireAdmin();
+  const supabase = getSupabaseAdmin();
+  const payload = {
+    tour_slug: row.tour_slug,
+    departure_date: row.departure_date,
+    end_date: row.end_date,
+    max_seats: row.max_seats,
+    price: row.price,
+    single_supplement: row.single_supplement,
+    status: row.status,
+    // All new tour departures use the NULL-city model — per-city variance is
+    // handled through tour_addons, not per-departure rows.
+    departure_city: null,
+  };
+  if (row.id) {
+    const { error } = await supabase.from("departures").update(payload).eq("id", row.id);
+    if (error) return { ok: false, error: error.message };
+    bust(row.tour_slug);
+    return { ok: true, id: row.id };
+  }
+  const { data, error } = await supabase.from("departures").insert(payload).select("id").single();
+  if (error) return { ok: false, error: error.message };
+  bust(row.tour_slug);
+  return { ok: true, id: (data as { id: string }).id };
+}
+
+export async function deleteDeparture(id: string, tourSlug: string): Promise<{ ok: boolean; error?: string }> {
+  await requireAdmin();
+  const supabase = getSupabaseAdmin();
+  // Guard: if any bookings reference this departure, refuse. Bookings ledger
+  // is the source of truth for payments; silently dropping a departure would
+  // orphan them.
+  const { count } = await supabase
+    .from("bookings")
+    .select("id", { count: "exact", head: true })
+    .eq("departure_id", id);
+  if ((count ?? 0) > 0) {
+    return { ok: false, error: `Departure has ${count} booking(s). Cancel it instead of deleting.` };
+  }
+  const { error } = await supabase.from("departures").delete().eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  bust(tourSlug);
+  return { ok: true };
+}

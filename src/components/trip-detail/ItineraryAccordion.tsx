@@ -8,18 +8,21 @@ import { useSharedDepartureCity } from "@/hooks/useSharedDepartureCity";
 interface ItineraryAccordionProps {
   days: ItineraryDay[];
   tourSlug: string;
+  /** Preview override — passed by admin ?preview= URL to force a specific city
+   *  as initial. Real users don't set this. */
+  initialDeparture?: "islamabad" | "lahore" | "karachi" | "skardu";
 }
 
 function formatDescription(text: string): string[] {
   return text.split('\n').map((l) => l.trim()).filter(Boolean);
 }
 
-export function ItineraryAccordion({ days, tourSlug }: ItineraryAccordionProps) {
+export function ItineraryAccordion({ days, tourSlug, initialDeparture = "islamabad" }: ItineraryAccordionProps) {
   // Read the shared departure-city selection (written by BookingSidebar).
   // Stops without cityOnly show for everyone; stops with cityOnly show only
   // when it matches the selection. Scoped by tourSlug so navigating between
   // tours doesn't inherit a stale city from a previous page.
-  const [city] = useSharedDepartureCity("islamabad", tourSlug);
+  const [city] = useSharedDepartureCity(initialDeparture, tourSlug);
 
   // A day may declare cityOnly to hide itself unless the traveler's home city
   // is in the list. Renumbered after filtering so Day 1/2/3 remain contiguous.
