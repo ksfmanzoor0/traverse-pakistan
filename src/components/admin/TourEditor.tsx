@@ -10,6 +10,8 @@ import { CityAwareList } from "./tour-editor/CityAwareList";
 import { CityChips } from "./tour-editor/CityChips";
 import { AddonConfigForm } from "./tour-editor/AddonConfigForm";
 import { GalleryEditor, type GalleryImage } from "./tour-editor/GalleryEditor";
+import { BlockEditor } from "./tour-editor/BlockEditor";
+import type { TourBlock } from "@/types/tour-block";
 
 type Home = "ISB" | "LHE" | "KHI" | "KDU";
 
@@ -25,7 +27,7 @@ interface Actions {
   deleteDeparture: (id: string, tourSlug: string) => Promise<{ ok: boolean; error?: string }>;
 }
 
-const TABS = ["Basics", "Gallery", "Highlights", "Inclusions", "Meeting Point", "Itinerary", "Addons", "Departures", "Preview"] as const;
+const TABS = ["Basics", "Gallery", "Content", "Highlights", "Inclusions", "Meeting Point", "Itinerary", "Addons", "Departures", "Preview"] as const;
 
 export function TourEditor({
   tour,
@@ -94,6 +96,12 @@ export function TourEditor({
       )}
       {tab === "Gallery" && (
         <GallerySection tour={tour} onSave={(patch) => startTransition(async () => {
+          const r = await actions.updateTour(tour.slug, patch);
+          announce(r.ok, r.ok ? "Saved" : r.error ?? "Failed");
+        })} pending={pending} />
+      )}
+      {tab === "Content" && (
+        <ContentSection tour={tour} onSave={(patch) => startTransition(async () => {
           const r = await actions.updateTour(tour.slug, patch);
           announce(r.ok, r.ok ? "Saved" : r.error ?? "Failed");
         })} pending={pending} />
@@ -257,6 +265,22 @@ function GallerySection({ tour, onSave, pending }: { tour: TourRow; onSave: (p: 
       </p>
       <GalleryEditor tourSlug={tour.slug} images={images} onChange={setImages} />
       <SaveBar pending={pending} onSave={() => onSave({ images })} />
+    </div>
+  );
+}
+
+/* ============================ Content (Block editor) ============================ */
+
+function ContentSection({ tour, onSave, pending }: { tour: TourRow; onSave: (p: TourPatch) => void; pending: boolean }) {
+  const [blocks, setBlocks] = useState<TourBlock[]>((tour.body_blocks as TourBlock[] | null) ?? []);
+  return (
+    <div className="space-y-4">
+      <p className="text-[12px] text-[var(--text-tertiary)]">
+        Rich body content shown below the description on the tour page. Each block can carry a city visibility
+        so it hides for travelers whose home isn&apos;t in the list. Preview under the Preview tab.
+      </p>
+      <BlockEditor tourSlug={tour.slug} blocks={blocks} onChange={setBlocks} />
+      <SaveBar pending={pending} onSave={() => onSave({ body_blocks: blocks })} />
     </div>
   );
 }

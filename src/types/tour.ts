@@ -10,6 +10,7 @@ export type TourCategory =
   | "coastal";
 
 import type { ResolvedAddonView } from "./tour-addon";
+import type { TourBlock } from "./tour-block";
 
 export type BadgeType = "on-sale" | "epic-trek" | "bestseller" | "new" | null;
 
@@ -82,6 +83,9 @@ export interface Tour {
   meetingPoint: MeetingPoint;
   metaTitle: string;
   metaDescription: string;
+  /** Rich block-editor content shown below the description on the tour
+   * page. Filtered client-side by traveler home city. Empty = nothing. */
+  bodyBlocks: TourBlock[];
   updatedAt?: string;
   /** True when the tour has tour_addons rows (flight/bus pickers at checkout).
    * Card price shows base + "+ transport" chip instead of the bare number. */

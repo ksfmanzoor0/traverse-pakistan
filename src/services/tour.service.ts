@@ -9,6 +9,7 @@ import type { TourRow, TourItineraryDayRow } from "@/lib/supabase/types";
 import type { Tour, TourCategory, TourImage } from "@/types/tour";
 import type { TourItinerary, ItineraryDay } from "@/types/itinerary";
 import type { ResolvedAddonView } from "@/types/tour-addon";
+import type { TourBlock } from "@/types/tour-block";
 
 function toTour(
   row: TourRow,
@@ -63,6 +64,7 @@ function toTour(
     meetingPoint: row.meeting_point,
     metaTitle: row.meta_title,
     metaDescription: row.meta_description,
+    bodyBlocks: (row.body_blocks as TourBlock[] | null) ?? [],
     updatedAt: row.updated_at ?? undefined,
     hasAddons,
     anchorCity: row.anchor_city,

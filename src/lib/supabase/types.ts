@@ -40,6 +40,9 @@ export type TourRow = {
     pickupDescription: string;
   };
   featured: boolean;
+  // Ordered block-editor content shown below the description on the tour
+  // page. See src/types/tour-block.ts for the discriminated union.
+  body_blocks: unknown;
   // City that pays the ground base with no addon required (e.g. "ISB" for
   // most legacy tours; "KHI" for the Gwadar coastal tour). null when every
   // home city needs a transport addon (e.g. the Skardu fly-in tour).

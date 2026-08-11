@@ -9,6 +9,7 @@ import { MosaicGallery } from "@/components/trip-detail/MosaicGallery";
 import { BookingSidebar } from "@/components/trip-detail/BookingSidebar";
 import { ItineraryAccordion } from "@/components/trip-detail/ItineraryAccordion";
 import { InclusionsExclusions } from "@/components/trip-detail/InclusionsExclusions";
+import { TourBody } from "@/components/trip-detail/TourBody";
 import { MobileReserveBar } from "@/components/booking/MobileReserveBar";
 import { TourCard } from "@/components/tours/TourCard";
 import { JsonLd } from "@/components/seo/JsonLd";
@@ -204,6 +205,13 @@ export default async function TripDetailPage({ params, searchParams }: Props) {
               <p className="text-[15px] text-[var(--text-secondary)] leading-relaxed">
                 {tour.description}
               </p>
+
+              {/* Rich body content (admin block editor) */}
+              {tour.bodyBlocks && tour.bodyBlocks.length > 0 && (
+                <div className="mt-6">
+                  <TourBody blocks={tour.bodyBlocks} tourSlug={tour.slug} initialDeparture={previewCity ?? undefined} />
+                </div>
+              )}
 
               {/* Highlights */}
               {tour.highlights.length > 0 && (

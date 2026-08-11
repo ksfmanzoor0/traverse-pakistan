@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/admin/guard";
 import type { AddonType } from "@/types/tour-addon";
+import type { TourBlock } from "@/types/tour-block";
 
 type TourListItem = { text: string; cityOnly?: Array<"ISB" | "LHE" | "KHI" | "KDU"> };
 
@@ -38,6 +39,7 @@ export type TourPatch = {
   meta_description?: string;
   featured?: boolean;
   images?: Array<{ url: string; alt: string }>;
+  body_blocks?: TourBlock[];
 };
 
 function bust(slug: string) {
@@ -222,6 +224,7 @@ export async function createTour(input: NewTourInput): Promise<{ ok: boolean; sl
     meta_title: "",
     meta_description: "",
     related_destination_slugs: [] as string[],
+    body_blocks: [] as TourBlock[],
   };
   const { error } = await supabase.from("tours").insert(row);
   if (error) return { ok: false, error: error.message };
