@@ -121,17 +121,26 @@ export default async function TripDetailPage({ params }: Props) {
               {upcomingDepartures.length > 0 && (() => {
                 // Group by city so the strip shows one pill per city with all
                 // upcoming dates for that city inline, e.g. "ISB · Jul 18, Aug 14".
-                const CITY_CODE: Record<string, string> = { islamabad: "ISB", lahore: "LHE", karachi: "KHI" };
-                const CITY_ORDER = ["islamabad", "lahore", "karachi"];
+                const CITY_CODE: Record<string, string> = { islamabad: "ISB", lahore: "LHE", karachi: "KHI", skardu: "KDU" };
                 const byCity = new Map<string, typeof upcomingDepartures>();
-                for (const d of upcomingDepartures) {
-                  const key = (d.departureCity ?? "").toLowerCase();
-                  if (!byCity.has(key)) byCity.set(key, [] as typeof upcomingDepartures);
-                  byCity.get(key)!.push(d);
+                // Fan the single (NULL-city) row out into one pill per city
+                // that either the anchor covers or an addon covers.
+                // Iterate the tour's own city list — anchor first, then addons.
+                // Adding a new home city to a tour is purely a DB change.
+                const CODE_TO_CITY = { ISB: "islamabad", LHE: "lahore", KHI: "karachi", KDU: "skardu" } as const;
+                const codes: Array<"ISB" | "LHE" | "KHI" | "KDU"> = [];
+                if (tour.anchorCity) codes.push(tour.anchorCity);
+                for (const c of tour.addonCities ?? []) {
+                  const code = c as "ISB" | "LHE" | "KHI" | "KDU";
+                  if (!codes.includes(code)) codes.push(code);
                 }
-                const cityKeys = Array.from(byCity.keys()).sort(
-                  (a, b) => (CITY_ORDER.indexOf(a) - CITY_ORDER.indexOf(b)),
-                );
+                for (const code of codes) {
+                  const city = CODE_TO_CITY[code];
+                  byCity.set(city, upcomingDepartures.map((d) => ({ ...d, departureCity: city as typeof d.departureCity })));
+                }
+                // Map preserves insertion order — anchor was inserted first,
+                // then addonCities in the order returned by the tour service.
+                const cityKeys = Array.from(byCity.keys());
                 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
                 return (
                   <div className="mt-4">
@@ -214,7 +223,7 @@ export default async function TripDetailPage({ params }: Props) {
                 <h2 className="text-xl font-bold text-[var(--text-primary)] mb-6">
                   Day-by-Day Itinerary
                 </h2>
-                <ItineraryAccordion days={itinerary.days} />
+                <ItineraryAccordion days={itinerary.days} tourSlug={tour.slug} />
               </section>
             )}
 

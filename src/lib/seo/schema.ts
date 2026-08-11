@@ -186,6 +186,68 @@ export function breadcrumbSchema(items: BreadcrumbItem[]): SchemaNode {
 
 // ── TouristTrip (group tour) ──
 
+const CITY_LABEL: Record<"ISB" | "LHE" | "KHI" | "KDU", string> = {
+  ISB: "Islamabad", LHE: "Lahore", KHI: "Karachi", KDU: "Skardu",
+};
+
+// If we have statically-computable per-city addon totals, emit an
+// AggregateOffer with lowPrice/highPrice + one Offer per city so Google can
+// display the price range on rich results. Otherwise fall back to a single
+// Offer at the ground base — the scraper-driven flight cost would go stale
+// and read as a price mismatch to visitors.
+function buildTourOffers(tour: Tour, url: string): SchemaNode {
+  const base = tour.pricing.base;
+  const validFrom = new Date().toISOString().slice(0, 10);
+  const perCity: Partial<Record<"ISB" | "LHE" | "KHI" | "KDU", number>> = tour.addonCostByCity ?? {};
+  const cityTotals: Array<{ city: "ISB" | "LHE" | "KHI" | "KDU"; total: number }> = [];
+
+  // Anchor city pays exactly base with no addon.
+  if (tour.anchorCity) cityTotals.push({ city: tour.anchorCity, total: base });
+
+  // Iterate the tour's own addon coverage — no hardcoded city universe.
+  for (const c of tour.addonCities ?? []) {
+    const code = c as "ISB" | "LHE" | "KHI" | "KDU";
+    if (tour.anchorCity === code) continue;
+    const cost = perCity[code];
+    if (typeof cost === "number") cityTotals.push({ city: code, total: base + cost });
+  }
+
+  if (cityTotals.length < 2) {
+    return {
+      "@type": "Offer",
+      url,
+      price: base,
+      priceCurrency: CURRENCY_PKR,
+      availability: "https://schema.org/InStock",
+      validFrom,
+      priceValidUntil: "2027-12-31",
+      seller: { "@id": `${SITE.url}/#organization` },
+    };
+  }
+
+  const prices = cityTotals.map((c) => c.total);
+  return {
+    "@type": "AggregateOffer",
+    url,
+    priceCurrency: CURRENCY_PKR,
+    lowPrice: Math.min(...prices),
+    highPrice: Math.max(...prices),
+    offerCount: cityTotals.length,
+    availability: "https://schema.org/InStock",
+    seller: { "@id": `${SITE.url}/#organization` },
+    offers: cityTotals.map((c) => ({
+      "@type": "Offer",
+      name: `${CITY_LABEL[c.city]} departure`,
+      price: c.total,
+      priceCurrency: CURRENCY_PKR,
+      availability: "https://schema.org/InStock",
+      validFrom,
+      priceValidUntil: "2027-12-31",
+      seller: { "@id": `${SITE.url}/#organization` },
+    })),
+  };
+}
+
 export function tourSchema(tour: Tour): SchemaNode {
   const url = absoluteUrl(`/grouptours/${tour.slug}`);
   const images = tour.images
@@ -212,34 +274,7 @@ export function tourSchema(tour: Tour): SchemaNode {
       })),
     },
     provider: { "@id": `${SITE.url}/#organization` },
-    offers: {
-      "@type": "Offer",
-      url,
-      price: tour.pricing.islamabad,
-      priceCurrency: CURRENCY_PKR,
-      availability: "https://schema.org/InStock",
-      validFrom: new Date().toISOString().slice(0, 10),
-      priceValidUntil: "2027-12-31",
-      seller: { "@id": `${SITE.url}/#organization` },
-      priceSpecification: [
-        {
-          "@type": "UnitPriceSpecification",
-          name: "Islamabad departure",
-          price: tour.pricing.islamabad,
-          priceCurrency: CURRENCY_PKR,
-        },
-        ...(tour.pricing.lahore
-          ? [
-              {
-                "@type": "UnitPriceSpecification",
-                name: "Lahore departure",
-                price: tour.pricing.lahore,
-                priceCurrency: CURRENCY_PKR,
-              },
-            ]
-          : []),
-      ],
-    },
+    offers: buildTourOffers(tour, url),
     aggregateRating:
       tour.reviewCount > 0
         ? {

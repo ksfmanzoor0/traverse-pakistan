@@ -1,7 +1,7 @@
 export type DepartureStatus = "open" | "closed" | "cancelled";
 export type BookingStatus = "pending" | "confirmed" | "cancelled" | "refunded" | "deposit_paid";
 export type PaymentStatus = "initiated" | "succeeded" | "failed" | "refunded";
-export type DepartureCity = "islamabad" | "lahore" | "karachi";
+export type DepartureCity = "islamabad" | "lahore" | "karachi" | "skardu";
 
 export type TourRow = {
   id: string;
@@ -40,6 +40,10 @@ export type TourRow = {
     pickupDescription: string;
   };
   featured: boolean;
+  // City that pays the ground base with no addon required (e.g. "ISB" for
+  // most legacy tours; "KHI" for the Gwadar coastal tour). null when every
+  // home city needs a transport addon (e.g. the Skardu fly-in tour).
+  anchor_city: "ISB" | "LHE" | "KHI" | "KDU" | null;
   meta_title: string;
   meta_description: string;
   created_at: string;
@@ -53,7 +57,7 @@ export type TourItineraryDayRow = {
   title: string;
   description: string;
   image: { url: string; alt: string } | null;
-  stops: Array<{ name: string; detail: string }>;
+  stops: Array<{ name: string; detail: string; cityOnly?: string }>;
   driving_time: string;
   overnight: string;
 };
@@ -97,6 +101,30 @@ export type BookingRow = {
   amount_paid: number;
   payment_confirmed_via: "ipn" | "polling" | null;
   payment_attempts: number;
+  home_city: "ISB" | "LHE" | "KHI" | "KDU" | null;
+  resolved_addons: unknown | null;
+};
+
+export type TourAddonRow = {
+  id: string;
+  tour_slug: string;
+  type: "flight" | "bus";
+  label: string;
+  applies_to_departures: string[];
+  group_key: string | null;
+  is_required: boolean;
+  priority: number;
+  config: {
+    legs?: Array<{
+      from: string;
+      to: string;
+      routeType: "ONEWAY" | "RETURN";
+      day: number | "last";
+    }>;
+    [k: string]: unknown;
+  };
+  created_at: string | null;
+  updated_at: string | null;
 };
 
 export type BookingParticipantRow = {
@@ -326,6 +354,13 @@ export type Database = {
         Insert: Omit<DepartureRow, "id" | "created_at" | "seats_booked" | "status"> &
           Partial<Pick<DepartureRow, "id" | "created_at" | "seats_booked" | "status">>;
         Update: Partial<DepartureRow>;
+        Relationships: [];
+      };
+      tour_addons: {
+        Row: TourAddonRow;
+        Insert: Omit<TourAddonRow, "id" | "created_at" | "updated_at"> &
+          Partial<Pick<TourAddonRow, "id" | "created_at" | "updated_at">>;
+        Update: Partial<TourAddonRow>;
         Relationships: [];
       };
       bookings: {

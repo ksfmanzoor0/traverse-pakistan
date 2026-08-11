@@ -15,6 +15,7 @@ import { calculatePricing } from "@/components/booking/pricing";
 import { deriveUrgency } from "@/components/booking/urgency";
 import { Stepper } from "@/components/booking/Stepper";
 import { hasResumableDraft } from "@/hooks/useCheckoutDraft";
+import { useSharedDepartureCity } from "@/hooks/useSharedDepartureCity";
 
 interface BookingSidebarProps {
   tour: Tour;
@@ -26,7 +27,13 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
   const [children, setChildren] = useState(0);
   const [singleRooms, setSingleRooms] = useState(0);
   const [singleOccupancyRooms, setSingleOccupancyRooms] = useState(0);
-  const [departure, setDeparture] = useState<"islamabad" | "lahore" | "karachi">("islamabad");
+  const CODE_TO_CITY = { ISB: "islamabad", LHE: "lahore", KHI: "karachi", KDU: "skardu" } as const;
+  const firstAddonCode = (tour.addonCities?.[0] ?? null) as "ISB" | "LHE" | "KHI" | "KDU" | null;
+  const initialDeparture: "islamabad" | "lahore" | "karachi" | "skardu" =
+    (tour.anchorCity ? CODE_TO_CITY[tour.anchorCity] : null)
+    ?? (firstAddonCode ? CODE_TO_CITY[firstAddonCode] : null)
+    ?? "islamabad";
+  const [departure, setDeparture] = useSharedDepartureCity(initialDeparture, tour.slug);
   const [allDepartures, setAllDepartures] = useState<Departure[]>([]);
   const [selectedDepartureId, setSelectedDepartureId] = useState<string | null>(null);
   const [departuresLoaded, setDeparturesLoaded] = useState(false);
@@ -77,8 +84,8 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
     return () => { cancelled = true; };
   }, [tour.slug]);
 
-  const departuresForCity = allDepartures.filter((d) => d.departureCity === departure);
-  // When city changes (or on first load), select the earliest for that city.
+  // All tours use NULL departure_city rows; city variance handled by addons.
+  const departuresForCity = allDepartures;
   useEffect(() => {
     if (departuresForCity.length === 0) {
       setSelectedDepartureId(null);
@@ -92,6 +99,35 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
 
   const liveDeparture = departuresForCity.find((d) => d.id === selectedDepartureId) ?? departuresForCity[0] ?? null;
 
+  // Live transport-addon cost + display label ("Return Flight" | "Bus" |
+  // "Transport" for mixed) — driven by tour_addons.type via quoteTourAddons.
+  const [addonPerPerson, setAddonPerPerson] = useState(0);
+  const [addonKind, setAddonKind] = useState<"flight" | "bus" | "mixed" | null>(null);
+  const cityToHome: Record<"islamabad" | "lahore" | "karachi" | "skardu", "ISB" | "LHE" | "KHI" | "KDU"> = {
+    islamabad: "ISB", lahore: "LHE", karachi: "KHI", skardu: "KDU",
+  };
+  const homeCityCode = cityToHome[departure];
+  const startDateForQuote = liveDeparture?.departureDate ?? tour.departureDate;
+  // Skip the fetch for the anchor city — no addon applies (perf B).
+  const shouldFetchAddon = tour.anchorCity !== homeCityCode;
+  useEffect(() => {
+    if (!startDateForQuote) return;
+    if (!shouldFetchAddon) { setAddonPerPerson(0); setAddonKind(null); return; }
+    const ctrl = new AbortController();
+    fetch(`/api/tours/quote-addons?tourSlug=${encodeURIComponent(tour.slug)}&homeCity=${homeCityCode}&startDate=${startDateForQuote}`, { signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((q) => {
+        if (!q) return;
+        setAddonPerPerson(q.addonCostPerPerson ?? 0);
+        const types = new Set(((q.addons ?? []) as Array<{ type: string }>).map((a) => a.type));
+        setAddonKind(types.size === 0 ? null : types.size > 1 ? "mixed" : (types.values().next().value as "flight" | "bus"));
+      })
+      .catch((e) => { if (e?.name !== "AbortError") console.error("[sidebar addon fetch]", e); });
+    return () => ctrl.abort();
+  }, [tour.slug, homeCityCode, startDateForQuote, shouldFetchAddon]);
+
+  const addonLineLabel = addonKind === "flight" ? "Return Flight" : addonKind === "bus" ? "Bus" : "Transport";
+
   const pricing = calculatePricing({
     tour,
     liveDeparture,
@@ -101,6 +137,7 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
     singleRooms,
     singleOccupancyRooms,
     paymentPlan: "full",
+    addonPerPerson,
   });
 
   const urgency = deriveUrgency(tour, liveDeparture);
@@ -124,7 +161,7 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
 
         <div className="mt-3 flex items-baseline gap-2 flex-wrap">
           <span className="text-[26px] font-bold text-[var(--text-primary)] tabular-nums leading-none">
-            {formatPrice(pricing.basePrice)}
+            {formatPrice(pricing.basePrice + pricing.addonPerPerson)}
           </span>
           {tour.originalPrice && (
             <span className="text-base text-[var(--text-tertiary)] line-through tabular-nums">
@@ -146,16 +183,26 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
         <hr className="my-5 border-[var(--border-default)]" />
 
         {(() => {
-          const availableCities = (["islamabad", "lahore", "karachi"] as const).filter(
-            (c) => departuresLoaded ? allDepartures.some((d) => d.departureCity === c) : c !== "karachi" && !!tour.pricing.lahore,
-          );
+          // A city is bookable only if the addon layer covers it OR it is the
+          // tour's anchor city (base ground price, no addon required).
+          // Cities come straight from the tour data: anchor + addon coverage.
+          // No hardcoded universe list — adding a new home city to a tour is
+          // purely a DB change (insert tour_addons row + optionally set anchor).
+          const codesInOrder: Array<"ISB" | "LHE" | "KHI" | "KDU"> = [];
+          if (tour.anchorCity) codesInOrder.push(tour.anchorCity);
+          for (const c of tour.addonCities ?? []) {
+            const code = c as "ISB" | "LHE" | "KHI" | "KDU";
+            if (!codesInOrder.includes(code)) codesInOrder.push(code);
+          }
+          const availableCities = codesInOrder.map((code) => CODE_TO_CITY[code]);
+          if (availableCities.length === 0) return null;
           if (availableCities.length < 2) return null;
           return (
             <div className="mb-4">
               <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-2">
                 Departure city
               </label>
-              <div className={`grid gap-2 ${availableCities.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+              <div className={`grid gap-2 ${availableCities.length >= 4 ? "grid-cols-2" : availableCities.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
                 {availableCities.map((city) => (
                   <button
                     key={city}
@@ -276,6 +323,12 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
             <div className="flex items-center justify-between text-[12px] text-[var(--text-secondary)]">
               <span>Private rooms</span>
               <span className="tabular-nums">{formatPrice(pricing.singleSupplementTotal)}</span>
+            </div>
+          )}
+          {pricing.addonSubtotal > 0 && (
+            <div className="flex items-center justify-between text-[12px] text-[var(--text-secondary)]">
+              <span>{addonLineLabel} ({homeCityCode}) × {pricing.totalTravelers}</span>
+              <span className="tabular-nums">{formatPrice(pricing.addonSubtotal)}</span>
             </div>
           )}
           <div className="flex items-center justify-between pt-2 border-t border-[var(--border-default)]">
