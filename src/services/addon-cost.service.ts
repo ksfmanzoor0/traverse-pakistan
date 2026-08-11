@@ -1,6 +1,12 @@
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import type { FlightAirline, FlightRouteType } from "@/types/flight";
 import type { PackageAddonRow, TourAddonRow } from "@/lib/supabase/types";
+import type {
+  AddonType,
+  HotelConfig,
+  MealConfig,
+  UnitConfig,
+} from "@/types/tour-addon";
 
 export type HomeCity = "ISB" | "LHE" | "KHI" | "KDU";
 
@@ -30,10 +36,12 @@ export interface ResolvedFlightLeg {
 
 export interface ResolvedAddon {
   addonId: string;
-  type: "flight" | "bus";
+  type: AddonType;
   label: string;
   groupKey: string | null;
   isRequired: boolean;
+  defaultSelected: boolean;
+  durationDelta: number;
   priority: number;
   perPerson: number;
   flightLegs?: ResolvedFlightLeg[];
@@ -168,6 +176,26 @@ function resolveSingleLeg(
   };
 }
 
+// -------------------- Non-scraper addon resolvers --------------------
+// Deterministic pricing for hotel/meal/activity/etc. Cost = quantity × fare.
+// No scraper, no home-city variance in the price itself — the row's
+// applies_to_departures gate handles per-city visibility.
+
+function resolveHotelAddon(config: HotelConfig): number {
+  const nights = Math.max(0, Number(config.nights ?? 0));
+  return nights * Number(config.farePerPerson ?? 0);
+}
+
+function resolveMealAddon(config: MealConfig): number {
+  const meals = Math.max(0, Number(config.meals ?? 0));
+  return meals * Number(config.farePerPerson ?? 0);
+}
+
+function resolveUnitAddon(config: UnitConfig): number {
+  const qty = Math.max(0, Number(config.quantity ?? 1));
+  return qty * Number(config.farePerPerson ?? 0);
+}
+
 async function resolveFlightAddon(
   addon: Pick<PackageAddonRow, "config">,
   home: HomeCity,
@@ -254,6 +282,8 @@ export async function quotePackageAddons(args: QuoteArgs): Promise<PackageQuote 
         label: addon.label,
         groupKey: addon.group_key,
         isRequired: addon.is_required,
+        defaultSelected: true,
+        durationDelta: 0,
         priority: addon.priority,
         perPerson,
         flightLegs: legs,
@@ -368,22 +398,54 @@ export async function quoteTourAddons(args: TourQuoteArgs): Promise<TourQuote | 
   const unresolved: ResolvedFlightLeg[] = [];
 
   for (const addon of matching) {
-    if (addon.type !== "flight" && addon.type !== "bus") continue;
-    const { perPerson, legs } = await resolveFlightAddon(addon, args.homeCity, args.startDate, tour.duration);
+    let perPerson = 0;
+    let flightLegs: ResolvedFlightLeg[] | undefined;
+
+    switch (addon.type) {
+      case "flight":
+      case "bus": {
+        const { perPerson: p, legs } = await resolveFlightAddon(addon, args.homeCity, args.startDate, tour.duration);
+        perPerson = p;
+        flightLegs = legs;
+        for (const l of legs) if (l.source === "unresolved") unresolved.push(l);
+        break;
+      }
+      case "hotel":
+        perPerson = resolveHotelAddon(addon.config as unknown as HotelConfig);
+        break;
+      case "meal":
+        perPerson = resolveMealAddon(addon.config as unknown as MealConfig);
+        break;
+      case "activity":
+      case "transfer":
+      case "insurance":
+      case "custom":
+        perPerson = resolveUnitAddon(addon.config as unknown as UnitConfig);
+        break;
+      default:
+        continue;
+    }
+
     resolved.push({
       addonId: addon.id,
       type: addon.type,
       label: addon.label,
       groupKey: addon.group_key,
       isRequired: addon.is_required,
+      defaultSelected: addon.default_selected,
+      durationDelta: addon.duration_delta,
       priority: addon.priority,
       perPerson,
-      flightLegs: legs,
+      flightLegs,
     });
-    for (const l of legs) if (l.source === "unresolved") unresolved.push(l);
   }
 
-  const totalPerPerson = resolved.filter((a) => a.isRequired).reduce((s, a) => s + a.perPerson, 0);
+  // "Baseline" total = required + optional-default-on. Matches what a user
+  // sees on the sidebar before touching any checkboxes. Consumers that need
+  // an exact user-picked total should sum `resolved` by their `selectedIds`.
+  const totalPerPerson = resolved
+    .filter((a) => a.isRequired || a.defaultSelected)
+    .reduce((s, a) => s + a.perPerson, 0);
 
   return {
     tourSlug: args.tourSlug,

@@ -108,21 +108,16 @@ export type BookingRow = {
 export type TourAddonRow = {
   id: string;
   tour_slug: string;
-  type: "flight" | "bus";
+  type: "flight" | "bus" | "hotel" | "meal" | "activity" | "transfer" | "insurance" | "custom";
   label: string;
   applies_to_departures: string[];
   group_key: string | null;
   is_required: boolean;
+  default_selected: boolean;
+  duration_delta: number;
   priority: number;
-  config: {
-    legs?: Array<{
-      from: string;
-      to: string;
-      routeType: "ONEWAY" | "RETURN";
-      day: number | "last";
-    }>;
-    [k: string]: unknown;
-  };
+  // Polymorphic per `type` — see AddonConfig union in src/types/tour-addon.ts
+  config: Record<string, unknown>;
   created_at: string | null;
   updated_at: string | null;
 };
