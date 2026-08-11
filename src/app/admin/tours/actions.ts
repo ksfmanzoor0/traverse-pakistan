@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath, revalidateTag } from "next/cache";
+import { redirect } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/admin/guard";
 import type { AddonType } from "@/types/tour-addon";
@@ -154,4 +155,150 @@ export async function deleteTourAddon(id: string, tourSlug: string): Promise<{ o
   if (error) return { ok: false, error: error.message };
   bust(tourSlug);
   return { ok: true };
+}
+
+/* ============================ Create / Duplicate / Delete ============================ */
+
+export type NewTourInput = {
+  slug: string;
+  name: string;
+  category: string;
+  duration: number;
+  destination_slug: string;
+  region_slug: string;
+};
+
+const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+// Minimal sensible defaults so the row satisfies NOT NULL constraints. Every
+// text field starts empty so the admin fills them in the editor.
+const DEFAULT_MEETING_POINT = {
+  address: "",
+  departureTime: "",
+  arrivalInstruction: "",
+  endPoint: "",
+  mapEmbedUrl: "",
+  pickupOffered: false,
+  pickupDescription: "",
+};
+
+export async function createTour(input: NewTourInput): Promise<{ ok: boolean; slug?: string; error?: string }> {
+  await requireAdmin();
+  if (!SLUG_RE.test(input.slug)) return { ok: false, error: "Slug must be lowercase kebab-case (a-z, 0-9, dashes)" };
+
+  const supabase = getSupabaseAdmin();
+  const { data: existing } = await supabase.from("tours").select("slug").eq("slug", input.slug).maybeSingle();
+  if (existing) return { ok: false, error: `Slug "${input.slug}" is already taken` };
+
+  const row = {
+    slug: input.slug,
+    name: input.name,
+    description: "",
+    category: input.category,
+    badge: null,
+    duration: input.duration,
+    route: "",
+    departure_date: null,
+    destination_slug: input.destination_slug,
+    region_slug: input.region_slug,
+    travel_style_slugs: [] as string[],
+    rating: 5.0,
+    review_count: 0,
+    max_group_size: 12,
+    min_age: null,
+    languages: ["English"],
+    free_cancellation: true,
+    reserve_now_pay_later: true,
+    images: [] as Array<{ url: string; alt: string }>,
+    guide: null,
+    highlights: [] as string[],
+    inclusions: [] as Array<{ text: string; cityOnly?: Array<"ISB" | "LHE" | "KHI" | "KDU"> }>,
+    exclusions: [] as Array<{ text: string; cityOnly?: Array<"ISB" | "LHE" | "KHI" | "KDU"> }>,
+    know_before_you_go: [] as string[],
+    meeting_point: DEFAULT_MEETING_POINT,
+    featured: false,
+    anchor_city: "ISB" as const,
+    meta_title: "",
+    meta_description: "",
+    related_destination_slugs: [] as string[],
+  };
+  const { error } = await supabase.from("tours").insert(row);
+  if (error) return { ok: false, error: error.message };
+  revalidateTag("tours", {});
+  revalidatePath("/admin/tours");
+  return { ok: true, slug: input.slug };
+}
+
+export async function duplicateTour(sourceSlug: string, newSlug: string, newName: string): Promise<{ ok: boolean; slug?: string; error?: string }> {
+  await requireAdmin();
+  if (!SLUG_RE.test(newSlug)) return { ok: false, error: "Slug must be lowercase kebab-case" };
+
+  const supabase = getSupabaseAdmin();
+  const { data: existing } = await supabase.from("tours").select("slug").eq("slug", newSlug).maybeSingle();
+  if (existing) return { ok: false, error: `Slug "${newSlug}" is already taken` };
+
+  const { data: src, error: srcErr } = await supabase.from("tours").select("*").eq("slug", sourceSlug).maybeSingle();
+  if (srcErr || !src) return { ok: false, error: "Source tour not found" };
+
+  const source = src as Record<string, unknown>;
+  const { id: _id, created_at: _c, updated_at: _u, slug: _s, name: _n, ...rest } = source;
+  const insertRow = { ...rest, slug: newSlug, name: newName };
+  // Row shape was validated at fetch time; we only substitute slug + name.
+  const { error: tourErr } = await supabase.from("tours").insert(insertRow as never);
+  if (tourErr) return { ok: false, error: tourErr.message };
+
+  // Deep-copy itinerary days
+  const { data: days } = await supabase.from("tour_itinerary_days").select("*").eq("tour_slug", sourceSlug);
+  if (days && days.length > 0) {
+    const dayRows = (days as Array<Record<string, unknown>>).map((d) => {
+      const { id: _did, ...rest } = d;
+      return { ...rest, tour_slug: newSlug };
+    });
+    const { error: dErr } = await supabase.from("tour_itinerary_days").insert(dayRows as never);
+    if (dErr) return { ok: false, error: `Copied tour but itinerary failed: ${dErr.message}` };
+  }
+
+  // Deep-copy addons
+  const { data: addons } = await supabase.from("tour_addons").select("*").eq("tour_slug", sourceSlug);
+  if (addons && addons.length > 0) {
+    const addonRows = (addons as Array<Record<string, unknown>>).map((a) => {
+      const { id: _aid, created_at: _c, updated_at: _u, ...rest } = a;
+      return { ...rest, tour_slug: newSlug };
+    });
+    const { error: aErr } = await supabase.from("tour_addons").insert(addonRows as never);
+    if (aErr) return { ok: false, error: `Copied tour but addons failed: ${aErr.message}` };
+  }
+
+  revalidateTag("tours", {});
+  revalidatePath("/admin/tours");
+  return { ok: true, slug: newSlug };
+}
+
+export async function deleteTour(slug: string): Promise<{ ok: boolean; error?: string }> {
+  await requireAdmin();
+  const supabase = getSupabaseAdmin();
+  // Refuse if departures still exist — those may carry bookings + payment
+  // history that must not be silently erased. Admin removes them from
+  // /admin/departures first.
+  const { count } = await supabase
+    .from("departures")
+    .select("id", { count: "exact", head: true })
+    .eq("tour_slug", slug);
+  if ((count ?? 0) > 0) {
+    return { ok: false, error: `Tour has ${count} departure(s). Delete them from /admin/departures first.` };
+  }
+  // FK cascades handle itinerary_days + addons.
+  const { error } = await supabase.from("tours").delete().eq("slug", slug);
+  if (error) return { ok: false, error: error.message };
+  revalidateTag("tours", {});
+  revalidatePath("/admin/tours");
+  revalidatePath(`/grouptours/${slug}`);
+  return { ok: true };
+}
+
+// Redirect wrapper so the form action lands on the new editor.
+export async function createTourAndRedirect(input: NewTourInput) {
+  const r = await createTour(input);
+  if (!r.ok || !r.slug) return r;
+  redirect(`/admin/tours/${r.slug}`);
 }
