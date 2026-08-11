@@ -9,6 +9,8 @@ export type TourCategory =
   | "skiing"
   | "coastal";
 
+import type { ResolvedAddonView } from "./tour-addon";
+
 export type BadgeType = "on-sale" | "epic-trek" | "bestseller" | "new" | null;
 
 export interface TourImage {
@@ -88,7 +90,11 @@ export interface Tour {
    * totals — refreshes on every 1h `tours` cache revalidation.
    * Consumers: SEO schema AggregateOffer, sidebar + wizard checkout. */
   addonCostByCity?: Partial<Record<"ISB" | "LHE" | "KHI" | "KDU", number>>;
-  /** Per-home-city addon type: "flight", "bus", or "mixed" when a single
-   * home fires both. Drives sidebar line label ("Return Flight" vs "Bus"). */
-  addonKindByCity?: Partial<Record<"ISB" | "LHE" | "KHI" | "KDU", "flight" | "bus" | "mixed">>;
+  /** Precomputed per-home-city resolved addon list — full breakdown for the
+   * sidebar/wizard. Contains transport + hotel + meal + activity + etc.
+   * so the UI can render Included (required) and Extras (optional) sections
+   * without any client fetch. Refreshes on the 1h `tours` cache tick.
+   * Source of truth — `addonCostByCity` is derived from this (sum of required
+   * + optional-default-on) and kept only for JSON-LD offer emission. */
+  addonsByCity?: Partial<Record<"ISB" | "LHE" | "KHI" | "KDU", ResolvedAddonView[]>>;
 }

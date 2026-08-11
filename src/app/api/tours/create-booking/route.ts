@@ -24,6 +24,11 @@ interface CreateBody {
   submitUuid?: string;
   paymentPlan?: "full" | "installments";
   homeCity: HomeCity;
+  // IDs of tour_addons rows the user has selected. When absent, we fall back
+  // to the "baseline" (required + optional-default-on). Server re-resolves
+  // and validates every ID against the tour's actual addon list — client
+  // cannot spoof unknown IDs or bypass required addons.
+  selectedAddonIds?: string[];
 }
 
 export async function POST(req: NextRequest) {
@@ -57,7 +62,13 @@ export async function POST(req: NextRequest) {
   });
   if (!quote) return NextResponse.json({ error: "tour not found" }, { status: 404 });
 
-  const addonAmountTotal = quote.addonCostPerPerson * body.seats;
+  // Enforce required addons always ship in the total. Optional addons only
+  // fire when the client passes their ID. Unknown IDs are silently dropped.
+  const validIds = new Set(quote.addons.map((a) => a.addonId));
+  const clientPicked = new Set((body.selectedAddonIds ?? []).filter((id) => validIds.has(id)));
+  const finalAddons = quote.addons.filter((a) => a.isRequired || clientPicked.has(a.addonId));
+  const addonCostPerPerson = finalAddons.reduce((s, a) => s + a.perPerson, 0);
+  const addonAmountTotal = addonCostPerPerson * body.seats;
 
   const { data, error } = await supabase.rpc("create_booking" as never, {
     p_departure_id: body.departureId,
@@ -80,8 +91,8 @@ export async function POST(req: NextRequest) {
     p_addon_amount_total: addonAmountTotal,
     p_resolved_addons: JSON.parse(JSON.stringify({
       homeCity: quote.homeCity,
-      perPerson: quote.addonCostPerPerson,
-      addons: quote.addons,
+      perPerson: addonCostPerPerson,
+      addons: finalAddons,
     })),
   } as never);
 

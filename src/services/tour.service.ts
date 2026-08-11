@@ -8,6 +8,7 @@ import { listR2Images, buildImagesFromR2 } from "@/lib/r2";
 import type { TourRow, TourItineraryDayRow } from "@/lib/supabase/types";
 import type { Tour, TourCategory, TourImage } from "@/types/tour";
 import type { TourItinerary, ItineraryDay } from "@/types/itinerary";
+import type { ResolvedAddonView } from "@/types/tour-addon";
 
 function toTour(
   row: TourRow,
@@ -16,7 +17,7 @@ function toTour(
   hasAddons?: boolean,
   addonCities?: string[],
   addonCostByCity?: Partial<Record<"ISB" | "LHE" | "KHI" | "KDU", number>>,
-  addonKindByCity?: Partial<Record<"ISB" | "LHE" | "KHI" | "KDU", "flight" | "bus" | "mixed">>,
+  addonsByCity?: Partial<Record<"ISB" | "LHE" | "KHI" | "KDU", ResolvedAddonView[]>>,
 ): Tour {
   const prices = priceMap?.get(row.slug);
   return {
@@ -61,7 +62,7 @@ function toTour(
     anchorCity: row.anchor_city,
     addonCities,
     addonCostByCity: addonCostByCity as Tour["addonCostByCity"],
-    addonKindByCity: addonKindByCity as Tour["addonKindByCity"],
+    addonsByCity: addonsByCity as Tour["addonsByCity"],
   };
 }
 
@@ -75,7 +76,7 @@ interface AddonCoverage {
   hasAddons: boolean;
   cities: string[];
   costByCity: Partial<Record<"ISB" | "LHE" | "KHI" | "KDU", number>>;
-  kindByCity: Partial<Record<"ISB" | "LHE" | "KHI" | "KDU", "flight" | "bus" | "mixed">>;
+  addonsByCity: Partial<Record<"ISB" | "LHE" | "KHI" | "KDU", ResolvedAddonView[]>>;
 }
 
 async function fetchAddonCoverage(
@@ -110,7 +111,7 @@ async function fetchAddonCoverage(
       hasAddons: true,
       cities: Array.from(cities),
       costByCity: {},
-      kindByCity: {},
+      addonsByCity: {},
     };
     map.set(slug, entry);
     for (const cityCode of cities) {
@@ -120,9 +121,18 @@ async function fetchAddonCoverage(
           .then((q) => {
             if (!q) return;
             entry.costByCity[c] = q.addonCostPerPerson;
-            const types = new Set(q.addons.map((a) => a.type));
-            if (types.size === 1) entry.kindByCity[c] = types.values().next().value as "flight" | "bus";
-            else if (types.size > 1) entry.kindByCity[c] = "mixed";
+            // Small JSON-safe views for the sidebar/wizard breakdown — no
+            // flight legs, no addon config, just what the UI renders.
+            entry.addonsByCity[c] = q.addons.map((a) => ({
+              id: a.addonId,
+              type: a.type,
+              label: a.label,
+              perPerson: a.perPerson,
+              isRequired: a.isRequired,
+              defaultSelected: a.defaultSelected,
+              groupKey: a.groupKey,
+              durationDelta: a.durationDelta,
+            }));
           })
           .catch((e) => { console.error(`[fetchAddonCoverage] ${slug}/${c}:`, e); }),
       );
@@ -208,7 +218,7 @@ const _fetchAllTours = unstable_cache(
     const coverage = await fetchAddonCoverage(supabase, rows.map((r) => r.slug), earliestBySlug);
     return rows.map((r) => {
       const c = coverage.get(r.slug);
-      return toTour(r, priceMap, undefined, !!c, c?.cities, c?.costByCity, c?.kindByCity);
+      return toTour(r, priceMap, undefined, !!c, c?.cities, c?.costByCity, c?.addonsByCity);
     });
   },
   ["all-tours"],
@@ -233,7 +243,7 @@ export const getTourBySlug = cache(async (slug: string): Promise<Tour | null> =>
   const coverage = await fetchAddonCoverage(supabase, [slug], earliestBySlug);
   const r2Images = r2Urls.length ? buildImagesFromR2(r2Urls, row.name) : undefined;
   const c = coverage.get(row.slug);
-  return toTour(row, priceMap, r2Images, !!c, c?.cities, c?.costByCity, c?.kindByCity);
+  return toTour(row, priceMap, r2Images, !!c, c?.cities, c?.costByCity, c?.addonsByCity);
 });
 
 export const getToursByDestination = cache(async (destinationSlug: string): Promise<Tour[]> => {
