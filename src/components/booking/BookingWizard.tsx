@@ -148,37 +148,15 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
   const firstDeparture = allDepartures[0] ?? null;
   const cityDepartures = { islamabad: firstDeparture, lahore: firstDeparture, karachi: firstDeparture, skardu: firstDeparture };
 
-  // Transport add-on cost + display label ("Return Flight" | "Bus" |
-  // "Transport") derived from tour_addons.type via the quote endpoint.
-  const [addonPerPerson, setAddonPerPerson] = useState(0);
-  const [addonKind, setAddonKind] = useState<"flight" | "bus" | "mixed" | null>(null);
-
+  // Transport add-on cost + display label — read directly from the Tour
+  // object (tour.service.ts precomputes both server-side per 1h `tours`
+  // cache tick). No fetch = instant city-switch response.
   const cityToHome: Record<DepartureCity, "ISB" | "LHE" | "KHI" | "KDU"> = {
     islamabad: "ISB", lahore: "LHE", karachi: "KHI", skardu: "KDU",
   };
   const homeCityCode = cityToHome[draft.departureCity];
-  const startDateForQuote = allDepartures[0]?.departureDate ?? tour.departureDate;
-
-  // Skip the network round-trip when the picked city is the tour's anchor —
-  // by definition it costs 0 (perf optimisation B).
-  const shouldFetchAddon = tour.anchorCity !== homeCityCode;
-
-  useEffect(() => {
-    if (!startDateForQuote) return;
-    if (!shouldFetchAddon) { setAddonPerPerson(0); setAddonKind(null); return; }
-    const ctrl = new AbortController();
-    fetch(`/api/tours/quote-addons?tourSlug=${encodeURIComponent(tour.slug)}&homeCity=${homeCityCode}&startDate=${startDateForQuote}`, { signal: ctrl.signal })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((q) => {
-        if (!q) return;
-        setAddonPerPerson(q.addonCostPerPerson ?? 0);
-        const types = new Set(((q.addons ?? []) as Array<{ type: string }>).map((a) => a.type));
-        setAddonKind(types.size === 0 ? null : types.size > 1 ? "mixed" : (types.values().next().value as "flight" | "bus"));
-      })
-      .catch((e) => { if (e?.name !== "AbortError") console.error("[wizard addon fetch]", e); });
-    return () => ctrl.abort();
-  }, [tour.slug, homeCityCode, startDateForQuote, shouldFetchAddon]);
-
+  const addonPerPerson = tour.addonCostByCity?.[homeCityCode] ?? 0;
+  const addonKind = tour.addonKindByCity?.[homeCityCode] ?? null;
   const addonLineLabel = addonKind === "flight" ? "Return Flight" : addonKind === "bus" ? "Bus" : "Transport";
 
   useEffect(() => {
