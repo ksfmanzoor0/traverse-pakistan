@@ -99,33 +99,15 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
 
   const liveDeparture = departuresForCity.find((d) => d.id === selectedDepartureId) ?? departuresForCity[0] ?? null;
 
-  // Live transport-addon cost + display label ("Return Flight" | "Bus" |
-  // "Transport" for mixed) — driven by tour_addons.type via quoteTourAddons.
-  const [addonPerPerson, setAddonPerPerson] = useState(0);
-  const [addonKind, setAddonKind] = useState<"flight" | "bus" | "mixed" | null>(null);
+  // Transport-addon cost + display label — read straight from the Tour
+  // object (tour.service.ts precomputes both server-side per 1h `tours`
+  // cache tick). No client fetch, no city-switch delay.
   const cityToHome: Record<"islamabad" | "lahore" | "karachi" | "skardu", "ISB" | "LHE" | "KHI" | "KDU"> = {
     islamabad: "ISB", lahore: "LHE", karachi: "KHI", skardu: "KDU",
   };
   const homeCityCode = cityToHome[departure];
-  const startDateForQuote = liveDeparture?.departureDate ?? tour.departureDate;
-  // Skip the fetch for the anchor city — no addon applies (perf B).
-  const shouldFetchAddon = tour.anchorCity !== homeCityCode;
-  useEffect(() => {
-    if (!startDateForQuote) return;
-    if (!shouldFetchAddon) { setAddonPerPerson(0); setAddonKind(null); return; }
-    const ctrl = new AbortController();
-    fetch(`/api/tours/quote-addons?tourSlug=${encodeURIComponent(tour.slug)}&homeCity=${homeCityCode}&startDate=${startDateForQuote}`, { signal: ctrl.signal })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((q) => {
-        if (!q) return;
-        setAddonPerPerson(q.addonCostPerPerson ?? 0);
-        const types = new Set(((q.addons ?? []) as Array<{ type: string }>).map((a) => a.type));
-        setAddonKind(types.size === 0 ? null : types.size > 1 ? "mixed" : (types.values().next().value as "flight" | "bus"));
-      })
-      .catch((e) => { if (e?.name !== "AbortError") console.error("[sidebar addon fetch]", e); });
-    return () => ctrl.abort();
-  }, [tour.slug, homeCityCode, startDateForQuote, shouldFetchAddon]);
-
+  const addonPerPerson = tour.addonCostByCity?.[homeCityCode] ?? 0;
+  const addonKind = tour.addonKindByCity?.[homeCityCode] ?? null;
   const addonLineLabel = addonKind === "flight" ? "Return Flight" : addonKind === "bus" ? "Bus" : "Transport";
 
   const pricing = calculatePricing({

@@ -16,6 +16,7 @@ function toTour(
   hasAddons?: boolean,
   addonCities?: string[],
   addonCostByCity?: Partial<Record<"ISB" | "LHE" | "KHI" | "KDU", number>>,
+  addonKindByCity?: Partial<Record<"ISB" | "LHE" | "KHI" | "KDU", "flight" | "bus" | "mixed">>,
 ): Tour {
   const prices = priceMap?.get(row.slug);
   return {
@@ -60,6 +61,7 @@ function toTour(
     anchorCity: row.anchor_city,
     addonCities,
     addonCostByCity: addonCostByCity as Tour["addonCostByCity"],
+    addonKindByCity: addonKindByCity as Tour["addonKindByCity"],
   };
 }
 
@@ -73,6 +75,7 @@ interface AddonCoverage {
   hasAddons: boolean;
   cities: string[];
   costByCity: Partial<Record<"ISB" | "LHE" | "KHI" | "KDU", number>>;
+  kindByCity: Partial<Record<"ISB" | "LHE" | "KHI" | "KDU", "flight" | "bus" | "mixed">>;
 }
 
 async function fetchAddonCoverage(
@@ -107,13 +110,20 @@ async function fetchAddonCoverage(
       hasAddons: true,
       cities: Array.from(cities),
       costByCity: {},
+      kindByCity: {},
     };
     map.set(slug, entry);
     for (const cityCode of cities) {
       const c = cityCode as HomeCity;
       jobs.push(
         quoteTourAddons({ tourSlug: slug, homeCity: c, startDate })
-          .then((q) => { if (q) entry.costByCity[c] = q.addonCostPerPerson; })
+          .then((q) => {
+            if (!q) return;
+            entry.costByCity[c] = q.addonCostPerPerson;
+            const types = new Set(q.addons.map((a) => a.type));
+            if (types.size === 1) entry.kindByCity[c] = types.values().next().value as "flight" | "bus";
+            else if (types.size > 1) entry.kindByCity[c] = "mixed";
+          })
           .catch((e) => { console.error(`[fetchAddonCoverage] ${slug}/${c}:`, e); }),
       );
     }
@@ -198,7 +208,7 @@ const _fetchAllTours = unstable_cache(
     const coverage = await fetchAddonCoverage(supabase, rows.map((r) => r.slug), earliestBySlug);
     return rows.map((r) => {
       const c = coverage.get(r.slug);
-      return toTour(r, priceMap, undefined, !!c, c?.cities, c?.costByCity);
+      return toTour(r, priceMap, undefined, !!c, c?.cities, c?.costByCity, c?.kindByCity);
     });
   },
   ["all-tours"],
@@ -223,7 +233,7 @@ export const getTourBySlug = cache(async (slug: string): Promise<Tour | null> =>
   const coverage = await fetchAddonCoverage(supabase, [slug], earliestBySlug);
   const r2Images = r2Urls.length ? buildImagesFromR2(r2Urls, row.name) : undefined;
   const c = coverage.get(row.slug);
-  return toTour(row, priceMap, r2Images, !!c, c?.cities, c?.costByCity);
+  return toTour(row, priceMap, r2Images, !!c, c?.cities, c?.costByCity, c?.kindByCity);
 });
 
 export const getToursByDestination = cache(async (destinationSlug: string): Promise<Tour[]> => {
