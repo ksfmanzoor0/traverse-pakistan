@@ -99,7 +99,7 @@ function buildFaqs(tour: Tour) {
       a: (
         <ul className="space-y-1 list-disc pl-5">
           {tour.inclusions.slice(0, 4).map((i, idx) => (
-            <li key={idx}>{i}</li>
+            <li key={idx}>{i.text}</li>
           ))}
         </ul>
       ),

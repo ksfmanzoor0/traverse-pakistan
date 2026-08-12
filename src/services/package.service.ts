@@ -6,6 +6,23 @@ import type { PackageRow, PackageItineraryDayRow } from "@/lib/supabase/types";
 import type { Package } from "@/types/package";
 import type { PackageItinerary, PackageItineraryDay } from "@/types/package";
 
+// Accept either legacy `string[]` or the new `{text, cityOnly?}[]` shape and
+// project down to plain strings so downstream renderers on this branch (which
+// still print `{inclusion}` directly) keep working.
+function normalizeStringList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((entry) => {
+      if (typeof entry === "string") return entry;
+      if (entry && typeof entry === "object" && "text" in entry) {
+        const t = (entry as { text?: unknown }).text;
+        return typeof t === "string" ? t : "";
+      }
+      return "";
+    })
+    .filter((s) => s.length > 0);
+}
+
 function shuffleGallery(slug: string, images: Package["images"]): Package["images"] {
   if (images.length <= 1) return images;
   const coverIdx = images.findIndex(img => /\/cover\./i.test(img.url));
@@ -60,8 +77,11 @@ function toPackage(row: PackageRow): Package {
     reserveNowPayLater: row.reserve_now_pay_later,
     images: shuffleGallery(row.slug, (row.images as unknown as Package["images"] | null) ?? []),
     highlights: row.highlights ?? [],
-    inclusions: row.inclusions ?? [],
-    exclusions: row.exclusions ?? [],
+    // Supabase now stores these as jsonb `{text, cityOnly?}[]` (packages-editor
+     // schema shipped ahead of the packages-editor branch). Older code on this
+     // branch reads them as `string[]`, so normalize back to strings here.
+    inclusions: normalizeStringList(row.inclusions),
+    exclusions: normalizeStringList(row.exclusions),
     knowBeforeYouGo: row.know_before_you_go ?? [],
     tiers: mergePricing(row.pricing, row.pricing_override) as Package["tiers"],
     metaTitle: row.meta_title ?? row.name,

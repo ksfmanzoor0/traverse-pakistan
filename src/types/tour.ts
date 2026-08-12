@@ -10,6 +10,7 @@ export type TourCategory =
   | "coastal";
 
 import type { ResolvedAddonView } from "./tour-addon";
+import type { TourBlock } from "./tour-block";
 
 export type BadgeType = "on-sale" | "epic-trek" | "bestseller" | "new" | null;
 
@@ -18,12 +19,24 @@ export interface TourImage {
   alt: string;
 }
 
+/** Inclusion / exclusion list item. `cityOnly` limits the item to travelers
+ * whose home city (ISB/LHE/KHI/KDU) is in the list. Undefined = all cities. */
+export interface TourListItem {
+  text: string;
+  cityOnly?: Array<"ISB" | "LHE" | "KHI" | "KDU">;
+}
+
 export interface TourPricing {
   // Ground-only price per person (city-agnostic). Per-city variance is layered
   // on at runtime via tour_addons — see quoteTourAddons in addon-cost.service.
   base: number;
   singleSupplement: number | null;
   international?: number | null;
+}
+
+export interface GroupDiscountTier {
+  minAdults: number;
+  pct: number;
 }
 
 export interface MeetingPoint {
@@ -69,12 +82,15 @@ export interface Tour {
     photo?: string;
   };
   highlights: string[];
-  inclusions: string[];
-  exclusions: string[];
+  inclusions: TourListItem[];
+  exclusions: TourListItem[];
   knowBeforeYouGo: string[];
   meetingPoint: MeetingPoint;
   metaTitle: string;
   metaDescription: string;
+  /** Rich block-editor content shown below the description on the tour
+   * page. Filtered client-side by traveler home city. Empty = nothing. */
+  bodyBlocks: TourBlock[];
   updatedAt?: string;
   /** True when the tour has tour_addons rows (flight/bus pickers at checkout).
    * Card price shows base + "+ transport" chip instead of the bare number. */
@@ -97,4 +113,9 @@ export interface Tour {
    * Source of truth — `addonCostByCity` is derived from this (sum of required
    * + optional-default-on) and kept only for JSON-LD offer emission. */
   addonsByCity?: Partial<Record<"ISB" | "LHE" | "KHI" | "KDU", ResolvedAddonView[]>>;
+  /** Fraction off base for children (2-12). null = fall back to global default (0.5). */
+  childDiscountPct?: number | null;
+  /** Tiers applied to adult subtotal only, sorted ascending by minAdults.
+   * null = fall back to default [{minAdults:3,pct:0.05},{minAdults:6,pct:0.10}]. */
+  groupDiscountTiers?: GroupDiscountTier[] | null;
 }

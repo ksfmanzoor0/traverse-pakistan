@@ -9,6 +9,7 @@ import type { TourRow, TourItineraryDayRow } from "@/lib/supabase/types";
 import type { Tour, TourCategory, TourImage } from "@/types/tour";
 import type { TourItinerary, ItineraryDay } from "@/types/itinerary";
 import type { ResolvedAddonView } from "@/types/tour-addon";
+import type { TourBlock } from "@/types/tour-block";
 
 function toTour(
   row: TourRow,
@@ -46,23 +47,32 @@ function toTour(
     languages: row.languages,
     freeCancellation: row.free_cancellation,
     reserveNowPayLater: row.reserve_now_pay_later,
-    images: r2Images ?? ((row.images as unknown as (TourImage | string)[] | null) ?? []).map((img) =>
-      typeof img === "string" ? { url: img, alt: row.name } : img
-    ),
+    images: (() => {
+      // DB-first: when the admin has curated an ordered list, it wins.
+      // R2 auto-listing is the fallback for legacy tours whose images row is empty.
+      const dbList = ((row.images as unknown as (TourImage | string)[] | null) ?? []).map((img) =>
+        typeof img === "string" ? { url: img, alt: row.name } : img
+      );
+      if (dbList.length > 0) return dbList;
+      return r2Images ?? [];
+    })(),
     guide: row.guide ?? undefined,
     highlights: row.highlights,
-    inclusions: row.inclusions,
-    exclusions: row.exclusions,
+    inclusions: (row.inclusions ?? []) as Tour["inclusions"],
+    exclusions: (row.exclusions ?? []) as Tour["exclusions"],
     knowBeforeYouGo: row.know_before_you_go,
     meetingPoint: row.meeting_point,
     metaTitle: row.meta_title,
     metaDescription: row.meta_description,
+    bodyBlocks: (row.body_blocks as TourBlock[] | null) ?? [],
     updatedAt: row.updated_at ?? undefined,
     hasAddons,
     anchorCity: row.anchor_city,
     addonCities,
     addonCostByCity: addonCostByCity as Tour["addonCostByCity"],
     addonsByCity: addonsByCity as Tour["addonsByCity"],
+    childDiscountPct: row.child_discount_pct != null ? Number(row.child_discount_pct) : null,
+    groupDiscountTiers: row.group_discount_tiers ?? null,
   };
 }
 
@@ -159,6 +169,7 @@ function toItinerary(tourSlug: string, rows: TourItineraryDayRow[]): TourItinera
         stops: r.stops as ItineraryDay["stops"],
         drivingTime: r.driving_time,
         overnight: r.overnight,
+        cityOnly: (r.city_only ?? undefined) as ItineraryDay["cityOnly"],
       })),
   };
 }
