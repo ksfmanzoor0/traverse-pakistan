@@ -421,12 +421,13 @@ function ItinerarySection({
   }
 
   function addDay() {
-    const nextNum = days.length ? Math.max(...days.map((d) => d.day_number)) + 1 : 1;
+    // Leave day_number unset (NaN sentinel → empty input) so admin explicitly
+    // picks the number. Save button refuses NaN.
     const blank: TourItineraryDayRow = {
       id: "",
       tour_slug: tourSlug,
-      day_number: nextNum,
-      title: `Day ${nextNum}`,
+      day_number: Number.NaN,
+      title: "",
       description: "",
       image: null,
       stops: [],
@@ -444,7 +445,9 @@ function ItinerarySection({
         <div key={d.id || `new-${i}`} className="border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] p-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex-1">
-              <div className="text-[13px] font-semibold text-[var(--text-primary)]">Day {d.day_number} — {d.title || "(untitled)"}</div>
+              <div className="text-[13px] font-semibold text-[var(--text-primary)]">
+                Day {Number.isFinite(d.day_number) ? d.day_number : "?"} — {d.title || "(untitled)"}
+              </div>
               <div className="text-[11px] text-[var(--text-tertiary)]">
                 {d.overnight ? `Overnight: ${d.overnight}` : "No overnight set"}
                 {d.city_only && d.city_only.length > 0 ? ` · Only for ${d.city_only.join("/")}` : ""}
@@ -462,10 +465,14 @@ function ItinerarySection({
                 <Field label="Day number">
                   <input
                     type="number"
-                    value={d.day_number}
+                    value={Number.isFinite(d.day_number) ? d.day_number : ""}
+                    placeholder="e.g. 0"
                     onChange={(e) => {
-                      const n = Number(e.target.value);
-                      updateDay(i, { day_number: Number.isFinite(n) ? n : 1 });
+                      const raw = e.target.value;
+                      // Empty string → NaN sentinel so the input stays blank
+                      // and Save refuses. Any parsable number (including 0
+                      // and negatives) round-trips.
+                      updateDay(i, { day_number: raw === "" ? Number.NaN : Number(raw) });
                     }}
                     className={inputCls}
                   />
@@ -519,7 +526,7 @@ function ItinerarySection({
               <div className="flex justify-end">
                 <button
                   type="button"
-                  disabled={pending}
+                  disabled={pending || !Number.isFinite(d.day_number)}
                   onClick={() => saveDay(d)}
                   className="h-9 px-4 text-[13px] font-semibold bg-[var(--primary)] text-[var(--text-inverse)] rounded-[var(--radius-sm)] disabled:opacity-60"
                 >
