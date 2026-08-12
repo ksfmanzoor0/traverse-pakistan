@@ -487,9 +487,6 @@ function MeetingPointSection({ tour, onSave, pending }: { tour: TourRow; onSave:
       <Field label="End point">
         <input value={m.endPoint} onChange={(e) => set({ endPoint: e.target.value })} className={inputCls} />
       </Field>
-      <Field label="Map embed URL">
-        <input value={m.mapEmbedUrl} onChange={(e) => set({ mapEmbedUrl: e.target.value })} className={inputCls} />
-      </Field>
       <label className="inline-flex items-center gap-2">
         <input type="checkbox" checked={m.pickupOffered} onChange={(e) => set({ pickupOffered: e.target.checked })} />
         <span className="text-[13px]">Pickup offered</span>
@@ -625,7 +622,7 @@ function ItinerarySection({
                 </Field>
               </div>
               <Field label="Description">
-                <textarea value={d.description} onChange={(e) => updateDay(i, { description: e.target.value })} rows={4} className={inputCls} />
+                <textarea value={d.description} onChange={(e) => updateDay(i, { description: e.target.value })} rows={10} className={inputCls} />
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Driving time">
@@ -649,23 +646,10 @@ function ItinerarySection({
                   onChange={(next) => updateDay(i, { city_only: next ?? null })}
                 />
               </div>
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] mb-1">Stops (JSON)</div>
-                <textarea
-                  value={JSON.stringify(d.stops, null, 2)}
-                  onChange={(e) => {
-                    try {
-                      const parsed = JSON.parse(e.target.value);
-                      if (Array.isArray(parsed)) updateDay(i, { stops: parsed });
-                    } catch { /* ignore */ }
-                  }}
-                  rows={6}
-                  className="w-full px-3 py-2 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[12px] font-mono"
-                />
-                <div className="text-[11px] text-[var(--text-tertiary)] mt-1">
-                  Each stop: {`{ name, detail, cityOnly?: "islamabad"|"lahore"|"karachi"|"skardu" }`}
-                </div>
-              </div>
+              <StopsEditor
+                stops={d.stops}
+                onChange={(next) => updateDay(i, { stops: next })}
+              />
               <div className="flex justify-end">
                 <button
                   type="button"
@@ -686,6 +670,72 @@ function ItinerarySection({
         className="h-9 px-3 text-[12px] font-semibold text-[var(--primary)] border border-dashed border-[var(--primary)]/40 rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)]"
       >
         + Add day
+      </button>
+    </div>
+  );
+}
+
+type Stop = { name: string; detail: string; cityOnly?: string };
+
+const STOP_CITY_OPTIONS = ["", "islamabad", "lahore", "karachi", "skardu"] as const;
+
+function StopsEditor({ stops, onChange }: { stops: Stop[]; onChange: (next: Stop[]) => void }) {
+  const update = (i: number, patch: Partial<Stop>) => {
+    const next = stops.map((s, idx) => (idx === i ? { ...s, ...patch } : s));
+    onChange(next);
+  };
+  const remove = (i: number) => onChange(stops.filter((_, idx) => idx !== i));
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= stops.length) return;
+    const next = [...stops];
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  };
+  return (
+    <div>
+      <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] mb-1">Stops</div>
+      <p className="text-[11px] text-[var(--text-tertiary)] mb-2">
+        Sub-locations shown as bullets under the day. Pick a city if a stop is only relevant to that departure.
+      </p>
+      <div className="space-y-2">
+        {stops.map((s, i) => (
+          <div key={i} className="border border-[var(--border-default)] rounded-[var(--radius-sm)] p-2 space-y-2 bg-[var(--bg-primary)]">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <Field label="Name">
+                <input value={s.name} onChange={(e) => update(i, { name: e.target.value })} className={inputCls} placeholder="e.g. Attabad Lake" />
+              </Field>
+              <Field label="Detail">
+                <input value={s.detail} onChange={(e) => update(i, { detail: e.target.value })} className={inputCls} placeholder="e.g. 20-min photo stop" />
+              </Field>
+            </div>
+            <div className="flex items-end gap-2 flex-wrap">
+              <Field label="Only for city">
+                <select
+                  value={s.cityOnly ?? ""}
+                  onChange={(e) => update(i, { cityOnly: e.target.value || undefined })}
+                  className={inputCls}
+                >
+                  {STOP_CITY_OPTIONS.map((c) => (
+                    <option key={c} value={c}>{c === "" ? "All cities" : c}</option>
+                  ))}
+                </select>
+              </Field>
+              <div className="ml-auto flex items-center gap-1">
+                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="h-8 px-2 text-[12px] border border-[var(--border-default)] rounded-[var(--radius-sm)] disabled:opacity-40">↑</button>
+                <button type="button" onClick={() => move(i, 1)} disabled={i === stops.length - 1} className="h-8 px-2 text-[12px] border border-[var(--border-default)] rounded-[var(--radius-sm)] disabled:opacity-40">↓</button>
+                <button type="button" onClick={() => remove(i)} className="h-8 px-3 text-[12px] text-[var(--danger)] border border-[var(--danger)]/40 rounded-[var(--radius-sm)]">Remove</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={() => onChange([...stops, { name: "", detail: "" }])}
+        className="mt-2 h-8 px-3 text-[12px] font-semibold text-[var(--primary)] border border-dashed border-[var(--primary)]/40 rounded-[var(--radius-sm)]"
+      >
+        + Add stop
       </button>
     </div>
   );
