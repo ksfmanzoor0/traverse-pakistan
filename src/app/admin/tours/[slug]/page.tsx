@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { TourEditor } from "@/components/admin/TourEditor";
-import { updateTour, upsertItineraryDay, deleteItineraryDay, upsertTourAddon, deleteTourAddon, upsertDeparture, deleteDeparture } from "../actions";
+import { updateTour, upsertItineraryDay, deleteItineraryDay, upsertTourAddon, deleteTourAddon, upsertDeparture, deleteDeparture, renameTourSlugAndRedirect } from "../actions";
 import type { TourRow, TourItineraryDayRow, TourAddonRow, DepartureRow } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +46,7 @@ export default async function AdminTourEditorPage({
           deleteTourAddon,
           upsertDeparture,
           deleteDeparture,
+          renameTourSlug: renameTourSlugAndRedirect,
         }}
       />
     </div>

@@ -25,6 +25,7 @@ interface Actions {
   deleteTourAddon: (id: string, tourSlug: string) => Promise<{ ok: boolean; error?: string }>;
   upsertDeparture: (row: DeparturePatch) => Promise<{ ok: boolean; id?: string; error?: string }>;
   deleteDeparture: (id: string, tourSlug: string) => Promise<{ ok: boolean; error?: string }>;
+  renameTourSlug: (oldSlug: string, newSlug: string) => Promise<{ ok: boolean; slug?: string; error?: string } | void>;
 }
 
 const TABS = ["Basics", "Gallery", "Content", "Highlights", "Inclusions", "Meeting Point", "Itinerary", "Addons", "Departures", "Preview"] as const;
@@ -90,6 +91,18 @@ export function TourEditor({
           onSave={(patch) => startTransition(async () => {
             const r = await actions.updateTour(tour.slug, patch);
             announce(r.ok, r.ok ? "Saved" : r.error ?? "Failed");
+          })}
+          onRenameSlug={(newSlug) => new Promise((resolve) => {
+            startTransition(async () => {
+              const r = await actions.renameTourSlug(tour.slug, newSlug);
+              // If the server redirected (rename succeeded), we never get here.
+              if (r && !r.ok) {
+                announce(false, r.error ?? "Rename failed");
+                resolve({ ok: false, error: r.error });
+              } else {
+                resolve({ ok: true });
+              }
+            });
           })}
           pending={pending}
         />
@@ -164,7 +177,18 @@ export function TourEditor({
 
 /* ============================ Basics ============================ */
 
-function BasicsSection({ tour, onSave, pending }: { tour: TourRow; onSave: (p: TourPatch) => void; pending: boolean }) {
+function BasicsSection({
+  tour,
+  onSave,
+  onRenameSlug,
+  pending,
+}: {
+  tour: TourRow;
+  onSave: (p: TourPatch) => void;
+  onRenameSlug: (newSlug: string) => Promise<{ ok: boolean; error?: string }>;
+  pending: boolean;
+}) {
+  const [renameOpen, setRenameOpen] = useState(false);
   const [name, setName] = useState(tour.name);
   const [description, setDescription] = useState(tour.description);
   const [category, setCategory] = useState(tour.category);
@@ -180,6 +204,27 @@ function BasicsSection({ tour, onSave, pending }: { tour: TourRow; onSave: (p: T
 
   return (
     <div className="space-y-4">
+      <div className="flex items-end justify-between gap-3 flex-wrap">
+        <Field label="Slug (URL)">
+          <div className="flex items-center gap-2">
+            <code className="px-3 py-1.5 rounded bg-[var(--bg-subtle)] text-[13px] text-[var(--text-primary)]">/{tour.slug}</code>
+            <button
+              type="button"
+              onClick={() => setRenameOpen(true)}
+              className="h-8 px-3 text-[12px] font-semibold text-[var(--primary)] border border-[var(--primary)]/40 rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)]"
+            >
+              Rename…
+            </button>
+          </div>
+        </Field>
+      </div>
+      {renameOpen && (
+        <RenameSlugModal
+          currentSlug={tour.slug}
+          onClose={() => setRenameOpen(false)}
+          onConfirm={onRenameSlug}
+        />
+      )}
       <Field label="Name">
         <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
       </Field>
@@ -937,6 +982,77 @@ function PreviewSection({ tourSlug, anchorCity }: { tourSlug: string; anchorCity
       <div className="border border-[var(--border-default)] rounded-[var(--radius-sm)] overflow-hidden bg-[var(--bg-primary)]" style={{ height: "80vh" }}>
         {/* key forces reload on city change so the initial-departure prop takes effect */}
         <iframe key={city} src={src} title={`Preview ${tourSlug} as ${city}`} className="w-full h-full" />
+      </div>
+    </div>
+  );
+}
+
+/* ============================ Rename slug modal ============================ */
+
+function RenameSlugModal({
+  currentSlug,
+  onClose,
+  onConfirm,
+}: {
+  currentSlug: string;
+  onClose: () => void;
+  onConfirm: (newSlug: string) => Promise<{ ok: boolean; error?: string }>;
+}) {
+  const [newSlug, setNewSlug] = useState(currentSlug);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const changed = newSlug !== currentSlug && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(newSlug);
+
+  async function submit() {
+    setError(null);
+    setPending(true);
+    const r = await onConfirm(newSlug);
+    // Successful rename redirects — we may never get here. On failure, show
+    // the error and stay open.
+    if (!r.ok) {
+      setError(r.error ?? "Rename failed");
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="bg-[var(--bg-primary)] rounded-[var(--radius-md)] p-6 w-full max-w-md space-y-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Rename slug</h2>
+        <p className="text-[13px] text-[var(--text-secondary)]">
+          Updates the URL for this tour and all references (itinerary days, addons, departures, reviews). Old URL will 404 — set up a redirect at your edge if the page had traffic.
+        </p>
+        {error && <div className="p-3 rounded bg-[var(--error)]/10 text-[var(--error)] text-[13px]">{error}</div>}
+        <label className="block">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-1">Current</span>
+          <code className="block px-3 py-2 rounded bg-[var(--bg-subtle)] text-[13px] text-[var(--text-primary)]">/{currentSlug}</code>
+        </label>
+        <label className="block">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-1">New slug</span>
+          <input
+            value={newSlug}
+            onChange={(e) => setNewSlug(e.target.value)}
+            placeholder="lowercase-kebab-case"
+            className="w-full h-10 px-3 border border-[var(--border-default)] rounded-[var(--radius-sm)] text-[13px] bg-[var(--bg-primary)]"
+          />
+          <span className="text-[11px] text-[var(--text-tertiary)] mt-1 block">Lowercase letters, digits, and single dashes only.</span>
+        </label>
+        <div className="flex justify-end gap-2 pt-2">
+          <button type="button" onClick={onClose} className="h-9 px-4 text-[13px] font-semibold text-[var(--text-secondary)] rounded hover:bg-[var(--bg-subtle)]">
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={pending || !changed}
+            onClick={submit}
+            className="h-9 px-4 text-[13px] font-semibold bg-[var(--primary)] text-[var(--text-inverse)] rounded-[var(--radius-sm)] disabled:opacity-60"
+          >
+            {pending ? "Renaming…" : "Rename"}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -278,6 +278,51 @@ export async function duplicateTour(sourceSlug: string, newSlug: string, newName
   return { ok: true, slug: newSlug };
 }
 
+export async function renameTourSlug(oldSlug: string, newSlug: string): Promise<{ ok: boolean; slug?: string; error?: string }> {
+  await requireAdmin();
+  if (oldSlug === newSlug) return { ok: true, slug: oldSlug };
+  if (!SLUG_RE.test(newSlug)) return { ok: false, error: "Slug must be lowercase kebab-case" };
+
+  const supabase = getSupabaseAdmin();
+
+  // Guard: destination slug free + source exists.
+  const [taken, source] = await Promise.all([
+    supabase.from("tours").select("slug").eq("slug", newSlug).maybeSingle(),
+    supabase.from("tours").select("slug").eq("slug", oldSlug).maybeSingle(),
+  ]);
+  if (taken.data) return { ok: false, error: `Slug "${newSlug}" is already taken` };
+  if (!source.data) return { ok: false, error: `Tour "${oldSlug}" not found` };
+
+  // Update child tables that don't have FK cascades first. `departures` and
+  // `reviews` both reference tour_slug as plain text without a foreign key,
+  // so we rewrite them before touching tours.slug. tour_itinerary_days and
+  // tour_addons ride the ON UPDATE CASCADE we added in migration
+  // 20260812_tour_slug_fks_on_update_cascade.
+  const dep = await supabase.from("departures").update({ tour_slug: newSlug }).eq("tour_slug", oldSlug);
+  if (dep.error) return { ok: false, error: `departures: ${dep.error.message}` };
+  const rev = await supabase.from("reviews").update({ tour_slug: newSlug }).eq("tour_slug", oldSlug);
+  if (rev.error) return { ok: false, error: `reviews: ${rev.error.message}` };
+
+  // Finally: the tours row itself. Cascade fires on days + addons.
+  const t = await supabase.from("tours").update({ slug: newSlug, updated_at: new Date().toISOString() }).eq("slug", oldSlug);
+  if (t.error) return { ok: false, error: t.error.message };
+
+  revalidateTag("tours", {});
+  revalidatePath("/admin/tours");
+  revalidatePath(`/admin/tours/${oldSlug}`);
+  revalidatePath(`/admin/tours/${newSlug}`);
+  revalidatePath(`/grouptours/${oldSlug}`);
+  revalidatePath(`/grouptours/${newSlug}`);
+  return { ok: true, slug: newSlug };
+}
+
+// Redirect wrapper — form action, lands on the renamed editor URL.
+export async function renameTourSlugAndRedirect(oldSlug: string, newSlug: string) {
+  const r = await renameTourSlug(oldSlug, newSlug);
+  if (!r.ok || !r.slug) return r;
+  redirect(`/admin/tours/${r.slug}`);
+}
+
 export async function deleteTour(slug: string): Promise<{ ok: boolean; error?: string }> {
   await requireAdmin();
   const supabase = getSupabaseAdmin();
