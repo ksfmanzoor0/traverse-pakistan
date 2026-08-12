@@ -460,7 +460,15 @@ function ItinerarySection({
             <div className="mt-3 space-y-3 border-t border-[var(--border-default)] pt-3">
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Day number">
-                  <input type="number" value={d.day_number} onChange={(e) => updateDay(i, { day_number: Number(e.target.value) || 1 })} className={inputCls} />
+                  <input
+                    type="number"
+                    value={d.day_number}
+                    onChange={(e) => {
+                      const n = Number(e.target.value);
+                      updateDay(i, { day_number: Number.isFinite(n) ? n : 1 });
+                    }}
+                    className={inputCls}
+                  />
                 </Field>
                 <Field label="Title">
                   <input value={d.title} onChange={(e) => updateDay(i, { title: e.target.value })} className={inputCls} />
