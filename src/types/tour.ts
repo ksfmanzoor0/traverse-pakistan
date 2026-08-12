@@ -34,6 +34,11 @@ export interface TourPricing {
   international?: number | null;
 }
 
+export interface GroupDiscountTier {
+  minAdults: number;
+  pct: number;
+}
+
 export interface MeetingPoint {
   address: string;
   departureTime: string;
@@ -108,4 +113,9 @@ export interface Tour {
    * Source of truth — `addonCostByCity` is derived from this (sum of required
    * + optional-default-on) and kept only for JSON-LD offer emission. */
   addonsByCity?: Partial<Record<"ISB" | "LHE" | "KHI" | "KDU", ResolvedAddonView[]>>;
+  /** Fraction off base for children (2-12). null = fall back to global default (0.5). */
+  childDiscountPct?: number | null;
+  /** Tiers applied to adult subtotal only, sorted ascending by minAdults.
+   * null = fall back to default [{minAdults:3,pct:0.05},{minAdults:6,pct:0.10}]. */
+  groupDiscountTiers?: GroupDiscountTier[] | null;
 }

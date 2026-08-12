@@ -40,6 +40,8 @@ export type TourPatch = {
   featured?: boolean;
   images?: Array<{ url: string; alt: string }>;
   body_blocks?: TourBlock[];
+  child_discount_pct?: number | null;
+  group_discount_tiers?: Array<{ minAdults: number; pct: number }> | null;
 };
 
 function bust(slug: string) {
@@ -225,6 +227,8 @@ export async function createTour(input: NewTourInput): Promise<{ ok: boolean; sl
     meta_description: "",
     related_destination_slugs: [] as string[],
     body_blocks: [] as TourBlock[],
+    child_discount_pct: null,
+    group_discount_tiers: null,
   };
   const { error } = await supabase.from("tours").insert(row);
   if (error) return { ok: false, error: error.message };

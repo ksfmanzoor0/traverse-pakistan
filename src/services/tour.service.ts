@@ -71,6 +71,8 @@ function toTour(
     addonCities,
     addonCostByCity: addonCostByCity as Tour["addonCostByCity"],
     addonsByCity: addonsByCity as Tour["addonsByCity"],
+    childDiscountPct: row.child_discount_pct != null ? Number(row.child_discount_pct) : null,
+    groupDiscountTiers: row.group_discount_tiers ?? null,
   };
 }
 

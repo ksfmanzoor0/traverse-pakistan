@@ -201,6 +201,16 @@ function BasicsSection({
   const [metaTitle, setMetaTitle] = useState(tour.meta_title ?? "");
   const [metaDescription, setMetaDescription] = useState(tour.meta_description ?? "");
   const [featured, setFeatured] = useState(tour.featured);
+  const [childPctInput, setChildPctInput] = useState<string>(
+    tour.child_discount_pct != null ? String(Math.round(Number(tour.child_discount_pct) * 100)) : ""
+  );
+  const initialTiers = (tour.group_discount_tiers && tour.group_discount_tiers.length > 0)
+    ? tour.group_discount_tiers
+    : [{ minAdults: 3, pct: 0.05 }, { minAdults: 6, pct: 0.1 }];
+  const [tiers, setTiers] = useState<Array<{ minAdults: number; pct: number }>>(initialTiers);
+  const [useCustomTiers, setUseCustomTiers] = useState<boolean>(
+    tour.group_discount_tiers != null && tour.group_discount_tiers.length > 0
+  );
 
   return (
     <div className="space-y-4">
@@ -273,9 +283,95 @@ function BasicsSection({
       <Field label="Meta description">
         <textarea value={metaDescription} onChange={(e) => setMetaDescription(e.target.value)} rows={2} className={inputCls} />
       </Field>
+
+      <div className="border-t border-[var(--border-default)] pt-4 space-y-4">
+        <div>
+          <div className="text-[13px] font-bold text-[var(--text-primary)]">Discounts (applied to base fare)</div>
+          <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
+            Leave child field blank to use the site default (50%). Turn off custom tiers to fall back to 3 adults → 5%, 6 adults → 10%.
+          </p>
+        </div>
+
+        <Field label="Child discount % (ages 2–12) — blank = default 50%">
+          <input
+            type="number"
+            min={0}
+            max={100}
+            value={childPctInput}
+            onChange={(e) => setChildPctInput(e.target.value)}
+            placeholder="50"
+            className={inputCls}
+          />
+        </Field>
+
+        <div>
+          <label className="inline-flex items-center gap-2 mb-2">
+            <input
+              type="checkbox"
+              checked={useCustomTiers}
+              onChange={(e) => setUseCustomTiers(e.target.checked)}
+            />
+            <span className="text-[13px]">Use custom group-discount tiers</span>
+          </label>
+          {useCustomTiers && (
+            <div className="space-y-2">
+              {tiers.map((t, i) => (
+                <div key={i} className="flex items-end gap-2">
+                  <Field label="Min adults">
+                    <input
+                      type="number"
+                      min={1}
+                      value={t.minAdults}
+                      onChange={(e) => {
+                        const next = [...tiers];
+                        next[i] = { ...next[i], minAdults: Number(e.target.value) || 0 };
+                        setTiers(next);
+                      }}
+                      className={inputCls}
+                    />
+                  </Field>
+                  <Field label="% off adult fare">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={Math.round(t.pct * 100)}
+                      onChange={(e) => {
+                        const next = [...tiers];
+                        next[i] = { ...next[i], pct: (Number(e.target.value) || 0) / 100 };
+                        setTiers(next);
+                      }}
+                      className={inputCls}
+                    />
+                  </Field>
+                  <button
+                    type="button"
+                    onClick={() => setTiers(tiers.filter((_, j) => j !== i))}
+                    className="h-9 px-3 text-[12px] text-[var(--danger)] border border-[var(--danger)]/40 rounded-[var(--radius-sm)]"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setTiers([...tiers, { minAdults: (tiers.at(-1)?.minAdults ?? 3) + 3, pct: 0.05 }])}
+                className="h-8 px-3 text-[12px] font-semibold text-[var(--primary)] border border-dashed border-[var(--primary)]/40 rounded-[var(--radius-sm)]"
+              >
+                + Add tier
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
       <SaveBar
         pending={pending}
-        onSave={() =>
+        onSave={() => {
+          const childPctNum = childPctInput.trim() === "" ? null : Number(childPctInput) / 100;
+          const sortedTiers = useCustomTiers
+            ? [...tiers].filter((t) => t.minAdults > 0).sort((a, b) => a.minAdults - b.minAdults)
+            : null;
           onSave({
             name,
             description,
@@ -289,8 +385,10 @@ function BasicsSection({
             meta_title: metaTitle,
             meta_description: metaDescription,
             featured,
-          })
-        }
+            child_discount_pct: childPctNum,
+            group_discount_tiers: sortedTiers,
+          });
+        }}
       />
     </div>
   );

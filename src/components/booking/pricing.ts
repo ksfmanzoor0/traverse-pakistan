@@ -35,16 +35,27 @@ export interface PricingBreakdown {
   currency: string;
 }
 
-const CHILD_DISCOUNT_PCT = 0.5;
+const DEFAULT_CHILD_DISCOUNT_PCT = 0.5;
+const DEFAULT_GROUP_DISCOUNT_TIERS: ReadonlyArray<{ minAdults: number; pct: number }> = [
+  { minAdults: 3, pct: 0.05 },
+  { minAdults: 6, pct: 0.1 },
+];
 // Group tours: 40% deposit to confirm the seat; balance due 30 days pre-departure.
 export const TOUR_DEPOSIT_PCT = 0.4;
 
-// Group discount is now driven by adults only; children don't count.
-// 3 adults → 5%, 6 adults → 10%. Applied to the adults subtotal only.
-export function getGroupDiscountPct(adults: number): number {
-  if (adults >= 6) return 0.1;
-  if (adults >= 3) return 0.05;
-  return 0;
+// Group discount is driven by adults only; children don't count. Tour-level
+// overrides on `tour.groupDiscountTiers` (sorted ascending by minAdults) win;
+// null/empty falls back to the default 3→5% / 6→10% ladder.
+export function getGroupDiscountPct(
+  adults: number,
+  tiers?: ReadonlyArray<{ minAdults: number; pct: number }> | null,
+): number {
+  const effective = tiers && tiers.length > 0 ? tiers : DEFAULT_GROUP_DISCOUNT_TIERS;
+  let pct = 0;
+  for (const t of effective) {
+    if (adults >= t.minAdults && t.pct > pct) pct = t.pct;
+  }
+  return pct;
 }
 
 export function calculatePricing(input: PricingInput): PricingBreakdown {
@@ -56,8 +67,9 @@ export function calculatePricing(input: PricingInput): PricingBreakdown {
 
   const singleSupplement = liveDeparture?.singleSupplement ?? tour.pricing.singleSupplement ?? 0;
 
+  const childDiscountPct = tour.childDiscountPct ?? DEFAULT_CHILD_DISCOUNT_PCT;
   const adultsSubtotal = basePrice * adults;
-  const childrenSubtotal = Math.round(basePrice * (1 - CHILD_DISCOUNT_PCT)) * childCount;
+  const childrenSubtotal = Math.round(basePrice * (1 - childDiscountPct)) * childCount;
   const subtotal = adultsSubtotal + childrenSubtotal;
 
   const totalTravelers = adults + childCount;
@@ -72,7 +84,7 @@ export function calculatePricing(input: PricingInput): PricingBreakdown {
 
   // Group discount applies to the adults subtotal only; children never trigger
   // or receive it.
-  const groupDiscountPct = getGroupDiscountPct(adults);
+  const groupDiscountPct = getGroupDiscountPct(adults, tour.groupDiscountTiers);
   const groupDiscountAmount = Math.round(adultsSubtotal * groupDiscountPct);
 
   const addonSubtotal = addonPerPerson * totalTravelers;

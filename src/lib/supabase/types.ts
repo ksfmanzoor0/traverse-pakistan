@@ -49,6 +49,12 @@ export type TourRow = {
   anchor_city: "ISB" | "LHE" | "KHI" | "KDU" | null;
   meta_title: string;
   meta_description: string;
+  // Per-tour override for the child (2-12) discount fraction. NULL = fall back
+  // to the default in src/components/booking/pricing.ts (0.5).
+  child_discount_pct: number | null;
+  // Per-tour override for group-size tiers, sorted ascending by minAdults.
+  // NULL = default [{minAdults:3,pct:0.05},{minAdults:6,pct:0.10}].
+  group_discount_tiers: Array<{ minAdults: number; pct: number }> | null;
   created_at: string;
   updated_at: string;
 };
