@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import type { ItineraryDayInput, ItineraryStop } from "@/app/admin/packages/actions";
+import { AutoGrowTextarea } from "./tour-editor/AutoGrowTextarea";
 
 type Day = {
   day_number: number;
@@ -286,10 +287,10 @@ export function ItineraryEditor({ packageSlug, expectedDays, initialDays, hotels
                   </div>
                   <div>
                     <label className={labelCls} style={labelStyle}>Description</label>
-                    <textarea
+                    <AutoGrowTextarea
                       value={d.description ?? ""}
                       onChange={(e) => updateDay(i, { description: e.target.value })}
-                      rows={3}
+                      minRows={3}
                       className={areaCls}
                       style={inputStyle}
                     />

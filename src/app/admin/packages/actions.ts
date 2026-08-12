@@ -48,6 +48,8 @@ export type PackagePatch = {
   meals_per_person?: number;
   entries_per_person?: number;
   destination_rank?: Record<string, number>;
+  child_discount_pct?: number | null;
+  group_discount_tiers?: Array<{ minAdults: number; pct: number }> | null;
 };
 
 export async function updatePackage(

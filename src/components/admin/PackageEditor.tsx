@@ -18,6 +18,7 @@ import { CityChips } from "./tour-editor/CityChips";
 import { AddonConfigForm } from "./tour-editor/AddonConfigForm";
 import { GalleryEditor, type GalleryImage } from "./tour-editor/GalleryEditor";
 import { BlockEditor } from "./tour-editor/BlockEditor";
+import { AutoGrowTextarea } from "./tour-editor/AutoGrowTextarea";
 import { ItineraryEditor } from "./ItineraryEditor";
 
 type Home = "ISB" | "LHE" | "KHI" | "KDU";
@@ -210,6 +211,15 @@ function BasicsSection({
   });
   const [relatedQuery, setRelatedQuery] = useState("");
   const rankSlugs = Array.from(new Set([destinationSlug, ...related].filter(Boolean)));
+  const [childPctInput, setChildPctInput] = useState<string>(
+    row.child_discount_pct != null ? String(Math.round(Number(row.child_discount_pct) * 100)) : ""
+  );
+  const [tiers, setTiers] = useState<Array<{ minAdults: number; pct: number }>>(
+    row.group_discount_tiers ?? []
+  );
+  const [useCustomTiers, setUseCustomTiers] = useState<boolean>(
+    row.group_discount_tiers != null && row.group_discount_tiers.length > 0
+  );
 
   return (
     <div className="space-y-4">
@@ -235,7 +245,7 @@ function BasicsSection({
         <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
       </Field>
       <Field label="Description">
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className={inputCls} />
+        <AutoGrowTextarea value={description} onChange={(e) => setDescription(e.target.value)} minRows={4} />
       </Field>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Field label="Badge">
@@ -347,30 +357,123 @@ function BasicsSection({
         <input value={metaTitle} onChange={(e) => setMetaTitle(e.target.value)} className={inputCls} />
       </Field>
       <Field label="Meta description">
-        <textarea value={metaDescription} onChange={(e) => setMetaDescription(e.target.value)} rows={2} className={inputCls} />
+        <AutoGrowTextarea value={metaDescription} onChange={(e) => setMetaDescription(e.target.value)} minRows={2} />
       </Field>
+
+      <div className="border-t border-[var(--border-default)] pt-4 space-y-4">
+        <div>
+          <div className="text-[13px] font-bold text-[var(--text-primary)]">Discounts (reserved — not yet applied)</div>
+          <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
+            Editable here for planning; not yet wired into the package pricing engine. Leave blank / unchecked to keep behaviour unchanged.
+          </p>
+        </div>
+
+        <Field label="Child discount % (ages 2–12) — blank = none">
+          <input
+            type="number"
+            min={0}
+            max={100}
+            value={childPctInput}
+            onChange={(e) => setChildPctInput(e.target.value)}
+            placeholder=""
+            className={inputCls}
+          />
+        </Field>
+
+        <div>
+          <label className="inline-flex items-center gap-2 mb-2">
+            <input
+              type="checkbox"
+              checked={useCustomTiers}
+              onChange={(e) => setUseCustomTiers(e.target.checked)}
+            />
+            <span className="text-[13px] font-semibold">Use custom group-discount tiers</span>
+          </label>
+          <p className="text-[11px] text-[var(--text-tertiary)] mb-2">
+            {useCustomTiers
+              ? "Tiers below will be saved with this package (still not applied to pricing math)."
+              : "No tiers saved. Tick above to define custom tiers."}
+          </p>
+          <div className={`space-y-2 ${useCustomTiers ? "" : "opacity-60"}`}>
+            {tiers.map((t, i) => (
+              <div key={i} className="flex items-end gap-2">
+                <Field label="Min adults">
+                  <input
+                    type="number"
+                    min={1}
+                    value={t.minAdults}
+                    onChange={(e) => {
+                      const next = [...tiers];
+                      next[i] = { ...next[i], minAdults: Number(e.target.value) || 0 };
+                      setTiers(next);
+                    }}
+                    className={inputCls}
+                  />
+                </Field>
+                <Field label="% off adult fare">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={Math.round(t.pct * 100)}
+                    onChange={(e) => {
+                      const next = [...tiers];
+                      next[i] = { ...next[i], pct: (Number(e.target.value) || 0) / 100 };
+                      setTiers(next);
+                    }}
+                    className={inputCls}
+                  />
+                </Field>
+                <button
+                  type="button"
+                  onClick={() => setTiers(tiers.filter((_, j) => j !== i))}
+                  className="h-9 px-3 text-[12px] text-[var(--danger)] border border-[var(--danger)]/40 rounded-[var(--radius-sm)]"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => setTiers([...tiers, { minAdults: (tiers.at(-1)?.minAdults ?? 3) + 3, pct: 0.05 }])}
+              className="h-8 px-3 text-[12px] font-semibold text-[var(--primary)] border border-dashed border-[var(--primary)]/40 rounded-[var(--radius-sm)]"
+            >
+              + Add tier
+            </button>
+          </div>
+        </div>
+      </div>
 
       <SaveBar
         pending={pending}
-        onSave={() => onSave({
-          name,
-          description,
-          badge: badge || null,
-          duration,
-          route: route || null,
-          destination_slug: destinationSlug,
-          region_slug: regionSlug,
-          related_destination_slugs: related,
-          published,
-          meta_title: metaTitle || null,
-          meta_description: metaDescription || null,
-          max_group_size: maxGroupSize,
-          languages,
-          total_distance_km: totalDistanceKm,
-          meals_per_person: mealsPerPerson,
-          entries_per_person: entriesPerPerson,
-          destination_rank: destinationRank,
-        })}
+        onSave={() => {
+          const childPctNum = childPctInput.trim() === "" ? null : Number(childPctInput) / 100;
+          const cleanTiers = [...tiers]
+            .filter((t) => t.minAdults > 0)
+            .sort((a, b) => a.minAdults - b.minAdults);
+          const sortedTiers = useCustomTiers && cleanTiers.length > 0 ? cleanTiers : null;
+          onSave({
+            name,
+            description,
+            badge: badge || null,
+            duration,
+            route: route || null,
+            destination_slug: destinationSlug,
+            region_slug: regionSlug,
+            related_destination_slugs: related,
+            published,
+            meta_title: metaTitle || null,
+            meta_description: metaDescription || null,
+            max_group_size: maxGroupSize,
+            languages,
+            total_distance_km: totalDistanceKm,
+            meals_per_person: mealsPerPerson,
+            entries_per_person: entriesPerPerson,
+            destination_rank: destinationRank,
+            child_discount_pct: childPctNum,
+            group_discount_tiers: sortedTiers,
+          });
+        }}
       />
     </div>
   );

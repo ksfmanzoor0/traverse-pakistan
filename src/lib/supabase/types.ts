@@ -282,6 +282,11 @@ export type PackageRow = {
   published: boolean;
   meta_title: string | null;
   meta_description: string | null;
+  // Per-package overrides for child + group discounts. Editable in admin but
+  // not yet wired into the package pricing engine — reserved for the pricing
+  // engine redesign. NULL = no override.
+  child_discount_pct: number | null;
+  group_discount_tiers: Array<{ minAdults: number; pct: number }> | null;
   created_at: string | null;
   updated_at: string | null;
 };
