@@ -260,9 +260,13 @@ export type PackageRow = {
   reserve_now_pay_later: boolean;
   images: Array<{ url: string; alt: string }>;
   highlights: string[];
-  inclusions: string[];
-  exclusions: string[];
+  inclusions: Array<{ text: string; cityOnly?: Array<"ISB" | "LHE" | "KHI" | "KDU"> }>;
+  exclusions: Array<{ text: string; cityOnly?: Array<"ISB" | "LHE" | "KHI" | "KDU"> }>;
   know_before_you_go: string[];
+  // Ordered block-editor content shown below the description on the package
+  // page. See src/types/tour-block.ts for the discriminated union (shared
+  // with tours).
+  body_blocks: unknown;
   pricing: unknown;
   pricing_override: unknown;
   starting_cities: string[];
@@ -299,21 +303,16 @@ export type PackageItineraryDayRow = {
 export type PackageAddonRow = {
   id: string;
   package_slug: string;
-  type: "flight" | "bus";
+  type: "flight" | "bus" | "hotel" | "meal" | "activity" | "transfer" | "insurance" | "custom";
   label: string;
   applies_to_departures: string[];
   group_key: string | null;
   is_required: boolean;
+  default_selected: boolean;
+  duration_delta: number;
   priority: number;
-  config: {
-    legs?: Array<{
-      from: string;
-      to: string;
-      routeType: "ONEWAY" | "RETURN";
-      day: number | "last";
-    }>;
-    [k: string]: unknown;
-  };
+  // Polymorphic per `type` — see AddonConfig union in src/types/tour-addon.ts
+  config: Record<string, unknown>;
   created_at: string | null;
   updated_at: string | null;
 };

@@ -262,7 +262,7 @@ export async function generatePackageItineraryPdf({ pkg, itinerary, hotelsBySlug
             {pkg.inclusions.map((line, i) => (
               <View key={i} style={styles.listItem}>
                 <Text style={styles.listBullet}>✓</Text>
-                <Text style={styles.listText}>{line}</Text>
+                <Text style={styles.listText}>{line.text}</Text>
               </View>
             ))}
           </View>
@@ -275,7 +275,7 @@ export async function generatePackageItineraryPdf({ pkg, itinerary, hotelsBySlug
             {pkg.exclusions.map((line, i) => (
               <View key={i} style={styles.listItem}>
                 <Text style={{ ...styles.listBullet, color: GREY_TEXT }}>×</Text>
-                <Text style={styles.listText}>{line}</Text>
+                <Text style={styles.listText}>{line.text}</Text>
               </View>
             ))}
           </View>
