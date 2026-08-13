@@ -838,7 +838,7 @@ function StepTravelers({
       <div>
         <p className="text-[15px] font-bold text-[var(--text-primary)]">Who&apos;s travelling?</p>
         <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
-          Up to {maxSeats} · children 2–12 get {childOffPct}% off
+          Up to {maxSeats}{childOffPct > 0 ? ` · children 2–12 get ${childOffPct}% off` : ""}
         </p>
       </div>
 
@@ -855,7 +855,7 @@ function StepTravelers({
         <div className="border-t border-[var(--border-default)]" />
         <Stepper
           label="Children"
-          sub={`Ages 2–12 · ${childOffPct}% off`}
+          sub={childOffPct > 0 ? `Ages 2–12 · ${childOffPct}% off` : "Ages 2–12"}
           value={childCount}
           min={0}
           max={seatCap - adults}
