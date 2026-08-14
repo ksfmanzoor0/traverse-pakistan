@@ -826,14 +826,19 @@ function StepTravelers({
   const supplement = tour.pricing.singleSupplement ?? 0;
   const maxSingles = Math.max(0, adults - 2 * singleRooms);
   const maxCoupleRooms = Math.max(0, Math.floor((adults - singleOccupancyRooms) / 2));
-  const nextAdultsForDiscount = groupDiscountPct === 0.05 ? 6 - adults : 3 - adults;
+  const discountTiers = (tour.groupDiscountTiers && tour.groupDiscountTiers.length > 0)
+    ? [...tour.groupDiscountTiers].sort((a, b) => a.minAdults - b.minAdults)
+    : [{ minAdults: 3, pct: 0.05 }, { minAdults: 6, pct: 0.1 }];
+  const nextTier = discountTiers.find((t) => adults < t.minAdults);
+  const nextTierGap = nextTier ? nextTier.minAdults - adults : 0;
+  const childOffPct = Math.round(((tour.childDiscountPct ?? 0.5)) * 100);
 
   return (
     <section className="space-y-3">
       <div>
         <p className="text-[15px] font-bold text-[var(--text-primary)]">Who&apos;s travelling?</p>
         <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
-          Up to {maxSeats} · children 2–12 get 50% off
+          Up to {maxSeats}{childOffPct > 0 ? ` · children 2–12 get ${childOffPct}% off` : ""}
         </p>
       </div>
 
@@ -850,7 +855,7 @@ function StepTravelers({
         <div className="border-t border-[var(--border-default)]" />
         <Stepper
           label="Children"
-          sub="Ages 2–12 · 50% off"
+          sub={childOffPct > 0 ? `Ages 2–12 · ${childOffPct}% off` : "Ages 2–12"}
           value={childCount}
           min={0}
           max={seatCap - adults}
@@ -890,14 +895,9 @@ function StepTravelers({
         </div>
       )}
 
-      {groupDiscountPct === 0 && adults < 3 && nextAdultsForDiscount > 0 && (
+      {nextTier && nextTierGap > 0 && (
         <p className="text-[12px] text-[var(--text-tertiary)]">
-          Tip · Add {nextAdultsForDiscount} more adult{nextAdultsForDiscount !== 1 ? "s" : ""} to unlock a 5% group discount
-        </p>
-      )}
-      {groupDiscountPct === 0.05 && (
-        <p className="text-[12px] text-[var(--text-tertiary)]">
-          Tip · Add {6 - adults} more adult{6 - adults !== 1 ? "s" : ""} for 10% off
+          Tip · Add {nextTierGap} more adult{nextTierGap !== 1 ? "s" : ""} to {groupDiscountPct > 0 ? "reach" : "unlock"} a {Math.round(nextTier.pct * 100)}% group discount
         </p>
       )}
     </section>

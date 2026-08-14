@@ -16,6 +16,9 @@ export interface ItineraryDay {
   stops: ItineraryStop[];
   drivingTime: string;
   overnight: string;
+  /** When set, day is only rendered for travelers whose home city is in this
+   * list (departure city on the sidebar). Undefined = all cities. */
+  cityOnly?: DepartureCity[];
 }
 
 export interface TourItinerary {

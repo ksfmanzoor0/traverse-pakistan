@@ -27,8 +27,8 @@ export type TourRow = {
   images: Array<{ url: string; alt: string }>;
   guide: { name: string; yearsGuiding: number; photo?: string } | null;
   highlights: string[];
-  inclusions: string[];
-  exclusions: string[];
+  inclusions: Array<{ text: string; cityOnly?: Array<"ISB" | "LHE" | "KHI" | "KDU"> }>;
+  exclusions: Array<{ text: string; cityOnly?: Array<"ISB" | "LHE" | "KHI" | "KDU"> }>;
   know_before_you_go: string[];
   meeting_point: {
     address: string;
@@ -40,12 +40,21 @@ export type TourRow = {
     pickupDescription: string;
   };
   featured: boolean;
+  // Ordered block-editor content shown below the description on the tour
+  // page. See src/types/tour-block.ts for the discriminated union.
+  body_blocks: unknown;
   // City that pays the ground base with no addon required (e.g. "ISB" for
   // most legacy tours; "KHI" for the Gwadar coastal tour). null when every
   // home city needs a transport addon (e.g. the Skardu fly-in tour).
   anchor_city: "ISB" | "LHE" | "KHI" | "KDU" | null;
   meta_title: string;
   meta_description: string;
+  // Per-tour override for the child (2-12) discount fraction. NULL = fall back
+  // to the default in src/components/booking/pricing.ts (0.5).
+  child_discount_pct: number | null;
+  // Per-tour override for group-size tiers, sorted ascending by minAdults.
+  // NULL = default [{minAdults:3,pct:0.05},{minAdults:6,pct:0.10}].
+  group_discount_tiers: Array<{ minAdults: number; pct: number }> | null;
   created_at: string;
   updated_at: string;
 };
@@ -60,6 +69,7 @@ export type TourItineraryDayRow = {
   stops: Array<{ name: string; detail: string; cityOnly?: string }>;
   driving_time: string;
   overnight: string;
+  city_only: string[] | null;
 };
 
 export type DepartureRow = {

@@ -8,6 +8,8 @@ import { StarRating } from "@/components/ui/StarRating";
 import { MosaicGallery } from "@/components/trip-detail/MosaicGallery";
 import { BookingSidebar } from "@/components/trip-detail/BookingSidebar";
 import { ItineraryAccordion } from "@/components/trip-detail/ItineraryAccordion";
+import { InclusionsExclusions } from "@/components/trip-detail/InclusionsExclusions";
+import { TourBody } from "@/components/trip-detail/TourBody";
 import { MobileReserveBar } from "@/components/booking/MobileReserveBar";
 import { TourCard } from "@/components/tours/TourCard";
 import { JsonLd } from "@/components/seo/JsonLd";
@@ -29,7 +31,12 @@ import { getUpcomingOpenDeparturesServer } from "@/services/booking.server";
 
 interface Props {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ preview?: string }>;
 }
+
+const PREVIEW_CITY_MAP: Record<string, "islamabad" | "lahore" | "karachi" | "skardu"> = {
+  ISB: "islamabad", LHE: "lahore", KHI: "karachi", KDU: "skardu",
+};
 
 export async function generateStaticParams() {
   const tours = await getAllTours();
@@ -58,8 +65,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
 }
 
-export default async function TripDetailPage({ params }: Props) {
+export default async function TripDetailPage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const sp = searchParams ? await searchParams : undefined;
+  const previewCity = sp?.preview ? PREVIEW_CITY_MAP[sp.preview.toUpperCase()] : null;
   const tour = await getTourBySlug(slug);
   if (!tour) notFound();
 
@@ -197,6 +206,13 @@ export default async function TripDetailPage({ params }: Props) {
                 {tour.description}
               </p>
 
+              {/* Rich body content (admin block editor) */}
+              {tour.bodyBlocks && tour.bodyBlocks.length > 0 && (
+                <div className="mt-6">
+                  <TourBody blocks={tour.bodyBlocks} tourSlug={tour.slug} initialDeparture={previewCity ?? undefined} />
+                </div>
+              )}
+
               {/* Highlights */}
               {tour.highlights.length > 0 && (
                 <div className="mt-6">
@@ -223,7 +239,7 @@ export default async function TripDetailPage({ params }: Props) {
                 <h2 className="text-xl font-bold text-[var(--text-primary)] mb-6">
                   Day-by-Day Itinerary
                 </h2>
-                <ItineraryAccordion days={itinerary.days} tourSlug={tour.slug} />
+                <ItineraryAccordion days={itinerary.days} tourSlug={tour.slug} initialDeparture={previewCity ?? undefined} />
               </section>
             )}
 
@@ -232,39 +248,19 @@ export default async function TripDetailPage({ params }: Props) {
               <h2 className="text-xl font-bold text-[var(--text-primary)] mb-6">
                 What&apos;s Included
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                <div>
-                  <h3 className="text-[14px] font-bold uppercase tracking-wider text-[var(--primary)] mb-3">
-                    Included
-                  </h3>
-                  <ul className="space-y-2">
-                    {tour.inclusions.map((item, i) => (
-                      <li key={i} className="flex items-start gap-2 text-[14px] text-[var(--text-secondary)]">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" className="shrink-0 mt-0.5">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <h3 className="text-[14px] font-bold uppercase tracking-wider text-[var(--warning)] mb-3">
-                    Not Included
-                  </h3>
-                  <ul className="space-y-2">
-                    {tour.exclusions.map((item, i) => (
-                      <li key={i} className="flex items-start gap-2 text-[14px] text-[var(--text-secondary)]">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" strokeWidth="2" className="shrink-0 mt-0.5">
-                          <line x1="18" y1="6" x2="6" y2="18" />
-                          <line x1="6" y1="6" x2="18" y2="18" />
-                        </svg>
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
+              <InclusionsExclusions
+                inclusions={tour.inclusions}
+                exclusions={tour.exclusions}
+                tourSlug={tour.slug}
+                initialDeparture={(() => {
+                  if (previewCity) return previewCity;
+                  const CODE_TO_CITY = { ISB: "islamabad", LHE: "lahore", KHI: "karachi", KDU: "skardu" } as const;
+                  const anchor = tour.anchorCity ? CODE_TO_CITY[tour.anchorCity] : null;
+                  const first = (tour.addonCities?.[0] as "ISB" | "LHE" | "KHI" | "KDU" | undefined);
+                  return anchor ?? (first ? CODE_TO_CITY[first] : "islamabad");
+                })()}
+              />
+
 
               {/* Know before you go */}
               {tour.knowBeforeYouGo.length > 0 && (
@@ -374,7 +370,7 @@ export default async function TripDetailPage({ params }: Props) {
               The MobileReserveBar below still offers the quick sticky-bottom
               Reserve tap; this exposes the full picker on mobile too. */}
           <aside className="mt-8 lg:mt-0">
-            <BookingSidebar tour={tour} reviews={reviews.slice(0, 3)} />
+            <BookingSidebar tour={tour} reviews={reviews.slice(0, 3)} previewCity={previewCity} />
           </aside>
         </div>
 

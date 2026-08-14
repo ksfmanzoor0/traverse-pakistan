@@ -25,9 +25,11 @@ import {
 interface BookingSidebarProps {
   tour: Tour;
   reviews?: Review[];
+  /** Preview override from ?preview= URL. Real customers don't set this. */
+  previewCity?: "islamabad" | "lahore" | "karachi" | "skardu" | null;
 }
 
-export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
+export function BookingSidebar({ tour, reviews = [], previewCity = null }: BookingSidebarProps) {
   const [adults, setAdults] = useState(1);
   const [children, setChildren] = useState(0);
   const [singleRooms, setSingleRooms] = useState(0);
@@ -35,7 +37,8 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
   const CODE_TO_CITY = { ISB: "islamabad", LHE: "lahore", KHI: "karachi", KDU: "skardu" } as const;
   const firstAddonCode = (tour.addonCities?.[0] ?? null) as "ISB" | "LHE" | "KHI" | "KDU" | null;
   const initialDeparture: "islamabad" | "lahore" | "karachi" | "skardu" =
-    (tour.anchorCity ? CODE_TO_CITY[tour.anchorCity] : null)
+    previewCity
+    ?? (tour.anchorCity ? CODE_TO_CITY[tour.anchorCity] : null)
     ?? (firstAddonCode ? CODE_TO_CITY[firstAddonCode] : null)
     ?? "islamabad";
   const [departure, setDeparture] = useSharedDepartureCity(initialDeparture, tour.slug);
@@ -269,17 +272,20 @@ export function BookingSidebar({ tour, reviews = [] }: BookingSidebarProps) {
             onDecrement={() => setAdults(Math.max(1, adults - 1))}
             onIncrement={() => setAdults(Math.min(seatCap - children, adults + 1))}
           />
-          {(tour.minAge == null || tour.minAge < 13) && (
-            <Stepper
-              label="Children"
-              sub="Ages 2–12 · 50% off"
-              value={children}
-              min={0}
-              max={seatCap - adults}
-              onDecrement={() => setChildren(Math.max(0, children - 1))}
-              onIncrement={() => setChildren(Math.min(seatCap - adults, children + 1))}
-            />
-          )}
+          {(tour.minAge == null || tour.minAge < 13) && (() => {
+            const pct = Math.round(((tour.childDiscountPct ?? 0.5)) * 100);
+            return (
+              <Stepper
+                label="Children"
+                sub={pct > 0 ? `Ages 2–12 · ${pct}% off` : "Ages 2–12"}
+                value={children}
+                min={0}
+                max={seatCap - adults}
+                onDecrement={() => setChildren(Math.max(0, children - 1))}
+                onIncrement={() => setChildren(Math.min(seatCap - adults, children + 1))}
+              />
+            );
+          })()}
           {tour.pricing.singleSupplement && (
             <Stepper
               label="Single occupancy"
