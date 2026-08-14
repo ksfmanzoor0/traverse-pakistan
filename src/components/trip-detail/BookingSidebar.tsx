@@ -272,17 +272,20 @@ export function BookingSidebar({ tour, reviews = [], previewCity = null }: Booki
             onDecrement={() => setAdults(Math.max(1, adults - 1))}
             onIncrement={() => setAdults(Math.min(seatCap - children, adults + 1))}
           />
-          {(tour.minAge == null || tour.minAge < 13) && (
-            <Stepper
-              label="Children"
-              sub="Ages 2–12 · 50% off"
-              value={children}
-              min={0}
-              max={seatCap - adults}
-              onDecrement={() => setChildren(Math.max(0, children - 1))}
-              onIncrement={() => setChildren(Math.min(seatCap - adults, children + 1))}
-            />
-          )}
+          {(tour.minAge == null || tour.minAge < 13) && (() => {
+            const pct = Math.round(((tour.childDiscountPct ?? 0.5)) * 100);
+            return (
+              <Stepper
+                label="Children"
+                sub={pct > 0 ? `Ages 2–12 · ${pct}% off` : "Ages 2–12"}
+                value={children}
+                min={0}
+                max={seatCap - adults}
+                onDecrement={() => setChildren(Math.max(0, children - 1))}
+                onIncrement={() => setChildren(Math.min(seatCap - adults, children + 1))}
+              />
+            );
+          })()}
           {tour.pricing.singleSupplement && (
             <Stepper
               label="Single occupancy"

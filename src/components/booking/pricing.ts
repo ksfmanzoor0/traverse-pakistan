@@ -26,6 +26,8 @@ export interface PricingBreakdown {
   singleSupplementTotal: number;
   groupDiscountPct: number;
   groupDiscountAmount: number;
+  childDiscountPct: number;
+  childUnitPrice: number;
   addonPerPerson: number;
   addonSubtotal: number;
   total: number;
@@ -68,8 +70,9 @@ export function calculatePricing(input: PricingInput): PricingBreakdown {
   const singleSupplement = liveDeparture?.singleSupplement ?? tour.pricing.singleSupplement ?? 0;
 
   const childDiscountPct = tour.childDiscountPct ?? DEFAULT_CHILD_DISCOUNT_PCT;
+  const childUnitPrice = Math.round(basePrice * (1 - childDiscountPct));
   const adultsSubtotal = basePrice * adults;
-  const childrenSubtotal = Math.round(basePrice * (1 - childDiscountPct)) * childCount;
+  const childrenSubtotal = childUnitPrice * childCount;
   const subtotal = adultsSubtotal + childrenSubtotal;
 
   const totalTravelers = adults + childCount;
@@ -101,6 +104,8 @@ export function calculatePricing(input: PricingInput): PricingBreakdown {
     singleSupplementTotal,
     groupDiscountPct,
     groupDiscountAmount,
+    childDiscountPct,
+    childUnitPrice,
     addonPerPerson,
     addonSubtotal,
     total,
