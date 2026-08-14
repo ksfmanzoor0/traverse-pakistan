@@ -76,7 +76,11 @@ export function PriceBreakdown({
           )}
           {childCount > 0 && (
             <Row
-              label={`${formatPrice(Math.round(breakdown.basePrice * 0.5))} × ${childCount} child${childCount !== 1 ? "ren" : ""} (50% off)`}
+              label={
+                breakdown.childDiscountPct > 0
+                  ? `${formatPrice(breakdown.childUnitPrice)} × ${childCount} child${childCount !== 1 ? "ren" : ""} (${Math.round(breakdown.childDiscountPct * 100)}% off)`
+                  : `${formatPrice(breakdown.childUnitPrice)} × ${childCount} child${childCount !== 1 ? "ren" : ""}`
+              }
               value={formatPrice(breakdown.childrenSubtotal)}
             />
           )}
