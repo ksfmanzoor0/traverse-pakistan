@@ -2,8 +2,17 @@
 
 import type { AddonType } from "@/types/tour-addon";
 
-// Per-type config form. Reads/writes an untyped Record<string,unknown> so the
-// admin can also enter raw JSON via the flight/bus legs case.
+type LegRow = {
+  from: string;
+  to: string;
+  routeType: "ONEWAY" | "RETURN";
+  day: number | "last";
+  farePerPerson?: number;
+  carrier?: string;
+};
+
+// Per-type config form. Reads/writes an untyped Record<string,unknown>; each
+// type dispatches to a purpose-built subform (no JSON textareas anywhere).
 export function AddonConfigForm({
   type,
   config,
@@ -18,30 +27,8 @@ export function AddonConfigForm({
   }
 
   if (type === "flight" || type === "bus") {
-    const legs = (config.legs as unknown[]) ?? [];
-    const legsJson = JSON.stringify(legs, null, 2);
-    return (
-      <label className="block">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-1">
-          Legs (JSON)
-        </span>
-        <textarea
-          value={legsJson}
-          onChange={(e) => {
-            try {
-              const parsed = JSON.parse(e.target.value);
-              if (Array.isArray(parsed)) set({ legs: parsed });
-            } catch { /* ignore parse errors while typing */ }
-          }}
-          rows={10}
-          className="w-full px-3 py-2 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[12px] font-mono"
-        />
-        <span className="text-[11px] text-[var(--text-tertiary)] mt-1 block">
-          Each leg: {`{ from, to, routeType: "ONEWAY"|"RETURN", day: 1|"last", farePerPerson?, carrier? }`}
-          . Use <code>{"{home}"}</code> in <code>from</code>/<code>to</code> for the traveler&apos;s home city.
-        </span>
-      </label>
-    );
+    const legs = ((config.legs as LegRow[] | undefined) ?? []).map((l) => ({ ...l }));
+    return <LegsEditor legs={legs} onChange={(next) => set({ legs: next })} />;
   }
 
   if (type === "hotel") {
@@ -100,6 +87,140 @@ function TextField({ label, value, onChange }: { label: string; value: string; o
         onChange={(e) => onChange(e.target.value)}
         className="w-full h-9 px-3 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[13px]"
       />
+    </label>
+  );
+}
+
+const CITY_SUGGESTIONS = ["{home}", "ISB", "LHE", "KHI", "KDU"] as const;
+
+function LegsEditor({ legs, onChange }: { legs: LegRow[]; onChange: (next: LegRow[]) => void }) {
+  function update(i: number, patch: Partial<LegRow>) {
+    onChange(legs.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+  }
+  function remove(i: number) {
+    onChange(legs.filter((_, idx) => idx !== i));
+  }
+  function move(i: number, delta: -1 | 1) {
+    const j = i + delta;
+    if (j < 0 || j >= legs.length) return;
+    const next = [...legs];
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  }
+  function add() {
+    onChange([
+      ...legs,
+      { from: "{home}", to: "", routeType: "ONEWAY", day: 1 },
+    ]);
+  }
+  return (
+    <div>
+      <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] mb-1">
+        Flight / bus legs
+      </div>
+      <p className="text-[11px] text-[var(--text-tertiary)] mb-2">
+        <code>{"{home}"}</code> in From / To is replaced by the traveler&apos;s home city at quote time.
+        Day <code>last</code> = final day of the trip.
+      </p>
+      <div className="space-y-2">
+        {legs.length === 0 && (
+          <p className="text-[12px] text-[var(--text-tertiary)]">No legs yet — click Add.</p>
+        )}
+        {legs.map((leg, i) => {
+          const dayIsLast = leg.day === "last";
+          return (
+            <div key={i} className="border border-[var(--border-default)] rounded-[var(--radius-sm)] p-2 bg-[var(--bg-primary)] space-y-2">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <CityField label="From" value={leg.from} onChange={(v) => update(i, { from: v })} />
+                <CityField label="To" value={leg.to} onChange={(v) => update(i, { to: v })} />
+                <label className="block">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-1">Route</span>
+                  <select
+                    value={leg.routeType}
+                    onChange={(e) => update(i, { routeType: e.target.value as "ONEWAY" | "RETURN" })}
+                    className="w-full h-9 px-3 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[13px]"
+                  >
+                    <option value="ONEWAY">One-way</option>
+                    <option value="RETURN">Return</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-1">Day</span>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min={0}
+                      value={dayIsLast ? "" : (leg.day as number)}
+                      disabled={dayIsLast}
+                      onChange={(e) => update(i, { day: Number(e.target.value) || 0 })}
+                      className="flex-1 h-9 px-2 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[13px] disabled:opacity-50"
+                    />
+                    <label className="flex items-center gap-1 text-[11px]">
+                      <input
+                        type="checkbox"
+                        checked={dayIsLast}
+                        onChange={(e) => update(i, { day: e.target.checked ? "last" : 1 })}
+                      />
+                      last
+                    </label>
+                  </div>
+                </label>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                <label className="block">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-1">Fare / person (optional)</span>
+                  <input
+                    type="number"
+                    value={leg.farePerPerson ?? ""}
+                    onChange={(e) => update(i, { farePerPerson: e.target.value ? Number(e.target.value) : undefined })}
+                    placeholder="Blank = resolved by scraper"
+                    className="w-full h-9 px-3 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[13px]"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-1">Carrier (optional)</span>
+                  <input
+                    value={leg.carrier ?? ""}
+                    onChange={(e) => update(i, { carrier: e.target.value || undefined })}
+                    placeholder="e.g. PIA, Daewoo"
+                    className="w-full h-9 px-3 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[13px]"
+                  />
+                </label>
+                <div className="flex items-end justify-end gap-1">
+                  <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="h-8 w-8 text-[12px] border border-[var(--border-default)] rounded-[var(--radius-sm)] disabled:opacity-40">↑</button>
+                  <button type="button" onClick={() => move(i, 1)} disabled={i === legs.length - 1} className="h-8 w-8 text-[12px] border border-[var(--border-default)] rounded-[var(--radius-sm)] disabled:opacity-40">↓</button>
+                  <button type="button" onClick={() => remove(i)} className="h-8 px-3 text-[12px] text-[var(--error)] border border-[var(--error)]/40 rounded-[var(--radius-sm)]">Remove</button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <button
+        type="button"
+        onClick={add}
+        className="mt-2 h-8 px-3 text-[12px] font-semibold text-[var(--primary)] border border-dashed border-[var(--primary)]/40 rounded-[var(--radius-sm)]"
+      >
+        + Add leg
+      </button>
+    </div>
+  );
+}
+
+function CityField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <label className="block">
+      <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-1">{label}</span>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        list={`${label.toLowerCase()}-city-suggestions`}
+        placeholder="ISB, LHE, KHI, KDU, {home}"
+        className="w-full h-9 px-3 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[13px]"
+      />
+      <datalist id={`${label.toLowerCase()}-city-suggestions`}>
+        {CITY_SUGGESTIONS.map((c) => <option key={c} value={c} />)}
+      </datalist>
     </label>
   );
 }
