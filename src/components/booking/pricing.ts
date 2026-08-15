@@ -67,11 +67,10 @@ export function calculatePricing(input: PricingInput): PricingBreakdown {
 
   const basePrice = liveDeparture?.price ?? tour.pricing.base;
 
-  // Twin + solo surcharges read from the departure directly. Legacy fallback:
-  // some historical rows only have single_supplement; derive × 2 / × 3.
-  const legacySupp = liveDeparture?.singleSupplement ?? tour.pricing.singleSupplement ?? 0;
-  const twinSurcharge = liveDeparture?.twinPrice ?? legacySupp * 2;
-  const soloSurcharge = liveDeparture?.singlePrice ?? legacySupp * 3;
+  // Twin + solo surcharges live on the departure row. Zero when no departure
+  // is picked yet (initial paint) — the private-room steppers stay hidden.
+  const twinSurcharge = liveDeparture?.twinPrice ?? 0;
+  const soloSurcharge = liveDeparture?.singlePrice ?? 0;
 
   const childDiscountPct = tour.childDiscountPct ?? DEFAULT_CHILD_DISCOUNT_PCT;
   const childUnitPrice = Math.round(basePrice * (1 - childDiscountPct));

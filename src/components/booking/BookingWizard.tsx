@@ -428,6 +428,8 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
               maxSeats={maxSeats}
               seatsLeft={seatsLeft}
               groupDiscountPct={pricing.groupDiscountPct}
+              twinPrice={liveDeparture?.twinPrice ?? 0}
+              singlePrice={liveDeparture?.singlePrice ?? 0}
               onAdults={(n) => patch({ adults: n })}
               onChildren={(n) => patch({ childCount: n })}
               onSingleRooms={(n) => patch({ singleRooms: n })}
@@ -493,16 +495,16 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
                 <span className="tabular-nums">− {formatPrice(pricing.groupDiscountAmount)}</span>
               </div>
             )}
-            {draft.singleOccupancyRooms > 0 && tour.pricing.singleSupplement && (
+            {draft.singleOccupancyRooms > 0 && liveDeparture && (
               <div className="flex justify-between text-[var(--text-secondary)]">
                 <span>Single occupancy × {draft.singleOccupancyRooms}</span>
-                <span className="tabular-nums">{formatPrice(tour.pricing.singleSupplement * 3 * draft.singleOccupancyRooms)}</span>
+                <span className="tabular-nums">{formatPrice(liveDeparture.singlePrice * draft.singleOccupancyRooms)}</span>
               </div>
             )}
-            {draft.singleRooms > 0 && tour.pricing.singleSupplement && (
+            {draft.singleRooms > 0 && liveDeparture && (
               <div className="flex justify-between text-[var(--text-secondary)]">
                 <span>Couple / Private room × {draft.singleRooms}</span>
-                <span className="tabular-nums">{formatPrice(tour.pricing.singleSupplement * 2 * draft.singleRooms)}</span>
+                <span className="tabular-nums">{formatPrice(liveDeparture.twinPrice * draft.singleRooms)}</span>
               </div>
             )}
             {pricing.addonSubtotal > 0 && (
@@ -804,6 +806,8 @@ function StepTravelers({
   maxSeats,
   seatsLeft,
   groupDiscountPct,
+  twinPrice,
+  singlePrice,
   onAdults,
   onChildren,
   onSingleRooms,
@@ -817,13 +821,14 @@ function StepTravelers({
   maxSeats: number;
   seatsLeft: number | null;
   groupDiscountPct: number;
+  twinPrice: number;
+  singlePrice: number;
   onAdults: (n: number) => void;
   onChildren: (n: number) => void;
   onSingleRooms: (n: number) => void;
   onSingleOccupancyRooms: (n: number) => void;
 }) {
   const seatCap = seatsLeft !== null ? Math.min(maxSeats, seatsLeft) : maxSeats;
-  const supplement = tour.pricing.singleSupplement ?? 0;
   const maxSingles = Math.max(0, adults - 2 * singleRooms);
   const maxCoupleRooms = Math.max(0, Math.floor((adults - singleOccupancyRooms) / 2));
   const discountTiers = (tour.groupDiscountTiers && tour.groupDiscountTiers.length > 0)
@@ -864,23 +869,27 @@ function StepTravelers({
         />
       </div>
 
-      {supplement > 0 && (
+      {(singlePrice > 0 || twinPrice > 0) && (
         <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] px-4 py-3 space-y-3">
-          <PrivateRoomRow
-            label="Single occupancy"
-            sub={`${formatPrice(supplement * 3)} · your own room`}
-            value={singleOccupancyRooms}
-            max={maxSingles}
-            onChange={(n) => onSingleOccupancyRooms(Math.min(maxSingles, Math.max(0, n)))}
-          />
-          <div className="border-t border-[var(--border-default)]" />
-          <PrivateRoomRow
-            label="Couple / Private room"
-            sub={`${formatPrice(supplement * 2)} / room · skip strangers`}
-            value={singleRooms}
-            max={maxCoupleRooms}
-            onChange={(n) => onSingleRooms(Math.min(maxCoupleRooms, Math.max(0, n)))}
-          />
+          {singlePrice > 0 && (
+            <PrivateRoomRow
+              label="Single occupancy"
+              sub={`+ ${formatPrice(singlePrice)} · your own room`}
+              value={singleOccupancyRooms}
+              max={maxSingles}
+              onChange={(n) => onSingleOccupancyRooms(Math.min(maxSingles, Math.max(0, n)))}
+            />
+          )}
+          {singlePrice > 0 && twinPrice > 0 && <div className="border-t border-[var(--border-default)]" />}
+          {twinPrice > 0 && (
+            <PrivateRoomRow
+              label="Couple / Private room"
+              sub={`+ ${formatPrice(twinPrice)} / room · skip strangers`}
+              value={singleRooms}
+              max={maxCoupleRooms}
+              onChange={(n) => onSingleRooms(Math.min(maxCoupleRooms, Math.max(0, n)))}
+            />
+          )}
         </div>
       )}
 

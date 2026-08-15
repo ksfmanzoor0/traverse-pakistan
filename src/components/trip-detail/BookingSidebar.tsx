@@ -286,10 +286,10 @@ export function BookingSidebar({ tour, reviews = [], previewCity = null }: Booki
               />
             );
           })()}
-          {tour.pricing.singleSupplement && (
+          {liveDeparture && liveDeparture.singlePrice > 0 && (
             <Stepper
               label="Single occupancy"
-              sub={`+ ${formatPrice(tour.pricing.singleSupplement * 3)} · your own room`}
+              sub={`+ ${formatPrice(liveDeparture.singlePrice)} · your own room`}
               value={singleOccupancyRooms}
               min={0}
               max={adults}
@@ -297,10 +297,10 @@ export function BookingSidebar({ tour, reviews = [], previewCity = null }: Booki
               onIncrement={() => setSingleOccupancyRooms(Math.min(maxSingles, singleOccupancyRooms + 1))}
             />
           )}
-          {tour.pricing.singleSupplement && (
+          {liveDeparture && liveDeparture.twinPrice > 0 && (
             <Stepper
               label="Couple / Private room"
-              sub={`+ ${formatPrice(tour.pricing.singleSupplement * 2)} / room · skip strangers`}
+              sub={`+ ${formatPrice(liveDeparture.twinPrice)} / room · skip strangers`}
               value={singleRooms}
               min={0}
               max={maxCoupleRooms}

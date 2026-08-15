@@ -13,12 +13,10 @@ export interface Departure {
   status: "open" | "closed" | "cancelled";
   /** Per-person base fare (group / triple / quad share). */
   price: number;
-  /** Surcharge PER twin private room (2 friends alone). Falls back to single_supplement * 2. */
+  /** Surcharge PER twin private room (2 friends alone). */
   twinPrice: number;
-  /** Surcharge PER solo person (1 alone in a room). Falls back to single_supplement * 3. */
+  /** Surcharge PER solo person (1 alone in a room). */
   singlePrice: number;
-  /** @deprecated readers should prefer twinPrice + singlePrice. */
-  singleSupplement: number | null;
 }
 
 export interface Participant {

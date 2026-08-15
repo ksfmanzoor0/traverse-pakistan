@@ -963,8 +963,8 @@ function DeparturesSection({
   }
 
   function save(row: DepartureRow) {
-    const twin = row.twin_price ?? (row.single_supplement ?? 0) * 2;
-    const single = row.single_price ?? (row.single_supplement ?? 0) * 3;
+    const twin = row.twin_price ?? 0;
+    const single = row.single_price ?? 0;
     startTransition(async () => {
       const r = await actions.upsertDeparture({
         id: row.id || undefined,
@@ -1010,9 +1010,8 @@ function DeparturesSection({
       seats_booked: 0,
       status: "open",
       price: last?.price ?? 0,
-      twin_price: last?.twin_price ?? (last?.single_supplement ?? 0) * 2,
-      single_price: last?.single_price ?? (last?.single_supplement ?? 0) * 3,
-      single_supplement: last?.single_supplement ?? null,
+      twin_price: last?.twin_price ?? 0,
+      single_price: last?.single_price ?? 0,
       created_at: "",
     };
     setRows((prev) => [...prev, seed]);
@@ -1037,7 +1036,7 @@ function DeparturesSection({
                   {r.departure_date || "(no date)"} → {r.end_date || "—"}
                 </div>
                 <div className="text-[11px] text-[var(--text-tertiary)]">
-                  Base {formatPrice(r.price)} · Twin +{formatPrice(r.twin_price ?? (r.single_supplement ?? 0) * 2)} / room · Single +{formatPrice(r.single_price ?? (r.single_supplement ?? 0) * 3)} / person
+                  Base {formatPrice(r.price)} · Twin +{formatPrice(r.twin_price ?? 0)} / room · Single +{formatPrice(r.single_price ?? 0)} / person
                   {" "}· {r.seats_booked}/{r.max_seats} seats ({seatsLeft} left) · {r.status}
                 </div>
               </div>
@@ -1069,7 +1068,7 @@ function DeparturesSection({
                   <Field label="Twin surcharge (PKR / room) — 2 friends alone">
                     <input
                       type="number"
-                      value={r.twin_price ?? (r.single_supplement ?? 0) * 2}
+                      value={r.twin_price ?? 0}
                       onChange={(e) => update(i, { twin_price: Number(e.target.value) || 0 })}
                       className={inputCls}
                     />
@@ -1077,7 +1076,7 @@ function DeparturesSection({
                   <Field label="Single surcharge (PKR / person) — 1 alone in a room">
                     <input
                       type="number"
-                      value={r.single_price ?? (r.single_supplement ?? 0) * 3}
+                      value={r.single_price ?? 0}
                       onChange={(e) => update(i, { single_price: Number(e.target.value) || 0 })}
                       className={inputCls}
                     />

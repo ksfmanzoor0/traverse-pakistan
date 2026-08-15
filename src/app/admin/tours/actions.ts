@@ -373,12 +373,6 @@ export type DeparturePatch = {
 export async function upsertDeparture(row: DeparturePatch): Promise<{ ok: boolean; id?: string; error?: string }> {
   await requireAdmin();
   const supabase = getSupabaseAdmin();
-  // Dual-write legacy `single_supplement` during the transition so any old
-  // reader (or a rollback) keeps producing sensible numbers. Derived as the
-  // per-person half of the twin room surcharge — matches the pre-migration
-  // math where solo = supp × 3 = twin × 1.5, so single_supplement stays a
-  // reasonable "average" for anything still reading it.
-  const legacySupp = Math.max(0, Math.round(row.twin_price / 2));
   const payload = {
     tour_slug: row.tour_slug,
     departure_date: row.departure_date,
@@ -387,7 +381,6 @@ export async function upsertDeparture(row: DeparturePatch): Promise<{ ok: boolea
     price: row.price,
     twin_price: row.twin_price,
     single_price: row.single_price,
-    single_supplement: legacySupp,
     status: row.status,
     // All new tour departures use the NULL-city model — per-city variance is
     // handled through tour_addons, not per-departure rows.

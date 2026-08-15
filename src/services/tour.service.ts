@@ -13,7 +13,7 @@ import type { TourBlock } from "@/types/tour-block";
 
 function toTour(
   row: TourRow,
-  priceMap?: Map<string, { base: number; earliestDate: string | null; singleSupplement: number | null }>,
+  priceMap?: Map<string, { base: number; earliestDate: string | null }>,
   r2Images?: TourImage[],
   hasAddons?: boolean,
   addonCities?: string[],
@@ -32,7 +32,6 @@ function toTour(
     route: row.route,
     pricing: {
       base: prices?.base ?? 0,
-      singleSupplement: prices?.singleSupplement ?? null,
     },
     price: prices?.base ?? 0,
     originalPrice: null,
@@ -177,24 +176,21 @@ function toItinerary(tourSlug: string, rows: TourItineraryDayRow[]): TourItinera
 async function buildPriceMap(supabase: ReturnType<typeof getSupabaseAnon>, slugs?: string[]) {
   let query = supabase
     .from("departures")
-    .select("tour_slug, departure_city, price, departure_date, single_supplement")
+    .select("tour_slug, departure_city, price, departure_date")
     .eq("status", "open")
     .gte("departure_date", todayISO());
   if (slugs?.length) query = query.in("tour_slug", slugs);
   const { data } = await query;
   // Every tour has NULL-city departure rows (addon-driven model). The base
   // price is city-agnostic; per-home-city delta is layered on at checkout
-  // via quoteTourAddons. We keep the earliest single-supplement seen across
-  // all departure rows so the sidebar can offer private-room pricing.
-  const map = new Map<string, { base: number; earliestDate: string | null; singleSupplement: number | null }>();
-  for (const row of (data ?? []) as { tour_slug: string; price: number; departure_date: string; single_supplement: number | null }[]) {
-    const entry = map.get(row.tour_slug) ?? { base: 0, earliestDate: null, singleSupplement: null };
+  // via quoteTourAddons. Private-room surcharges live on the departure row
+  // itself and only surface once a departure is picked.
+  const map = new Map<string, { base: number; earliestDate: string | null }>();
+  for (const row of (data ?? []) as { tour_slug: string; price: number; departure_date: string }[]) {
+    const entry = map.get(row.tour_slug) ?? { base: 0, earliestDate: null };
     if (entry.base === 0) entry.base = row.price;
     if (!entry.earliestDate || row.departure_date < entry.earliestDate) {
       entry.earliestDate = row.departure_date;
-    }
-    if (row.single_supplement && (!entry.singleSupplement || row.single_supplement < entry.singleSupplement)) {
-      entry.singleSupplement = row.single_supplement;
     }
     map.set(row.tour_slug, entry);
   }
