@@ -81,7 +81,13 @@ export type DepartureRow = {
   max_seats: number;
   seats_booked: number;
   status: DepartureStatus;
+  /** Per-person base fare (group / triple / quad share). */
   price: number;
+  /** Surcharge PER twin private room (2 friends alone). Default = single_supplement * 2. */
+  twin_price: number | null;
+  /** Surcharge PER solo person (1 alone in a room). Default = single_supplement * 3. */
+  single_price: number | null;
+  /** @deprecated dropped once twin_price + single_price rollout is verified. */
   single_supplement: number | null;
   created_at: string;
 };

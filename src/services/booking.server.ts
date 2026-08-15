@@ -7,6 +7,8 @@ import type { DepartureRow } from "@/lib/supabase/types";
 import type { Departure, DepartureCity } from "@/types/booking";
 
 function toDeparture(row: DepartureRow): Departure {
+  const twinPrice = row.twin_price ?? (row.single_supplement ?? 0) * 2;
+  const singlePrice = row.single_price ?? (row.single_supplement ?? 0) * 3;
   return {
     id: row.id,
     tourSlug: row.tour_slug,
@@ -18,6 +20,8 @@ function toDeparture(row: DepartureRow): Departure {
     seatsAvailable: Math.max(0, row.max_seats - row.seats_booked),
     status: row.status,
     price: row.price,
+    twinPrice,
+    singlePrice,
     singleSupplement: row.single_supplement,
   };
 }

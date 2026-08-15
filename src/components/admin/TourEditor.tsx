@@ -963,6 +963,8 @@ function DeparturesSection({
   }
 
   function save(row: DepartureRow) {
+    const twin = row.twin_price ?? (row.single_supplement ?? 0) * 2;
+    const single = row.single_price ?? (row.single_supplement ?? 0) * 3;
     startTransition(async () => {
       const r = await actions.upsertDeparture({
         id: row.id || undefined,
@@ -971,7 +973,8 @@ function DeparturesSection({
         end_date: row.end_date,
         max_seats: row.max_seats,
         price: row.price,
-        single_supplement: row.single_supplement,
+        twin_price: twin,
+        single_price: single,
         status: row.status,
       });
       if (r.ok && r.id && !row.id) {
@@ -1007,6 +1010,8 @@ function DeparturesSection({
       seats_booked: 0,
       status: "open",
       price: last?.price ?? 0,
+      twin_price: last?.twin_price ?? (last?.single_supplement ?? 0) * 2,
+      single_price: last?.single_price ?? (last?.single_supplement ?? 0) * 3,
       single_supplement: last?.single_supplement ?? null,
       created_at: "",
     };
@@ -1032,8 +1037,8 @@ function DeparturesSection({
                   {r.departure_date || "(no date)"} → {r.end_date || "—"}
                 </div>
                 <div className="text-[11px] text-[var(--text-tertiary)]">
-                  {formatPrice(r.price)} · {r.seats_booked}/{r.max_seats} seats booked ({seatsLeft} left) · {r.status}
-                  {r.single_supplement ? ` · single supp ${formatPrice(r.single_supplement)}` : ""}
+                  Base {formatPrice(r.price)} · Twin +{formatPrice(r.twin_price ?? (r.single_supplement ?? 0) * 2)} / room · Single +{formatPrice(r.single_price ?? (r.single_supplement ?? 0) * 3)} / person
+                  {" "}· {r.seats_booked}/{r.max_seats} seats ({seatsLeft} left) · {r.status}
                 </div>
               </div>
               <button type="button" onClick={() => setEditingId(editing ? null : key)} className="text-[12px] font-semibold text-[var(--primary)] hover:underline">
@@ -1052,15 +1057,30 @@ function DeparturesSection({
                     <input type="date" value={r.end_date ?? ""} onChange={(e) => update(i, { end_date: e.target.value || null })} className={inputCls} />
                   </Field>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <Field label="Price / person (PKR)">
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Base price / person (PKR) — group / triple / quad share">
                     <input type="number" value={r.price} onChange={(e) => update(i, { price: Number(e.target.value) || 0 })} className={inputCls} />
-                  </Field>
-                  <Field label="Single supplement (PKR)">
-                    <input type="number" value={r.single_supplement ?? ""} onChange={(e) => update(i, { single_supplement: e.target.value ? Number(e.target.value) : null })} className={inputCls} />
                   </Field>
                   <Field label="Max seats">
                     <input type="number" value={r.max_seats} onChange={(e) => update(i, { max_seats: Number(e.target.value) || 0 })} className={inputCls} />
+                  </Field>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Twin surcharge (PKR / room) — 2 friends alone">
+                    <input
+                      type="number"
+                      value={r.twin_price ?? (r.single_supplement ?? 0) * 2}
+                      onChange={(e) => update(i, { twin_price: Number(e.target.value) || 0 })}
+                      className={inputCls}
+                    />
+                  </Field>
+                  <Field label="Single surcharge (PKR / person) — 1 alone in a room">
+                    <input
+                      type="number"
+                      value={r.single_price ?? (r.single_supplement ?? 0) * 3}
+                      onChange={(e) => update(i, { single_price: Number(e.target.value) || 0 })}
+                      className={inputCls}
+                    />
                   </Field>
                 </div>
                 <Field label="Status">

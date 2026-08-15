@@ -67,7 +67,11 @@ export function calculatePricing(input: PricingInput): PricingBreakdown {
 
   const basePrice = liveDeparture?.price ?? tour.pricing.base;
 
-  const singleSupplement = liveDeparture?.singleSupplement ?? tour.pricing.singleSupplement ?? 0;
+  // Twin + solo surcharges read from the departure directly. Legacy fallback:
+  // some historical rows only have single_supplement; derive × 2 / × 3.
+  const legacySupp = liveDeparture?.singleSupplement ?? tour.pricing.singleSupplement ?? 0;
+  const twinSurcharge = liveDeparture?.twinPrice ?? legacySupp * 2;
+  const soloSurcharge = liveDeparture?.singlePrice ?? legacySupp * 3;
 
   const childDiscountPct = tour.childDiscountPct ?? DEFAULT_CHILD_DISCOUNT_PCT;
   const childUnitPrice = Math.round(basePrice * (1 - childDiscountPct));
@@ -76,13 +80,13 @@ export function calculatePricing(input: PricingInput): PricingBreakdown {
   const subtotal = adultsSubtotal + childrenSubtotal;
 
   const totalTravelers = adults + childCount;
-  // Private-room add-on (two independent rows):
-  //  - Single occupancy: supplement × 3 per solo person (own room).
-  //  - Couple / twin private: supplement × 2 per room (both share, no strangers).
+  // Private-room surcharges:
+  //  - Single occupancy: single_price per solo person (own room).
+  //  - Couple / twin private: twin_price per room (both share, no strangers).
   // Caller is responsible for enforcing that
   //   singleOccupancyRooms + 2 * singleRooms ≤ adults.
-  const soloTotal = singleSupplement * 3 * singleOccupancyRooms;
-  const coupleTotal = singleSupplement * 2 * singleRooms;
+  const soloTotal = soloSurcharge * singleOccupancyRooms;
+  const coupleTotal = twinSurcharge * singleRooms;
   const singleSupplementTotal = soloTotal + coupleTotal;
 
   // Group discount applies to the adults subtotal only; children never trigger
