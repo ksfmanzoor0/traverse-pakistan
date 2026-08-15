@@ -365,7 +365,8 @@ export type DeparturePatch = {
   end_date: string | null;
   max_seats: number;
   price: number;
-  single_supplement: number | null;
+  twin_price: number;
+  single_price: number;
   status: "open" | "closed" | "cancelled";
 };
 
@@ -378,7 +379,8 @@ export async function upsertDeparture(row: DeparturePatch): Promise<{ ok: boolea
     end_date: row.end_date,
     max_seats: row.max_seats,
     price: row.price,
-    single_supplement: row.single_supplement,
+    twin_price: row.twin_price,
+    single_price: row.single_price,
     status: row.status,
     // All new tour departures use the NULL-city model — per-city variance is
     // handled through tour_addons, not per-departure rows.

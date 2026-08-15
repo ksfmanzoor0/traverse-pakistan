@@ -15,7 +15,8 @@ type DepartureWithCount = {
   max_seats: number;
   seats_booked: number;
   price: number;
-  single_supplement: number | null;
+  twin_price: number | null;
+  single_price: number | null;
   booking_count: number;
   confirmed_seats: number;
 };
@@ -33,7 +34,7 @@ async function loadDepartures(): Promise<DepartureWithCount[]> {
   const [{ data: deps, error: depErr }, { data: bookings, error: bkErr }] = await Promise.all([
     supabase
       .from("departures")
-      .select("id, tour_slug, departure_date, end_date, departure_city, status, max_seats, seats_booked, price, single_supplement")
+      .select("id, tour_slug, departure_date, end_date, departure_city, status, max_seats, seats_booked, price, twin_price, single_price")
       .order("departure_date", { ascending: false }),
     supabase
       .from("bookings")
@@ -249,9 +250,9 @@ export default async function AdminDeparturesPage({
                         </td>
                         <td className="px-4 py-2.5 tabular-nums">
                           {formatPrice(d.price)}
-                          {d.single_supplement ? (
+                          {(d.twin_price || d.single_price) ? (
                             <span className="ml-1 text-[11px]" style={{ color: "var(--text-tertiary)" }}>
-                              +{formatPrice(d.single_supplement)} solo
+                              +{formatPrice(d.twin_price ?? 0)} twin · +{formatPrice(d.single_price ?? 0)} solo
                             </span>
                           ) : null}
                         </td>

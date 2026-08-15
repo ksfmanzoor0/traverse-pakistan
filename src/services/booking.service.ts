@@ -28,7 +28,8 @@ function toDeparture(row: DepartureRow): Departure {
     seatsAvailable: Math.max(0, row.max_seats - row.seats_booked),
     status: row.status,
     price: row.price,
-    singleSupplement: row.single_supplement,
+    twinPrice: row.twin_price ?? 0,
+    singlePrice: row.single_price ?? 0,
   };
 }
 

@@ -27,10 +27,11 @@ export interface TourListItem {
 }
 
 export interface TourPricing {
-  // Ground-only price per person (city-agnostic). Per-city variance is layered
-  // on at runtime via tour_addons — see quoteTourAddons in addon-cost.service.
+  // Ground-only base per-person for group / triple / quad share. Per-city
+  // variance is layered on at runtime via tour_addons — see quoteTourAddons
+  // in addon-cost.service. Private-room surcharges live on the departure row
+  // (twin_price / single_price) and only surface once a departure is picked.
   base: number;
-  singleSupplement: number | null;
   international?: number | null;
 }
 
