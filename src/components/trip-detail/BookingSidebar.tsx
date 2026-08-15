@@ -299,7 +299,7 @@ export function BookingSidebar({ tour, reviews = [], previewCity = null }: Booki
           )}
           {tour.pricing.singleSupplement && (
             <Stepper
-              label="Couple private room"
+              label="Couple / Private room"
               sub={`+ ${formatPrice(tour.pricing.singleSupplement * 2)} / room · skip strangers`}
               value={singleRooms}
               min={0}

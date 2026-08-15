@@ -501,7 +501,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
             )}
             {draft.singleRooms > 0 && tour.pricing.singleSupplement && (
               <div className="flex justify-between text-[var(--text-secondary)]">
-                <span>Couple private room × {draft.singleRooms}</span>
+                <span>Couple / Private room × {draft.singleRooms}</span>
                 <span className="tabular-nums">{formatPrice(tour.pricing.singleSupplement * 2 * draft.singleRooms)}</span>
               </div>
             )}
@@ -875,7 +875,7 @@ function StepTravelers({
           />
           <div className="border-t border-[var(--border-default)]" />
           <PrivateRoomRow
-            label="Couple private room"
+            label="Couple / Private room"
             sub={`${formatPrice(supplement * 2)} / room · skip strangers`}
             value={singleRooms}
             max={maxCoupleRooms}
