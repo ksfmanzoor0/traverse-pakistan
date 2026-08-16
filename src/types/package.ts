@@ -8,7 +8,6 @@ export interface PackageTierPricing {
   islamabad: number | null;
   lahore: number | null;
   karachi: number | null;
-  singleSupplement: number | null;
 }
 
 export interface PackageDayHotels {

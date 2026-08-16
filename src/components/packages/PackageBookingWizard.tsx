@@ -195,9 +195,7 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
     (pricing.islamabad ?? pricing.lahore ?? pricing.karachi ?? 0);
 
   const defaultRooms = Math.ceil(state.adults / 3);
-  const extraRooms = Math.max(0, state.rooms - defaultRooms);
-  const roomSurcharge = extraRooms * (pricing.singleSupplement ?? 0);
-  const staticTotal = staticPerPerson * state.adults + roomSurcharge;
+  const staticTotal = staticPerPerson * state.adults;
 
   // Engine-driven quote — same endpoint the sidebar uses so checkout shows
   // the same number quoted at booking time (jeep legs + meals + entries +
@@ -502,7 +500,7 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
               <div className="border-t border-[var(--border-default)]" />
               <Stepper
                 label="Rooms"
-                sub={state.rooms > defaultRooms ? `+${formatPrice(roomSurcharge)} single supplement` : "Up to 3 per room — no extra charge"}
+                sub="Up to 3 per room"
                 value={state.rooms}
                 min={defaultRooms}
                 max={state.adults}
@@ -572,9 +570,6 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
             <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] p-5 space-y-2">
               <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--text-secondary)] mb-3">Price breakdown</p>
               <SummaryRow label={`${formatPrice(pricePerPerson)} × ${state.adults} person${state.adults !== 1 ? "s" : ""}`} value={formatPrice(pricePerPerson * state.adults)} />
-              {roomSurcharge > 0 && (
-                <SummaryRow label={`${extraRooms} extra room supplement`} value={`+${formatPrice(roomSurcharge)}`} />
-              )}
               {promoDiscount > 0 && (
                 <SummaryRow label={`Promo ${promoState.code}`} value={`− ${formatPrice(promoDiscount)}`} />
               )}

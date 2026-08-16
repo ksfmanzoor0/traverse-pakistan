@@ -14,7 +14,6 @@ export type TierPricing = {
   islamabad: number | null;
   lahore: number | null;
   karachi: number | null;
-  singleSupplement: number | null;
 };
 
 export type PackagePricing = {

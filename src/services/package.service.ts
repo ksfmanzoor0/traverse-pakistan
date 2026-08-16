@@ -25,8 +25,7 @@ function shuffleGallery(slug: string, images: Package["images"]): Package["image
 type PricingLeaves = Record<string, Record<string, number | null | undefined>>;
 
 /** Merge engine snapshot (`pricing`) with operator pin (`pricing_override`) per
- *  leaf. Override wins where set; snapshot fills the rest. Sibling keys like
- *  `singleSupplement` come from snapshot unless an override carries one too. */
+ *  leaf. Override wins where set; snapshot fills the rest. */
 function mergePricing(snapshot: unknown, override: unknown): unknown {
   const snap = (snapshot ?? {}) as PricingLeaves;
   const over = (override ?? {}) as PricingLeaves;

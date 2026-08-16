@@ -561,13 +561,11 @@ function PricingSection({ row, onSave, pending }: { row: PackageRow; onSave: (p:
     islamabad: raw?.deluxe?.islamabad ?? null,
     lahore: raw?.deluxe?.lahore ?? null,
     karachi: raw?.deluxe?.karachi ?? null,
-    singleSupplement: raw?.deluxe?.singleSupplement ?? null,
   }));
   const [luxury, setLuxury] = useState<TierPricing>(() => ({
     islamabad: raw?.luxury?.islamabad ?? null,
     lahore: raw?.luxury?.lahore ?? null,
     karachi: raw?.luxury?.karachi ?? null,
-    singleSupplement: raw?.luxury?.singleSupplement ?? null,
   }));
   const [startingCities, setStartingCities] = useState<Home[]>(
     (row.starting_cities ?? []).filter((c): c is Home => CITY_KEYS.includes(c as Home)),
@@ -577,11 +575,11 @@ function PricingSection({ row, onSave, pending }: { row: PackageRow; onSave: (p:
     return (
       <fieldset className="border border-[var(--border-default)] rounded-[var(--radius-sm)] p-4 space-y-3">
         <legend className="px-2 text-[13px] font-bold text-[var(--text-primary)]">{label}</legend>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {(["islamabad", "lahore", "karachi", "singleSupplement"] as const).map((k) => (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {(["islamabad", "lahore", "karachi"] as const).map((k) => (
             <label key={k} className="block">
               <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-1">
-                {k === "singleSupplement" ? "Single supp" : k}
+                {k}
               </span>
               <input
                 type="number"
