@@ -3,6 +3,21 @@
 import { useMemo, useState, useTransition } from "react";
 import type { ItineraryDayInput, ItineraryStop } from "@/app/admin/packages/actions";
 import { AutoGrowTextarea } from "./tour-editor/AutoGrowTextarea";
+import { CityChips } from "./tour-editor/CityChips";
+
+type Home = "ISB" | "LHE" | "KHI" | "KDU";
+const CODE_TO_CITY: Record<Home, string> = {
+  ISB: "islamabad",
+  LHE: "lahore",
+  KHI: "karachi",
+  KDU: "skardu",
+};
+const CITY_TO_CODE: Record<string, Home> = {
+  islamabad: "ISB",
+  lahore: "LHE",
+  karachi: "KHI",
+  skardu: "KDU",
+};
 
 type Day = {
   day_number: number;
@@ -375,21 +390,17 @@ export function ItineraryEditor({ packageSlug, expectedDays, initialDays, hotels
 
                   <div>
                     <label className={labelCls} style={labelStyle}>City-only (advanced)</label>
-                    <input
-                      value={(d.city_only ?? []).join(", ")}
-                      onChange={(e) => {
-                        const arr = e.target.value
-                          .split(",")
-                          .map((s) => s.trim().toLowerCase())
-                          .filter(Boolean);
+                    <CityChips
+                      value={(d.city_only ?? [])
+                        .map((c) => CITY_TO_CODE[c])
+                        .filter((c): c is Home => Boolean(c))}
+                      onChange={(next) => {
+                        const arr = (next ?? []).map((code) => CODE_TO_CITY[code]);
                         updateDay(i, { city_only: arr.length > 0 ? arr : null });
                       }}
-                      placeholder="e.g. lahore, karachi"
-                      className={inputCls}
-                      style={inputStyle}
                     />
                     <p className="text-[11px] mt-1" style={{ color: "var(--text-tertiary)" }}>
-                      Engine hint — comma-separated city keys where hotels don&apos;t apply this day (e.g. transit night). Leave blank otherwise.
+                      Engine hint — pick the home cities this day applies to (e.g. transit night from LHE only). Leave empty for &quot;all cities&quot;.
                     </p>
                   </div>
                 </div>
