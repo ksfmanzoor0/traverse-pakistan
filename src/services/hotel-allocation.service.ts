@@ -141,8 +141,19 @@ function allocate(
 
   const sorted = [...rooms].sort((a, b) => a.doublePrice - b.doublePrice);
 
+  // When rooms are forced (e.g. customer asked for 2 rooms for 2 people),
+  // each room type must be allowed up to `forceRoomCount` copies — otherwise
+  // a hotel with only one room type can never satisfy 2× same-type. The
+  // unforced path still bounds by pack-density (ceil(people / maxOccupancy))
+  // to keep the search space tight.
+  const perTypeCap = forceRoomCount ?? Math.ceil(people / Math.max(1, sorted[0]?.maxOccupancy ?? 1));
   const maxCounts = sorted.map((r) =>
-    Math.min(r.available, Math.ceil(people / Math.max(1, r.maxOccupancy))),
+    Math.min(
+      r.available,
+      forceRoomCount !== undefined
+        ? perTypeCap
+        : Math.ceil(people / Math.max(1, r.maxOccupancy)),
+    ),
   );
 
   type Best = { allocation: AllocatedRoom[]; cost: number };

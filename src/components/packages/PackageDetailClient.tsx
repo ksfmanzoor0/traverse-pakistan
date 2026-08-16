@@ -11,6 +11,7 @@ import { PackageBookingSidebar } from "@/components/packages/PackageBookingSideb
 import { PackageMobileBookingSheet } from "@/components/packages/PackageMobileBookingSheet";
 import { PackageItineraryAccordion } from "@/components/packages/PackageItineraryAccordion";
 import { PackageCard } from "@/components/packages/PackageCard";
+import { TourBody } from "@/components/trip-detail/TourBody";
 import { formatPrice } from "@/lib/utils";
 import type { Package, PackageItinerary, PackageTier } from "@/types/package";
 import type { Hotel } from "@/types/hotel";
@@ -20,13 +21,26 @@ interface PackageDetailClientProps {
   itinerary: PackageItinerary | null;
   hotelsMap: Record<string, Hotel>;
   relatedPackages: Package[];
+  /** Preview override from ?preview= URL. Real customers don't set this. */
+  previewCity?: "islamabad" | "lahore" | "karachi" | "skardu" | null;
 }
 
-export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages }: PackageDetailClientProps) {
+const CITY_TO_HOME: Record<"islamabad" | "lahore" | "karachi" | "skardu", "ISB" | "LHE" | "KHI" | "KDU"> = {
+  islamabad: "ISB", lahore: "LHE", karachi: "KHI", skardu: "KDU",
+};
+
+export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages, previewCity }: PackageDetailClientProps) {
   const [selectedTier, setSelectedTier] = useState<PackageTier>("deluxe");
   const [departureCity, setDepartureCity] = useState<"islamabad" | "lahore" | "karachi">(
-    pkg.tiers.deluxe.islamabad != null ? "islamabad" : pkg.tiers.deluxe.lahore != null ? "lahore" : "karachi"
+    (previewCity && previewCity !== "skardu" ? previewCity : null)
+    ?? (pkg.tiers.deluxe.islamabad != null ? "islamabad" : pkg.tiers.deluxe.lahore != null ? "lahore" : "karachi")
   );
+  // Home code used for cityOnly filtering of inclusions, exclusions, blocks,
+  // and itinerary days. Falls back to the pricing-driven departureCity when
+  // no preview override is set.
+  const homeCode = previewCity ? CITY_TO_HOME[previewCity] : CITY_TO_HOME[departureCity];
+  const visibleInclusions = pkg.inclusions.filter((i) => !i.cityOnly || i.cityOnly.length === 0 || i.cityOnly.includes(homeCode));
+  const visibleExclusions = pkg.exclusions.filter((i) => !i.cityOnly || i.cityOnly.length === 0 || i.cityOnly.includes(homeCode));
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   // Picks emitted from the sidebar (rendered inside the mobile sheet) so the
   // sticky bar can mirror the chosen adults/rooms/check-in AND the live price
@@ -141,6 +155,13 @@ export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages
             <section className="mt-10 pt-8 border-t border-[var(--border-default)]" id="overview">
               <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4">Overview</h2>
               <p className="text-[15px] text-[var(--text-secondary)] leading-relaxed">{pkg.description}</p>
+
+              {/* Rich body content (admin block editor) */}
+              {pkg.bodyBlocks && pkg.bodyBlocks.length > 0 && (
+                <div className="mt-6">
+                  <TourBody blocks={pkg.bodyBlocks} tourSlug={pkg.slug} initialDeparture={previewCity ?? departureCity} />
+                </div>
+              )}
               {pkg.highlights.length > 0 && (
                 <div className="mt-6">
                   <h3 className="text-[16px] font-semibold text-[var(--text-primary)] mb-3">Highlights</h3>
@@ -211,10 +232,10 @@ export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages
                 <div>
                   <h3 className="text-[14px] font-bold uppercase tracking-wider text-[var(--primary)] mb-3">Included</h3>
                   <ul className="space-y-2">
-                    {pkg.inclusions.map((item, i) => (
+                    {visibleInclusions.map((item, i) => (
                       <li key={i} className="flex items-start gap-2 text-[14px] text-[var(--text-secondary)]">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" className="shrink-0 mt-0.5"><polyline points="20 6 9 17 4 12" /></svg>
-                        {item}
+                        {item.text}
                       </li>
                     ))}
                   </ul>
@@ -222,12 +243,12 @@ export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages
                 <div>
                   <h3 className="text-[14px] font-bold uppercase tracking-wider text-[var(--warning)] mb-3">Not Included</h3>
                   <ul className="space-y-2">
-                    {pkg.exclusions.map((item, i) => (
+                    {visibleExclusions.map((item, i) => (
                       <li key={i} className="flex items-start gap-2 text-[14px] text-[var(--text-secondary)]">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" strokeWidth="2" className="shrink-0 mt-0.5">
                           <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                         </svg>
-                        {item}
+                        {item.text}
                       </li>
                     ))}
                   </ul>
