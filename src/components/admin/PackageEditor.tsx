@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { formatPrice } from "@/lib/utils";
 import type { PackageRow, PackageItineraryDayRow, PackageAddonRow } from "@/lib/supabase/types";
 import type { AddonType } from "@/types/tour-addon";
@@ -37,6 +38,7 @@ interface Actions {
   upsertPackageAddon: (addon: PackageAddonPatch) => Promise<{ ok: boolean; id?: string; error?: string }>;
   deletePackageAddon: (id: string, packageSlug: string) => Promise<{ ok: boolean; error?: string }>;
   saveItinerary: (packageSlug: string, days: ItineraryDayInput[]) => Promise<{ ok: boolean; error?: string }>;
+  repricePackage: (slug: string) => Promise<{ ok: boolean; written?: number; skipped?: Array<{ tier: string; home: string; reason: string }>; error?: string }>;
 }
 
 const TABS = ["Basics", "Gallery", "Content", "Highlights", "Inclusions", "Itinerary", "Pricing", "Addons", "Preview"] as const;
@@ -62,11 +64,39 @@ export function PackageEditor({
   const [pending, startTransition] = useTransition();
   const [flash, setFlash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // True when any input inside the tab body has changed since the last save.
+  // onInput bubbles from every text input/textarea/select and marks the ref;
+  // announce() clears it on a successful save. attemptTabChange checks the
+  // ref to guard tab switches; useEffect wires browser nav-away as well.
+  const dirtyRef = useRef(false);
 
   function announce(ok: boolean, msg: string) {
-    if (ok) { setFlash(msg); setError(null); setTimeout(() => setFlash(null), 2000); }
-    else { setError(msg); setFlash(null); }
+    if (ok) {
+      setFlash(msg);
+      setError(null);
+      setTimeout(() => setFlash(null), 2000);
+      dirtyRef.current = false;
+    } else {
+      setError(msg);
+      setFlash(null);
+    }
   }
+
+  function attemptTabChange(next: (typeof TABS)[number]) {
+    if (dirtyRef.current && !window.confirm("You have unsaved changes on this tab. Discard and continue?")) return;
+    dirtyRef.current = false;
+    setTab(next);
+  }
+
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!dirtyRef.current) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
 
   const saveViaUpdate = (patch: PackagePatch) => startTransition(async () => {
     const r = await actions.updatePackage(row.slug, patch);
@@ -90,7 +120,7 @@ export function PackageEditor({
           <button
             key={t}
             type="button"
-            onClick={() => setTab(t)}
+            onClick={() => attemptTabChange(t)}
             className={`px-3 py-2 text-[13px] font-semibold border-b-2 -mb-px transition-colors ${
               tab === t
                 ? "border-[var(--primary)] text-[var(--primary)]"
@@ -105,6 +135,7 @@ export function PackageEditor({
       {flash && <div className="p-3 rounded bg-[var(--success)]/10 text-[var(--success)] text-[13px]">{flash}</div>}
       {error && <div className="p-3 rounded bg-[var(--error)]/10 text-[var(--error)] text-[13px]">{error}</div>}
 
+      <div onInput={() => { dirtyRef.current = true; }}>
       {tab === "Basics" && (
         <BasicsSection
           row={row}
@@ -147,7 +178,27 @@ export function PackageEditor({
         />
       )}
       {tab === "Pricing" && (
-        <PricingSection row={row} onSave={saveViaUpdate} pending={pending} />
+        <PricingSection
+          row={row}
+          onSave={saveViaUpdate}
+          onReprice={() => new Promise<void>((resolve) => {
+            startTransition(async () => {
+              const r = await actions.repricePackage(row.slug);
+              if (r.ok) {
+                const skippedCount = r.skipped?.length ?? 0;
+                const msg = skippedCount > 0
+                  ? `Repriced ${r.written} of ${(r.written ?? 0) + skippedCount} combos (${skippedCount} skipped — see console)`
+                  : `Repriced ${r.written ?? 0} tier×city combos`;
+                announce(true, msg);
+                if (skippedCount > 0) console.warn("[reprice] skipped:", r.skipped);
+              } else {
+                announce(false, r.error ?? "Reprice failed");
+              }
+              resolve();
+            });
+          })}
+          pending={pending}
+        />
       )}
       {tab === "Addons" && (
         <AddonsSection
@@ -162,6 +213,7 @@ export function PackageEditor({
       {tab === "Preview" && (
         <PreviewSection packageSlug={row.slug} startingCities={row.starting_cities as Home[]} />
       )}
+      </div>
     </div>
   );
 }
@@ -555,7 +607,8 @@ function InclusionsSection({ row, onSave, pending }: { row: PackageRow; onSave: 
 // Preserves the exact `pricing` shape the pricing engine expects — one
 // TierPricing per tier (deluxe / luxury) with per-city prices + single supp.
 // This tab only re-lays out the existing form; math is unchanged.
-function PricingSection({ row, onSave, pending }: { row: PackageRow; onSave: (p: PackagePatch) => void; pending: boolean }) {
+function PricingSection({ row, onSave, onReprice, pending }: { row: PackageRow; onSave: (p: PackagePatch) => void; onReprice: () => Promise<void>; pending: boolean }) {
+  const router = useRouter();
   const raw = row.pricing as { deluxe?: TierPricing; luxury?: TierPricing } | null;
   const [deluxe, setDeluxe] = useState<TierPricing>(() => ({
     islamabad: raw?.deluxe?.islamabad ?? null,
@@ -567,6 +620,20 @@ function PricingSection({ row, onSave, pending }: { row: PackageRow; onSave: (p:
     lahore: raw?.luxury?.lahore ?? null,
     karachi: raw?.luxury?.karachi ?? null,
   }));
+  // Sync local state when server row updates (e.g. after reprice + router.refresh).
+  useEffect(() => {
+    setDeluxe({
+      islamabad: raw?.deluxe?.islamabad ?? null,
+      lahore: raw?.deluxe?.lahore ?? null,
+      karachi: raw?.deluxe?.karachi ?? null,
+    });
+    setLuxury({
+      islamabad: raw?.luxury?.islamabad ?? null,
+      lahore: raw?.luxury?.lahore ?? null,
+      karachi: raw?.luxury?.karachi ?? null,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [row.pricing]);
   const [startingCities, setStartingCities] = useState<Home[]>(
     (row.starting_cities ?? []).filter((c): c is Home => CITY_KEYS.includes(c as Home)),
   );
@@ -599,9 +666,22 @@ function PricingSection({ row, onSave, pending }: { row: PackageRow; onSave: (p:
 
   return (
     <div className="space-y-4">
-      <p className="text-[12px] text-[var(--text-tertiary)]">
-        Pricing engine reads these values as-is — the math is unchanged. Per-home-city variance is layered on via the Addons tab.
-      </p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <p className="text-[12px] text-[var(--text-tertiary)] max-w-xl">
+          Snapshot prices the customer sees. Engine recomputes these from hotels + fuel + margin — click Reprice from engine to refresh.
+        </p>
+        <button
+          type="button"
+          onClick={async () => {
+            await onReprice();
+            router.refresh();
+          }}
+          disabled={pending}
+          className="h-9 px-3 text-[12px] font-semibold text-[var(--primary)] border border-[var(--primary)]/40 rounded-[var(--radius-sm)] hover:bg-[var(--primary)]/5 disabled:opacity-50"
+        >
+          {pending ? "Repricing…" : "Reprice from engine"}
+        </button>
+      </div>
       <Field label="Starting cities (which home cities this package is offered to)">
         <CityChips value={startingCities} onChange={(next) => setStartingCities((next ?? []) as Home[])} />
       </Field>
@@ -795,29 +875,45 @@ function AddonsSection({
 function PreviewSection({ packageSlug, startingCities }: { packageSlug: string; startingCities: Home[] }) {
   const initialCity: Home = (startingCities?.[0] as Home) ?? "ISB";
   const [city, setCity] = useState<Home>(initialCity);
-  const src = `/packages/${packageSlug}?preview=${city}`;
+  const [tier, setTier] = useState<"deluxe" | "luxury">("deluxe");
+  const src = `/packages/${packageSlug}?preview=${city}&previewTier=${tier}`;
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="text-[13px] text-[var(--text-secondary)]">Viewing as a traveler from:</div>
-        <div className="flex gap-1.5">
-          {CITY_KEYS.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => setCity(c)}
-              className={city === c ? chipActive : chip}
-            >
-              {c}
-            </button>
-          ))}
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[13px] text-[var(--text-secondary)]">From:</span>
+            {CITY_KEYS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setCity(c)}
+                className={city === c ? chipActive : chip}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[13px] text-[var(--text-secondary)]">Tier:</span>
+            {(["deluxe", "luxury"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTier(t)}
+                className={tier === t ? chipActive : chip}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
         </div>
         <a href={src} target="_blank" rel="noreferrer" className="text-[12px] font-semibold text-[var(--primary)] hover:underline">
           Open in new tab ↗
         </a>
       </div>
       <div className="border border-[var(--border-default)] rounded-[var(--radius-sm)] overflow-hidden bg-[var(--bg-primary)]" style={{ height: "80vh" }}>
-        <iframe key={city} src={src} title={`Preview ${packageSlug} as ${city}`} className="w-full h-full" />
+        <iframe key={`${city}-${tier}`} src={src} title={`Preview ${packageSlug} as ${city} ${tier}`} className="w-full h-full" />
       </div>
     </div>
   );
