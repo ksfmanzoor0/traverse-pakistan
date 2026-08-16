@@ -1,744 +1,922 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { PackagePatch, PackagePricing } from "@/app/admin/packages/actions";
+import { formatPrice } from "@/lib/utils";
+import type { PackageRow, PackageItineraryDayRow, PackageAddonRow } from "@/lib/supabase/types";
+import type { AddonType } from "@/types/tour-addon";
+import type { TourBlock } from "@/types/tour-block";
+import type {
+  PackagePatch,
+  PackagePricing,
+  TierPricing,
+  ItineraryDayInput,
+  PackageAddonPatch,
+} from "@/app/admin/packages/actions";
+import { StringList } from "./tour-editor/StringList";
+import { CityAwareList } from "./tour-editor/CityAwareList";
+import { CityChips } from "./tour-editor/CityChips";
+import { AddonConfigForm } from "./tour-editor/AddonConfigForm";
+import { GalleryEditor, type GalleryImage } from "./tour-editor/GalleryEditor";
+import { BlockEditor } from "./tour-editor/BlockEditor";
+import { AutoGrowTextarea } from "./tour-editor/AutoGrowTextarea";
+import { ItineraryEditor } from "./ItineraryEditor";
 
-type TierPricingIn = { islamabad?: number; lahore?: number; karachi?: number; singleSupplement?: number };
+type Home = "ISB" | "LHE" | "KHI" | "KDU";
+type DestOption = { slug: string; name: string; region_slug: string | null };
+type RegionOption = { slug: string; name: string };
+type HotelOption = { slug: string; name: string; tier: string | null };
 
-type Row = {
-  slug: string;
-  name: string;
-  description: string;
-  badge: string | null;
-  duration: number;
-  route: string | null;
-  destination_slug: string;
-  related_destination_slugs: string[] | null;
-  region_slug: string;
-  highlights: string[] | null;
-  inclusions: string[] | null;
-  exclusions: string[] | null;
-  know_before_you_go: string[] | null;
-  max_group_size: number | null;
-  languages: string[] | null;
-  published: boolean;
-  meta_title: string | null;
-  meta_description: string | null;
-  updated_at: string | null;
-  pricing: { deluxe?: TierPricingIn; luxury?: TierPricingIn } | null;
-  starting_cities: string[] | null;
-  total_distance_km: number | null;
-  meals_per_person: number | null;
-  entries_per_person: number | null;
-  destination_rank: Record<string, number> | null;
-};
+const ADDON_TYPES: AddonType[] = ["flight", "bus", "hotel", "meal", "activity", "transfer", "insurance", "custom"];
+const CITY_KEYS: Home[] = ["ISB", "LHE", "KHI", "KDU"];
 
-const CITY_KEYS = ["KDU", "ISB", "LHE", "KHI"] as const;
-type CityKey = (typeof CITY_KEYS)[number];
-
-type TierPriceForm = { islamabad: string; lahore: string; karachi: string; singleSupplement: string };
-function pricingToForm(p: TierPricingIn | undefined): TierPriceForm {
-  return {
-    islamabad: p?.islamabad?.toString() ?? "",
-    lahore: p?.lahore?.toString() ?? "",
-    karachi: p?.karachi?.toString() ?? "",
-    singleSupplement: p?.singleSupplement?.toString() ?? "",
-  };
-}
-function formToTier(f: TierPriceForm): PackagePricing["deluxe"] {
-  const n = (s: string) => (s.trim() === "" ? null : Number(s));
-  return {
-    islamabad: n(f.islamabad),
-    lahore: n(f.lahore),
-    karachi: n(f.karachi),
-    singleSupplement: n(f.singleSupplement),
-  };
+interface Actions {
+  updatePackage: (slug: string, patch: PackagePatch) => Promise<{ ok: boolean; error?: string }>;
+  deletePackage: (slug: string) => Promise<{ ok: boolean; error?: string }>;
+  provisionR2Folder: (slug: string) => Promise<{ ok: boolean; key?: string; error?: string }>;
+  renamePackageSlug: (oldSlug: string, newSlug: string) => Promise<{ ok: boolean; slug?: string; error?: string } | void>;
+  upsertPackageAddon: (addon: PackageAddonPatch) => Promise<{ ok: boolean; id?: string; error?: string }>;
+  deletePackageAddon: (id: string, packageSlug: string) => Promise<{ ok: boolean; error?: string }>;
+  saveItinerary: (packageSlug: string, days: ItineraryDayInput[]) => Promise<{ ok: boolean; error?: string }>;
 }
 
-type Option = { slug: string; name: string };
-type DestOption = { slug: string; name: string; region_slug?: string | null };
+const TABS = ["Basics", "Gallery", "Content", "Highlights", "Inclusions", "Itinerary", "Pricing", "Addons", "Preview"] as const;
 
-type Props = {
-  row: Row;
-  destinationOptions: DestOption[];
-  regionOptions: Option[];
-  updateAction: (slug: string, patch: PackagePatch) => Promise<{ ok: boolean; error?: string }>;
-  deleteAction: (slug: string) => Promise<{ ok: boolean; error?: string }>;
-  provisionR2Action?: (slug: string) => Promise<{ ok: boolean; key?: string; error?: string }>;
-};
-
-const BADGES = ["", "new", "popular", "bestseller", "editors-pick"];
-
-const inputCls =
-  "w-full h-10 px-3 rounded-[var(--radius-sm)] border text-[14px]";
-const inputStyle: React.CSSProperties = { borderColor: "var(--border-default)", background: "var(--bg-primary)" };
-const areaCls = "w-full px-3 py-2 rounded-[var(--radius-sm)] border text-[14px] leading-[1.5]";
-const labelCls = "block text-[12px] font-semibold uppercase tracking-wider mb-1";
-const labelStyle: React.CSSProperties = { color: "var(--text-tertiary)" };
-
-function StringListEditor({
-  label,
-  items,
-  onChange,
-  placeholder,
+export function PackageEditor({
+  row,
+  days,
+  addons,
+  hotels,
+  destinationOptions,
+  regionOptions,
+  actions,
 }: {
-  label: string;
-  items: string[];
-  onChange: (next: string[]) => void;
-  placeholder?: string;
+  row: PackageRow;
+  days: PackageItineraryDayRow[];
+  addons: PackageAddonRow[];
+  hotels: HotelOption[];
+  destinationOptions: DestOption[];
+  regionOptions: RegionOption[];
+  actions: Actions;
 }) {
-  function update(i: number, value: string) {
-    onChange(items.map((it, idx) => (idx === i ? value : it)));
+  const [tab, setTab] = useState<(typeof TABS)[number]>("Basics");
+  const [pending, startTransition] = useTransition();
+  const [flash, setFlash] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  function announce(ok: boolean, msg: string) {
+    if (ok) { setFlash(msg); setError(null); setTimeout(() => setFlash(null), 2000); }
+    else { setError(msg); setFlash(null); }
   }
-  function add() {
-    onChange([...items, ""]);
-  }
-  function remove(i: number) {
-    onChange(items.filter((_, idx) => idx !== i));
-  }
-  function move(i: number, delta: -1 | 1) {
-    const j = i + delta;
-    if (j < 0 || j >= items.length) return;
-    const next = [...items];
-    [next[i], next[j]] = [next[j], next[i]];
-    onChange(next);
-  }
+
+  const saveViaUpdate = (patch: PackagePatch) => startTransition(async () => {
+    const r = await actions.updatePackage(row.slug, patch);
+    announce(r.ok, r.ok ? "Saved" : r.error ?? "Failed");
+  });
+
   return (
-    <div>
-      <label className={labelCls} style={labelStyle}>{label}</label>
-      <div className="space-y-2">
-        {items.length === 0 && (
-          <p className="text-[12px]" style={{ color: "var(--text-tertiary)" }}>
-            None yet — click Add.
-          </p>
-        )}
-        {items.map((it, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <div className="flex flex-col gap-0.5">
-              <button
-                type="button"
-                onClick={() => move(i, -1)}
-                disabled={i === 0}
-                aria-label="Move up"
-                className="w-5 h-5 rounded text-[12px] border cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                style={{ borderColor: "var(--border-default)", color: "var(--text-secondary)" }}
-              >
-                ↑
-              </button>
-              <button
-                type="button"
-                onClick={() => move(i, 1)}
-                disabled={i === items.length - 1}
-                aria-label="Move down"
-                className="w-5 h-5 rounded text-[12px] border cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                style={{ borderColor: "var(--border-default)", color: "var(--text-secondary)" }}
-              >
-                ↓
-              </button>
-            </div>
-            <input
-              value={it}
-              onChange={(e) => update(i, e.target.value)}
-              placeholder={placeholder}
-              className={inputCls}
-              style={inputStyle}
-            />
-            <button
-              type="button"
-              onClick={() => remove(i)}
-              aria-label="Remove"
-              className="h-8 px-2 text-[12px] font-medium rounded-full cursor-pointer"
-              style={{
-                color: "var(--error)",
-                background: "color-mix(in srgb, var(--error) 8%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--error) 30%, transparent)",
-              }}
-            >
-              Remove
+    <div className="space-y-6">
+      <header className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-semibold text-[var(--text-primary)]">{row.name}</h1>
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">/{row.slug}</p>
+        </div>
+        <a href={`/packages/${row.slug}`} target="_blank" rel="noreferrer" className="text-[13px] font-semibold text-[var(--primary)] hover:underline">
+          View live ↗
+        </a>
+      </header>
+
+      <nav className="flex flex-wrap gap-1 border-b border-[var(--border-default)]">
+        {TABS.map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTab(t)}
+            className={`px-3 py-2 text-[13px] font-semibold border-b-2 -mb-px transition-colors ${
+              tab === t
+                ? "border-[var(--primary)] text-[var(--primary)]"
+                : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            }`}
+          >
+            {t}
+          </button>
+        ))}
+      </nav>
+
+      {flash && <div className="p-3 rounded bg-[var(--success)]/10 text-[var(--success)] text-[13px]">{flash}</div>}
+      {error && <div className="p-3 rounded bg-[var(--error)]/10 text-[var(--error)] text-[13px]">{error}</div>}
+
+      {tab === "Basics" && (
+        <BasicsSection
+          row={row}
+          destinationOptions={destinationOptions}
+          regionOptions={regionOptions}
+          onSave={saveViaUpdate}
+          onRenameSlug={(newSlug) => new Promise((resolve) => {
+            startTransition(async () => {
+              const r = await actions.renamePackageSlug(row.slug, newSlug);
+              if (r && !r.ok) {
+                announce(false, r.error ?? "Rename failed");
+                resolve({ ok: false, error: r.error });
+              } else {
+                resolve({ ok: true });
+              }
+            });
+          })}
+          pending={pending}
+        />
+      )}
+      {tab === "Gallery" && (
+        <GallerySection row={row} onSave={saveViaUpdate} pending={pending} />
+      )}
+      {tab === "Content" && (
+        <ContentSection row={row} onSave={saveViaUpdate} pending={pending} />
+      )}
+      {tab === "Highlights" && (
+        <HighlightsSection row={row} onSave={saveViaUpdate} pending={pending} />
+      )}
+      {tab === "Inclusions" && (
+        <InclusionsSection row={row} onSave={saveViaUpdate} pending={pending} />
+      )}
+      {tab === "Itinerary" && (
+        <ItineraryEditor
+          packageSlug={row.slug}
+          expectedDays={row.duration}
+          initialDays={days}
+          hotels={hotels}
+          saveAction={actions.saveItinerary}
+        />
+      )}
+      {tab === "Pricing" && (
+        <PricingSection row={row} onSave={saveViaUpdate} pending={pending} />
+      )}
+      {tab === "Addons" && (
+        <AddonsSection
+          packageSlug={row.slug}
+          initialAddons={addons}
+          actions={actions}
+          pending={pending}
+          announce={announce}
+          startTransition={startTransition}
+        />
+      )}
+      {tab === "Preview" && (
+        <PreviewSection packageSlug={row.slug} startingCities={row.starting_cities as Home[]} />
+      )}
+    </div>
+  );
+}
+
+/* ============================ Basics ============================ */
+
+function BasicsSection({
+  row,
+  destinationOptions,
+  regionOptions,
+  onSave,
+  onRenameSlug,
+  pending,
+}: {
+  row: PackageRow;
+  destinationOptions: DestOption[];
+  regionOptions: RegionOption[];
+  onSave: (p: PackagePatch) => void;
+  onRenameSlug: (newSlug: string) => Promise<{ ok: boolean; error?: string }>;
+  pending: boolean;
+}) {
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [name, setName] = useState(row.name);
+  const [description, setDescription] = useState(row.description ?? "");
+  const [badge, setBadge] = useState(row.badge ?? "");
+  const [duration, setDuration] = useState(row.duration);
+  const [route, setRoute] = useState(row.route ?? "");
+  const [destinationSlug, setDestinationSlug] = useState(row.destination_slug);
+  const [regionSlug, setRegionSlug] = useState(row.region_slug);
+  const [related, setRelated] = useState<string[]>(row.related_destination_slugs ?? []);
+  const [published, setPublished] = useState(row.published);
+  const [metaTitle, setMetaTitle] = useState(row.meta_title ?? "");
+  const [metaDescription, setMetaDescription] = useState(row.meta_description ?? "");
+  const [maxGroupSize, setMaxGroupSize] = useState<number | null>(row.max_group_size);
+  const [languages, setLanguages] = useState<string[]>(row.languages ?? []);
+  const [totalDistanceKm, setTotalDistanceKm] = useState<number | null>(row.total_distance_km);
+  const [mealsPerPerson, setMealsPerPerson] = useState(row.meals_per_person ?? 0);
+  const [entriesPerPerson, setEntriesPerPerson] = useState(row.entries_per_person ?? 0);
+  const [destinationRank, setDestinationRank] = useState<Record<string, number>>(() => {
+    const src = row.destination_rank ?? {};
+    const out: Record<string, number> = {};
+    for (const [k, v] of Object.entries(src)) {
+      if (typeof v === "number") out[k] = v;
+      else if (v && typeof v === "object" && typeof v.rank === "number") out[k] = v.rank;
+    }
+    return out;
+  });
+  const [relatedQuery, setRelatedQuery] = useState("");
+  const rankSlugs = Array.from(new Set([destinationSlug, ...related].filter(Boolean)));
+  const [childPctInput, setChildPctInput] = useState<string>(
+    row.child_discount_pct != null ? String(Math.round(Number(row.child_discount_pct) * 100)) : ""
+  );
+  const [tiers, setTiers] = useState<Array<{ minAdults: number; pct: number }>>(
+    row.group_discount_tiers ?? []
+  );
+  const [useCustomTiers, setUseCustomTiers] = useState<boolean>(
+    row.group_discount_tiers != null && row.group_discount_tiers.length > 0
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-end justify-between gap-3 flex-wrap">
+        <Field label="Slug (URL)">
+          <div className="flex items-center gap-2">
+            <code className="px-3 py-1.5 rounded bg-[var(--bg-subtle)] text-[13px] text-[var(--text-primary)]">/{row.slug}</code>
+            <button type="button" onClick={() => setRenameOpen(true)} className="h-8 px-3 text-[12px] font-semibold text-[var(--primary)] border border-[var(--primary)]/40 rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)]">
+              Rename…
             </button>
           </div>
-        ))}
-        <button
-          type="button"
-          onClick={add}
-          className="text-[13px] font-semibold cursor-pointer"
-          style={{ color: "var(--primary)" }}
-        >
-          + Add
-        </button>
+        </Field>
+      </div>
+      {renameOpen && (
+        <RenameSlugModal
+          currentSlug={row.slug}
+          onClose={() => setRenameOpen(false)}
+          onConfirm={onRenameSlug}
+        />
+      )}
+
+      <Field label="Name">
+        <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
+      </Field>
+      <Field label="Description">
+        <AutoGrowTextarea value={description} onChange={(e) => setDescription(e.target.value)} minRows={4} />
+      </Field>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Field label="Badge">
+          <input value={badge} onChange={(e) => setBadge(e.target.value)} placeholder="new | popular | bestseller | editors-pick" className={inputCls} />
+        </Field>
+        <Field label="Duration (days)">
+          <input type="number" value={duration} onChange={(e) => setDuration(Number(e.target.value) || 1)} className={inputCls} />
+        </Field>
+        <Field label="Max group size (blank = default)">
+          <input type="number" value={maxGroupSize ?? ""} onChange={(e) => setMaxGroupSize(e.target.value ? Number(e.target.value) : null)} className={inputCls} />
+        </Field>
+        <Field label="Published">
+          <label className="inline-flex items-center gap-2 h-9">
+            <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} />
+            <span className="text-[13px]">Live on site</span>
+          </label>
+        </Field>
+      </div>
+      <Field label="Route (short description)">
+        <input value={route} onChange={(e) => setRoute(e.target.value)} className={inputCls} />
+      </Field>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Destination">
+          <select value={destinationSlug} onChange={(e) => setDestinationSlug(e.target.value)} className={inputCls}>
+            {destinationOptions.map((d) => (
+              <option key={d.slug} value={d.slug}>{d.name} ({d.slug})</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Region">
+          <select value={regionSlug} onChange={(e) => setRegionSlug(e.target.value)} className={inputCls}>
+            {regionOptions.map((r) => (
+              <option key={r.slug} value={r.slug}>{r.name} ({r.slug})</option>
+            ))}
+          </select>
+        </Field>
+      </div>
+
+      <Field label="Related destinations (shown as tags on listings)">
+        <input
+          value={relatedQuery}
+          onChange={(e) => setRelatedQuery(e.target.value)}
+          placeholder="Filter destinations…"
+          className={inputCls}
+        />
+        <div className="mt-2 max-h-40 overflow-y-auto border border-[var(--border-default)] rounded-[var(--radius-sm)] p-2 space-y-1">
+          {destinationOptions
+            .filter((d) => d.slug !== destinationSlug && d.name.toLowerCase().includes(relatedQuery.toLowerCase()))
+            .map((d) => {
+              const on = related.includes(d.slug);
+              return (
+                <label key={d.slug} className="flex items-center gap-2 text-[12px]">
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    onChange={() => setRelated((prev) => on ? prev.filter((s) => s !== d.slug) : [...prev, d.slug])}
+                  />
+                  <span>{d.name} <span className="text-[var(--text-tertiary)]">({d.slug})</span></span>
+                </label>
+              );
+            })}
+        </div>
+      </Field>
+
+      {rankSlugs.length > 0 && (
+        <Field label="Ranking per destination (lower number ranks first)">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {rankSlugs.map((slug) => (
+              <label key={slug} className="text-[12px] block">
+                <span className="text-[var(--text-secondary)]">{slug}</span>
+                <input
+                  type="number"
+                  value={destinationRank[slug] ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setDestinationRank((prev) => {
+                      const next = { ...prev };
+                      if (v === "") delete next[slug];
+                      else next[slug] = Number(v);
+                      return next;
+                    });
+                  }}
+                  className="w-full h-8 px-2 border border-[var(--border-default)] rounded text-[12px] bg-[var(--bg-primary)] mt-0.5"
+                />
+              </label>
+            ))}
+          </div>
+        </Field>
+      )}
+
+      <div className="grid grid-cols-3 gap-3">
+        <Field label="Total distance (km)">
+          <input type="number" value={totalDistanceKm ?? ""} onChange={(e) => setTotalDistanceKm(e.target.value ? Number(e.target.value) : null)} className={inputCls} />
+        </Field>
+        <Field label="Meals / person">
+          <input type="number" value={mealsPerPerson} onChange={(e) => setMealsPerPerson(Number(e.target.value) || 0)} className={inputCls} />
+        </Field>
+        <Field label="Entries / person">
+          <input type="number" value={entriesPerPerson} onChange={(e) => setEntriesPerPerson(Number(e.target.value) || 0)} className={inputCls} />
+        </Field>
+      </div>
+
+      <Field label="Languages">
+        <StringList value={languages} onChange={setLanguages} placeholder="language" />
+      </Field>
+
+      <Field label="Meta title">
+        <input value={metaTitle} onChange={(e) => setMetaTitle(e.target.value)} className={inputCls} />
+      </Field>
+      <Field label="Meta description">
+        <AutoGrowTextarea value={metaDescription} onChange={(e) => setMetaDescription(e.target.value)} minRows={2} />
+      </Field>
+
+      <div className="border-t border-[var(--border-default)] pt-4 space-y-4">
+        <div>
+          <div className="text-[13px] font-bold text-[var(--text-primary)]">Discounts (reserved — not yet applied)</div>
+          <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
+            Editable here for planning; not yet wired into the package pricing engine. Leave blank / unchecked to keep behaviour unchanged.
+          </p>
+        </div>
+
+        <Field label="Child discount % (ages 2–12) — blank = none">
+          <input
+            type="number"
+            min={0}
+            max={100}
+            value={childPctInput}
+            onChange={(e) => setChildPctInput(e.target.value)}
+            placeholder=""
+            className={inputCls}
+          />
+        </Field>
+
+        <div>
+          <label className="inline-flex items-center gap-2 mb-2">
+            <input
+              type="checkbox"
+              checked={useCustomTiers}
+              onChange={(e) => setUseCustomTiers(e.target.checked)}
+            />
+            <span className="text-[13px] font-semibold">Use custom group-discount tiers</span>
+          </label>
+          <p className="text-[11px] text-[var(--text-tertiary)] mb-2">
+            {useCustomTiers
+              ? "Tiers below will be saved with this package (still not applied to pricing math)."
+              : "No tiers saved. Tick above to define custom tiers."}
+          </p>
+          <div className={`space-y-2 ${useCustomTiers ? "" : "opacity-60"}`}>
+            {tiers.map((t, i) => (
+              <div key={i} className="flex items-end gap-2">
+                <Field label="Min adults">
+                  <input
+                    type="number"
+                    min={1}
+                    value={t.minAdults}
+                    onChange={(e) => {
+                      const next = [...tiers];
+                      next[i] = { ...next[i], minAdults: Number(e.target.value) || 0 };
+                      setTiers(next);
+                    }}
+                    className={inputCls}
+                  />
+                </Field>
+                <Field label="% off adult fare">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={Math.round(t.pct * 100)}
+                    onChange={(e) => {
+                      const next = [...tiers];
+                      next[i] = { ...next[i], pct: (Number(e.target.value) || 0) / 100 };
+                      setTiers(next);
+                    }}
+                    className={inputCls}
+                  />
+                </Field>
+                <button
+                  type="button"
+                  onClick={() => setTiers(tiers.filter((_, j) => j !== i))}
+                  className="h-9 px-3 text-[12px] text-[var(--danger)] border border-[var(--danger)]/40 rounded-[var(--radius-sm)]"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => setTiers([...tiers, { minAdults: (tiers.at(-1)?.minAdults ?? 3) + 3, pct: 0.05 }])}
+              className="h-8 px-3 text-[12px] font-semibold text-[var(--primary)] border border-dashed border-[var(--primary)]/40 rounded-[var(--radius-sm)]"
+            >
+              + Add tier
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <SaveBar
+        pending={pending}
+        onSave={() => {
+          const childPctNum = childPctInput.trim() === "" ? null : Number(childPctInput) / 100;
+          const cleanTiers = [...tiers]
+            .filter((t) => t.minAdults > 0)
+            .sort((a, b) => a.minAdults - b.minAdults);
+          const sortedTiers = useCustomTiers && cleanTiers.length > 0 ? cleanTiers : null;
+          onSave({
+            name,
+            description,
+            badge: badge || null,
+            duration,
+            route: route || null,
+            destination_slug: destinationSlug,
+            region_slug: regionSlug,
+            related_destination_slugs: related,
+            published,
+            meta_title: metaTitle || null,
+            meta_description: metaDescription || null,
+            max_group_size: maxGroupSize,
+            languages,
+            total_distance_km: totalDistanceKm,
+            meals_per_person: mealsPerPerson,
+            entries_per_person: entriesPerPerson,
+            destination_rank: destinationRank,
+            child_discount_pct: childPctNum,
+            group_discount_tiers: sortedTiers,
+          });
+        }}
+      />
+    </div>
+  );
+}
+
+/* ============================ Gallery ============================ */
+
+function GallerySection({ row, onSave, pending }: { row: PackageRow; onSave: (p: PackagePatch) => void; pending: boolean }) {
+  const [images, setImages] = useState<GalleryImage[]>(row.images ?? []);
+  return (
+    <div className="space-y-4">
+      <p className="text-[12px] text-[var(--text-tertiary)]">
+        First image is the cover on listings + Open Graph. Uploads land in R2 at
+        <code className="mx-1">packages/{row.slug}/</code>. DB order takes priority over R2 auto-listing.
+      </p>
+      <GalleryEditor tourSlug={row.slug} resourceKind="packages" images={images} onChange={setImages} />
+      <SaveBar pending={pending} onSave={() => onSave({ images })} />
+    </div>
+  );
+}
+
+/* ============================ Content ============================ */
+
+function ContentSection({ row, onSave, pending }: { row: PackageRow; onSave: (p: PackagePatch) => void; pending: boolean }) {
+  const [blocks, setBlocks] = useState<TourBlock[]>((row.body_blocks as TourBlock[] | null) ?? []);
+  return (
+    <div className="space-y-4">
+      <p className="text-[12px] text-[var(--text-tertiary)]">
+        Rich body content shown below the description on the package page. Each block can carry a city visibility so it hides for travelers whose home isn&apos;t in the list. Preview under the Preview tab.
+      </p>
+      <BlockEditor tourSlug={row.slug} blocks={blocks} onChange={setBlocks} />
+      <SaveBar pending={pending} onSave={() => onSave({ body_blocks: blocks })} />
+    </div>
+  );
+}
+
+/* ============================ Highlights + KBYG ============================ */
+
+function HighlightsSection({ row, onSave, pending }: { row: PackageRow; onSave: (p: PackagePatch) => void; pending: boolean }) {
+  const [highlights, setHighlights] = useState<string[]>(row.highlights ?? []);
+  const [kbyg, setKbyg] = useState<string[]>(row.know_before_you_go ?? []);
+  return (
+    <div className="space-y-6">
+      <section>
+        <h2 className="text-[15px] font-bold text-[var(--text-primary)] mb-2">Highlights</h2>
+        <StringList value={highlights} onChange={setHighlights} placeholder="highlight" />
+      </section>
+      <section>
+        <h2 className="text-[15px] font-bold text-[var(--text-primary)] mb-2">Know before you go</h2>
+        <StringList value={kbyg} onChange={setKbyg} placeholder="note" />
+      </section>
+      <SaveBar pending={pending} onSave={() => onSave({ highlights, know_before_you_go: kbyg })} />
+    </div>
+  );
+}
+
+/* ============================ Inclusions / Exclusions ============================ */
+
+function InclusionsSection({ row, onSave, pending }: { row: PackageRow; onSave: (p: PackagePatch) => void; pending: boolean }) {
+  const [inclusions, setInclusions] = useState(row.inclusions);
+  const [exclusions, setExclusions] = useState(row.exclusions);
+  return (
+    <div className="space-y-6">
+      <section>
+        <h2 className="text-[15px] font-bold text-[var(--text-primary)] mb-2">Included</h2>
+        <CityAwareList value={inclusions} onChange={setInclusions} />
+      </section>
+      <section>
+        <h2 className="text-[15px] font-bold text-[var(--text-primary)] mb-2">Not included</h2>
+        <CityAwareList value={exclusions} onChange={setExclusions} />
+      </section>
+      <SaveBar pending={pending} onSave={() => onSave({ inclusions, exclusions })} />
+    </div>
+  );
+}
+
+/* ============================ Pricing ============================ */
+
+// Preserves the exact `pricing` shape the pricing engine expects — one
+// TierPricing per tier (deluxe / luxury) with per-city prices + single supp.
+// This tab only re-lays out the existing form; math is unchanged.
+function PricingSection({ row, onSave, pending }: { row: PackageRow; onSave: (p: PackagePatch) => void; pending: boolean }) {
+  const raw = row.pricing as { deluxe?: TierPricing; luxury?: TierPricing } | null;
+  const [deluxe, setDeluxe] = useState<TierPricing>(() => ({
+    islamabad: raw?.deluxe?.islamabad ?? null,
+    lahore: raw?.deluxe?.lahore ?? null,
+    karachi: raw?.deluxe?.karachi ?? null,
+  }));
+  const [luxury, setLuxury] = useState<TierPricing>(() => ({
+    islamabad: raw?.luxury?.islamabad ?? null,
+    lahore: raw?.luxury?.lahore ?? null,
+    karachi: raw?.luxury?.karachi ?? null,
+  }));
+  const [startingCities, setStartingCities] = useState<Home[]>(
+    (row.starting_cities ?? []).filter((c): c is Home => CITY_KEYS.includes(c as Home)),
+  );
+
+  function TierGrid({ label, value, onChange }: { label: string; value: TierPricing; onChange: (v: TierPricing) => void }) {
+    return (
+      <fieldset className="border border-[var(--border-default)] rounded-[var(--radius-sm)] p-4 space-y-3">
+        <legend className="px-2 text-[13px] font-bold text-[var(--text-primary)]">{label}</legend>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {(["islamabad", "lahore", "karachi"] as const).map((k) => (
+            <label key={k} className="block">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-1">
+                {k}
+              </span>
+              <input
+                type="number"
+                value={value[k] ?? ""}
+                onChange={(e) => onChange({ ...value, [k]: e.target.value ? Number(e.target.value) : null })}
+                className={inputCls}
+                placeholder={value[k] != null ? formatPrice(value[k]!) : "—"}
+              />
+            </label>
+          ))}
+        </div>
+      </fieldset>
+    );
+  }
+
+  const pricing: PackagePricing = { deluxe, luxury };
+
+  return (
+    <div className="space-y-4">
+      <p className="text-[12px] text-[var(--text-tertiary)]">
+        Pricing engine reads these values as-is — the math is unchanged. Per-home-city variance is layered on via the Addons tab.
+      </p>
+      <Field label="Starting cities (which home cities this package is offered to)">
+        <CityChips value={startingCities} onChange={(next) => setStartingCities((next ?? []) as Home[])} />
+      </Field>
+      <TierGrid label="Deluxe tier" value={deluxe} onChange={setDeluxe} />
+      <TierGrid label="Luxury tier" value={luxury} onChange={setLuxury} />
+      <SaveBar
+        pending={pending}
+        onSave={() => onSave({ pricing, starting_cities: startingCities })}
+      />
+    </div>
+  );
+}
+
+/* ============================ Addons ============================ */
+
+function AddonsSection({
+  packageSlug,
+  initialAddons,
+  actions,
+  pending,
+  announce,
+  startTransition,
+}: {
+  packageSlug: string;
+  initialAddons: PackageAddonRow[];
+  actions: Actions;
+  pending: boolean;
+  announce: (ok: boolean, msg: string) => void;
+  startTransition: React.TransitionStartFunction;
+}) {
+  const [addons, setAddons] = useState(initialAddons);
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+
+  function updateAddon(i: number, patch: Partial<PackageAddonRow>) {
+    setAddons((prev) => prev.map((a, idx) => (idx === i ? { ...a, ...patch } : a)));
+  }
+  function saveAddon(a: PackageAddonRow) {
+    startTransition(async () => {
+      const r = await actions.upsertPackageAddon({
+        id: a.id || undefined,
+        package_slug: packageSlug,
+        type: a.type,
+        label: a.label,
+        applies_to_departures: a.applies_to_departures,
+        group_key: a.group_key,
+        is_required: a.is_required,
+        default_selected: a.default_selected,
+        duration_delta: a.duration_delta,
+        priority: a.priority,
+        config: a.config,
+      });
+      if (r.ok && r.id && !a.id) {
+        setAddons((prev) => prev.map((x) => (x === a ? { ...x, id: r.id! } : x)));
+      }
+      announce(r.ok, r.ok ? "Addon saved" : r.error ?? "Save failed");
+    });
+  }
+  function removeAddon(i: number) {
+    const a = addons[i];
+    if (!confirm(`Delete "${a.label}"?`)) return;
+    if (a.id) {
+      startTransition(async () => {
+        const r = await actions.deletePackageAddon(a.id, packageSlug);
+        if (r.ok) setAddons((prev) => prev.filter((_, idx) => idx !== i));
+        announce(r.ok, r.ok ? "Addon deleted" : r.error ?? "Delete failed");
+      });
+    } else {
+      setAddons((prev) => prev.filter((_, idx) => idx !== i));
+    }
+  }
+  function addAddon() {
+    const blank: PackageAddonRow = {
+      id: "",
+      package_slug: packageSlug,
+      type: "custom",
+      label: "New addon",
+      applies_to_departures: ["ISB"],
+      group_key: null,
+      is_required: false,
+      default_selected: false,
+      duration_delta: 0,
+      priority: 100,
+      config: { farePerPerson: 0 },
+      created_at: null,
+      updated_at: null,
+    };
+    setAddons((prev) => [...prev, blank]);
+    setEditingIdx(addons.length);
+  }
+
+  return (
+    <div className="space-y-3">
+      {addons.map((a, i) => (
+        <div key={a.id || `new-${i}`} className="border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] p-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex-1">
+              <div className="text-[13px] font-semibold text-[var(--text-primary)]">
+                {a.label} <span className="text-[11px] text-[var(--text-tertiary)] font-normal">[{a.type}]</span>
+              </div>
+              <div className="text-[11px] text-[var(--text-tertiary)]">
+                Applies to: {a.applies_to_departures.join(", ") || "—"}
+                {" · "}{a.is_required ? "Required" : `Optional (${a.default_selected ? "default on" : "default off"})`}
+                {a.group_key ? ` · group: ${a.group_key}` : ""}
+                {a.duration_delta ? ` · +${a.duration_delta}d` : ""}
+              </div>
+            </div>
+            <button type="button" onClick={() => setEditingIdx(editingIdx === i ? null : i)} className="text-[12px] font-semibold text-[var(--primary)] hover:underline">
+              {editingIdx === i ? "Close" : "Edit"}
+            </button>
+            <button type="button" onClick={() => removeAddon(i)} className="text-[12px] font-semibold text-[var(--error)] hover:underline">Delete</button>
+          </div>
+
+          {editingIdx === i && (
+            <div className="mt-3 space-y-3 border-t border-[var(--border-default)] pt-3">
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Type">
+                  <select value={a.type} onChange={(e) => updateAddon(i, { type: e.target.value as AddonType, config: {} })} className={inputCls}>
+                    {ADDON_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </Field>
+                <Field label="Label">
+                  <input value={a.label} onChange={(e) => updateAddon(i, { label: e.target.value })} className={inputCls} />
+                </Field>
+              </div>
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] mb-1">Applies to departures</div>
+                <CityChips
+                  value={a.applies_to_departures as Home[]}
+                  onChange={(next) => updateAddon(i, { applies_to_departures: next ?? [] })}
+                />
+                <div className="text-[11px] text-[var(--text-tertiary)] mt-1">Empty = disabled. Pick at least one city.</div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="inline-flex items-center gap-2">
+                  <input type="checkbox" checked={a.is_required} onChange={(e) => updateAddon(i, { is_required: e.target.checked })} />
+                  <span className="text-[13px]">Required (auto-included, non-toggleable)</span>
+                </label>
+                {!a.is_required && (
+                  <label className="inline-flex items-center gap-2">
+                    <input type="checkbox" checked={a.default_selected} onChange={(e) => updateAddon(i, { default_selected: e.target.checked })} />
+                    <span className="text-[13px]">Default checked in Extras</span>
+                  </label>
+                )}
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <Field label="Group key (radio)">
+                  <input value={a.group_key ?? ""} onChange={(e) => updateAddon(i, { group_key: e.target.value || null })} placeholder="e.g. hotel-pre-tour" className={inputCls} />
+                </Field>
+                <Field label="Priority">
+                  <input type="number" value={a.priority} onChange={(e) => updateAddon(i, { priority: Number(e.target.value) || 0 })} className={inputCls} />
+                </Field>
+                <Field label="Duration delta (days)">
+                  <input type="number" value={a.duration_delta} onChange={(e) => updateAddon(i, { duration_delta: Number(e.target.value) || 0 })} className={inputCls} />
+                </Field>
+              </div>
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] mb-2">Config</div>
+                <AddonConfigForm
+                  type={a.type as AddonType}
+                  config={a.config as Record<string, unknown>}
+                  onChange={(next) => updateAddon(i, { config: next })}
+                />
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => saveAddon(a)}
+                  className="h-9 px-4 text-[13px] font-semibold bg-[var(--primary)] text-[var(--text-inverse)] rounded-[var(--radius-sm)] disabled:opacity-60"
+                >
+                  {pending ? "Saving…" : a.id ? "Save addon" : "Create addon"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={addAddon}
+        className="h-9 px-3 text-[12px] font-semibold text-[var(--primary)] border border-dashed border-[var(--primary)]/40 rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)]"
+      >
+        + Add addon
+      </button>
+    </div>
+  );
+}
+
+/* ============================ Preview ============================ */
+
+function PreviewSection({ packageSlug, startingCities }: { packageSlug: string; startingCities: Home[] }) {
+  const initialCity: Home = (startingCities?.[0] as Home) ?? "ISB";
+  const [city, setCity] = useState<Home>(initialCity);
+  const src = `/packages/${packageSlug}?preview=${city}`;
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="text-[13px] text-[var(--text-secondary)]">Viewing as a traveler from:</div>
+        <div className="flex gap-1.5">
+          {CITY_KEYS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setCity(c)}
+              className={city === c ? chipActive : chip}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+        <a href={src} target="_blank" rel="noreferrer" className="text-[12px] font-semibold text-[var(--primary)] hover:underline">
+          Open in new tab ↗
+        </a>
+      </div>
+      <div className="border border-[var(--border-default)] rounded-[var(--radius-sm)] overflow-hidden bg-[var(--bg-primary)]" style={{ height: "80vh" }}>
+        <iframe key={city} src={src} title={`Preview ${packageSlug} as ${city}`} className="w-full h-full" />
       </div>
     </div>
   );
 }
 
-export function PackageEditor({ row, destinationOptions, regionOptions, updateAction, deleteAction, provisionR2Action }: Props) {
-  const [name, setName] = useState(row.name);
-  const [description, setDescription] = useState(row.description);
-  const [badge, setBadge] = useState(row.badge ?? "");
-  const [duration, setDuration] = useState(String(row.duration));
-  const [route, setRoute] = useState(row.route ?? "");
-  const [destinationSlug, setDestinationSlug] = useState(row.destination_slug);
-  const [related, setRelated] = useState<string[]>(row.related_destination_slugs ?? []);
-  const [regionSlug, setRegionSlug] = useState(row.region_slug);
-  const [highlights, setHighlights] = useState<string[]>(row.highlights ?? []);
-  const [inclusions, setInclusions] = useState<string[]>(row.inclusions ?? []);
-  const [exclusions, setExclusions] = useState<string[]>(row.exclusions ?? []);
-  const [knowBefore, setKnowBefore] = useState<string[]>(row.know_before_you_go ?? []);
-  const [maxGroupSize, setMaxGroupSize] = useState(row.max_group_size?.toString() ?? "");
-  const [languages, setLanguages] = useState<string[]>(row.languages ?? []);
-  const [published, setPublished] = useState(row.published);
-  const [metaTitle, setMetaTitle] = useState(row.meta_title ?? "");
-  const [metaDescription, setMetaDescription] = useState(row.meta_description ?? "");
-  const [deluxePricing, setDeluxePricing] = useState<TierPriceForm>(() => pricingToForm(row.pricing?.deluxe));
-  const [luxuryPricing, setLuxuryPricing] = useState<TierPriceForm>(() => pricingToForm(row.pricing?.luxury));
-  const [startingCities, setStartingCities] = useState<Set<CityKey>>(
-    () => new Set(((row.starting_cities ?? []) as string[]).filter((c): c is CityKey => (CITY_KEYS as readonly string[]).includes(c))),
-  );
-  const [totalDistanceKm, setTotalDistanceKm] = useState(row.total_distance_km?.toString() ?? "");
-  const [mealsPerPerson, setMealsPerPerson] = useState((row.meals_per_person ?? 0).toString());
-  const [entriesPerPerson, setEntriesPerPerson] = useState((row.entries_per_person ?? 0).toString());
-  const [destinationRank, setDestinationRank] = useState<Record<string, string>>(() => {
-    const src = row.destination_rank ?? {};
-    return Object.fromEntries(Object.entries(src).map(([k, v]) => [k, String(v)]));
-  });
+/* ============================ Rename slug modal ============================ */
 
-  const [saveMsg, setSaveMsg] = useState<string | null>(null);
-  const [savePending, startSave] = useTransition();
-  const [deletePending, startDelete] = useTransition();
-  const [r2Msg, setR2Msg] = useState<string | null>(null);
-  const [r2Pending, startR2] = useTransition();
-  const [relatedQuery, setRelatedQuery] = useState("");
-  const [bulkRegion, setBulkRegion] = useState("");
+function RenameSlugModal({
+  currentSlug,
+  onClose,
+  onConfirm,
+}: {
+  currentSlug: string;
+  onClose: () => void;
+  onConfirm: (newSlug: string) => Promise<{ ok: boolean; error?: string }>;
+}) {
+  const [newSlug, setNewSlug] = useState(currentSlug);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const changed = newSlug !== currentSlug && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(newSlug);
 
-  function onSave() {
-    setSaveMsg(null);
-    const patch: PackagePatch = {
-      name: name.trim(),
-      description: description.trim(),
-      badge: badge || null,
-      duration: Math.max(1, Number(duration) || row.duration),
-      route: route.trim() || null,
-      destination_slug: destinationSlug,
-      related_destination_slugs: related.filter(Boolean),
-      region_slug: regionSlug,
-      highlights: highlights.map((s) => s.trim()).filter(Boolean),
-      inclusions: inclusions.map((s) => s.trim()).filter(Boolean),
-      exclusions: exclusions.map((s) => s.trim()).filter(Boolean),
-      know_before_you_go: knowBefore.map((s) => s.trim()).filter(Boolean),
-      max_group_size: maxGroupSize.trim() ? Number(maxGroupSize) : null,
-      languages: languages.filter(Boolean),
-      published,
-      meta_title: metaTitle.trim() || null,
-      meta_description: metaDescription.trim() || null,
-      pricing: {
-        deluxe: formToTier(deluxePricing),
-        luxury: formToTier(luxuryPricing),
-      },
-      starting_cities: Array.from(startingCities),
-      total_distance_km: totalDistanceKm.trim() ? Number(totalDistanceKm) : null,
-      meals_per_person: Math.max(0, Number(mealsPerPerson) || 0),
-      entries_per_person: Math.max(0, Number(entriesPerPerson) || 0),
-      destination_rank: Object.fromEntries(
-        Object.entries(destinationRank)
-          .filter(([, v]) => v.trim() !== "" && !Number.isNaN(Number(v)))
-          .map(([k, v]) => [k, Number(v)]),
-      ),
-    };
-    startSave(async () => {
-      const res = await updateAction(row.slug, patch);
-      setSaveMsg(res.ok ? "Saved." : res.error ?? "Save failed");
-      if (res.ok) setTimeout(() => setSaveMsg(null), 3000);
-    });
+  async function submit() {
+    setError(null);
+    setPending(true);
+    const r = await onConfirm(newSlug);
+    if (!r.ok) {
+      setError(r.error ?? "Rename failed");
+      setPending(false);
+    }
   }
-
-  function onDelete() {
-    if (!confirm(`Delete package ${row.slug}? This cannot be undone.`)) return;
-    startDelete(async () => {
-      const res = await deleteAction(row.slug);
-      if (!res.ok) alert(res.error ?? "Delete failed");
-    });
-  }
-
-  function onProvisionR2() {
-    if (!provisionR2Action) return;
-    setR2Msg(null);
-    startR2(async () => {
-      const res = await provisionR2Action(row.slug);
-      if (res.ok) setR2Msg(`Created packages/${row.slug}/`);
-      else setR2Msg(res.error ?? "R2 provision failed");
-    });
-  }
-
-  function toggleRelated(slug: string) {
-    setRelated((prev) => (prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]));
-  }
-
-  function addAllInRegion(regionSlugKey: string) {
-    if (!regionSlugKey) return;
-    const slugsInRegion = destinationOptions
-      .filter((d) => d.region_slug === regionSlugKey && d.slug !== destinationSlug)
-      .map((d) => d.slug);
-    if (slugsInRegion.length === 0) return;
-    setRelated((prev) => Array.from(new Set([...prev, ...slugsInRegion])));
-  }
-
-  function removeAllInRegion(regionSlugKey: string) {
-    if (!regionSlugKey) return;
-    const slugsInRegion = new Set(
-      destinationOptions.filter((d) => d.region_slug === regionSlugKey).map((d) => d.slug),
-    );
-    setRelated((prev) => prev.filter((s) => !slugsInRegion.has(s)));
-  }
-
-  function toggleCity(c: CityKey) {
-    setStartingCities((prev) => {
-      const next = new Set(prev);
-      if (next.has(c)) next.delete(c);
-      else next.add(c);
-      return next;
-    });
-  }
-
-  function updateDeluxe(key: keyof TierPriceForm, value: string) {
-    setDeluxePricing((prev) => ({ ...prev, [key]: value }));
-  }
-  function updateLuxury(key: keyof TierPriceForm, value: string) {
-    setLuxuryPricing((prev) => ({ ...prev, [key]: value }));
-  }
-  function updateRank(slug: string, value: string) {
-    setDestinationRank((prev) => ({ ...prev, [slug]: value }));
-  }
-
-  const rankSlugs = Array.from(new Set([destinationSlug, ...related].filter(Boolean)));
-  const destinationNameBySlug = Object.fromEntries(destinationOptions.map((d) => [d.slug, d.name]));
 
   return (
-    <div className="space-y-6">
-      <section
-        className="p-5 rounded-2xl"
-        style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
-      >
-        <h2 className="text-[14px] font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--text-tertiary)" }}>
-          Basics
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="md:col-span-2">
-            <label className={labelCls} style={labelStyle}>Name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} style={inputStyle} />
-          </div>
-          <div className="md:col-span-2">
-            <label className={labelCls} style={labelStyle}>Description</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={4}
-              className={areaCls}
-              style={inputStyle}
-            />
-          </div>
-          <div>
-            <label className={labelCls} style={labelStyle}>Duration (days)</label>
-            <input
-              type="number"
-              min={1}
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              className={inputCls}
-              style={inputStyle}
-            />
-          </div>
-          <div>
-            <label className={labelCls} style={labelStyle}>Badge</label>
-            <select value={badge} onChange={(e) => setBadge(e.target.value)} className={inputCls} style={inputStyle}>
-              {BADGES.map((b) => (
-                <option key={b} value={b}>
-                  {b || "(none)"}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="md:col-span-2">
-            <label className={labelCls} style={labelStyle}>Route</label>
-            <input value={route} onChange={(e) => setRoute(e.target.value)} className={inputCls} style={inputStyle} />
-          </div>
-          <div>
-            <label className={labelCls} style={labelStyle}>Max group size</label>
-            <input
-              value={maxGroupSize}
-              onChange={(e) => setMaxGroupSize(e.target.value)}
-              placeholder="12"
-              className={inputCls}
-              style={inputStyle}
-            />
-          </div>
-          <div className="flex items-end">
-            <label className="inline-flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={published}
-                onChange={(e) => setPublished(e.target.checked)}
-              />
-              <span className="text-[14px]" style={{ color: "var(--text-primary)" }}>Published</span>
-            </label>
-          </div>
-        </div>
-      </section>
-
-      <section
-        className="p-5 rounded-2xl"
-        style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
-      >
-        <h2 className="text-[14px] font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--text-tertiary)" }}>
-          Location
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className={labelCls} style={labelStyle}>Primary destination</label>
-            <select
-              value={destinationSlug}
-              onChange={(e) => setDestinationSlug(e.target.value)}
-              className={inputCls}
-              style={inputStyle}
-            >
-              {destinationOptions.map((d) => (
-                <option key={d.slug} value={d.slug}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className={labelCls} style={labelStyle}>Region</label>
-            <select value={regionSlug} onChange={(e) => setRegionSlug(e.target.value)} className={inputCls} style={inputStyle}>
-              {regionOptions.map((r) => (
-                <option key={r.slug} value={r.slug}>
-                  {r.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="md:col-span-2">
-            <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
-              <label className={`${labelCls} mb-0`} style={labelStyle}>Related destinations</label>
-              <span className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
-                {related.length} selected
-              </span>
-            </div>
-            <div className="flex items-stretch gap-2 mb-2">
-              <select
-                value={bulkRegion}
-                onChange={(e) => setBulkRegion(e.target.value)}
-                className={`${inputCls} flex-1`}
-                style={inputStyle}
-              >
-                <option value="">Bulk-add by region…</option>
-                {regionOptions.map((r) => {
-                  const count = destinationOptions.filter((d) => d.region_slug === r.slug).length;
-                  return (
-                    <option key={r.slug} value={r.slug}>
-                      {r.name} ({count})
-                    </option>
-                  );
-                })}
-              </select>
-              <button
-                type="button"
-                onClick={() => addAllInRegion(bulkRegion)}
-                disabled={!bulkRegion}
-                className="h-10 px-3 rounded-[var(--radius-sm)] text-[12px] font-semibold cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap"
-                style={{ background: "var(--primary)", color: "var(--text-inverse)" }}
-              >
-                Add all
-              </button>
-              <button
-                type="button"
-                onClick={() => removeAllInRegion(bulkRegion)}
-                disabled={!bulkRegion}
-                className="h-10 px-3 rounded-[var(--radius-sm)] border text-[12px] font-semibold cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap"
-                style={{ borderColor: "var(--border-default)", color: "var(--text-secondary)" }}
-              >
-                Remove all
-              </button>
-            </div>
-            <input
-              type="search"
-              value={relatedQuery}
-              onChange={(e) => setRelatedQuery(e.target.value)}
-              placeholder="Search destinations…"
-              className={`${inputCls} mb-3`}
-              style={inputStyle}
-            />
-            <div className="flex flex-wrap gap-2">
-              {(() => {
-                const q = relatedQuery.trim().toLowerCase();
-                const filtered = destinationOptions.filter((d) => {
-                  if (related.includes(d.slug)) return true;
-                  if (!q) return true;
-                  return d.name.toLowerCase().includes(q) || d.slug.toLowerCase().includes(q);
-                });
-                if (filtered.length === 0) {
-                  return (
-                    <p className="text-[12px]" style={{ color: "var(--text-tertiary)" }}>
-                      No destinations match.
-                    </p>
-                  );
-                }
-                return filtered.map((d) => {
-                  const active = related.includes(d.slug);
-                  return (
-                    <button
-                      key={d.slug}
-                      type="button"
-                      onClick={() => toggleRelated(d.slug)}
-                      className="px-2.5 py-1 rounded-full text-[12px] cursor-pointer"
-                      style={{
-                        background: active ? "var(--primary)" : "var(--bg-subtle)",
-                        color: active ? "var(--text-inverse)" : "var(--text-secondary)",
-                        border: `1px solid ${active ? "var(--primary)" : "var(--border-default)"}`,
-                      }}
-                    >
-                      {d.name}
-                    </button>
-                  );
-                });
-              })()}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section
-        className="p-5 rounded-2xl space-y-6"
-        style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
-      >
-        <h2 className="text-[14px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>
-          Content
-        </h2>
-        <StringListEditor label="Highlights" items={highlights} onChange={setHighlights} placeholder="e.g. Sunset at Rakaposhi View Point" />
-        <StringListEditor label="Inclusions" items={inclusions} onChange={setInclusions} placeholder="What's included" />
-        <StringListEditor label="Exclusions" items={exclusions} onChange={setExclusions} placeholder="What's not included" />
-        <StringListEditor label="Know before you go" items={knowBefore} onChange={setKnowBefore} placeholder="Practical tip" />
-        <StringListEditor label="Languages" items={languages} onChange={setLanguages} placeholder="English" />
-      </section>
-
-      <section
-        className="p-5 rounded-2xl space-y-5"
-        style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
-      >
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <h2 className="text-[14px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>
-            Pricing (PKR per person)
-          </h2>
-          <span className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
-            Leave blank for cities where this package isn&apos;t offered.
-          </span>
-        </div>
-        {(["deluxe", "luxury"] as const).map((tier) => {
-          const form = tier === "deluxe" ? deluxePricing : luxuryPricing;
-          const set = tier === "deluxe" ? updateDeluxe : updateLuxury;
-          return (
-            <div key={tier}>
-              <div className="text-[12px] font-semibold capitalize mb-2" style={{ color: "var(--text-secondary)" }}>
-                {tier} tier
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {(["islamabad", "lahore", "karachi", "singleSupplement"] as const).map((k) => (
-                  <div key={k}>
-                    <label className={labelCls} style={labelStyle}>
-                      {k === "singleSupplement" ? "Single supp." : k}
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={form[k]}
-                      onChange={(e) => set(k, e.target.value)}
-                      placeholder="—"
-                      className={inputCls}
-                      style={inputStyle}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </section>
-
-      <section
-        className="p-5 rounded-2xl space-y-5"
-        style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
-      >
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <h2 className="text-[14px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>
-            Engine
-          </h2>
-          {provisionR2Action && (
-            <div className="flex items-center gap-3">
-              {r2Msg && (
-                <span className="text-[12px]" style={{ color: r2Msg.startsWith("Created") ? "var(--success)" : "var(--error)" }}>
-                  {r2Msg}
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={onProvisionR2}
-                disabled={r2Pending}
-                className="h-8 px-3 rounded-[var(--radius-sm)] border text-[12px] font-semibold cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-                style={{ borderColor: "var(--border-default)", color: "var(--text-secondary)" }}
-                title={`Create packages/${row.slug}/ marker in R2`}
-              >
-                {r2Pending ? "Creating…" : "Provision R2 folder"}
-              </button>
-            </div>
-          )}
-        </div>
-        <div>
-          <label className={labelCls} style={labelStyle}>Starting cities (departures offered)</label>
-          <div className="flex flex-wrap gap-2">
-            {CITY_KEYS.map((c) => {
-              const active = startingCities.has(c);
-              return (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => toggleCity(c)}
-                  className="px-3 py-1 rounded-full text-[12px] font-semibold cursor-pointer"
-                  style={{
-                    background: active ? "var(--primary)" : "var(--bg-subtle)",
-                    color: active ? "var(--text-inverse)" : "var(--text-secondary)",
-                    border: `1px solid ${active ? "var(--primary)" : "var(--border-default)"}`,
-                  }}
-                >
-                  {c}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className={labelCls} style={labelStyle}>Total distance (km)</label>
-            <input
-              type="number"
-              min={0}
-              value={totalDistanceKm}
-              onChange={(e) => setTotalDistanceKm(e.target.value)}
-              placeholder="e.g. 1126"
-              className={inputCls}
-              style={inputStyle}
-            />
-          </div>
-          <div>
-            <label className={labelCls} style={labelStyle}>Meals / person</label>
-            <input
-              type="number"
-              min={0}
-              value={mealsPerPerson}
-              onChange={(e) => setMealsPerPerson(e.target.value)}
-              className={inputCls}
-              style={inputStyle}
-            />
-          </div>
-          <div>
-            <label className={labelCls} style={labelStyle}>Entries / person</label>
-            <input
-              type="number"
-              min={0}
-              value={entriesPerPerson}
-              onChange={(e) => setEntriesPerPerson(e.target.value)}
-              className={inputCls}
-              style={inputStyle}
-            />
-          </div>
-        </div>
-        <div>
-          <label className={labelCls} style={labelStyle}>Destination rank</label>
-          <p className="text-[11px] mb-2" style={{ color: "var(--text-tertiary)" }}>
-            Lower shows this package earlier on the destination page. Set per destination you want it to appear under.
-          </p>
-          {rankSlugs.length === 0 && (
-            <p className="text-[12px]" style={{ color: "var(--text-tertiary)" }}>
-              Pick a primary or related destination first.
-            </p>
-          )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {rankSlugs.map((slug) => (
-              <div key={slug} className="flex items-center gap-2">
-                <div className="flex-1 text-[13px] truncate" style={{ color: "var(--text-secondary)" }}>
-                  {destinationNameBySlug[slug] ?? slug}
-                  <span className="ml-1 text-[11px] font-mono" style={{ color: "var(--text-tertiary)" }}>({slug})</span>
-                </div>
-                <input
-                  type="number"
-                  value={destinationRank[slug] ?? ""}
-                  onChange={(e) => updateRank(slug, e.target.value)}
-                  placeholder="rank"
-                  className="w-24 h-9 px-2 rounded-[var(--radius-sm)] border text-[13px] tabular-nums"
-                  style={inputStyle}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section
-        className="p-5 rounded-2xl"
-        style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)" }}
-      >
-        <h2 className="text-[14px] font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--text-tertiary)" }}>
-          SEO
-        </h2>
-        <div className="space-y-4">
-          <div>
-            <label className={labelCls} style={labelStyle}>Meta title</label>
-            <input value={metaTitle} onChange={(e) => setMetaTitle(e.target.value)} className={inputCls} style={inputStyle} />
-          </div>
-          <div>
-            <label className={labelCls} style={labelStyle}>Meta description</label>
-            <textarea
-              value={metaDescription}
-              onChange={(e) => setMetaDescription(e.target.value)}
-              rows={3}
-              className={areaCls}
-              style={inputStyle}
-            />
-          </div>
-        </div>
-      </section>
-
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
       <div
-        className="sticky bottom-4 flex items-center justify-between gap-4 p-3 rounded-2xl"
-        style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)", boxShadow: "var(--shadow-lg)" }}
+        className="bg-[var(--bg-primary)] rounded-[var(--radius-md)] p-6 w-full max-w-md space-y-4"
+        onClick={(e) => e.stopPropagation()}
       >
-        <button
-          type="button"
-          onClick={onDelete}
-          disabled={deletePending}
-          className="inline-flex items-center gap-2 h-10 px-4 rounded-[var(--radius-sm)] text-[13px] font-semibold cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-          style={{
-            color: "var(--error)",
-            background: "color-mix(in srgb, var(--error) 8%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--error) 30%, transparent)",
-          }}
-        >
-          {deletePending ? "Deleting…" : "Delete package"}
-        </button>
-        <div className="flex items-center gap-3">
-          {saveMsg && (
-            <span className="text-[13px]" style={{ color: "var(--text-secondary)" }}>{saveMsg}</span>
-          )}
+        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Rename slug</h2>
+        <p className="text-[13px] text-[var(--text-secondary)]">
+          Updates the URL for this package and cascades to itinerary + addon rows. Only rename if the package hasn&apos;t been shared — the old URL will 404 otherwise.
+        </p>
+        {error && <div className="p-3 rounded bg-[var(--error)]/10 text-[var(--error)] text-[13px]">{error}</div>}
+        <label className="block">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-1">Current</span>
+          <code className="block px-3 py-2 rounded bg-[var(--bg-subtle)] text-[13px] text-[var(--text-primary)]">/{currentSlug}</code>
+        </label>
+        <label className="block">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-1">New slug</span>
+          <input
+            value={newSlug}
+            onChange={(e) => setNewSlug(e.target.value)}
+            placeholder="lowercase-kebab-case"
+            className="w-full h-10 px-3 border border-[var(--border-default)] rounded-[var(--radius-sm)] text-[13px] bg-[var(--bg-primary)]"
+          />
+        </label>
+        <div className="flex justify-end gap-2 pt-2">
+          <button type="button" onClick={onClose} className="h-9 px-4 text-[13px] font-semibold text-[var(--text-secondary)] rounded hover:bg-[var(--bg-subtle)]">
+            Cancel
+          </button>
           <button
             type="button"
-            onClick={onSave}
-            disabled={savePending}
-            className="h-10 px-5 rounded-[var(--radius-sm)] text-[13px] font-semibold cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-            style={{ background: "var(--primary)", color: "var(--text-inverse)" }}
+            disabled={pending || !changed}
+            onClick={submit}
+            className="h-9 px-4 text-[13px] font-semibold bg-[var(--primary)] text-[var(--text-inverse)] rounded-[var(--radius-sm)] disabled:opacity-60"
           >
-            {savePending ? "Saving…" : "Save changes"}
+            {pending ? "Renaming…" : "Rename"}
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ============================ Shared ============================ */
+
+const inputCls = "w-full h-9 px-3 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[13px]";
+const chip = "h-7 px-2.5 rounded-full text-[11px] font-semibold border border-[var(--border-default)] text-[var(--text-secondary)] hover:border-[var(--primary)]";
+const chipActive = "h-7 px-2.5 rounded-full text-[11px] font-semibold border border-[var(--primary)] bg-[var(--primary)] text-[var(--text-inverse)]";
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-1">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function SaveBar({ pending, onSave }: { pending: boolean; onSave: () => void }) {
+  return (
+    <div className="flex justify-end pt-3 border-t border-[var(--border-default)]">
+      <button
+        type="button"
+        disabled={pending}
+        onClick={onSave}
+        className="h-10 px-4 text-[13px] font-semibold bg-[var(--primary)] text-[var(--text-inverse)] rounded-[var(--radius-sm)] disabled:opacity-60"
+      >
+        {pending ? "Saving…" : "Save changes"}
+      </button>
     </div>
   );
 }

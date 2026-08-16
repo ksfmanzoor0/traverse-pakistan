@@ -252,13 +252,11 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
   const nights = Math.max(0, pkg.duration - 1);
   const isDayTrip = nights === 0;
   const effectiveRooms = isDayTrip ? 0 : displayRooms;
-  const extraRooms = Math.max(0, displayRooms - naturalRooms);
-  const singleSupp = pricing.singleSupplement ?? 0;
   const staticPerPerson =
     (departureCity === "lahore" && pricing.lahore) ? pricing.lahore :
     (departureCity === "karachi" && pricing.karachi) ? pricing.karachi :
     (pricing.islamabad ?? pricing.lahore ?? pricing.karachi ?? 0);
-  const staticTotal = staticPerPerson * adults + extraRooms * singleSupp;
+  const staticTotal = staticPerPerson * adults;
 
   const HOME_FROM_CITY: Record<DepartureCityOption, "ISB" | "LHE" | "KHI"> = {
     islamabad: "ISB",

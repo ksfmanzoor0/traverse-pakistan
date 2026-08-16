@@ -5,12 +5,15 @@ import { redirect } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/admin/guard";
 import { putR2Marker } from "@/lib/r2";
+import type { AddonType } from "@/types/tour-addon";
+import type { TourBlock } from "@/types/tour-block";
+
+type PackageListItem = { text: string; cityOnly?: Array<"ISB" | "LHE" | "KHI" | "KDU"> };
 
 export type TierPricing = {
   islamabad: number | null;
   lahore: number | null;
   karachi: number | null;
-  singleSupplement: number | null;
 };
 
 export type PackagePricing = {
@@ -28,9 +31,11 @@ export type PackagePatch = {
   related_destination_slugs?: string[];
   region_slug?: string;
   highlights?: string[];
-  inclusions?: string[];
-  exclusions?: string[];
+  inclusions?: PackageListItem[];
+  exclusions?: PackageListItem[];
   know_before_you_go?: string[];
+  body_blocks?: TourBlock[];
+  images?: Array<{ url: string; alt: string }>;
   max_group_size?: number | null;
   languages?: string[];
   published?: boolean;
@@ -42,6 +47,8 @@ export type PackagePatch = {
   meals_per_person?: number;
   entries_per_person?: number;
   destination_rank?: Record<string, number>;
+  child_discount_pct?: number | null;
+  group_discount_tiers?: Array<{ minAdults: number; pct: number }> | null;
 };
 
 export async function updatePackage(
@@ -234,4 +241,101 @@ export async function deletePackage(slug: string): Promise<{ ok: boolean; error?
   revalidatePath("/admin/packages");
   revalidatePath("/packages");
   redirect("/admin/packages");
+}
+
+/* ============================ Rename slug ============================ */
+
+const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+export async function renamePackageSlug(oldSlug: string, newSlug: string): Promise<{ ok: boolean; slug?: string; error?: string }> {
+  await requireAdmin();
+  if (oldSlug === newSlug) return { ok: true, slug: oldSlug };
+  if (!SLUG_RE.test(newSlug)) return { ok: false, error: "Slug must be lowercase kebab-case" };
+
+  const supabase = getSupabaseAdmin();
+  const [taken, source] = await Promise.all([
+    supabase.from("packages").select("slug").eq("slug", newSlug).maybeSingle(),
+    supabase.from("packages").select("slug").eq("slug", oldSlug).maybeSingle(),
+  ]);
+  if (taken.data) return { ok: false, error: `Slug "${newSlug}" is already taken` };
+  if (!source.data) return { ok: false, error: `Package "${oldSlug}" not found` };
+
+  // package_itinerary_days + package_addons ride ON UPDATE CASCADE
+  // (migration 20260812_package_slug_fks_on_update_cascade). No sibling
+  // tables reference package_slug as plain text.
+  const t = await supabase
+    .from("packages")
+    .update({ slug: newSlug, updated_at: new Date().toISOString() })
+    .eq("slug", oldSlug);
+  if (t.error) return { ok: false, error: t.error.message };
+
+  revalidateTag("packages", {});
+  revalidatePath("/admin/packages");
+  revalidatePath(`/admin/packages/${oldSlug}`);
+  revalidatePath(`/admin/packages/${newSlug}`);
+  revalidatePath(`/packages/${oldSlug}`);
+  revalidatePath(`/packages/${newSlug}`);
+  return { ok: true, slug: newSlug };
+}
+
+export async function renamePackageSlugAndRedirect(oldSlug: string, newSlug: string) {
+  const r = await renamePackageSlug(oldSlug, newSlug);
+  if (!r.ok || !r.slug) return r;
+  redirect(`/admin/packages/${r.slug}`);
+}
+
+/* ============================ Package addons ============================ */
+
+export type PackageAddonPatch = {
+  id?: string;
+  package_slug: string;
+  type: AddonType;
+  label: string;
+  applies_to_departures: string[];
+  group_key: string | null;
+  is_required: boolean;
+  default_selected: boolean;
+  duration_delta: number;
+  priority: number;
+  config: Record<string, unknown>;
+};
+
+export async function upsertPackageAddon(addon: PackageAddonPatch): Promise<{ ok: boolean; id?: string; error?: string }> {
+  await requireAdmin();
+  const supabase = getSupabaseAdmin();
+  const payload = {
+    package_slug: addon.package_slug,
+    type: addon.type,
+    label: addon.label,
+    applies_to_departures: addon.applies_to_departures,
+    group_key: addon.group_key,
+    is_required: addon.is_required,
+    default_selected: addon.default_selected,
+    duration_delta: addon.duration_delta,
+    priority: addon.priority,
+    config: addon.config,
+    updated_at: new Date().toISOString(),
+  };
+  if (addon.id) {
+    const { error } = await supabase.from("package_addons").update(payload).eq("id", addon.id);
+    if (error) return { ok: false, error: error.message };
+    revalidateTag("packages", {});
+    revalidatePath(`/packages/${addon.package_slug}`);
+    return { ok: true, id: addon.id };
+  }
+  const { data, error } = await supabase.from("package_addons").insert(payload).select("id").single();
+  if (error) return { ok: false, error: error.message };
+  revalidateTag("packages", {});
+  revalidatePath(`/packages/${addon.package_slug}`);
+  return { ok: true, id: (data as { id: string }).id };
+}
+
+export async function deletePackageAddon(id: string, packageSlug: string): Promise<{ ok: boolean; error?: string }> {
+  await requireAdmin();
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase.from("package_addons").delete().eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  revalidateTag("packages", {});
+  revalidatePath(`/packages/${packageSlug}`);
+  return { ok: true };
 }

@@ -5,18 +5,22 @@ import Image from "next/image";
 
 export type GalleryImage = { url: string; alt: string };
 
-// Edit tour.images inline. First entry is treated as the cover.
-// Upload → POST /api/admin/tours/[slug]/images (returns R2 URL)
+// Edit tour/package images inline. First entry is treated as the cover.
+// Upload → POST /api/admin/{kind}/[slug]/images (returns R2 URL)
 // Delete → DELETE ?url=... (removes from R2 too if it's a bucket URL)
-// Reorder → ↑ / ↓ buttons; Save posts the array via server action.
+// Reorder → ↑ / ↓ buttons; Save persists the array via the caller's server action.
 export function GalleryEditor({
   tourSlug,
   images,
   onChange,
+  resourceKind = "tours",
 }: {
   tourSlug: string;
   images: GalleryImage[];
   onChange: (next: GalleryImage[]) => void;
+  /** Which resource's upload endpoint to hit. Defaults to "tours" for
+   *  backwards compat with the existing tour editor. */
+  resourceKind?: "tours" | "packages";
 }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +35,7 @@ export function GalleryEditor({
       for (const file of Array.from(files)) {
         const form = new FormData();
         form.append("file", file);
-        const res = await fetch(`/api/admin/tours/${tourSlug}/images`, { method: "POST", body: form });
+        const res = await fetch(`/api/admin/${resourceKind}/${tourSlug}/images`, { method: "POST", body: form });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           throw new Error(body.error ?? `Upload failed (${res.status})`);
@@ -63,7 +67,7 @@ export function GalleryEditor({
     // Fire-and-forget R2 delete. If it fails, the DB list already dropped it —
     // the file becomes an orphan in the bucket but doesn't break anything.
     try {
-      await fetch(`/api/admin/tours/${tourSlug}/images?url=${encodeURIComponent(img.url)}`, { method: "DELETE" });
+      await fetch(`/api/admin/${resourceKind}/${tourSlug}/images?url=${encodeURIComponent(img.url)}`, { method: "DELETE" });
     } catch { /* ignore */ }
   }
 

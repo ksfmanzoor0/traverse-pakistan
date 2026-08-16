@@ -1,5 +1,6 @@
-import type { TourImage, BadgeType } from "./tour";
+import type { TourImage, BadgeType, TourListItem } from "./tour";
 import type { ItineraryStop, DepartureCity } from "./itinerary";
+import type { TourBlock } from "./tour-block";
 
 export type PackageTier = "deluxe" | "luxury";
 
@@ -7,7 +8,6 @@ export interface PackageTierPricing {
   islamabad: number | null;
   lahore: number | null;
   karachi: number | null;
-  singleSupplement: number | null;
 }
 
 export interface PackageDayHotels {
@@ -52,9 +52,12 @@ export interface Package {
   reserveNowPayLater: boolean;
   images: TourImage[];
   highlights: string[];
-  inclusions: string[];
-  exclusions: string[];
+  inclusions: TourListItem[];
+  exclusions: TourListItem[];
   knowBeforeYouGo: string[];
+  /** Rich block-editor content shown below the description on the package
+   * page. Filtered client-side by traveler starting city. */
+  bodyBlocks: TourBlock[];
   tiers: {
     deluxe: PackageTierPricing;
     luxury: PackageTierPricing;
