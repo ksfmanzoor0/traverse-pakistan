@@ -259,6 +259,20 @@ export function ItineraryEditor({ packageSlug, expectedDays, initialDays, hotels
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     type="button"
+                    onClick={() => {
+                      const prev = days[i - 1];
+                      if (!prev) return;
+                      updateDay(i, { hotel_deluxe: prev.hotel_deluxe, hotel_luxury: prev.hotel_luxury });
+                    }}
+                    disabled={i === 0}
+                    title="Copy Deluxe + Luxury hotels from previous day"
+                    className="h-8 px-2 text-[12px] rounded-[var(--radius-sm)] border cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ borderColor: "var(--border-default)", color: "var(--text-secondary)" }}
+                  >
+                    Copy hotels ↥
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => moveDay(i, -1)}
                     disabled={i === 0}
                     className="h-8 w-8 text-[13px] rounded-[var(--radius-sm)] border cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
