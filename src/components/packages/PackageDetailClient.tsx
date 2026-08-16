@@ -23,14 +23,16 @@ interface PackageDetailClientProps {
   relatedPackages: Package[];
   /** Preview override from ?preview= URL. Real customers don't set this. */
   previewCity?: "islamabad" | "lahore" | "karachi" | "skardu" | null;
+  /** Preview tier override from ?previewTier= URL. Admin-only. */
+  previewTier?: "deluxe" | "luxury" | null;
 }
 
 const CITY_TO_HOME: Record<"islamabad" | "lahore" | "karachi" | "skardu", "ISB" | "LHE" | "KHI" | "KDU"> = {
   islamabad: "ISB", lahore: "LHE", karachi: "KHI", skardu: "KDU",
 };
 
-export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages, previewCity }: PackageDetailClientProps) {
-  const [selectedTier, setSelectedTier] = useState<PackageTier>("deluxe");
+export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages, previewCity, previewTier }: PackageDetailClientProps) {
+  const [selectedTier, setSelectedTier] = useState<PackageTier>(previewTier ?? "deluxe");
   const [departureCity, setDepartureCity] = useState<"islamabad" | "lahore" | "karachi">(
     (previewCity && previewCity !== "skardu" ? previewCity : null)
     ?? (pkg.tiers.deluxe.islamabad != null ? "islamabad" : pkg.tiers.deluxe.lahore != null ? "lahore" : "karachi")

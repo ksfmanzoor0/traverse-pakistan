@@ -10,6 +10,7 @@ import {
   upsertPackageAddon,
   deletePackageAddon,
   saveItinerary,
+  repricePackage,
 } from "../actions";
 import type { PackageRow, PackageItineraryDayRow, PackageAddonRow } from "@/lib/supabase/types";
 
@@ -85,6 +86,7 @@ export default async function AdminPackageEditPage({ params }: { params: Promise
           upsertPackageAddon,
           deletePackageAddon,
           saveItinerary,
+          repricePackage,
         }}
       />
     </div>

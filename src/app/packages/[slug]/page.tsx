@@ -15,7 +15,7 @@ import type { Hotel } from "@/types/hotel";
 
 interface Props {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<{ preview?: string }>;
+  searchParams?: Promise<{ preview?: string; previewTier?: string }>;
 }
 
 const PREVIEW_CITY_MAP: Record<string, "islamabad" | "lahore" | "karachi" | "skardu"> = {
@@ -53,6 +53,8 @@ export default async function PackageDetailPage({ params, searchParams }: Props)
   const { slug } = await params;
   const sp = searchParams ? await searchParams : undefined;
   const previewCity = sp?.preview ? PREVIEW_CITY_MAP[sp.preview.toUpperCase()] ?? null : null;
+  const previewTier: "deluxe" | "luxury" | null =
+    sp?.previewTier === "deluxe" || sp?.previewTier === "luxury" ? sp.previewTier : null;
   const pkg = await getPackageBySlug(slug);
   if (!pkg) notFound();
 
@@ -91,6 +93,7 @@ export default async function PackageDetailPage({ params, searchParams }: Props)
         hotelsMap={hotelsMap}
         relatedPackages={relatedPackages}
         previewCity={previewCity}
+        previewTier={previewTier}
       />
     </>
   );

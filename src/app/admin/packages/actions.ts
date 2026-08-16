@@ -51,6 +51,28 @@ export type PackagePatch = {
   group_discount_tiers?: Array<{ minAdults: number; pct: number }> | null;
 };
 
+export interface RepricePackageActionResult {
+  ok: boolean;
+  written?: number;
+  skipped?: Array<{ tier: string; home: string; reason: string }>;
+  error?: string;
+}
+
+export async function repricePackage(slug: string): Promise<RepricePackageActionResult> {
+  await requireAdmin();
+  try {
+    const { repricePackageBySlug } = await import("@/services/package-quote.service");
+    const result = await repricePackageBySlug(slug);
+    revalidateTag("packages", {});
+    revalidateTag("package-quote", {});
+    revalidatePath(`/admin/packages/${slug}`);
+    revalidatePath(`/packages/${slug}`);
+    return { ok: true, written: result.written, skipped: result.skipped };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  }
+}
+
 export async function updatePackage(
   slug: string,
   patch: PackagePatch,
