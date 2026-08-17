@@ -77,14 +77,25 @@ const nextConfig: NextConfig = {
         // Original WP plugin (Support Tour): /st_tour/{slug} → /grouptours/{slug}
         { source: "/st_tour/:slug", destination: "/grouptours/:slug", permanent: true },
         { source: "/st_tour/:slug/", destination: "/grouptours/:slug", permanent: true },
+        // /st_tour/{slug}/feed/ → /grouptours/{slug} (drop the RSS suffix)
+        { source: "/st_tour/:slug/feed", destination: "/grouptours/:slug", permanent: true },
+        { source: "/st_tour/:slug/feed/", destination: "/grouptours/:slug", permanent: true },
 
         // Other WP plugin slugs — no 1:1 mapping to current slugs, so route each
         // family to its category landing page. 301s pass ~90% of the backlink
         // equity Google was still crediting to the dead URLs.
         { source: "/st_hotel/:slug*", destination: "/hotels", permanent: true },
         { source: "/st_activity/:slug*", destination: "/grouptours", permanent: true },
-        { source: "/st_location/:slug*", destination: "/destinations", permanent: true },
+        // /st_location/* is handled by middleware.ts — it looks up the slug
+        // against the current destinations set and 301s to the specific page
+        // when possible, else falls back to /destinations. Static redirect
+        // would risk 301 → 404 because WP mis-tagged regions.
         { source: "/st_room/:slug*", destination: "/hotels", permanent: true },
+        { source: "/st_packages/:slug*", destination: "/packages", permanent: true },
+        // WP transport (cars): no equivalent on the new site — send home.
+        { source: "/st_car/:slug*", destination: "/", permanent: true },
+        // WP admin junk (email templates) — should never have been indexed.
+        { source: "/st_template_email/:slug*", destination: "/", permanent: true },
 
         // Singular WP taxonomy paths shared with any old third-party listings.
         { source: "/tour/:slug*", destination: "/grouptours", permanent: true },
@@ -95,6 +106,31 @@ const nextConfig: NextConfig = {
         // WP blog taxonomy pages.
         { source: "/category/:slug*", destination: "/blog", permanent: true },
         { source: "/tag/:slug*", destination: "/blog", permanent: true },
+
+        // WP hotel-room detail pages — no 1:1 mapping (rooms belong to hotels
+        // on the new site, no standalone URLs). Send to /hotels listing.
+        { source: "/hotel_room/:slug*", destination: "/hotels", permanent: true },
+
+        // WooCommerce (WP product pages) — the old site sold trips + cars +
+        // rooms as products. Most were trip-flavoured; safe fallback = /grouptours.
+        // Product taxonomies + author + order pages have no equivalent → home.
+        { source: "/product/:slug*", destination: "/grouptours", permanent: true },
+        { source: "/product-tag/:slug*", destination: "/", permanent: true },
+        { source: "/product-category/:slug*", destination: "/", permanent: true },
+        { source: "/order-received/:slug*", destination: "/", permanent: true },
+        { source: "/author/:slug*", destination: "/", permanent: true },
+
+        // Old WP language variants (en/) — new site is English-only, drop prefix.
+        { source: "/en", destination: "/", permanent: true },
+        { source: "/en/:path*", destination: "/", permanent: true },
+
+        // Misc WP legacy pages — /type/gallery, /feed suffixes on any path.
+        { source: "/type/:path*", destination: "/", permanent: true },
+        { source: "/feed", destination: "/", permanent: true },
+        { source: "/feed/", destination: "/", permanent: true },
+        { source: "/feed.xml", destination: "/", permanent: true },
+        { source: "/:path*/feed", destination: "/:path*", permanent: true },
+        { source: "/:path*/feed/", destination: "/:path*", permanent: true },
 
         // WP date-archived blog posts: /YYYY/MM/slug → /blog
         {
