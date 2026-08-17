@@ -276,7 +276,10 @@ function BasicsSection({
   return (
     <div className="space-y-4">
       <div className="flex items-end justify-between gap-3 flex-wrap">
-        <Field label="Slug (URL)">
+        <Field
+          label="Slug (URL)"
+          note="URL identifier used in /packages/{slug}. Renaming redirects old URLs but breaks any hardcoded external links."
+        >
           <div className="flex items-center gap-2">
             <code className="px-3 py-1.5 rounded bg-[var(--bg-subtle)] text-[13px] text-[var(--text-primary)]">/{row.slug}</code>
             <button type="button" onClick={() => setRenameOpen(true)} className="h-8 px-3 text-[12px] font-semibold text-[var(--primary)] border border-[var(--primary)]/40 rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)]">
@@ -316,7 +319,10 @@ function BasicsSection({
           </label>
         </Field>
       </div>
-      <Field label="Route (short description)">
+      <Field
+        label="Route (short description)"
+        note="One-line route shown under the package name (e.g. 'Islamabad → Naran → Babusar → Hunza')."
+      >
         <input value={route} onChange={(e) => setRoute(e.target.value)} className={inputCls} />
       </Field>
 
@@ -337,7 +343,10 @@ function BasicsSection({
         </Field>
       </div>
 
-      <Field label="Related destinations (shown as tags on listings)">
+      <Field
+        label="Related destinations (shown as tags on listings)"
+        note="Adds this package to the listing pages for these destinations, in addition to the primary destination above."
+      >
         <input
           value={relatedQuery}
           onChange={(e) => setRelatedQuery(e.target.value)}
@@ -390,13 +399,22 @@ function BasicsSection({
       )}
 
       <div className="grid grid-cols-3 gap-3">
-        <Field label="Total distance (km)">
+        <Field
+          label="Total distance (km)"
+          note="Total road km one-way + return. Jeep portions excluded (handled by jeep_legs). Drives fuel + rent cost in the engine."
+        >
           <input type="number" value={totalDistanceKm ?? ""} onChange={(e) => setTotalDistanceKm(e.target.value ? Number(e.target.value) : null)} className={inputCls} />
         </Field>
-        <Field label="Meals / person">
+        <Field
+          label="Meals / person"
+          note="PKR per person per day. Set 0 when hotels include all meals."
+        >
           <input type="number" value={mealsPerPerson} onChange={(e) => setMealsPerPerson(Number(e.target.value) || 0)} className={inputCls} />
         </Field>
-        <Field label="Entries / person">
+        <Field
+          label="Entries / person"
+          note="PKR per person, total for the whole trip (sum of all entry tickets)."
+        >
           <input type="number" value={entriesPerPerson} onChange={(e) => setEntriesPerPerson(Number(e.target.value) || 0)} className={inputCls} />
         </Field>
       </div>
@@ -405,10 +423,16 @@ function BasicsSection({
         <StringList value={languages} onChange={setLanguages} placeholder="language" />
       </Field>
 
-      <Field label="Meta title">
+      <Field
+        label="Meta title"
+        note="Search-engine snippet title (Google, social share). Blank = auto-derived from package name."
+      >
         <input value={metaTitle} onChange={(e) => setMetaTitle(e.target.value)} className={inputCls} />
       </Field>
-      <Field label="Meta description">
+      <Field
+        label="Meta description"
+        note="Search-engine snippet description (~150–160 chars ideal). Blank = auto-derived from package description."
+      >
         <AutoGrowTextarea value={metaDescription} onChange={(e) => setMetaDescription(e.target.value)} minRows={2} />
       </Field>
 
@@ -815,25 +839,40 @@ function AddonsSection({
                 <div className="text-[11px] text-[var(--text-tertiary)] mt-1">Empty = disabled. Pick at least one city.</div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <label className="inline-flex items-center gap-2">
-                  <input type="checkbox" checked={a.is_required} onChange={(e) => updateAddon(i, { is_required: e.target.checked })} />
-                  <span className="text-[13px]">Required (auto-included, non-toggleable)</span>
-                </label>
-                {!a.is_required && (
+                <div>
                   <label className="inline-flex items-center gap-2">
-                    <input type="checkbox" checked={a.default_selected} onChange={(e) => updateAddon(i, { default_selected: e.target.checked })} />
-                    <span className="text-[13px]">Default checked in Extras</span>
+                    <input type="checkbox" checked={a.is_required} onChange={(e) => updateAddon(i, { is_required: e.target.checked })} />
+                    <span className="text-[13px]">Required (auto-included, non-toggleable)</span>
                   </label>
+                  <p className="text-[11px] text-[var(--text-tertiary)] mt-1">Charged automatically when the addon&apos;s departure conditions match. Customer can&apos;t opt out.</p>
+                </div>
+                {!a.is_required && (
+                  <div>
+                    <label className="inline-flex items-center gap-2">
+                      <input type="checkbox" checked={a.default_selected} onChange={(e) => updateAddon(i, { default_selected: e.target.checked })} />
+                      <span className="text-[13px]">Default checked in Extras</span>
+                    </label>
+                    <p className="text-[11px] text-[var(--text-tertiary)] mt-1">Pre-ticked in the wizard&apos;s Extras step; customer can uncheck.</p>
+                  </div>
                 )}
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <Field label="Group key (radio)">
+                <Field
+                  label="Group key (radio)"
+                  note="Addons sharing the same group key are mutually exclusive — engine picks the highest-priority match (e.g. 'flight-primary' for competing ISB vs KHI flights)."
+                >
                   <input value={a.group_key ?? ""} onChange={(e) => updateAddon(i, { group_key: e.target.value || null })} placeholder="e.g. hotel-pre-tour" className={inputCls} />
                 </Field>
-                <Field label="Priority">
+                <Field
+                  label="Priority"
+                  note="Higher wins within the same group. Ties broken by insertion order."
+                >
                   <input type="number" value={a.priority} onChange={(e) => updateAddon(i, { priority: Number(e.target.value) || 0 })} className={inputCls} />
                 </Field>
-                <Field label="Duration delta (days)">
+                <Field
+                  label="Duration delta (days)"
+                  note="Extra days added to trip length when this addon applies (e.g. +2 for KHI travelers needing an ISB overnight each way)."
+                >
                   <input type="number" value={a.duration_delta} onChange={(e) => updateAddon(i, { duration_delta: Number(e.target.value) || 0 })} className={inputCls} />
                 </Field>
               </div>
@@ -993,11 +1032,12 @@ const inputCls = "w-full h-9 px-3 border border-[var(--border-default)] rounded-
 const chip = "h-7 px-2.5 rounded-full text-[11px] font-semibold border border-[var(--border-default)] text-[var(--text-secondary)] hover:border-[var(--primary)]";
 const chipActive = "h-7 px-2.5 rounded-full text-[11px] font-semibold border border-[var(--primary)] bg-[var(--primary)] text-[var(--text-inverse)]";
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children, note }: { label: string; children: React.ReactNode; note?: string }) {
   return (
     <label className="block">
       <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-1">{label}</span>
       {children}
+      {note && <p className="text-[11px] text-[var(--text-tertiary)] mt-1">{note}</p>}
     </label>
   );
 }
