@@ -378,10 +378,10 @@ export function HotelBookingSidebar({ hotel }: { hotel: Hotel }) {
 
         {/* CTA */}
         {checkoutHref ? (
-          <Link href={checkoutHref}
+          <a href={checkoutHref} rel="nofollow"
             className="w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-semibold rounded-[var(--radius-sm)] flex items-center justify-center gap-2 hover:bg-[var(--primary-hover)] active:scale-[0.98] transition-all">
             Book Now
-          </Link>
+          </a>
         ) : (
           <button type="button"
             onClick={() => !hasSelections ? document.getElementById("rooms")?.scrollIntoView({ behavior: "smooth" }) : openFor("checkin")}

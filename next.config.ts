@@ -74,17 +74,47 @@ const nextConfig: NextConfig = {
   ...(!isGitHubPages && {
     async redirects() {
       return [
-        // Original WP plugin (Support Tour): /st_tour/{slug} → /grouptours/{slug}
+        // Original WP plugin (Support Tour): /st_tour/{slug} → /grouptours/{slug}.
+        //
+        // A few WP tour slugs were renamed or moved to /packages on the new
+        // site — these MUST come BEFORE the generic /st_tour/:slug catch-all
+        // so they win the match. Google discovered these via /st_tour URLs and
+        // was landing on noindex 404 fallbacks.
+        { source: "/st_tour/trek-to-patundas-ultimate-adventure-of-upper-hunza", destination: "/grouptours/patundas-meadows-trek-upper-hunza", permanent: true },
+        { source: "/st_tour/trek-to-patundas-ultimate-adventure-of-upper-hunza/", destination: "/grouptours/patundas-meadows-trek-upper-hunza", permanent: true },
+        { source: "/st_tour/fairy-meadows-nanga-parbat", destination: "/packages/fairy-meadows-nanga-parbat", permanent: true },
+        { source: "/st_tour/fairy-meadows-nanga-parbat/", destination: "/packages/fairy-meadows-nanga-parbat", permanent: true },
+        { source: "/st_tour/luxury-trip-to-kumrat", destination: "/grouptours/trip-to-kumrat", permanent: true },
+        { source: "/st_tour/luxury-trip-to-kumrat/", destination: "/grouptours/trip-to-kumrat", permanent: true },
+        { source: "/st_tour/chitral-kalash-gol-national-park", destination: "/packages/chitral-kailash-gol-4day", permanent: true },
+        { source: "/st_tour/chitral-kalash-gol-national-park/", destination: "/packages/chitral-kailash-gol-4day", permanent: true },
+        // Generic catch-all: /st_tour/{slug} → /grouptours/{slug}
         { source: "/st_tour/:slug", destination: "/grouptours/:slug", permanent: true },
         { source: "/st_tour/:slug/", destination: "/grouptours/:slug", permanent: true },
+        // /st_tour/{slug}/feed/ → /grouptours/{slug} (drop the RSS suffix)
+        { source: "/st_tour/:slug/feed", destination: "/grouptours/:slug", permanent: true },
+        { source: "/st_tour/:slug/feed/", destination: "/grouptours/:slug", permanent: true },
 
         // Other WP plugin slugs — no 1:1 mapping to current slugs, so route each
         // family to its category landing page. 301s pass ~90% of the backlink
         // equity Google was still crediting to the dead URLs.
         { source: "/st_hotel/:slug*", destination: "/hotels", permanent: true },
         { source: "/st_activity/:slug*", destination: "/grouptours", permanent: true },
-        { source: "/st_location/:slug*", destination: "/destinations", permanent: true },
+        // /st_location/* is handled by middleware.ts — it looks up the slug
+        // against the current destinations set and 301s to the specific page
+        // when possible, else falls back to /destinations. Static redirect
+        // would risk 301 → 404 because WP mis-tagged regions.
         { source: "/st_room/:slug*", destination: "/hotels", permanent: true },
+        { source: "/st_packages/:slug*", destination: "/packages", permanent: true },
+        // WP transport (cars): no equivalent on the new site — send home.
+        { source: "/st_car/:slug*", destination: "/", permanent: true },
+        // WP admin junk (email templates) — should never have been indexed.
+        { source: "/st_template_email/:slug*", destination: "/", permanent: true },
+        // WP admin surfaces Google occasionally discovers via login redirects.
+        { source: "/wp-login.php", destination: "/", permanent: true },
+        { source: "/wp-admin/:slug*", destination: "/", permanent: true },
+        { source: "/my-account", destination: "/", permanent: true },
+        { source: "/my-account/:slug*", destination: "/", permanent: true },
 
         // Singular WP taxonomy paths shared with any old third-party listings.
         { source: "/tour/:slug*", destination: "/grouptours", permanent: true },
@@ -96,9 +126,88 @@ const nextConfig: NextConfig = {
         { source: "/category/:slug*", destination: "/blog", permanent: true },
         { source: "/tag/:slug*", destination: "/blog", permanent: true },
 
+        // WP hotel-room detail pages — no 1:1 mapping (rooms belong to hotels
+        // on the new site, no standalone URLs). Send to /hotels listing.
+        { source: "/hotel_room/:slug*", destination: "/hotels", permanent: true },
+
+        // WooCommerce (WP product pages) — the old site sold trips + cars +
+        // rooms as products. Most were trip-flavoured; safe fallback = /grouptours.
+        // Product taxonomies + author + order pages have no equivalent → home.
+        { source: "/product/:slug*", destination: "/grouptours", permanent: true },
+        { source: "/product-tag/:slug*", destination: "/", permanent: true },
+        { source: "/product-category/:slug*", destination: "/", permanent: true },
+        { source: "/order-received/:slug*", destination: "/", permanent: true },
+        { source: "/author/:slug*", destination: "/", permanent: true },
+
+        // Old WP language variants (en/) — new site is English-only, drop prefix.
+        // /en/blog/* → /blog listing (blog post slugs from WP don't match current
+        // blog set, so we send to the listing rather than /). Order matters:
+        // this must come BEFORE the /en/:path* catch-all.
+        { source: "/en/blog/:slug*", destination: "/blog", permanent: true },
+        { source: "/en", destination: "/", permanent: true },
+        { source: "/en/:path*", destination: "/", permanent: true },
+
+        // Misc WP legacy pages — /type/gallery, /feed suffixes on any path.
+        { source: "/type/:path*", destination: "/", permanent: true },
+        { source: "/feed", destination: "/", permanent: true },
+        { source: "/feed/", destination: "/", permanent: true },
+        { source: "/feed.xml", destination: "/", permanent: true },
+        { source: "/:path*/feed", destination: "/:path*", permanent: true },
+        { source: "/:path*/feed/", destination: "/:path*", permanent: true },
+
         // WP date-archived blog posts: /YYYY/MM/slug → /blog
         {
           source: "/:yyyy(2\\d{3})/:mm(\\d{2})/:slug*",
+          destination: "/blog",
+          permanent: true,
+        },
+
+        // WP root-level policy/section pages — renamed on the new site.
+        { source: "/cancellation-policy-of-traverse-pakistan", destination: "/cancellation", permanent: true },
+        { source: "/cancellation-policy-of-traverse-pakistan/", destination: "/cancellation", permanent: true },
+        { source: "/customized-trips", destination: "/customise-tour", permanent: true },
+        { source: "/customized-trips/", destination: "/customise-tour", permanent: true },
+        { source: "/invitation-letter-for-pakistan", destination: "/invitation-letter", permanent: true },
+        { source: "/invitation-letter-for-pakistan/", destination: "/invitation-letter", permanent: true },
+        { source: "/privacy-policy", destination: "/privacy", permanent: true },
+        { source: "/privacy-policy/", destination: "/privacy", permanent: true },
+        { source: "/privacy-and-cookies", destination: "/privacy", permanent: true },
+        { source: "/privacy-and-cookies/", destination: "/privacy", permanent: true },
+        { source: "/all-destinations", destination: "/destinations", permanent: true },
+        { source: "/all-destinations/", destination: "/destinations", permanent: true },
+        { source: "/pakistan-tours", destination: "/packages", permanent: true },
+        { source: "/pakistan-tours/", destination: "/packages", permanent: true },
+        { source: "/experiences", destination: "/packages", permanent: true },
+        { source: "/experiences/", destination: "/packages", permanent: true },
+        { source: "/transport", destination: "/", permanent: true },
+        { source: "/transport/", destination: "/", permanent: true },
+
+        // WP root-level blog posts — new site nests them under /blog/{slug}.
+        // Every slug in the 404 report matches a current blog post.
+        { source: "/how-traverse-pakistan-is-different-than-a-trivial-tour-company", destination: "/blog/how-traverse-pakistan-is-different-than-a-trivial-tour-company", permanent: true },
+        { source: "/how-traverse-pakistan-is-different-than-a-trivial-tour-company/", destination: "/blog/how-traverse-pakistan-is-different-than-a-trivial-tour-company", permanent: true },
+        { source: "/trek-to-haramosh-massif-kutwal-lake", destination: "/blog/trek-to-haramosh-massif-kutwal-lake", permanent: true },
+        { source: "/trek-to-haramosh-massif-kutwal-lake/", destination: "/blog/trek-to-haramosh-massif-kutwal-lake", permanent: true },
+        { source: "/leos-workshop-explores-walled-city-of-lahore-2", destination: "/blog/leos-workshop-explores-walled-city-of-lahore-2", permanent: true },
+        { source: "/leos-workshop-explores-walled-city-of-lahore-2/", destination: "/blog/leos-workshop-explores-walled-city-of-lahore-2", permanent: true },
+        { source: "/all-about-the-killer-mountain-nanga-parbat", destination: "/blog/all-about-the-killer-mountain-nanga-parbat", permanent: true },
+        { source: "/all-about-the-killer-mountain-nanga-parbat/", destination: "/blog/all-about-the-killer-mountain-nanga-parbat", permanent: true },
+        { source: "/things-to-do-in-hunza-valley", destination: "/blog/things-to-do-in-hunza-valley", permanent: true },
+        { source: "/things-to-do-in-hunza-valley/", destination: "/blog/things-to-do-in-hunza-valley", permanent: true },
+        { source: "/who-are-kalasha-people-where-do-they-live", destination: "/blog/who-are-kalasha-people-where-do-they-live", permanent: true },
+        { source: "/who-are-kalasha-people-where-do-they-live/", destination: "/blog/who-are-kalasha-people-where-do-they-live", permanent: true },
+        { source: "/peaks-visible-from-hunza-valley", destination: "/blog/peaks-visible-from-hunza-valley", permanent: true },
+        { source: "/peaks-visible-from-hunza-valley/", destination: "/blog/peaks-visible-from-hunza-valley", permanent: true },
+        { source: "/best-places-to-experience-blossom-up-north", destination: "/blog/best-places-to-experience-blossom-up-north", permanent: true },
+        { source: "/best-places-to-experience-blossom-up-north/", destination: "/blog/best-places-to-experience-blossom-up-north", permanent: true },
+        { source: "/best-winter-destinations-of-pakistan", destination: "/blog/best-winter-destinations-of-pakistan", permanent: true },
+        { source: "/best-winter-destinations-of-pakistan/", destination: "/blog/best-winter-destinations-of-pakistan", permanent: true },
+
+        // WP default permalinks: /?p=NUMBER can't be mapped 1:1 without a WP
+        // export. Best-effort — send to /blog listing (most were blog posts).
+        {
+          source: "/",
+          has: [{ type: "query", key: "p" }],
           destination: "/blog",
           permanent: true,
         },

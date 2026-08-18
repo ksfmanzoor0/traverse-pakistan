@@ -64,13 +64,14 @@ export function PromoTeaser({ compact }: { compact?: boolean }) {
   if (compact) {
     // Mobile bar / compact contexts — one-line pill above the CTA
     return state.status === "logged-out" ? (
-      <Link
+      <a
         href={signInHref}
+        rel="nofollow"
         className="flex items-center gap-2 h-9 px-3 rounded-[var(--radius-sm)] bg-[var(--primary-light)] text-[12px] font-semibold text-[var(--primary-deep)]"
       >
         <span className="inline-block w-2 h-2 rounded-full bg-[var(--primary)]" />
         Sign in for PKR 14,000 off →
-      </Link>
+      </a>
     ) : (
       <div className="flex items-center gap-2 h-9 px-3 rounded-[var(--radius-sm)] bg-[var(--primary-light)] text-[12px] font-semibold text-[var(--primary-deep)]">
         <span className="inline-block w-2 h-2 rounded-full bg-[var(--primary)]" />
@@ -81,8 +82,9 @@ export function PromoTeaser({ compact }: { compact?: boolean }) {
 
   // Sidebar block — two-line with icon
   return state.status === "logged-out" ? (
-    <Link
+    <a
       href={signInHref}
+      rel="nofollow"
       className="mt-4 flex items-start gap-3 p-3 rounded-[var(--radius-sm)] border border-[var(--primary)]/25 bg-[var(--primary-light)]/60 hover:border-[var(--primary)]/50 transition-colors"
     >
       <span
@@ -95,7 +97,7 @@ export function PromoTeaser({ compact }: { compact?: boolean }) {
         <span className="font-bold">Sign in to unlock PKR 14,000 off</span>
         <span className="block text-[var(--text-secondary)] mt-0.5">Every Traverser gets a personal code.</span>
       </span>
-    </Link>
+    </a>
   ) : (
     <div className="mt-4 flex items-start gap-3 p-3 rounded-[var(--radius-sm)] border border-[var(--primary)]/25 bg-[var(--primary-light)]/60">
       <span
