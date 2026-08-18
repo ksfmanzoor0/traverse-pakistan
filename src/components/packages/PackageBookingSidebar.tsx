@@ -574,12 +574,13 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
             scrolls to + opens the date picker and surfaces a one-line hint so
             the user isn't bounced. */}
         {checkIn ? (
-          <Link
+          <a
             href={`/packages/${pkg.slug}/checkout?adults=${adults}&rooms=${displayRooms}&tier=${selectedTier}&city=${departureCity}&checkin=${toIsoDate(checkIn)}`}
+            rel="nofollow"
             className="w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-semibold rounded-[var(--radius-sm)] flex items-center justify-center gap-2 hover:bg-[var(--primary-hover)] active:scale-[0.98] transition-all"
           >
             Book Now
-          </Link>
+          </a>
         ) : (
           <button
             type="button"

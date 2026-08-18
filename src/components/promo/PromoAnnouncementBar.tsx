@@ -53,8 +53,9 @@ export function PromoAnnouncementBar() {
   const signInHref = `/auth/sign-in?next=${encodeURIComponent(pathname)}`;
 
   return (
-    <Link
+    <a
       href={signInHref}
+      rel="nofollow"
       role="banner"
       aria-label="Sign up free to unlock PKR 14,000 off your first package"
       className="relative flex items-center justify-center gap-2 h-9 px-10 sm:px-12 bg-[var(--primary)] text-[var(--text-inverse)] text-[12px] sm:text-[13px] font-semibold hover:bg-[var(--primary-hover)] transition-colors"
@@ -77,6 +78,6 @@ export function PromoAnnouncementBar() {
           <line x1="6" y1="6" x2="18" y2="18" />
         </svg>
       </button>
-    </Link>
+    </a>
   );
 }

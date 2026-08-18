@@ -96,12 +96,13 @@ function FindBookingInner() {
         </form>
 
         <div className="space-y-1.5">
-          <Link
+          <a
             href="/auth/sign-in"
+            rel="nofollow"
             className="w-full h-11 flex items-center justify-center border border-[var(--border-default)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] font-semibold rounded-[var(--radius-sm)] hover:bg-[var(--bg-subtle)] transition-colors"
           >
             Get a Magic Link
-          </Link>
+          </a>
           <p className="text-center text-[12px] text-[var(--text-tertiary)]">
             On your WhatsApp or Email to view all bookings
           </p>

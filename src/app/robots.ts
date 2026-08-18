@@ -29,18 +29,18 @@ const AI_CRAWLERS = [
 
 const SEARCH_ENGINES = ["Googlebot", "Googlebot-Image", "Bingbot", "DuckDuckBot", "YandexBot", "Applebot"];
 
-// Explicit prefixes beat raw /*/ wildcards — many crawlers parse `/*/checkout`
-// as a literal path instead of a pattern, so we list the checkout routes by
-// product prefix.
+// /checkout paths deliberately stay ALLOWED (removed from this list) — the
+// pages themselves export noindex metadata (verified in each checkout
+// page.tsx). Blocking them via robots.txt would prevent Googlebot from
+// crawling → prevent it from ever SEEING the noindex tag → left URLs stuck
+// in the "Indexed, though blocked by robots.txt" bucket (we had 17). Letting
+// Google crawl once so it can read the noindex is the cleaner signal.
+//
+// Same reasoning for /auth/*: pages export robots.index=false. Nofollow on
+// internal links reduces discovery; noindex handles anything that leaks in.
 const FUNNEL_DISALLOW = [
   "/account/",
   "/booking/",
-  "/packages/*/checkout",
-  "/packages/*/checkout/",
-  "/hotels/*/checkout",
-  "/hotels/*/checkout/",
-  "/grouptours/*/checkout",
-  "/grouptours/*/checkout/",
   "/api/",
   "/_next/",
 ];

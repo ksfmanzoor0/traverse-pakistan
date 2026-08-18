@@ -361,12 +361,13 @@ export function BookingSidebar({ tour, reviews = [], previewCity = null }: Booki
           </div>
         </div>
 
-        <Link
+        <a
           href={checkoutHref}
+          rel="nofollow"
           className="mt-5 w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-bold rounded-[var(--radius-sm)] flex items-center justify-center gap-2 hover:bg-[var(--primary-hover)] active:scale-[0.98] transition-all"
         >
           {resumeAvailable ? "Resume booking" : "Reserve — no charge yet"}
-        </Link>
+        </a>
 
         <p className="mt-3 text-center text-[11px] text-[var(--text-tertiary)] flex items-center justify-center gap-1.5">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
