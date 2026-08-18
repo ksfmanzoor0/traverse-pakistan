@@ -74,7 +74,21 @@ const nextConfig: NextConfig = {
   ...(!isGitHubPages && {
     async redirects() {
       return [
-        // Original WP plugin (Support Tour): /st_tour/{slug} → /grouptours/{slug}
+        // Original WP plugin (Support Tour): /st_tour/{slug} → /grouptours/{slug}.
+        //
+        // A few WP tour slugs were renamed or moved to /packages on the new
+        // site — these MUST come BEFORE the generic /st_tour/:slug catch-all
+        // so they win the match. Google discovered these via /st_tour URLs and
+        // was landing on noindex 404 fallbacks.
+        { source: "/st_tour/trek-to-patundas-ultimate-adventure-of-upper-hunza", destination: "/grouptours/patundas-meadows-trek-upper-hunza", permanent: true },
+        { source: "/st_tour/trek-to-patundas-ultimate-adventure-of-upper-hunza/", destination: "/grouptours/patundas-meadows-trek-upper-hunza", permanent: true },
+        { source: "/st_tour/fairy-meadows-nanga-parbat", destination: "/packages/fairy-meadows-nanga-parbat", permanent: true },
+        { source: "/st_tour/fairy-meadows-nanga-parbat/", destination: "/packages/fairy-meadows-nanga-parbat", permanent: true },
+        { source: "/st_tour/luxury-trip-to-kumrat", destination: "/grouptours/trip-to-kumrat", permanent: true },
+        { source: "/st_tour/luxury-trip-to-kumrat/", destination: "/grouptours/trip-to-kumrat", permanent: true },
+        { source: "/st_tour/chitral-kalash-gol-national-park", destination: "/packages/chitral-kailash-gol-4day", permanent: true },
+        { source: "/st_tour/chitral-kalash-gol-national-park/", destination: "/packages/chitral-kailash-gol-4day", permanent: true },
+        // Generic catch-all: /st_tour/{slug} → /grouptours/{slug}
         { source: "/st_tour/:slug", destination: "/grouptours/:slug", permanent: true },
         { source: "/st_tour/:slug/", destination: "/grouptours/:slug", permanent: true },
         // /st_tour/{slug}/feed/ → /grouptours/{slug} (drop the RSS suffix)
@@ -96,6 +110,11 @@ const nextConfig: NextConfig = {
         { source: "/st_car/:slug*", destination: "/", permanent: true },
         // WP admin junk (email templates) — should never have been indexed.
         { source: "/st_template_email/:slug*", destination: "/", permanent: true },
+        // WP admin surfaces Google occasionally discovers via login redirects.
+        { source: "/wp-login.php", destination: "/", permanent: true },
+        { source: "/wp-admin/:slug*", destination: "/", permanent: true },
+        { source: "/my-account", destination: "/", permanent: true },
+        { source: "/my-account/:slug*", destination: "/", permanent: true },
 
         // Singular WP taxonomy paths shared with any old third-party listings.
         { source: "/tour/:slug*", destination: "/grouptours", permanent: true },
