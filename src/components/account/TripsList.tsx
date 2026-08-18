@@ -58,9 +58,9 @@ export function TripsList() {
         title="Sign in to view your trips"
         description="Sign in with email or Google to see bookings and manage trips."
         action={
-          <Link href="/auth/sign-in?redirect=/mybookings" rel="nofollow">
+          <a href="/auth/sign-in?redirect=/mybookings" rel="nofollow">
             <Button size="lg">Sign in</Button>
-          </Link>
+          </a>
         }
       />
     );

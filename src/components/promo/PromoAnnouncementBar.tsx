@@ -53,7 +53,7 @@ export function PromoAnnouncementBar() {
   const signInHref = `/auth/sign-in?next=${encodeURIComponent(pathname)}`;
 
   return (
-    <Link
+    <a
       href={signInHref}
       rel="nofollow"
       role="banner"
@@ -78,6 +78,6 @@ export function PromoAnnouncementBar() {
           <line x1="6" y1="6" x2="18" y2="18" />
         </svg>
       </button>
-    </Link>
+    </a>
   );
 }
