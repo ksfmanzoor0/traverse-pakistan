@@ -121,6 +121,10 @@ const nextConfig: NextConfig = {
         { source: "/author/:slug*", destination: "/", permanent: true },
 
         // Old WP language variants (en/) — new site is English-only, drop prefix.
+        // /en/blog/* → /blog listing (blog post slugs from WP don't match current
+        // blog set, so we send to the listing rather than /). Order matters:
+        // this must come BEFORE the /en/:path* catch-all.
+        { source: "/en/blog/:slug*", destination: "/blog", permanent: true },
         { source: "/en", destination: "/", permanent: true },
         { source: "/en/:path*", destination: "/", permanent: true },
 
