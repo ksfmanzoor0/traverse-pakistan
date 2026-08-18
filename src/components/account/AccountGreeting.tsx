@@ -22,7 +22,7 @@ export function AccountGreeting() {
             Sign in to manage your bookings and wishlist.
           </p>
         </div>
-        <Link href="/auth/sign-in?redirect=/account">
+        <Link href="/auth/sign-in?redirect=/account" rel="nofollow">
           <Button size="lg">Sign in</Button>
         </Link>
       </div>

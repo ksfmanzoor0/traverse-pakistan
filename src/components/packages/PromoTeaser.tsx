@@ -66,6 +66,7 @@ export function PromoTeaser({ compact }: { compact?: boolean }) {
     return state.status === "logged-out" ? (
       <Link
         href={signInHref}
+        rel="nofollow"
         className="flex items-center gap-2 h-9 px-3 rounded-[var(--radius-sm)] bg-[var(--primary-light)] text-[12px] font-semibold text-[var(--primary-deep)]"
       >
         <span className="inline-block w-2 h-2 rounded-full bg-[var(--primary)]" />
@@ -83,6 +84,7 @@ export function PromoTeaser({ compact }: { compact?: boolean }) {
   return state.status === "logged-out" ? (
     <Link
       href={signInHref}
+      rel="nofollow"
       className="mt-4 flex items-start gap-3 p-3 rounded-[var(--radius-sm)] border border-[var(--primary)]/25 bg-[var(--primary-light)]/60 hover:border-[var(--primary)]/50 transition-colors"
     >
       <span

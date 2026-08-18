@@ -48,6 +48,7 @@ export function UserMenu() {
     return (
       <Link
         href={signInHref}
+        rel="nofollow"
         className="w-9 h-9 rounded-full border border-[var(--border-default)] flex items-center justify-center text-[var(--text-primary)] hover:border-[var(--primary)] hover:bg-[var(--bg-subtle)] transition-colors"
         aria-label="Sign in"
       >
