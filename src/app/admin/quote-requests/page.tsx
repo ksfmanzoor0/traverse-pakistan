@@ -155,18 +155,23 @@ export default async function QuoteRequestsPage({
                     }}
                   >
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <div style={{ color: "var(--text-primary)" }}>
+                      <Link
+                        href={`/admin/quote-requests/${row.id}`}
+                        className="hover:underline"
+                        style={{ color: "var(--text-primary)" }}
+                      >
                         {formatDate(row.created_at)}
-                      </div>
+                      </Link>
                     </td>
                     <td className="px-4 py-3">{typeLabel(row.request_type)}</td>
                     <td className="px-4 py-3">
-                      <div
-                        className="font-medium"
+                      <Link
+                        href={`/admin/quote-requests/${row.id}`}
+                        className="font-medium hover:underline"
                         style={{ color: "var(--text-primary)" }}
                       >
                         {row.display_name}
-                      </div>
+                      </Link>
                       {row.tier ? (
                         <div
                           className="text-xs"
