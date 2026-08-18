@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+// Sign-in link uses a raw <a> instead of next/link so `rel="nofollow"` reaches
+// the rendered anchor — Next.js 16's Link strips unknown/hint rel values.
 import { useAuth } from "./AuthProvider";
 import { Icon } from "@/components/ui/Icon";
 
@@ -46,14 +48,14 @@ export function UserMenu() {
   // link (client) at hydration time.
   if (loading || !user) {
     return (
-      <Link
+      <a
         href={signInHref}
         rel="nofollow"
         className="w-9 h-9 rounded-full border border-[var(--border-default)] flex items-center justify-center text-[var(--text-primary)] hover:border-[var(--primary)] hover:bg-[var(--bg-subtle)] transition-colors"
         aria-label="Sign in"
       >
         <Icon name="user" size="md" />
-      </Link>
+      </a>
     );
   }
 
