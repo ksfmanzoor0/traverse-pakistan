@@ -20,7 +20,7 @@ export function GalleryEditor({
   onChange: (next: GalleryImage[]) => void;
   /** Which resource's upload endpoint to hit. Defaults to "tours" for
    *  backwards compat with the existing tour editor. */
-  resourceKind?: "tours" | "packages";
+  resourceKind?: "tours" | "packages" | "blog";
 }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
