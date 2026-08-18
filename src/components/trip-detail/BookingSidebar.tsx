@@ -363,6 +363,7 @@ export function BookingSidebar({ tour, reviews = [], previewCity = null }: Booki
 
         <Link
           href={checkoutHref}
+          rel="nofollow"
           className="mt-5 w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-bold rounded-[var(--radius-sm)] flex items-center justify-center gap-2 hover:bg-[var(--primary-hover)] active:scale-[0.98] transition-all"
         >
           {resumeAvailable ? "Resume booking" : "Reserve — no charge yet"}

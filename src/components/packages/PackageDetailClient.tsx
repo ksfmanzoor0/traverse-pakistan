@@ -214,6 +214,7 @@ export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages
                   <a
                     href={`/api/packages/${pkg.slug}/pdf`}
                     download
+                    rel="nofollow"
                     className="inline-flex items-center gap-2 px-5 h-11 rounded-[var(--radius-sm)] border border-[var(--border-default)] text-[14px] font-semibold text-[var(--text-primary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors"
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
