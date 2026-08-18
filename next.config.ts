@@ -138,6 +138,56 @@ const nextConfig: NextConfig = {
           destination: "/blog",
           permanent: true,
         },
+
+        // WP root-level policy/section pages — renamed on the new site.
+        { source: "/cancellation-policy-of-traverse-pakistan", destination: "/cancellation", permanent: true },
+        { source: "/cancellation-policy-of-traverse-pakistan/", destination: "/cancellation", permanent: true },
+        { source: "/customized-trips", destination: "/customise-tour", permanent: true },
+        { source: "/customized-trips/", destination: "/customise-tour", permanent: true },
+        { source: "/invitation-letter-for-pakistan", destination: "/invitation-letter", permanent: true },
+        { source: "/invitation-letter-for-pakistan/", destination: "/invitation-letter", permanent: true },
+        { source: "/privacy-policy", destination: "/privacy", permanent: true },
+        { source: "/privacy-policy/", destination: "/privacy", permanent: true },
+        { source: "/privacy-and-cookies", destination: "/privacy", permanent: true },
+        { source: "/privacy-and-cookies/", destination: "/privacy", permanent: true },
+        { source: "/all-destinations", destination: "/destinations", permanent: true },
+        { source: "/all-destinations/", destination: "/destinations", permanent: true },
+        { source: "/pakistan-tours", destination: "/packages", permanent: true },
+        { source: "/pakistan-tours/", destination: "/packages", permanent: true },
+        { source: "/experiences", destination: "/packages", permanent: true },
+        { source: "/experiences/", destination: "/packages", permanent: true },
+        { source: "/transport", destination: "/", permanent: true },
+        { source: "/transport/", destination: "/", permanent: true },
+
+        // WP root-level blog posts — new site nests them under /blog/{slug}.
+        // Every slug in the 404 report matches a current blog post.
+        { source: "/how-traverse-pakistan-is-different-than-a-trivial-tour-company", destination: "/blog/how-traverse-pakistan-is-different-than-a-trivial-tour-company", permanent: true },
+        { source: "/how-traverse-pakistan-is-different-than-a-trivial-tour-company/", destination: "/blog/how-traverse-pakistan-is-different-than-a-trivial-tour-company", permanent: true },
+        { source: "/trek-to-haramosh-massif-kutwal-lake", destination: "/blog/trek-to-haramosh-massif-kutwal-lake", permanent: true },
+        { source: "/trek-to-haramosh-massif-kutwal-lake/", destination: "/blog/trek-to-haramosh-massif-kutwal-lake", permanent: true },
+        { source: "/leos-workshop-explores-walled-city-of-lahore-2", destination: "/blog/leos-workshop-explores-walled-city-of-lahore-2", permanent: true },
+        { source: "/leos-workshop-explores-walled-city-of-lahore-2/", destination: "/blog/leos-workshop-explores-walled-city-of-lahore-2", permanent: true },
+        { source: "/all-about-the-killer-mountain-nanga-parbat", destination: "/blog/all-about-the-killer-mountain-nanga-parbat", permanent: true },
+        { source: "/all-about-the-killer-mountain-nanga-parbat/", destination: "/blog/all-about-the-killer-mountain-nanga-parbat", permanent: true },
+        { source: "/things-to-do-in-hunza-valley", destination: "/blog/things-to-do-in-hunza-valley", permanent: true },
+        { source: "/things-to-do-in-hunza-valley/", destination: "/blog/things-to-do-in-hunza-valley", permanent: true },
+        { source: "/who-are-kalasha-people-where-do-they-live", destination: "/blog/who-are-kalasha-people-where-do-they-live", permanent: true },
+        { source: "/who-are-kalasha-people-where-do-they-live/", destination: "/blog/who-are-kalasha-people-where-do-they-live", permanent: true },
+        { source: "/peaks-visible-from-hunza-valley", destination: "/blog/peaks-visible-from-hunza-valley", permanent: true },
+        { source: "/peaks-visible-from-hunza-valley/", destination: "/blog/peaks-visible-from-hunza-valley", permanent: true },
+        { source: "/best-places-to-experience-blossom-up-north", destination: "/blog/best-places-to-experience-blossom-up-north", permanent: true },
+        { source: "/best-places-to-experience-blossom-up-north/", destination: "/blog/best-places-to-experience-blossom-up-north", permanent: true },
+        { source: "/best-winter-destinations-of-pakistan", destination: "/blog/best-winter-destinations-of-pakistan", permanent: true },
+        { source: "/best-winter-destinations-of-pakistan/", destination: "/blog/best-winter-destinations-of-pakistan", permanent: true },
+
+        // WP default permalinks: /?p=NUMBER can't be mapped 1:1 without a WP
+        // export. Best-effort — send to /blog listing (most were blog posts).
+        {
+          source: "/",
+          has: [{ type: "query", key: "p" }],
+          destination: "/blog",
+          permanent: true,
+        },
       ];
     },
     async headers() {
