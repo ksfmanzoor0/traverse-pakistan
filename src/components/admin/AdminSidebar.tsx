@@ -14,6 +14,7 @@ const NAV = [
   { href: "/admin/destinations", label: "Destinations" },
   { href: "/admin/packages", label: "Packages" },
   { href: "/admin/tours", label: "Tours" },
+  { href: "/admin/blog", label: "Blog" },
   { href: "/admin/departures", label: "Departures" },
   { href: "/admin/reviews", label: "Reviews" },
   { href: "/admin/flight-fares", label: "Flight Fares" },

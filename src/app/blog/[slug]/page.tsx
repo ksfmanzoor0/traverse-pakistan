@@ -12,6 +12,7 @@ import {
   combineSchemas,
 } from "@/lib/seo/schema";
 import { getBlogPostBySlug, getAllBlogPosts } from "@/services/blog.service";
+import { sanitizeBlogHtml } from "@/lib/blog/sanitize";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -144,19 +145,15 @@ export default async function BlogPostPage({ params }: Props) {
                   </h4>
                 )}
 
-                {/* Section text — render paragraphs */}
-                {section.text && section.text.split("\n\n").map((para, j) => {
-                  const trimmed = para.trim();
-                  if (!trimmed || trimmed.length < 5) return null;
-                  return (
-                    <p
-                      key={j}
-                      className="text-[16px] leading-[1.8] text-[var(--text-secondary)] mb-4"
-                    >
-                      {trimmed}
-                    </p>
-                  );
-                })}
+                {/* Section text — sanitized HTML from the editor */}
+                {section.text && (
+                  <div
+                    className="blog-prose text-[16px] leading-[1.8] text-[var(--text-secondary)]"
+                    dangerouslySetInnerHTML={{
+                      __html: sanitizeBlogHtml(section.text),
+                    }}
+                  />
+                )}
 
                 {/* Section images */}
                 {section.images && section.images.length > 0 && (
