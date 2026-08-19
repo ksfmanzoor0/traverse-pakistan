@@ -2,13 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { BlogPostRow } from "@/lib/supabase/types";
+import type { BlogPostRow, BlogSectionJson } from "@/lib/supabase/types";
 import {
   updateBlogPost,
   setBlogPublished,
   deleteBlogPost,
   type BlogPatch,
 } from "@/app/admin/blog/actions";
+import { BlogSectionsEditor } from "./BlogSectionsEditor";
 
 type Tab = "basics" | "seo" | "sections" | "preview";
 
@@ -41,6 +42,7 @@ export function BlogEditor({ post }: { post: BlogPostRow }) {
         destination_slug: state.destination_slug,
         meta_title: state.meta_title,
         meta_description: state.meta_description,
+        sections: state.sections,
       };
       const res = await updateBlogPost(post.slug, body);
       if (!res.ok) return setError(res.error);
@@ -151,12 +153,11 @@ export function BlogEditor({ post }: { post: BlogPostRow }) {
         {tab === "basics" && <BasicsTab state={state} patch={patch} />}
         {tab === "seo" && <SeoTab state={state} patch={patch} />}
         {tab === "sections" && (
-          <div
-            className="p-8 rounded text-sm text-center"
-            style={{ background: "var(--bg-subtle)", color: "var(--text-tertiary)" }}
-          >
-            Sections editor with TipTap ships in the next step.
-          </div>
+          <BlogSectionsEditor
+            slug={post.slug}
+            value={state.sections}
+            onChange={(next: BlogSectionJson[]) => patch("sections", next)}
+          />
         )}
         {tab === "preview" && (
           <div className="text-sm" style={{ color: "var(--text-secondary)" }}>
@@ -184,7 +185,7 @@ export function BlogEditor({ post }: { post: BlogPostRow }) {
         </div>
       )}
 
-      {tab !== "preview" && tab !== "sections" && (
+      {tab !== "preview" && (
         <div
           className="mt-6 pt-4 flex items-center justify-between gap-3 border-t"
           style={{ borderColor: "var(--border-default)" }}
