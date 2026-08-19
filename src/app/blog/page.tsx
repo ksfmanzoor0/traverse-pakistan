@@ -6,6 +6,8 @@ import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { getLatestBlogPosts } from "@/services/blog.service";
 
+export const revalidate = 0;
+
 export const metadata: Metadata = buildMetadata({
   title: "Pakistan Travel Blog — Guides, Treks, Culture & Seasons",
   description:
