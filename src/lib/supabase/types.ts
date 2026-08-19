@@ -168,6 +168,36 @@ export type ProfileRow = {
 export type QuoteRequestType = "package" | "hotel" | "tour" | "custom";
 export type QuoteRequestStatus = "new" | "contacted" | "quoted" | "converted" | "closed";
 
+export type BlogSectionJson = {
+  id?: string;
+  heading?: string | null;
+  headingLevel?: "h2" | "h3" | "h4" | null;
+  text: string;
+  images?: { src: string; alt: string; caption?: string }[];
+};
+
+export type BlogPostRow = {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  image: string;
+  tag: string;
+  tags: string[];
+  categories: string[];
+  author: string;
+  read_time: string;
+  destination_slug: string | null;
+  meta_title: string;
+  meta_description: string;
+  sections: BlogSectionJson[];
+  published: boolean;
+  published_at: string | null;
+  updated_at: string;
+  created_at: string;
+};
+
 export type QuoteRequestRow = {
   id: string;
   user_id: string | null;
@@ -394,6 +424,13 @@ export type Database = {
         Insert: Omit<ReviewRow, "id" | "created_at" | "approved"> &
           Partial<Pick<ReviewRow, "id" | "created_at" | "approved">>;
         Update: Partial<ReviewRow>;
+        Relationships: [];
+      };
+      blog_posts: {
+        Row: BlogPostRow;
+        Insert: Omit<BlogPostRow, "created_at" | "updated_at"> &
+          Partial<Pick<BlogPostRow, "created_at" | "updated_at">>;
+        Update: Partial<BlogPostRow>;
         Relationships: [];
       };
       quote_requests: {

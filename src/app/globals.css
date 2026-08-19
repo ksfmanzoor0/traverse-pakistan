@@ -394,3 +394,18 @@ h1, h2, h3, h4, h5, h6 { letter-spacing: -0.025em; line-height: 1.15; }
   .hero-slide { animation: none; opacity: 0; }
   .hero-slide:first-child { opacity: 1; }
 }
+
+/* Blog post prose (TipTap HTML output, rendered via dangerouslySetInnerHTML) */
+.blog-prose p { margin-bottom: 1rem; }
+.blog-prose a { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
+.blog-prose a:hover { color: var(--primary-dark); }
+.blog-prose strong { font-weight: 700; color: var(--text-primary); }
+.blog-prose em { font-style: italic; }
+.blog-prose ul, .blog-prose ol { margin: 0.75rem 0 1rem 1.25rem; }
+.blog-prose ul { list-style: disc; }
+.blog-prose ol { list-style: decimal; }
+.blog-prose li { margin-bottom: 0.375rem; }
+.blog-prose blockquote { border-left: 3px solid var(--border-default); padding-left: 1rem; margin: 1rem 0; color: var(--text-tertiary); font-style: italic; }
+.blog-prose h2 { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin: 2rem 0 0.75rem; }
+.blog-prose h3 { font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin: 1.5rem 0 0.5rem; }
+.blog-prose iframe { width: 100%; aspect-ratio: 16 / 9; margin: 1rem 0; border-radius: var(--radius-md); border: 0; }
