@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { BlogPostRow, BlogSectionJson } from "@/lib/supabase/types";
 import {
@@ -313,12 +313,13 @@ function CoverImageInput({
 }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   async function onFile(file: File) {
     setError(null);
     setUploading(true);
+    const previous = value;
     try {
-      const previous = value;
       const form = new FormData();
       form.append("file", file);
       const res = await fetch(`/api/admin/blog/${slug}/images`, {
@@ -331,18 +332,17 @@ function CoverImageInput({
       }
       const { url } = (await res.json()) as { url: string };
       onChange(url);
-      // Fire-and-forget: delete the previous cover if it was an R2 file we
-      // uploaded. Orphan cleanup — failure is fine.
       if (previous && previous.startsWith("https://media.traversepakistan.com/")) {
         void fetch(
           `/api/admin/blog/${slug}/images?url=${encodeURIComponent(previous)}`,
           { method: "DELETE" },
-        );
+        ).catch(() => {});
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");
     } finally {
       setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
     }
   }
 
@@ -356,26 +356,28 @@ function CoverImageInput({
           className="flex-1 h-10 px-3 rounded text-sm"
           style={inputStyle}
         />
-        <label
-          className="h-10 px-3 rounded text-sm font-semibold cursor-pointer inline-flex items-center whitespace-nowrap"
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={() => inputRef.current?.click()}
+          className="h-10 px-4 rounded text-sm font-semibold whitespace-nowrap disabled:opacity-50"
           style={{
-            background: uploading ? "var(--bg-subtle)" : "var(--primary)",
-            color: uploading ? "var(--text-tertiary)" : "var(--text-inverse)",
+            background: "var(--primary)",
+            color: "var(--text-inverse)",
           }}
         >
           {uploading ? "Uploading…" : "Upload"}
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/avif"
-            className="hidden"
-            disabled={uploading}
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) onFile(f);
-              e.target.value = "";
-            }}
-          />
-        </label>
+        </button>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/avif"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void onFile(f);
+          }}
+        />
       </div>
       {error && (
         <div className="text-xs" style={{ color: "var(--error)" }}>
@@ -385,6 +387,7 @@ function CoverImageInput({
       {value && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
+          key={value}
           src={value}
           alt="Cover preview"
           className="max-h-40 rounded object-cover"
