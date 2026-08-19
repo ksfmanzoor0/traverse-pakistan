@@ -318,6 +318,7 @@ function CoverImageInput({
     setError(null);
     setUploading(true);
     try {
+      const previous = value;
       const form = new FormData();
       form.append("file", file);
       const res = await fetch(`/api/admin/blog/${slug}/images`, {
@@ -330,6 +331,14 @@ function CoverImageInput({
       }
       const { url } = (await res.json()) as { url: string };
       onChange(url);
+      // Fire-and-forget: delete the previous cover if it was an R2 file we
+      // uploaded. Orphan cleanup — failure is fine.
+      if (previous && previous.startsWith("https://media.traversepakistan.com/")) {
+        void fetch(
+          `/api/admin/blog/${slug}/images?url=${encodeURIComponent(previous)}`,
+          { method: "DELETE" },
+        );
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");
     } finally {

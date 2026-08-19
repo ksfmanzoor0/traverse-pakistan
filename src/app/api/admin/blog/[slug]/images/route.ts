@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAdmin } from "@/lib/admin/guard";
 import { putR2Object, deleteR2Object, r2KeyFromUrl } from "@/lib/r2";
+
+function bustBlogCache(slug: string) {
+  revalidateTag("blog", {});
+  revalidatePath(`/blog/${slug}`);
+  revalidatePath("/blog");
+}
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -30,16 +37,19 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: stri
   const key = `blog/${slug}/${crypto.randomUUID()}.${extForType(file.type)}`;
   const r = await putR2Object(key, bytes, file.type);
   if (!r.ok || !r.url) return NextResponse.json({ error: r.error ?? "upload failed" }, { status: 500 });
+  bustBlogCache(slug);
   return NextResponse.json({ url: r.url });
 }
 
-export async function DELETE(req: NextRequest) {
+export async function DELETE(req: NextRequest, ctx: { params: Promise<{ slug: string }> }) {
   await requireAdmin();
+  const { slug } = await ctx.params;
   const url = req.nextUrl.searchParams.get("url");
   if (!url) return NextResponse.json({ error: "url query param required" }, { status: 400 });
   const key = r2KeyFromUrl(url);
   if (!key) return NextResponse.json({ ok: true, skipped: true });
   const r = await deleteR2Object(key);
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: 500 });
+  bustBlogCache(slug);
   return NextResponse.json({ ok: true });
 }
