@@ -82,18 +82,26 @@ export const getAllBlogPosts = cache(async (): Promise<BlogPost[]> => {
   }
 });
 
+const _fetchBlogPostBySlug = unstable_cache(
+  async (slug: string): Promise<BlogPost | null> => {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("blog_posts")
+      .select(BLOG_SELECT)
+      .eq("slug", slug)
+      .eq("published", true)
+      .maybeSingle();
+    if (error) throw new Error(`getBlogPostBySlug: ${error.message}`);
+    return data ? toBlogPost(data as unknown as RawBlogPost) : null;
+  },
+  ["blog-post-by-slug"],
+  { tags: ["blog"], revalidate: 3600 },
+);
+
 export const getBlogPostBySlug = cache(
   async (slug: string): Promise<BlogPost | null> => {
     try {
-      const supabase = getSupabaseAdmin();
-      const { data, error } = await supabase
-        .from("blog_posts")
-        .select(BLOG_SELECT)
-        .eq("slug", slug)
-        .eq("published", true)
-        .maybeSingle();
-      if (error) throw new Error(`getBlogPostBySlug: ${error.message}`);
-      return data ? toBlogPost(data as unknown as RawBlogPost) : null;
+      return await _fetchBlogPostBySlug(slug);
     } catch (err) {
       console.error("[blog.service] Supabase read failed, falling back to static data:", err);
       return STATIC_BLOG_POSTS.find((p) => p.slug === slug) ?? null;

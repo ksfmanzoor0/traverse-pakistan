@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { BlogPostRow, BlogSectionJson } from "@/lib/supabase/types";
 import {
@@ -302,6 +302,102 @@ function ChipsInput({
   );
 }
 
+function CoverImageInput({
+  slug,
+  value,
+  onChange,
+}: {
+  slug: string;
+  value: string;
+  onChange: (url: string) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function onFile(file: File) {
+    setError(null);
+    setUploading(true);
+    const previous = value;
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch(`/api/admin/blog/${slug}/images`, {
+        method: "POST",
+        body: form,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `Upload failed (${res.status})`);
+      }
+      const { url } = (await res.json()) as { url: string };
+      onChange(url);
+      if (previous && previous.startsWith("https://media.traversepakistan.com/")) {
+        void fetch(
+          `/api/admin/blog/${slug}/images?url=${encodeURIComponent(previous)}`,
+          { method: "DELETE" },
+        ).catch(() => {});
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Paste URL or click Upload"
+          className="flex-1 h-10 px-3 rounded text-sm"
+          style={inputStyle}
+        />
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={() => inputRef.current?.click()}
+          className="h-10 px-4 rounded text-sm font-semibold whitespace-nowrap disabled:opacity-50"
+          style={{
+            background: "var(--primary)",
+            color: "var(--text-inverse)",
+          }}
+        >
+          {uploading ? "Uploading…" : "Upload"}
+        </button>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/avif"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void onFile(f);
+          }}
+        />
+      </div>
+      {error && (
+        <div className="text-xs" style={{ color: "var(--error)" }}>
+          {error}
+        </div>
+      )}
+      {value && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={value}
+          src={value}
+          alt="Cover preview"
+          className="max-h-40 rounded object-cover"
+          style={{ border: "1px solid var(--border-default)" }}
+        />
+      )}
+    </div>
+  );
+}
+
 function BasicsTab({
   state,
   patch,
@@ -332,15 +428,11 @@ function BasicsTab({
         />
       </Field>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field
-          label="Cover image URL"
-          note="Full URL to the hero image. R2 upload UI is in the Sections tab."
-        >
-          <input
+        <Field label="Cover image" note="Upload or paste a URL. Uploads land in R2.">
+          <CoverImageInput
+            slug={state.slug}
             value={state.image}
-            onChange={(e) => patch("image", e.target.value)}
-            className="w-full h-10 px-3 rounded text-sm"
-            style={inputStyle}
+            onChange={(url) => patch("image", url)}
           />
         </Field>
         <Field label="Read time">
