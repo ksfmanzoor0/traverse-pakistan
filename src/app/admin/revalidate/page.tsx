@@ -2,16 +2,18 @@ import { getAllHotels } from "@/services/hotel.service";
 import { getAllTours } from "@/services/tour.service";
 import { getAllPackages } from "@/services/package.service";
 import { getAllDestinations } from "@/services/destination.service";
+import { getAllBlogPosts } from "@/services/blog.service";
 import { RevalidatePanel } from "@/components/admin/RevalidatePanel";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminRevalidatePage() {
-  const [hotels, tours, packages, destinations] = await Promise.all([
+  const [hotels, tours, packages, destinations, blogPosts] = await Promise.all([
     getAllHotels(),
     getAllTours(),
     getAllPackages(),
     getAllDestinations(),
+    getAllBlogPosts(),
   ]);
 
   const sections = [
@@ -42,6 +44,13 @@ export default async function AdminRevalidatePage() {
       listingPath: "/destinations",
       pathPrefix: "/destinations/",
       items: destinations.map((d) => ({ slug: d.slug, name: d.name })),
+    },
+    {
+      title: "Blog",
+      endpoint: "/api/revalidate-blog",
+      listingPath: "/blog",
+      pathPrefix: "/blog/",
+      items: blogPosts.map((p) => ({ slug: p.slug, name: p.title })),
     },
   ];
 
