@@ -14,10 +14,6 @@ import {
 import { getBlogPostBySlug, getAllBlogPosts } from "@/services/blog.service";
 import { sanitizeBlogHtml } from "@/lib/blog/sanitize";
 
-// Admin-authored content: render fresh every request so Save shows up
-// instantly. Supabase read is cheap (indexed slug lookup).
-export const revalidate = 0;
-
 interface Props {
   params: Promise<{ slug: string }>;
 }
