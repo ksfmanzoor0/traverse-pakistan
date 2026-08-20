@@ -2,11 +2,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { blogPosts } from "@/data/blog-posts";
+import { getLatestBlogPosts } from "@/services/blog.service";
 
-export function BlogGrid() {
-  const featured = blogPosts[0];
-  const rest = blogPosts.slice(1, 5);
+export async function BlogGrid() {
+  const posts = await getLatestBlogPosts(5);
+  const featured = posts[0];
+  const rest = posts.slice(1, 5);
 
   return (
     <section className="py-20 sm:py-24 bg-[var(--bg-primary)]">
