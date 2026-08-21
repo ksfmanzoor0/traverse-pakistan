@@ -31,6 +31,19 @@ function revalidateBlog(slug?: string) {
   revalidatePath("/admin/blog");
   // Homepage BlogGrid also reads blog data — invalidate its cache too.
   revalidatePath("/");
+
+  // Warm the invalidated pages so Vercel edge SWR doesn't serve the first
+  // visitor stale HTML. Fire-and-forget: we don't await because Save shouldn't
+  // block on cache warming. Failure is harmless (SWR still works, just with
+  // a 1-request delay).
+  const base = process.env.NEXT_PUBLIC_SITE_URL;
+  if (base) {
+    const urls = [`${base}/blog`, `${base}/`];
+    if (slug) urls.push(`${base}/blog/${slug}`);
+    for (const url of urls) {
+      void fetch(url, { method: "GET", cache: "no-store" }).catch(() => {});
+    }
+  }
 }
 
 export async function createBlogPost(input: {
