@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Container } from "@/components/ui/Container";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { buildMetadata } from "@/lib/seo/metadata";
+import { getTerms } from "@/services/terms.service";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = buildMetadata({
   title: "Terms & Conditions",
@@ -10,17 +13,17 @@ export const metadata: Metadata = buildMetadata({
   path: "/terms",
 });
 
-const codeOfConduct = [
-  "Garbage disposal must not pollute water sources or the natural environment.",
-  "The host reserves the right to cancel the trip without prior notice for any reasons deemed appropriate by them.",
-  "The company, trip leader, and organizers hold no responsibility for accidents arising from avalanches or unforeseen natural disasters.",
-  "No liability is accepted for theft, loss, or damage to personal belongings.",
-  "Weather, political conditions, and transport availability may necessitate itinerary changes; trip leaders decide on alternatives.",
-  "Organizers can terminate a participant's trip for indiscipline without refund.",
-  "Management decides on meals; prices may adjust if fuel costs increase by more than PKR 30/litre from the announcement date.",
-];
+export default async function TermsPage() {
+  const terms = await getTerms();
+  const cancellationBlocks: {
+    title: string;
+    rows: { days: string; charge: string }[];
+  }[] = [
+    { title: "Group / Public Tours", rows: terms.cancellation.group },
+    { title: "Custom / Private Tours", rows: terms.cancellation.private },
+    { title: "Transport Service", rows: terms.cancellation.transport },
+  ];
 
-export default function TermsPage() {
   return (
     <div className="py-8 sm:py-12">
       <Container>
@@ -31,26 +34,24 @@ export default function TermsPage() {
             Terms &amp; Conditions
           </h1>
           <p className="mt-4 text-[var(--text-secondary)] leading-relaxed">
-            Traverse Pakistan strictly follows these terms and conditions. You are required to read all
-            of them before signing up for a trip with us. Participants receive an undertaking form at
-            the start of each trip containing trip details and these T&amp;Cs, requiring a physical
-            signature and thumb impression.
+            {terms.intro}
           </p>
         </div>
 
         <div className="mt-12 space-y-12 max-w-3xl">
-
           <section>
             <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-6">
               Code of Conduct
             </h2>
             <ol className="space-y-4">
-              {codeOfConduct.map((item, i) => (
+              {terms.codeOfConduct.map((item, i) => (
                 <li key={i} className="flex gap-4">
                   <span className="shrink-0 w-7 h-7 rounded-full bg-[var(--primary-light)] text-[var(--primary)] text-[13px] font-bold flex items-center justify-center">
                     {i + 1}
                   </span>
-                  <p className="text-[var(--text-secondary)] leading-relaxed pt-0.5">{item}</p>
+                  <p className="text-[var(--text-secondary)] leading-relaxed pt-0.5">
+                    {item}
+                  </p>
                 </li>
               ))}
             </ol>
@@ -62,60 +63,33 @@ export default function TermsPage() {
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div className="bg-[var(--bg-subtle)] rounded-xl p-6">
-                <h3 className="text-[16px] font-bold text-[var(--text-primary)] mb-4">Group / Public Tours</h3>
-                <ul className="space-y-3 text-[14px]">
-                  {[
-                    { days: "14 days before", charge: "50% charges" },
-                    { days: "7 days before", charge: "75% charges" },
-                    { days: "3 days before", charge: "100% charges" },
-                    { days: "1 day before", charge: "100% charges" },
-                  ].map(({ days, charge }) => (
-                    <li key={days} className="flex justify-between items-center gap-4">
-                      <span className="text-[var(--text-secondary)]">{days}</span>
-                      <span className="font-semibold text-[var(--text-primary)]">{charge}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              {cancellationBlocks.map(({ title, rows }) => (
+                <div key={title} className="bg-[var(--bg-subtle)] rounded-xl p-6">
+                  <h3 className="text-[16px] font-bold text-[var(--text-primary)] mb-4">
+                    {title}
+                  </h3>
+                  <ul className="space-y-3 text-[14px]">
+                    {rows.map((r, i) => (
+                      <li
+                        key={`${r.days}-${i}`}
+                        className="flex justify-between items-center gap-4"
+                      >
+                        <span className="text-[var(--text-secondary)]">{r.days}</span>
+                        <span className="font-semibold text-[var(--text-primary)]">
+                          {r.charge}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
 
               <div className="bg-[var(--bg-subtle)] rounded-xl p-6">
-                <h3 className="text-[16px] font-bold text-[var(--text-primary)] mb-4">Custom / Private Tours</h3>
-                <ul className="space-y-3 text-[14px]">
-                  {[
-                    { days: "30 days before", charge: "75% charges" },
-                    { days: "7 days before", charge: "100% charges" },
-                    { days: "3 days before", charge: "100% charges" },
-                  ].map(({ days, charge }) => (
-                    <li key={days} className="flex justify-between items-center gap-4">
-                      <span className="text-[var(--text-secondary)]">{days}</span>
-                      <span className="font-semibold text-[var(--text-primary)]">{charge}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="bg-[var(--bg-subtle)] rounded-xl p-6">
-                <h3 className="text-[16px] font-bold text-[var(--text-primary)] mb-4">Transport Service</h3>
-                <ul className="space-y-3 text-[14px]">
-                  {[
-                    { days: "14 days before", charge: "30% charges" },
-                    { days: "7 days before", charge: "50% charges" },
-                    { days: "3 days before", charge: "75% charges" },
-                    { days: "1 day before", charge: "100% charges" },
-                  ].map(({ days, charge }) => (
-                    <li key={days} className="flex justify-between items-center gap-4">
-                      <span className="text-[var(--text-secondary)]">{days}</span>
-                      <span className="font-semibold text-[var(--text-primary)]">{charge}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="bg-[var(--bg-subtle)] rounded-xl p-6">
-                <h3 className="text-[16px] font-bold text-[var(--text-primary)] mb-4">Hotels &amp; Airline Tickets</h3>
+                <h3 className="text-[16px] font-bold text-[var(--text-primary)] mb-4">
+                  Hotels &amp; Airline Tickets
+                </h3>
                 <p className="text-[14px] text-[var(--text-secondary)] leading-relaxed">
-                  Cancellation policies vary per hotel or airline and will be clearly shown before booking confirmation.
+                  {terms.cancellation.hotelsAirlinesNote}
                 </p>
               </div>
             </div>
@@ -125,15 +99,17 @@ export default function TermsPage() {
                 Flight Cancellation / Road Closure
               </h3>
               <p className="text-[14px] text-[var(--text-secondary)] leading-relaxed">
-                In the event of a flight cancellation or road closure, clients may reschedule within 6 months or cancel. A minimum cancellation charge of 50% applies in either case.
+                {terms.flightCancellation}
               </p>
             </div>
           </section>
 
           <section>
-            <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-4">Refund Policy</h2>
+            <h2 className="text-[22px] font-bold text-[var(--text-primary)] mb-4">
+              Refund Policy
+            </h2>
             <p className="text-[var(--text-secondary)] leading-relaxed">
-              Approved refunds are processed within <strong className="text-[var(--text-primary)]">6 working weeks</strong> from the date of cancellation.
+              {terms.refund}
             </p>
           </section>
 
@@ -159,7 +135,6 @@ export default function TermsPage() {
               </a>
             </div>
           </section>
-
         </div>
       </Container>
     </div>

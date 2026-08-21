@@ -6,11 +6,6 @@ import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { getLatestBlogPosts } from "@/services/blog.service";
 
-// Render fresh on every request so admin Save is instant. Underlying data
-// fetch is unstable_cache-backed and tagged 'blog', so DB reads are cheap
-// and only happen after tag revalidation.
-export const dynamic = "force-dynamic";
-
 export const metadata: Metadata = buildMetadata({
   title: "Pakistan Travel Blog — Guides, Treks, Culture & Seasons",
   description:
