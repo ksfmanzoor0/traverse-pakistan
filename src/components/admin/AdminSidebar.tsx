@@ -15,6 +15,7 @@ const NAV = [
   { href: "/admin/packages", label: "Packages" },
   { href: "/admin/tours", label: "Tours" },
   { href: "/admin/blog", label: "Blog" },
+  { href: "/admin/terms", label: "Terms" },
   { href: "/admin/departures", label: "Departures" },
   { href: "/admin/reviews", label: "Reviews" },
   { href: "/admin/flight-fares", label: "Flight Fares" },
