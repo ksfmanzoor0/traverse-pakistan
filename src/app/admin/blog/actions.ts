@@ -81,6 +81,20 @@ export async function updateBlogPost(
   const supabase = getSupabaseAdmin();
 
   const updates: BlogPatch & { published_at?: string | null } = { ...patch };
+
+  // Normalize sections: if a section has a heading but no headingLevel, the
+  // public renderer would silently hide the heading. Default to h2.
+  if (Array.isArray(updates.sections)) {
+    updates.sections = updates.sections.map((sec) => {
+      const heading = sec.heading?.trim() ?? "";
+      const level = sec.headingLevel;
+      if (heading && (level === null || level === undefined)) {
+        return { ...sec, headingLevel: "h2" };
+      }
+      return sec;
+    });
+  }
+
   if (patch.published === true) {
     const { data: existing } = await supabase
       .from("blog_posts")
