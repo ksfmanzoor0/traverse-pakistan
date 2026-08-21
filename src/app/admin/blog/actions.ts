@@ -29,6 +29,8 @@ function revalidateBlog(slug?: string) {
   revalidatePath("/blog");
   if (slug) revalidatePath(`/blog/${slug}`);
   revalidatePath("/admin/blog");
+  // Homepage BlogGrid also reads blog data — invalidate its cache too.
+  revalidatePath("/");
 }
 
 export async function createBlogPost(input: {

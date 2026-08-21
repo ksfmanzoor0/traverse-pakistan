@@ -11,18 +11,11 @@ export const metadata: Metadata = buildMetadata({
 });
 
 const codeOfConduct = [
-  "Members cannot engage in acts showing moral or character failures.",
-  "Altercation, verbal or physical abuse, and aggravated behavior are strictly forbidden.",
   "Garbage disposal must not pollute water sources or the natural environment.",
   "The host reserves the right to cancel the trip without prior notice for any reasons deemed appropriate by them.",
-  "Organizers are not responsible for unavailability due to hotel closures or circumstances beyond their control.",
-  "Air-conditioned buses operate selectively on steep mountain ascents to prevent engine overheating.",
   "The company, trip leader, and organizers hold no responsibility for accidents arising from avalanches or unforeseen natural disasters.",
   "No liability is accepted for theft, loss, or damage to personal belongings.",
   "Weather, political conditions, and transport availability may necessitate itinerary changes; trip leaders decide on alternatives.",
-  "Organizers reserve the right to assign seats in transport vehicles.",
-  "The organizers reserve the right to use group photos for electronic or digital media.",
-  "Smoking in transport vehicles is strictly prohibited.",
   "Organizers can terminate a participant's trip for indiscipline without refund.",
   "Management decides on meals; prices may adjust if fuel costs increase by more than PKR 30/litre from the announcement date.",
 ];

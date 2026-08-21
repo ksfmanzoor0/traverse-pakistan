@@ -14,6 +14,11 @@ import {
 import { getBlogPostBySlug, getAllBlogPosts } from "@/services/blog.service";
 import { sanitizeBlogHtml } from "@/lib/blog/sanitize";
 
+// Admin-authored content — render fresh on every request so Save is instant.
+// Supabase read is a cheap indexed slug lookup wrapped in unstable_cache, so
+// the actual DB hit only happens after the 'blog' tag is revalidated.
+export const dynamic = "force-dynamic";
+
 interface Props {
   params: Promise<{ slug: string }>;
 }
