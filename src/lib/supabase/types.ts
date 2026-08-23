@@ -168,6 +168,27 @@ export type ProfileRow = {
 export type QuoteRequestType = "package" | "hotel" | "tour" | "custom";
 export type QuoteRequestStatus = "new" | "contacted" | "quoted" | "converted" | "closed";
 
+export type CancellationRow = { days: string; charge: string };
+
+export type TermsContent = {
+  intro: string;
+  codeOfConduct: string[];
+  cancellation: {
+    group: CancellationRow[];
+    private: CancellationRow[];
+    transport: CancellationRow[];
+    hotelsAirlinesNote: string;
+  };
+  flightCancellation: string;
+  refund: string;
+};
+
+export type SiteSettingsRow = {
+  key: string;
+  value: unknown;
+  updated_at: string;
+};
+
 export type BlogSectionJson = {
   id?: string;
   heading?: string | null;
@@ -424,6 +445,13 @@ export type Database = {
         Insert: Omit<ReviewRow, "id" | "created_at" | "approved"> &
           Partial<Pick<ReviewRow, "id" | "created_at" | "approved">>;
         Update: Partial<ReviewRow>;
+        Relationships: [];
+      };
+      site_settings: {
+        Row: SiteSettingsRow;
+        Insert: Omit<SiteSettingsRow, "updated_at"> &
+          Partial<Pick<SiteSettingsRow, "updated_at">>;
+        Update: Partial<SiteSettingsRow>;
         Relationships: [];
       };
       blog_posts: {

@@ -29,6 +29,21 @@ function revalidateBlog(slug?: string) {
   revalidatePath("/blog");
   if (slug) revalidatePath(`/blog/${slug}`);
   revalidatePath("/admin/blog");
+  // Homepage BlogGrid also reads blog data — invalidate its cache too.
+  revalidatePath("/");
+
+  // Warm the invalidated pages so Vercel edge SWR doesn't serve the first
+  // visitor stale HTML. Fire-and-forget: we don't await because Save shouldn't
+  // block on cache warming. Failure is harmless (SWR still works, just with
+  // a 1-request delay).
+  const base = process.env.NEXT_PUBLIC_SITE_URL;
+  if (base) {
+    const urls = [`${base}/blog`, `${base}/`];
+    if (slug) urls.push(`${base}/blog/${slug}`);
+    for (const url of urls) {
+      void fetch(url, { method: "GET", cache: "no-store" }).catch(() => {});
+    }
+  }
 }
 
 export async function createBlogPost(input: {
@@ -79,6 +94,20 @@ export async function updateBlogPost(
   const supabase = getSupabaseAdmin();
 
   const updates: BlogPatch & { published_at?: string | null } = { ...patch };
+
+  // Normalize sections: if a section has a heading but no headingLevel, the
+  // public renderer would silently hide the heading. Default to h2.
+  if (Array.isArray(updates.sections)) {
+    updates.sections = updates.sections.map((sec) => {
+      const heading = sec.heading?.trim() ?? "";
+      const level = sec.headingLevel;
+      if (heading && (level === null || level === undefined)) {
+        return { ...sec, headingLevel: "h2" };
+      }
+      return sec;
+    });
+  }
+
   if (patch.published === true) {
     const { data: existing } = await supabase
       .from("blog_posts")

@@ -40,7 +40,17 @@ DOMPurify.addHook("uponSanitizeElement", (node, data) => {
   }
 });
 
-export function sanitizeBlogHtml(html: string): string {
-  if (!html) return "";
-  return DOMPurify.sanitize(html, CONFIG) as unknown as string;
+export function sanitizeBlogHtml(html: unknown): string {
+  if (typeof html !== "string" || !html) return "";
+  try {
+    return DOMPurify.sanitize(html, CONFIG) as unknown as string;
+  } catch (err) {
+    // Never 500 the page for a bad section; log so we can see it in Vercel.
+    console.error("[sanitizeBlogHtml] threw on input:", {
+      length: html.length,
+      preview: html.slice(0, 200),
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return "";
+  }
 }
