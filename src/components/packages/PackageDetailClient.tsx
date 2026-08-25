@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Container } from "@/components/ui/Container";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { Chip } from "@/components/ui/Chip";
@@ -21,17 +22,29 @@ interface PackageDetailClientProps {
   itinerary: PackageItinerary | null;
   hotelsMap: Record<string, Hotel>;
   relatedPackages: Package[];
-  /** Preview override from ?preview= URL. Real customers don't set this. */
-  previewCity?: "islamabad" | "lahore" | "karachi" | "skardu" | null;
-  /** Preview tier override from ?previewTier= URL. Admin-only. */
-  previewTier?: "deluxe" | "luxury" | null;
 }
 
 const CITY_TO_HOME: Record<"islamabad" | "lahore" | "karachi" | "skardu", "ISB" | "LHE" | "KHI" | "KDU"> = {
   islamabad: "ISB", lahore: "LHE", karachi: "KHI", skardu: "KDU",
 };
 
-export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages, previewCity, previewTier }: PackageDetailClientProps) {
+const PREVIEW_CITY_MAP: Record<string, "islamabad" | "lahore" | "karachi" | "skardu"> = {
+  ISB: "islamabad", LHE: "lahore", KHI: "karachi", KDU: "skardu",
+};
+
+export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages }: PackageDetailClientProps) {
+  // Read ?preview= / ?previewTier= client-side so the server route can stay
+  // fully static and prerender via generateStaticParams. Real customers don't
+  // set these — they exist for admin/QA to preview a specific pricing tier.
+  const searchParams = useSearchParams();
+  const { previewCity, previewTier } = useMemo(() => {
+    const rawCity = searchParams.get("preview")?.toUpperCase() ?? "";
+    const rawTier = searchParams.get("previewTier") ?? "";
+    return {
+      previewCity: PREVIEW_CITY_MAP[rawCity] ?? null,
+      previewTier: rawTier === "deluxe" || rawTier === "luxury" ? (rawTier as "deluxe" | "luxury") : null,
+    };
+  }, [searchParams]);
   const [selectedTier, setSelectedTier] = useState<PackageTier>(previewTier ?? "deluxe");
   const [departureCity, setDepartureCity] = useState<"islamabad" | "lahore" | "karachi">(
     (previewCity && previewCity !== "skardu" ? previewCity : null)
