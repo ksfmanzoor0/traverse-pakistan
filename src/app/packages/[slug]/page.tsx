@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { PackageDetailClient } from "@/components/packages/PackageDetailClient";
 import { JsonLd } from "@/components/seo/JsonLd";
@@ -15,12 +16,7 @@ import type { Hotel } from "@/types/hotel";
 
 interface Props {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<{ preview?: string; previewTier?: string }>;
 }
-
-const PREVIEW_CITY_MAP: Record<string, "islamabad" | "lahore" | "karachi" | "skardu"> = {
-  ISB: "islamabad", LHE: "lahore", KHI: "karachi", KDU: "skardu",
-};
 
 export async function generateStaticParams() {
   const packages = await getAllPackages();
@@ -49,12 +45,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
 }
 
-export default async function PackageDetailPage({ params, searchParams }: Props) {
+export default async function PackageDetailPage({ params }: Props) {
   const { slug } = await params;
-  const sp = searchParams ? await searchParams : undefined;
-  const previewCity = sp?.preview ? PREVIEW_CITY_MAP[sp.preview.toUpperCase()] ?? null : null;
-  const previewTier: "deluxe" | "luxury" | null =
-    sp?.previewTier === "deluxe" || sp?.previewTier === "luxury" ? sp.previewTier : null;
   const pkg = await getPackageBySlug(slug);
   if (!pkg) notFound();
 
@@ -87,14 +79,14 @@ export default async function PackageDetailPage({ params, searchParams }: Props)
     <>
       <JsonLd data={schema} id={`package-${pkg.slug}-jsonld`} />
       <TrackView itemId={pkg.slug} itemName={pkg.name} bookingType="package" price={fromPrice} />
-      <PackageDetailClient
-        pkg={pkg}
-        itinerary={itinerary}
-        hotelsMap={hotelsMap}
-        relatedPackages={relatedPackages}
-        previewCity={previewCity}
-        previewTier={previewTier}
-      />
+      <Suspense fallback={null}>
+        <PackageDetailClient
+          pkg={pkg}
+          itinerary={itinerary}
+          hotelsMap={hotelsMap}
+          relatedPackages={relatedPackages}
+        />
+      </Suspense>
     </>
   );
 }
