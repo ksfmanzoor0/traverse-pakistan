@@ -181,6 +181,18 @@ const nextConfig: NextConfig = {
         { source: "/experiences/", destination: "/packages", permanent: true },
         { source: "/transport", destination: "/", permanent: true },
         { source: "/transport/", destination: "/", permanent: true },
+        // Renamed policy pages.
+        { source: "/terms-conditions", destination: "/terms", permanent: true },
+        { source: "/terms-conditions/", destination: "/terms", permanent: true },
+        // /st_location bare root — middleware handles /st_location/{...}/ but
+        // not the archive index.
+        { source: "/st_location", destination: "/destinations", permanent: true },
+        { source: "/st_location/", destination: "/destinations", permanent: true },
+        // WP theme leftovers — safe to send home.
+        { source: "/footer-page-new", destination: "/", permanent: true },
+        { source: "/footer-page-new/", destination: "/", permanent: true },
+        { source: "/search-hotel-half-map", destination: "/", permanent: true },
+        { source: "/search-hotel-half-map/", destination: "/", permanent: true },
 
         // WP root-level blog posts — new site nests them under /blog/{slug}.
         // Every slug in the 404 report matches a current blog post.
@@ -202,6 +214,13 @@ const nextConfig: NextConfig = {
         { source: "/best-places-to-experience-blossom-up-north/", destination: "/blog/best-places-to-experience-blossom-up-north", permanent: true },
         { source: "/best-winter-destinations-of-pakistan", destination: "/blog/best-winter-destinations-of-pakistan", permanent: true },
         { source: "/best-winter-destinations-of-pakistan/", destination: "/blog/best-winter-destinations-of-pakistan", permanent: true },
+        { source: "/best-places-to-experience-autumn-colors-in-pakistan", destination: "/blog/best-places-to-experience-autumn-colors-in-pakistan", permanent: true },
+        { source: "/best-places-to-experience-autumn-colors-in-pakistan/", destination: "/blog/best-places-to-experience-autumn-colors-in-pakistan", permanent: true },
+        // Blog post whose original WP images are all on the decommissioned
+        // wp.traversepakistan.com origin and cannot be recovered. Route the
+        // URL to the blog listing so Google drops it and users don't hit
+        // a broken page.
+        { source: "/blog/leos-workshop-explores-walled-city-of-lahore-2", destination: "/blog", permanent: true },
 
         // WP default permalinks: /?p=NUMBER can't be mapped 1:1 without a WP
         // export. Best-effort — send to /blog listing (most were blog posts).

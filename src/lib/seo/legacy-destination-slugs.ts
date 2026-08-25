@@ -55,11 +55,15 @@ export function resolveLegacyDestinationSlug(rawSlug: string): string | null {
   // Strip trailing "-N" WP disambiguator (e.g. "passu-2" → "passu")
   const stripped = s.replace(/-\d+$/, "");
   if (stripped !== s && DESTINATION_SLUGS.has(stripped)) return stripped;
-  // Known WP hyphen/typo variants
+  // Known WP hyphen/typo variants — mapping stale WP slugs to their current
+  // successor. Basho alone was leaking 47 clicks / 5,449 impressions to the
+  // /destinations listing before this was added.
   const variants: Record<string, string> = {
     "borithlake": "borith-lake",
     "gahukuch": "gahkuch",
     "shinghu-meadows": "shingu-meadows",
+    "basho": "basho-meadows-skardu",
+    "shandur-national-park": "shandur",
   };
   if (variants[s]) return variants[s];
   return null;
