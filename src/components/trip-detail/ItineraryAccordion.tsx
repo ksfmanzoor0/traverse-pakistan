@@ -17,6 +17,15 @@ function formatDescription(text: string): string[] {
   return text.split('\n').map((l) => l.trim()).filter(Boolean);
 }
 
+// Legacy DB rows store cityOnly as ["LHE"] (city codes) while the
+// SharedDepartureCity contract is "lahore" (lowercase full name). The filter
+// accepts either shape by comparing against both the name and its code.
+const NAME_TO_CODE = { islamabad: "ISB", lahore: "LHE", karachi: "KHI", skardu: "KDU" } as const;
+function matchesCity(cityOnly: readonly string[] | undefined, city: keyof typeof NAME_TO_CODE): boolean {
+  if (!cityOnly || cityOnly.length === 0) return true;
+  return cityOnly.includes(city) || cityOnly.includes(NAME_TO_CODE[city]);
+}
+
 export function ItineraryAccordion({ days, tourSlug, initialDeparture = "islamabad" }: ItineraryAccordionProps) {
   // Read the shared departure-city selection (written by BookingSidebar).
   // Stops without cityOnly show for everyone; stops with cityOnly show only
@@ -27,7 +36,7 @@ export function ItineraryAccordion({ days, tourSlug, initialDeparture = "islamab
   // A day may declare cityOnly to hide itself unless the traveler's home city
   // is in the list. Renumbered after filtering so Day 1/2/3 remain contiguous.
   const visibleDays = days
-    .filter((d) => !d.cityOnly || d.cityOnly.length === 0 || d.cityOnly.includes(city))
+    .filter((d) => matchesCity(d.cityOnly, city))
     .map((d, i) => ({ ...d, dayNumber: i + 1 }));
 
   return (
@@ -72,7 +81,11 @@ export function ItineraryAccordion({ days, tourSlug, initialDeparture = "islamab
             {/* Stops timeline — cityOnly stops appear only when the traveller's
                 selected departure city matches (e.g. LHE-return-via-ISB details). */}
             {(() => {
-              const visibleStops = day.stops.filter((s) => !s.cityOnly || s.cityOnly === city);
+              const visibleStops = day.stops.filter((s) => {
+                if (!s.cityOnly) return true;
+                const target: string = s.cityOnly;
+                return target === city || target === NAME_TO_CODE[city];
+              });
               if (visibleStops.length === 0) return null;
               return (
                 <div className="relative pl-6 border-l-2 border-[var(--primary)]/20 space-y-4 mb-4">
