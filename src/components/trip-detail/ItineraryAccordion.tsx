@@ -17,17 +17,23 @@ function formatDescription(text: string): string[] {
   return text.split('\n').map((l) => l.trim()).filter(Boolean);
 }
 
+// DB stores cityOnly as city codes ("LHE", "ISB", …) while the shared
+// departure-city hook uses lowercase names for the UI label. Convert once at
+// the filter boundary and compare in the DB's shape.
+const NAME_TO_CODE = { islamabad: "ISB", lahore: "LHE", karachi: "KHI", skardu: "KDU" } as const;
+
 export function ItineraryAccordion({ days, tourSlug, initialDeparture = "islamabad" }: ItineraryAccordionProps) {
   // Read the shared departure-city selection (written by BookingSidebar).
   // Stops without cityOnly show for everyone; stops with cityOnly show only
   // when it matches the selection. Scoped by tourSlug so navigating between
   // tours doesn't inherit a stale city from a previous page.
   const [city] = useSharedDepartureCity(initialDeparture, tourSlug);
+  const cityCode: string = NAME_TO_CODE[city];
 
   // A day may declare cityOnly to hide itself unless the traveler's home city
   // is in the list. Renumbered after filtering so Day 1/2/3 remain contiguous.
   const visibleDays = days
-    .filter((d) => !d.cityOnly || d.cityOnly.length === 0 || d.cityOnly.includes(city))
+    .filter((d) => !d.cityOnly || d.cityOnly.length === 0 || (d.cityOnly as readonly string[]).includes(cityCode))
     .map((d, i) => ({ ...d, dayNumber: i + 1 }));
 
   return (
@@ -72,7 +78,9 @@ export function ItineraryAccordion({ days, tourSlug, initialDeparture = "islamab
             {/* Stops timeline — cityOnly stops appear only when the traveller's
                 selected departure city matches (e.g. LHE-return-via-ISB details). */}
             {(() => {
-              const visibleStops = day.stops.filter((s) => !s.cityOnly || s.cityOnly === city);
+              const visibleStops = day.stops.filter(
+                (s) => !s.cityOnly || (s.cityOnly as string) === cityCode,
+              );
               if (visibleStops.length === 0) return null;
               return (
                 <div className="relative pl-6 border-l-2 border-[var(--primary)]/20 space-y-4 mb-4">

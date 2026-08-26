@@ -25,18 +25,24 @@ const TIER_COLORS: Record<PackageTier, string> = {
   luxury: "bg-[var(--accent-warm-light)] text-[var(--accent-warm)] border-[var(--accent-warm)]/30",
 };
 
+// DB stores cityOnly as city codes ("LHE", …). Component receives the name
+// form ("lahore") so it can drive display logic; convert once at the boundary
+// and compare in the DB's shape.
+const NAME_TO_CODE = { islamabad: "ISB", lahore: "LHE", karachi: "KHI" } as const;
+
 export function PackageItineraryAccordion({ days, selectedTier, hotelsMap, departureCity }: PackageItineraryAccordionProps) {
+  const cityCode: string = NAME_TO_CODE[departureCity];
   const visibleDays = days.filter((d) => {
     if (!d.cityOnly) return true;
     const allowed = Array.isArray(d.cityOnly) ? d.cityOnly : [d.cityOnly];
-    return allowed.includes(departureCity);
+    return (allowed as readonly string[]).includes(cityCode);
   });
   return (
     <div className="border border-[var(--border-default)] rounded-xl overflow-hidden">
       {visibleDays.map((day) => {
         const hotelSlug = day.hotels[selectedTier];
         const hotel = hotelsMap[hotelSlug];
-        const stops = day.stops.filter((s) => !s.cityOnly || s.cityOnly === departureCity);
+        const stops = day.stops.filter((s) => !s.cityOnly || (s.cityOnly as string) === cityCode);
 
         return (
           <AccordionItem
