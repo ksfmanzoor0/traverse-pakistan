@@ -6,18 +6,6 @@ import { AutoGrowTextarea } from "./tour-editor/AutoGrowTextarea";
 import { CityChips } from "./tour-editor/CityChips";
 
 type Home = "ISB" | "LHE" | "KHI" | "KDU";
-const CODE_TO_CITY: Record<Home, string> = {
-  ISB: "islamabad",
-  LHE: "lahore",
-  KHI: "karachi",
-  KDU: "skardu",
-};
-const CITY_TO_CODE: Record<string, Home> = {
-  islamabad: "ISB",
-  lahore: "LHE",
-  karachi: "KHI",
-  skardu: "KDU",
-};
 
 type Day = {
   day_number: number;
@@ -405,11 +393,9 @@ export function ItineraryEditor({ packageSlug, expectedDays, initialDays, hotels
                   <div>
                     <label className={labelCls} style={labelStyle}>City-only (advanced)</label>
                     <CityChips
-                      value={(d.city_only ?? [])
-                        .map((c) => CITY_TO_CODE[c])
-                        .filter((c): c is Home => Boolean(c))}
+                      value={(d.city_only ?? []).filter((c): c is Home => c === "ISB" || c === "LHE" || c === "KHI" || c === "KDU")}
                       onChange={(next) => {
-                        const arr = (next ?? []).map((code) => CODE_TO_CITY[code]);
+                        const arr = next ?? [];
                         updateDay(i, { city_only: arr.length > 0 ? arr : null });
                       }}
                     />
