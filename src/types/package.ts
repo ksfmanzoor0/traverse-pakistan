@@ -5,9 +5,12 @@ import type { TourBlock } from "./tour-block";
 export type PackageTier = "deluxe" | "luxury";
 
 export interface PackageTierPricing {
-  islamabad: number | null;
-  lahore: number | null;
-  karachi: number | null;
+  ISB: number | null;
+  LHE: number | null;
+  KHI: number | null;
+  /** Non-city extras — e.g. single-occupancy supplement. Preserved verbatim
+   *  through normalization. */
+  singleSupplement?: number | null;
 }
 
 export interface PackageDayHotels {

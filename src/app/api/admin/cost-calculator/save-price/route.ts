@@ -6,7 +6,10 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 type Tier = "deluxe" | "luxury" | "premium";
 type Home = "ISB" | "LHE" | "KHI";
 
-const HOME_TO_PRICING_KEY: Record<Home, "islamabad" | "lahore" | "karachi"> = {
+// Legacy DB rows keyed leaves by lowercase names; new writes use the code
+// directly. Also clean up the shadow name key if it's still present so a
+// subsequent read doesn't see two entries for the same city.
+const LEGACY_NAME_KEY: Record<Home, "islamabad" | "lahore" | "karachi"> = {
   ISB: "islamabad",
   LHE: "lahore",
   KHI: "karachi",
@@ -90,9 +93,14 @@ export async function POST(req: Request) {
   const previousByCity: Record<string, number | null> = {};
   const tierBlock = { ...(override[body.tier] ?? {}) };
   for (const { home, value } of updates) {
-    const cityKey = HOME_TO_PRICING_KEY[home];
-    previousByCity[cityKey] = (tierBlock[cityKey] as number | null | undefined) ?? null;
-    tierBlock[cityKey] = value;
+    const legacyKey = LEGACY_NAME_KEY[home];
+    previousByCity[home] = (tierBlock[home] as number | null | undefined)
+      ?? (tierBlock[legacyKey] as number | null | undefined)
+      ?? null;
+    tierBlock[home] = value;
+    // Erase the legacy name key so a subsequent read doesn't see two entries
+    // (name + code) for the same city.
+    delete tierBlock[legacyKey];
   }
   override[body.tier] = tierBlock;
 
@@ -109,7 +117,7 @@ export async function POST(req: Request) {
   return NextResponse.json({
     slug: body.slug,
     tier: body.tier,
-    updated: updates.map((u) => ({ city: HOME_TO_PRICING_KEY[u.home], value: u.value })),
+    updated: updates.map((u) => ({ city: u.home, value: u.value })),
     previous: previousByCity,
     ...(skipped.length > 0
       ? { warning: `Skipped ${skipped.join(", ")} — not in starting_cities (${startingCities.join(", ")})` }
@@ -160,10 +168,14 @@ export async function DELETE(req: Request) {
     delete override[body.tier];
   } else {
     for (const home of homesToClear) {
-      const cityKey = HOME_TO_PRICING_KEY[home];
-      if (cityKey in tierBlock) {
-        delete tierBlock[cityKey];
-        cleared.push(cityKey);
+      const legacyKey = LEGACY_NAME_KEY[home];
+      if (home in tierBlock) {
+        delete tierBlock[home];
+        cleared.push(home);
+      }
+      if (legacyKey in tierBlock) {
+        delete tierBlock[legacyKey];
+        if (!cleared.includes(home)) cleared.push(home);
       }
     }
     if (Object.keys(tierBlock).length === 0) delete override[body.tier];

@@ -24,6 +24,27 @@ function shuffleGallery(slug: string, images: Package["images"]): Package["image
 
 type PricingLeaves = Record<string, Record<string, number | null | undefined>>;
 
+// Historical DB rows keyed the per-city price under the lowercase city name
+// (`islamabad` / `lahore` / `karachi`). Everything else in the app now uses
+// codes (ISB / LHE / KHI / KDU). Normalize on read so downstream code only
+// speaks codes — idempotent, so rows already migrated to code keys pass
+// through untouched. Non-city keys (e.g. `singleSupplement`) are preserved.
+const CITY_NAME_TO_CODE: Record<string, string> = {
+  islamabad: "ISB",
+  lahore: "LHE",
+  karachi: "KHI",
+  skardu: "KDU",
+};
+function normalizeCityKeys(leaves: Record<string, number | null | undefined>): Record<string, number | null | undefined> {
+  const out: Record<string, number | null | undefined> = {};
+  for (const [k, v] of Object.entries(leaves)) {
+    const nextKey = CITY_NAME_TO_CODE[k] ?? k;
+    // Prefer an explicit code entry if it already exists (post-migration data).
+    if (out[nextKey] === undefined) out[nextKey] = v;
+  }
+  return out;
+}
+
 /** Merge engine snapshot (`pricing`) with operator pin (`pricing_override`) per
  *  leaf. Override wins where set; snapshot fills the rest. */
 function mergePricing(snapshot: unknown, override: unknown): unknown {
@@ -32,7 +53,7 @@ function mergePricing(snapshot: unknown, override: unknown): unknown {
   const tiers = new Set([...Object.keys(snap), ...Object.keys(over)]);
   const out: PricingLeaves = {};
   for (const tier of tiers) {
-    out[tier] = { ...(snap[tier] ?? {}), ...(over[tier] ?? {}) };
+    out[tier] = normalizeCityKeys({ ...(snap[tier] ?? {}), ...(over[tier] ?? {}) });
   }
   return out;
 }

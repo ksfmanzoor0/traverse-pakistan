@@ -633,29 +633,46 @@ function InclusionsSection({ row, onSave, pending }: { row: PackageRow; onSave: 
 // This tab only re-lays out the existing form; math is unchanged.
 function PricingSection({ row, onSave, onReprice, pending }: { row: PackageRow; onSave: (p: PackagePatch) => void; onReprice: () => Promise<void>; pending: boolean }) {
   const router = useRouter();
-  const raw = row.pricing as { deluxe?: TierPricing; luxury?: TierPricing } | null;
-  const [deluxe, setDeluxe] = useState<TierPricing>(() => ({
-    islamabad: raw?.deluxe?.islamabad ?? null,
-    lahore: raw?.deluxe?.lahore ?? null,
-    karachi: raw?.deluxe?.karachi ?? null,
-  }));
-  const [luxury, setLuxury] = useState<TierPricing>(() => ({
-    islamabad: raw?.luxury?.islamabad ?? null,
-    lahore: raw?.luxury?.lahore ?? null,
-    karachi: raw?.luxury?.karachi ?? null,
-  }));
+  // DB rows may still carry lowercase-name keys (`islamabad`) during the
+  // rollout window. Prefer the code key when present, fall back to the name
+  // for backward-compatibility. New writes always use codes.
+  //
+  // Non-city extras (`singleSupplement`) live on the same tier object and
+  // must be preserved on save. Kept in a ref so we can round-trip them
+  // through the form without exposing extra inputs.
+  type TierRaw = Partial<TierPricing> & {
+    islamabad?: number | null;
+    lahore?: number | null;
+    karachi?: number | null;
+    singleSupplement?: number | null;
+  };
+  const raw = row.pricing as { deluxe?: TierRaw; luxury?: TierRaw } | null;
+  const readTier = (t: TierRaw | undefined): TierPricing => ({
+    ISB: t?.ISB ?? t?.islamabad ?? null,
+    LHE: t?.LHE ?? t?.lahore ?? null,
+    KHI: t?.KHI ?? t?.karachi ?? null,
+  });
+  const extrasDeluxeRef = useRef<Record<string, unknown>>({});
+  const extrasLuxuryRef = useRef<Record<string, unknown>>({});
+  const captureExtras = (t: TierRaw | undefined): Record<string, unknown> => {
+    if (!t) return {};
+    const drop = new Set(["ISB", "LHE", "KHI", "islamabad", "lahore", "karachi"]);
+    return Object.fromEntries(Object.entries(t).filter(([k]) => !drop.has(k)));
+  };
+  const [deluxe, setDeluxe] = useState<TierPricing>(() => {
+    extrasDeluxeRef.current = captureExtras(raw?.deluxe);
+    return readTier(raw?.deluxe);
+  });
+  const [luxury, setLuxury] = useState<TierPricing>(() => {
+    extrasLuxuryRef.current = captureExtras(raw?.luxury);
+    return readTier(raw?.luxury);
+  });
   // Sync local state when server row updates (e.g. after reprice + router.refresh).
   useEffect(() => {
-    setDeluxe({
-      islamabad: raw?.deluxe?.islamabad ?? null,
-      lahore: raw?.deluxe?.lahore ?? null,
-      karachi: raw?.deluxe?.karachi ?? null,
-    });
-    setLuxury({
-      islamabad: raw?.luxury?.islamabad ?? null,
-      lahore: raw?.luxury?.lahore ?? null,
-      karachi: raw?.luxury?.karachi ?? null,
-    });
+    extrasDeluxeRef.current = captureExtras(raw?.deluxe);
+    extrasLuxuryRef.current = captureExtras(raw?.luxury);
+    setDeluxe(readTier(raw?.deluxe));
+    setLuxury(readTier(raw?.luxury));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [row.pricing]);
   const [startingCities, setStartingCities] = useState<Home[]>(
@@ -667,17 +684,21 @@ function PricingSection({ row, onSave, onReprice, pending }: { row: PackageRow; 
       <fieldset className="border border-[var(--border-default)] rounded-[var(--radius-sm)] p-4 space-y-3">
         <legend className="px-2 text-[13px] font-bold text-[var(--text-primary)]">{label}</legend>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {(["islamabad", "lahore", "karachi"] as const).map((k) => (
-            <label key={k} className="block">
+          {([
+            { code: "ISB", label: "Islamabad" },
+            { code: "LHE", label: "Lahore" },
+            { code: "KHI", label: "Karachi" },
+          ] as const).map(({ code, label }) => (
+            <label key={code} className="block">
               <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-1">
-                {k}
+                {label}
               </span>
               <input
                 type="number"
-                value={value[k] ?? ""}
-                onChange={(e) => onChange({ ...value, [k]: e.target.value ? Number(e.target.value) : null })}
+                value={value[code] ?? ""}
+                onChange={(e) => onChange({ ...value, [code]: e.target.value ? Number(e.target.value) : null })}
                 className={inputCls}
-                placeholder={value[k] != null ? formatPrice(value[k]!) : "—"}
+                placeholder={value[code] != null ? formatPrice(value[code]!) : "—"}
               />
             </label>
           ))}
@@ -686,7 +707,14 @@ function PricingSection({ row, onSave, onReprice, pending }: { row: PackageRow; 
     );
   }
 
-  const pricing: PackagePricing = { deluxe, luxury };
+  // Merge captured extras (singleSupplement, etc.) back onto each tier so the
+  // save doesn't drop them. Extras with the same key as a rate field would be
+  // overwritten by the form values — the captureExtras filter above prevents
+  // that from being possible.
+  const pricing: PackagePricing = {
+    deluxe: { ...extrasDeluxeRef.current, ...deluxe } as PackagePricing["deluxe"],
+    luxury: { ...extrasLuxuryRef.current, ...luxury } as PackagePricing["luxury"],
+  };
 
   return (
     <div className="space-y-4">
