@@ -365,12 +365,7 @@ async function repriceOnePackage(slug: string, startDate: string): Promise<Repri
         skipped.push({ tier, home, reason: `non-positive perPerson (${quote.perPerson})` });
         continue;
       }
-      // Write under the code key. Erase any lingering legacy name key so a
-      // subsequent read doesn't see two entries for the same city.
       tierBlock[home] = quote.perPerson;
-      const LEGACY: Record<string, string> = { ISB: "islamabad", LHE: "lahore", KHI: "karachi" };
-      const legacyKey = LEGACY[home];
-      if (legacyKey && legacyKey in tierBlock) delete tierBlock[legacyKey];
       written += 1;
     }
     if (Object.keys(tierBlock).length > 0) next[tier] = tierBlock;

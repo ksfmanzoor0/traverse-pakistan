@@ -633,30 +633,21 @@ function InclusionsSection({ row, onSave, pending }: { row: PackageRow; onSave: 
 // This tab only re-lays out the existing form; math is unchanged.
 function PricingSection({ row, onSave, onReprice, pending }: { row: PackageRow; onSave: (p: PackagePatch) => void; onReprice: () => Promise<void>; pending: boolean }) {
   const router = useRouter();
-  // DB rows may still carry lowercase-name keys (`islamabad`) during the
-  // rollout window. Prefer the code key when present, fall back to the name
-  // for backward-compatibility. New writes always use codes.
-  //
   // Non-city extras (`singleSupplement`) live on the same tier object and
   // must be preserved on save. Kept in a ref so we can round-trip them
   // through the form without exposing extra inputs.
-  type TierRaw = Partial<TierPricing> & {
-    islamabad?: number | null;
-    lahore?: number | null;
-    karachi?: number | null;
-    singleSupplement?: number | null;
-  };
+  type TierRaw = Partial<TierPricing> & { singleSupplement?: number | null };
   const raw = row.pricing as { deluxe?: TierRaw; luxury?: TierRaw } | null;
   const readTier = (t: TierRaw | undefined): TierPricing => ({
-    ISB: t?.ISB ?? t?.islamabad ?? null,
-    LHE: t?.LHE ?? t?.lahore ?? null,
-    KHI: t?.KHI ?? t?.karachi ?? null,
+    ISB: t?.ISB ?? null,
+    LHE: t?.LHE ?? null,
+    KHI: t?.KHI ?? null,
   });
   const extrasDeluxeRef = useRef<Record<string, unknown>>({});
   const extrasLuxuryRef = useRef<Record<string, unknown>>({});
   const captureExtras = (t: TierRaw | undefined): Record<string, unknown> => {
     if (!t) return {};
-    const drop = new Set(["ISB", "LHE", "KHI", "islamabad", "lahore", "karachi"]);
+    const drop = new Set(["ISB", "LHE", "KHI"]);
     return Object.fromEntries(Object.entries(t).filter(([k]) => !drop.has(k)));
   };
   const [deluxe, setDeluxe] = useState<TierPricing>(() => {
