@@ -81,8 +81,14 @@ async function loadPublicImage(rel: string): Promise<string | null> {
   }
 }
 
+const CITY_CODE_TO_LABEL: Record<string, string> = {
+  ISB: "Islamabad",
+  LHE: "Lahore",
+  KHI: "Karachi",
+  KDU: "Skardu",
+};
 function formatCityLabel(city: string): string {
-  return city.charAt(0).toUpperCase() + city.slice(1);
+  return CITY_CODE_TO_LABEL[city] ?? city.charAt(0).toUpperCase() + city.slice(1);
 }
 
 interface PdfArgs {
@@ -104,9 +110,9 @@ export async function generatePackageItineraryPdf({ pkg, itinerary, hotelsBySlug
   const days = itinerary?.days ?? [];
   const tierPricing = pkg.tiers?.deluxe ?? pkg.tiers?.luxury;
   const startingCities = (
-    ["islamabad", "lahore", "karachi"] as const
+    ["ISB", "LHE", "KHI"] as const
   )
-    .filter((city) => tierPricing?.[city] != null)
+    .filter((code) => tierPricing?.[code] != null)
     .map(formatCityLabel)
     .join(" · ") || "Islamabad";
 

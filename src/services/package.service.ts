@@ -25,7 +25,9 @@ function shuffleGallery(slug: string, images: Package["images"]): Package["image
 type PricingLeaves = Record<string, Record<string, number | null | undefined>>;
 
 /** Merge engine snapshot (`pricing`) with operator pin (`pricing_override`) per
- *  leaf. Override wins where set; snapshot fills the rest. */
+ *  leaf. Override wins where set; snapshot fills the rest. Both columns are
+ *  keyed by city code (ISB/LHE/KHI/KDU) — the legacy lowercase-name migration
+ *  ran on 2026-08-27. */
 function mergePricing(snapshot: unknown, override: unknown): unknown {
   const snap = (snapshot ?? {}) as PricingLeaves;
   const over = (override ?? {}) as PricingLeaves;

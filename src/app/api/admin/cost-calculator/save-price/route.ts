@@ -6,12 +6,6 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 type Tier = "deluxe" | "luxury" | "premium";
 type Home = "ISB" | "LHE" | "KHI";
 
-const HOME_TO_PRICING_KEY: Record<Home, "islamabad" | "lahore" | "karachi"> = {
-  ISB: "islamabad",
-  LHE: "lahore",
-  KHI: "karachi",
-};
-
 function isHome(v: string): v is Home {
   return v === "ISB" || v === "LHE" || v === "KHI";
 }
@@ -90,9 +84,8 @@ export async function POST(req: Request) {
   const previousByCity: Record<string, number | null> = {};
   const tierBlock = { ...(override[body.tier] ?? {}) };
   for (const { home, value } of updates) {
-    const cityKey = HOME_TO_PRICING_KEY[home];
-    previousByCity[cityKey] = (tierBlock[cityKey] as number | null | undefined) ?? null;
-    tierBlock[cityKey] = value;
+    previousByCity[home] = (tierBlock[home] as number | null | undefined) ?? null;
+    tierBlock[home] = value;
   }
   override[body.tier] = tierBlock;
 
@@ -109,7 +102,7 @@ export async function POST(req: Request) {
   return NextResponse.json({
     slug: body.slug,
     tier: body.tier,
-    updated: updates.map((u) => ({ city: HOME_TO_PRICING_KEY[u.home], value: u.value })),
+    updated: updates.map((u) => ({ city: u.home, value: u.value })),
     previous: previousByCity,
     ...(skipped.length > 0
       ? { warning: `Skipped ${skipped.join(", ")} — not in starting_cities (${startingCities.join(", ")})` }
@@ -160,10 +153,9 @@ export async function DELETE(req: Request) {
     delete override[body.tier];
   } else {
     for (const home of homesToClear) {
-      const cityKey = HOME_TO_PRICING_KEY[home];
-      if (cityKey in tierBlock) {
-        delete tierBlock[cityKey];
-        cleared.push(cityKey);
+      if (home in tierBlock) {
+        delete tierBlock[home];
+        cleared.push(home);
       }
     }
     if (Object.keys(tierBlock).length === 0) delete override[body.tier];

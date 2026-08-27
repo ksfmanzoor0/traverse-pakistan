@@ -11,9 +11,9 @@ import type { TourBlock } from "@/types/tour-block";
 type PackageListItem = { text: string; cityOnly?: Array<"ISB" | "LHE" | "KHI" | "KDU"> };
 
 export type TierPricing = {
-  islamabad: number | null;
-  lahore: number | null;
-  karachi: number | null;
+  ISB: number | null;
+  LHE: number | null;
+  KHI: number | null;
 };
 
 export type PackagePricing = {

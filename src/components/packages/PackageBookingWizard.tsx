@@ -152,7 +152,7 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
   const initAdults = Math.max(1, Number(searchParams?.get("adults") ?? 2));
   const initRooms = Math.max(1, Number(searchParams?.get("rooms") ?? Math.ceil(initAdults / 3)));
   const initTier = (searchParams?.get("tier") as "deluxe" | "luxury" | null) ?? "deluxe";
-  const defaultCity = pkg.tiers.deluxe.islamabad !== null ? "islamabad" : pkg.tiers.deluxe.lahore !== null ? "lahore" : "karachi";
+  const defaultCity = pkg.tiers.deluxe.ISB !== null ? "islamabad" : pkg.tiers.deluxe.LHE !== null ? "lahore" : "karachi";
   const initCity = (searchParams?.get("city") as "islamabad" | "lahore" | "karachi" | null) ?? defaultCity;
   const initCheckinParam = searchParams?.get("checkin") ?? null;
   // Parse YYYY-MM-DD as a local date (avoid the UTC drift `new Date("YYYY-MM-DD")`
@@ -190,9 +190,9 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
 
   const pricing = pkg.tiers[state.tier];
   const staticPerPerson =
-    state.city === "lahore" && pricing.lahore ? pricing.lahore :
-    state.city === "karachi" && pricing.karachi ? pricing.karachi :
-    (pricing.islamabad ?? pricing.lahore ?? pricing.karachi ?? 0);
+    state.city === "lahore" && pricing.LHE ? pricing.LHE :
+    state.city === "karachi" && pricing.KHI ? pricing.KHI :
+    (pricing.ISB ?? pricing.LHE ?? pricing.KHI ?? 0);
 
   const defaultRooms = Math.ceil(state.adults / 3);
   const staticTotal = staticPerPerson * state.adults;
@@ -416,20 +416,26 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
                     }`}
                   >
                     <span className="text-[14px] font-bold capitalize">{tier}</span>
-                    <span className="text-[12px] opacity-80">{formatPrice(pkg.tiers[tier].islamabad ?? pkg.tiers[tier].lahore ?? 0)} / person</span>
+                    <span className="text-[12px] opacity-80">{formatPrice(pkg.tiers[tier].ISB ?? pkg.tiers[tier].LHE ?? 0)} / person</span>
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Departure city */}
-            {(pricing.lahore || pricing.karachi) && (
+            {(pricing.LHE || pricing.KHI) && (
               <div>
                 <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-2">Departure city</label>
-                <div className={`grid gap-3 ${pricing.karachi ? "grid-cols-3" : "grid-cols-2"}`}>
-                  {(["islamabad", "lahore", "karachi"] as DepartureCity[])
-                    .filter(c => pricing[c] !== null)
-                    .map(city => (
+                <div className={`grid gap-3 ${pricing.KHI ? "grid-cols-3" : "grid-cols-2"}`}>
+                  {(
+                    [
+                      { name: "islamabad", code: "ISB" },
+                      { name: "lahore", code: "LHE" },
+                      { name: "karachi", code: "KHI" },
+                    ] as Array<{ name: DepartureCity; code: "ISB" | "LHE" | "KHI" }>
+                  )
+                    .filter((c) => pricing[c.code] !== null)
+                    .map(({ name: city }) => (
                       <button
                         key={city} type="button" onClick={() => patch({ city })}
                         className={`h-12 rounded-[var(--radius-sm)] border transition-all cursor-pointer capitalize text-[14px] font-semibold ${
