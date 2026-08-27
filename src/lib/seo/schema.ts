@@ -327,8 +327,8 @@ export function packageSchema(pkg: Package): SchemaNode {
   // KHI/LHE-only pricing (e.g. Makran, Sindh) show the correct range.
   const priceCells: number[] = [];
   for (const tier of [pkg.tiers.deluxe, pkg.tiers.luxury]) {
-    for (const city of ["islamabad", "lahore", "karachi"] as const) {
-      const p = tier[city];
+    for (const code of ["ISB", "LHE", "KHI"] as const) {
+      const p = tier[code];
       if (typeof p === "number" && p > 0) priceCells.push(p);
     }
   }
@@ -341,9 +341,9 @@ export function packageSchema(pkg: Package): SchemaNode {
     ["Luxury", pkg.tiers.luxury],
   ] as const) {
     for (const [cityKey, cityLabel] of [
-      ["islamabad", "Islamabad"],
-      ["lahore", "Lahore"],
-      ["karachi", "Karachi"],
+      ["ISB", "Islamabad"],
+      ["LHE", "Lahore"],
+      ["KHI", "Karachi"],
     ] as const) {
       const price = tier[cityKey];
       if (typeof price !== "number" || price <= 0) continue;

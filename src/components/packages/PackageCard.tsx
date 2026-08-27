@@ -120,13 +120,13 @@ export function PackageCard({ pkg, variant = "carousel", className, priority = f
             <div className="flex items-baseline gap-1.5">
               <span className="text-[12px] text-[var(--text-tertiary)] font-medium">From</span>
               <span className="text-[18px] font-bold text-[var(--text-primary)] tabular-nums tracking-tight">
-                {formatPrice(pkg.tiers.deluxe.islamabad ?? pkg.tiers.deluxe.lahore ?? pkg.tiers.deluxe.karachi ?? 0)}
+                {formatPrice(pkg.tiers.deluxe.ISB ?? pkg.tiers.deluxe.LHE ?? pkg.tiers.deluxe.KHI ?? 0)}
               </span>
             </div>
             <span className="text-[11px] text-[var(--text-tertiary)]">per person</span>
           </div>
           <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
-            Luxury from {formatPrice(pkg.tiers.luxury.islamabad ?? pkg.tiers.luxury.lahore ?? pkg.tiers.luxury.karachi ?? 0)}
+            Luxury from {formatPrice(pkg.tiers.luxury.ISB ?? pkg.tiers.luxury.LHE ?? pkg.tiers.luxury.KHI ?? 0)}
           </p>
         </div>
       </div>

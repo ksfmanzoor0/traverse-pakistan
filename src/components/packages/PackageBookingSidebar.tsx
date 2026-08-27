@@ -253,9 +253,9 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
   const isDayTrip = nights === 0;
   const effectiveRooms = isDayTrip ? 0 : displayRooms;
   const staticPerPerson =
-    (departureCity === "lahore" && pricing.lahore) ? pricing.lahore :
-    (departureCity === "karachi" && pricing.karachi) ? pricing.karachi :
-    (pricing.islamabad ?? pricing.lahore ?? pricing.karachi ?? 0);
+    (departureCity === "lahore" && pricing.LHE) ? pricing.LHE :
+    (departureCity === "karachi" && pricing.KHI) ? pricing.KHI :
+    (pricing.ISB ?? pricing.LHE ?? pricing.KHI ?? 0);
   const staticTotal = staticPerPerson * adults;
 
   const HOME_FROM_CITY: Record<DepartureCityOption, "ISB" | "LHE" | "KHI"> = {
@@ -394,13 +394,19 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
         {/* Departure City — show whenever any bookable city exists so the
             single-origin case still surfaces the city as a label (1-button
             picker), and multi-city cases get the full selector. */}
-        {(pricing.islamabad != null || pricing.lahore != null || pricing.karachi != null) && (
+        {(pricing.ISB != null || pricing.LHE != null || pricing.KHI != null) && (
           <div className="mb-5">
             <label className="text-[12px] font-bold uppercase tracking-[0.08em] text-[var(--text-secondary)] block mb-2">Starting Location</label>
-            <div className={`grid gap-2 ${pricing.karachi ? "grid-cols-3" : "grid-cols-2"}`}>
-              {(["islamabad", "lahore", "karachi"] as DepartureCityOption[])
-                .filter((city) => pricing[city] != null)
-                .map((city) => (
+            <div className={`grid gap-2 ${pricing.KHI ? "grid-cols-3" : "grid-cols-2"}`}>
+              {(
+                [
+                  { name: "islamabad", code: "ISB" },
+                  { name: "lahore", code: "LHE" },
+                  { name: "karachi", code: "KHI" },
+                ] as Array<{ name: DepartureCityOption; code: "ISB" | "LHE" | "KHI" }>
+              )
+                .filter((c) => pricing[c.code] != null)
+                .map(({ name: city }) => (
                   <button key={city} type="button" onClick={() => onDepartureCityChange(city)}
                     className={`h-11 rounded-[var(--radius-sm)] text-[13px] font-semibold border transition-colors cursor-pointer capitalize ${
                       departureCity === city

@@ -73,7 +73,7 @@ export default async function PackageDetailPage({ params }: Props) {
     ])
   );
 
-  const fromPrice = pkg.tiers?.deluxe?.islamabad ?? pkg.tiers?.deluxe?.lahore ?? null;
+  const fromPrice = pkg.tiers?.deluxe?.ISB ?? pkg.tiers?.deluxe?.LHE ?? null;
 
   return (
     <>
