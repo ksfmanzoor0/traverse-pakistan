@@ -1036,7 +1036,7 @@ function DeparturesSection({
                   {r.departure_date || "(no date)"} → {r.end_date || "—"}
                 </div>
                 <div className="text-[11px] text-[var(--text-tertiary)]">
-                  Base {formatPrice(r.price)} · Twin +{formatPrice(r.twin_price ?? 0)} / room · Single +{formatPrice(r.single_price ?? 0)} / person
+                  Base {formatPrice(r.price)} · Twin +{formatPrice(r.twin_price ?? 0)} / person · Single +{formatPrice(r.single_price ?? 0)} / person
                   {" "}· {r.seats_booked}/{r.max_seats} seats ({seatsLeft} left) · {r.status}
                 </div>
               </div>
@@ -1065,7 +1065,7 @@ function DeparturesSection({
                   </Field>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="Twin surcharge (PKR / room) — 2 friends alone">
+                  <Field label="Twin surcharge (PKR / person) — 2 friends alone in a room">
                     <input
                       type="number"
                       value={r.twin_price ?? 0}
