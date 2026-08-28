@@ -28,10 +28,13 @@ export interface ResolvedFlightLeg {
   routeType: FlightRouteType;
   departDate: string;
   perPerson: number;
-  source: "manual" | "averaged" | "single" | "unresolved";
+  source: "manual" | "averaged" | "single" | "stale" | "unresolved";
   carriers: { airline: string; fare: number; scrapedAt: string }[];
   manualOverride?: { airline: string; fare: number; notes: string | null };
   unresolvedReason?: string;
+  /** When source === "stale": most recent scrape date the fallback fare came
+   *  from. Purely informational — the value itself still feeds `perPerson`. */
+  staleFrom?: string;
 }
 
 export interface ResolvedAddon {
@@ -94,6 +97,42 @@ interface FareCandidate {
   scrapedAt: string;
   departDate: string;
   notes: string | null;
+}
+
+/** Fallback lookup — most recent scraped fares for a route, ignoring depart_date.
+ *  Used when the ±21 day window comes back empty so the leg still resolves to a
+ *  real number instead of zero. Same per-carrier selection + averaging rules
+ *  apply on the caller side. */
+async function fetchLatestLegFallback(
+  origin: string,
+  destination: string,
+  routeType: FlightRouteType,
+): Promise<FareCandidate[]> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("flight_routes")
+    .select("airline, fare_total, source, scraped_at, depart_date, notes")
+    .eq("origin", origin)
+    .eq("destination", destination)
+    .eq("route_type", routeType)
+    .order("scraped_at", { ascending: false })
+    .limit(50);
+  if (error) throw new Error(`fetchLatestLegFallback: ${error.message}`);
+  return ((data ?? []) as Array<{
+    airline: string;
+    fare_total: number;
+    source: string;
+    scraped_at: string;
+    depart_date: string;
+    notes: string | null;
+  }>).map((r) => ({
+    airline: r.airline,
+    fare: r.fare_total,
+    source: r.source,
+    scrapedAt: r.scraped_at,
+    departDate: r.depart_date,
+    notes: r.notes,
+  }));
 }
 
 async function fetchLegCandidates(
@@ -226,6 +265,29 @@ async function resolveFlightAddon(
     const pair = `${from}-${to}`;
     const candidates = await fetchLegCandidates(from, to, leg.routeType, targetDate);
     const r = resolveSingleLeg(candidates, pair, targetDate);
+    if (r.source === "unresolved") {
+      // Empty ±21 day window. Retry with the most-recent scraped fares for
+      // this route so the leg never contributes zero to the total.
+      const fallback = await fetchLatestLegFallback(from, to, leg.routeType);
+      if (fallback.length > 0) {
+        const stale = resolveSingleLeg(fallback, pair, targetDate);
+        if (stale.source !== "unresolved") {
+          const latestScrape = fallback
+            .map((c) => c.scrapedAt)
+            .sort()
+            .at(-1);
+          resolved.push({
+            from, to, routeType: leg.routeType, departDate: targetDate,
+            perPerson: stale.perPerson,
+            source: "stale",
+            carriers: stale.carriers,
+            manualOverride: stale.manualOverride,
+            staleFrom: latestScrape,
+          });
+          continue;
+        }
+      }
+    }
     resolved.push({ from, to, routeType: leg.routeType, departDate: targetDate, ...r });
   }
 

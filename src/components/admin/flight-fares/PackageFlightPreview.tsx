@@ -20,6 +20,8 @@ function legBadge(leg: ResolvedFlightLeg): { label: string; color: string } {
       return { label: `avg ${leg.carriers.length}`, color: "var(--accent-info)" };
     case "single":
       return { label: leg.carriers[0]?.airline ?? "single", color: "var(--text-tertiary)" };
+    case "stale":
+      return { label: leg.staleFrom ? `stale ${leg.staleFrom.slice(0, 10)}` : "stale", color: "var(--accent-warning)" };
     case "unresolved":
       return { label: "no data", color: "var(--accent-danger)" };
   }
