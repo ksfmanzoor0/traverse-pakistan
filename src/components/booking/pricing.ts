@@ -79,13 +79,13 @@ export function calculatePricing(input: PricingInput): PricingBreakdown {
   const subtotal = adultsSubtotal + childrenSubtotal;
 
   const totalTravelers = adults + childCount;
-  // Private-room surcharges:
+  // Private-room surcharges (both stored per person):
   //  - Single occupancy: single_price per solo person (own room).
-  //  - Couple / twin private: twin_price per room (both share, no strangers).
+  //  - Couple / twin private: twin_price per person, ×2 per room.
   // Caller is responsible for enforcing that
   //   singleOccupancyRooms + 2 * singleRooms ≤ adults.
   const soloTotal = soloSurcharge * singleOccupancyRooms;
-  const coupleTotal = twinSurcharge * singleRooms;
+  const coupleTotal = twinSurcharge * singleRooms * 2;
   const singleSupplementTotal = soloTotal + coupleTotal;
 
   // Group discount applies to the adults subtotal only; children never trigger

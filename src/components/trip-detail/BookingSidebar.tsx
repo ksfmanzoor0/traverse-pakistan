@@ -300,7 +300,7 @@ export function BookingSidebar({ tour, reviews = [], previewCity = null }: Booki
           {liveDeparture && liveDeparture.twinPrice > 0 && (
             <Stepper
               label="Couple / Private room"
-              sub={`+ ${formatPrice(liveDeparture.twinPrice)} / room · skip strangers`}
+              sub={`+ ${formatPrice(liveDeparture.twinPrice)} / person · skip strangers`}
               value={singleRooms}
               min={0}
               max={maxCoupleRooms}
