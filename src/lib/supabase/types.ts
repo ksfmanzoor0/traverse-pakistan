@@ -689,6 +689,12 @@ export type Database = {
         Update: Record<string, unknown>;
         Relationships: [];
       };
+      flight_route_scrape_log: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
       flight_scraper_config: {
         Row: Record<string, unknown>;
         Insert: Record<string, unknown>;
