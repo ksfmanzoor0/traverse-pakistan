@@ -31,6 +31,7 @@ import { getToursByDestination } from "@/services/tour.service";
 import { getPackagesByDestination } from "@/services/package.service";
 import { getHotelsByDestination } from "@/services/hotel.service";
 import { sortByDestinationRelevance } from "@/lib/packages/sortByDestinationRelevance";
+import { Carousel } from "@/components/ui/Carousel";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -69,11 +70,12 @@ export default async function DestinationDetailPage({ params }: Props) {
 
   const ancestorSlugs = dest.ancestorSlugs ?? [];
 
-  const [tours, faqs, pkgs, hotels, ...ancestorResults] = await Promise.all([
+  const [tours, faqs, pkgs, hotels, allDests, ...ancestorResults] = await Promise.all([
     getToursByDestination(slug),
     getFAQsByDestination(slug),
     getPackagesByDestination(slug),
     getHotelsByDestination(slug),
+    getAllDestinations(),
     ...ancestorSlugs.flatMap((a) => [
       getToursByDestination(a),
       getPackagesByDestination(a),
@@ -106,6 +108,12 @@ export default async function DestinationDetailPage({ params }: Props) {
   const visiblePkgs = sortByDestinationRelevance(allPkgs, dest.slug);
   const packageCount = visiblePkgs.length;
   const tourCount = allTours.length;
+
+  // Direct children only (e.g. Hunza → Altit, Attabad, Passu — not grandchildren).
+  // Sorted by name for stable ordering across builds.
+  const childDestinations = allDests
+    .filter((d) => d.parentSlug === dest.slug)
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <>
@@ -160,6 +168,54 @@ export default async function DestinationDetailPage({ params }: Props) {
           )}
         </Container>
       </section>
+
+      {/* Child destinations — horizontal rail for discovery */}
+      {childDestinations.length > 0 && (
+        <section className="py-16 sm:py-20">
+          <Container wide>
+            <SectionHeader
+              title={`Places within ${dest.name}`}
+              subtitle={`${childDestinations.length} spot${childDestinations.length !== 1 ? "s" : ""} to explore`}
+            />
+            <Carousel>
+              {childDestinations.map((child) => (
+                <Link
+                  key={child.id}
+                  href={`/destinations/${child.slug}`}
+                  className="group min-w-[260px] w-[260px] sm:min-w-[300px] sm:w-[300px] h-[360px] relative rounded-[var(--radius-lg)] overflow-hidden flex flex-col justify-end"
+                >
+                  {child.heroImage && (
+                    <Image
+                      src={child.heroImage}
+                      alt={child.name}
+                      fill
+                      className="object-cover transition-transform duration-700 ease-[cubic-bezier(0.2,0,0,1)] group-hover:scale-[1.06]"
+                      sizes="(max-width: 640px) 260px, 300px"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+                  <div className="relative p-5">
+                    <h3
+                      className="text-[20px] sm:text-[22px] font-bold text-[var(--on-dark)] leading-tight tracking-[-0.01em]"
+                      style={{ textShadow: "0 2px 12px rgba(0,0,0,0.5)" }}
+                    >
+                      {child.name}
+                    </h3>
+                    {child.subtitle && (
+                      <p
+                        className="text-[13px] text-[var(--on-dark-secondary)] mt-1.5 line-clamp-2"
+                        style={{ textShadow: "0 1px 6px rgba(0,0,0,0.4)" }}
+                      >
+                        {child.subtitle}
+                      </p>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </Carousel>
+          </Container>
+        </section>
+      )}
 
       {/* Packages */}
       {visiblePkgs.length > 0 && (
