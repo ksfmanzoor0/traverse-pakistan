@@ -278,6 +278,7 @@ export type DestinationRow = {
   }> | null;
   meta_title: string | null;
   meta_description: string | null;
+  body_blocks: unknown | null;
   created_at: string;
   updated_at: string;
 };

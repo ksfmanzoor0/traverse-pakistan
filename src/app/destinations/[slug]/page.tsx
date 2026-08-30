@@ -32,6 +32,7 @@ import { getPackagesByDestination } from "@/services/package.service";
 import { getHotelsByDestination } from "@/services/hotel.service";
 import { sortByDestinationRelevance } from "@/lib/packages/sortByDestinationRelevance";
 import { Carousel } from "@/components/ui/Carousel";
+import { BlockList } from "@/components/ui/BlockList";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -168,6 +169,18 @@ export default async function DestinationDetailPage({ params }: Props) {
           )}
         </Container>
       </section>
+
+      {/* Long-form guide — admin-editable block content. Rendered before the
+          children rail so travelers meet the story before they browse. */}
+      {(dest.bodyBlocks?.length ?? 0) > 0 && (
+        <section className="py-16 sm:py-20">
+          <Container>
+            <div className="max-w-3xl">
+              <BlockList blocks={dest.bodyBlocks ?? []} />
+            </div>
+          </Container>
+        </section>
+      )}
 
       {/* Child destinations — horizontal rail for discovery */}
       {childDestinations.length > 0 && (

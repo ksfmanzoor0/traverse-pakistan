@@ -3,18 +3,20 @@ import { notFound } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { readDestinationRankEntry } from "@/lib/packages/sortByDestinationRelevance";
 import { DestinationPackagesEditor } from "@/components/admin/DestinationPackagesEditor";
-import { saveDestinationPackageOverrides } from "../actions";
+import { DestinationBodyEditor } from "@/components/admin/DestinationBodyEditor";
+import { saveDestinationPackageOverrides, saveDestinationBodyBlocks } from "../actions";
 import type { PackageRow } from "@/lib/supabase/types";
+import type { TourBlock } from "@/types/tour-block";
 
 export const dynamic = "force-dynamic";
 
-type DestinationLite = { slug: string; name: string };
+type DestinationLite = { slug: string; name: string; body_blocks: unknown | null };
 
 async function fetchDestination(slug: string): Promise<DestinationLite | null> {
   const supabase = getSupabaseAdmin();
   const { data } = await supabase
     .from("destinations")
-    .select("slug, name")
+    .select("slug, name, body_blocks")
     .eq("slug", slug)
     .maybeSingle();
   return (data as DestinationLite | null) ?? null;
@@ -72,6 +74,12 @@ export default async function AdminDestinationDetail({ params }: { params: Promi
         </h1>
         <p className="text-[13px] text-[var(--text-tertiary)] font-mono mt-1">/destinations/{dest.slug}</p>
       </div>
+
+      <DestinationBodyEditor
+        destinationSlug={slug}
+        initialBlocks={(dest.body_blocks as TourBlock[] | null) ?? []}
+        saveAction={saveDestinationBodyBlocks}
+      />
 
       <DestinationPackagesEditor
         destinationSlug={slug}
