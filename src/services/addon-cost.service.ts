@@ -170,15 +170,56 @@ async function fetchLegCandidates(
   }));
 }
 
-function resolveSingleLeg(
+/** Confidence threshold for treating extended-mode scrape data as authoritative.
+ *  Fewer than this many visits in a (route, month) bucket → trust the hardcoded
+ *  ELIGIBLE_CARRIERS list instead. 15 is comfortably above the sample size
+ *  where a scraper gap could false-flag a carrier as suspended. */
+const SEASONAL_MIN_VISITS = 15;
+
+/** Look up which carriers actually appeared in extended-mode scrapes for this
+ *  (route, target-month) in the last 90 days. Returns the intersection with
+ *  the hardcoded eligibility list when we have enough evidence, otherwise
+ *  falls back to the hardcoded list (safer than silently excluding on thin
+ *  data). Never returns an empty set. */
+async function seasonalEligibleCarriers(
+  origin: string,
+  destination: string,
+  targetDate: string,
+  hardcoded: readonly FlightAirline[],
+): Promise<readonly FlightAirline[]> {
+  const supabase = getSupabaseAdmin();
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+  const targetMonth = Number(targetDate.slice(5, 7));
+  const { data, error } = await supabase
+    .from("flight_route_scrape_log")
+    .select("carriers_seen, depart_date")
+    .eq("origin", origin)
+    .eq("destination", destination)
+    .eq("mode", "extended")
+    .eq("route_type", "ONEWAY")
+    .gte("scraped_at", ninetyDaysAgo);
+  if (error || !data) return hardcoded;
+  const inMonth = (data as Array<{ carriers_seen: string[]; depart_date: string }>)
+    .filter((r) => Number(r.depart_date.slice(5, 7)) === targetMonth);
+  if (inMonth.length < SEASONAL_MIN_VISITS) return hardcoded;
+  const seen = new Set<string>();
+  for (const row of inMonth) for (const c of row.carriers_seen) seen.add(c);
+  const filtered = hardcoded.filter((c) => seen.has(c));
+  return filtered.length > 0 ? filtered : hardcoded;
+}
+
+async function resolveSingleLeg(
   candidates: FareCandidate[],
   pair: string,
   targetDate: string,
-): Pick<ResolvedFlightLeg, "perPerson" | "source" | "carriers" | "manualOverride" | "unresolvedReason"> {
-  const eligible = ELIGIBLE_CARRIERS[pair];
-  if (!eligible) {
+  origin: string,
+  destination: string,
+): Promise<Pick<ResolvedFlightLeg, "perPerson" | "source" | "carriers" | "manualOverride" | "unresolvedReason">> {
+  const hardcoded = ELIGIBLE_CARRIERS[pair];
+  if (!hardcoded) {
     return { perPerson: 0, source: "unresolved", carriers: [], unresolvedReason: `No carrier rules for ${pair}` };
   }
+  const eligible = await seasonalEligibleCarriers(origin, destination, targetDate, hardcoded);
 
   const manual = candidates.find((c) => c.source === "manual");
   if (manual) {
@@ -264,13 +305,13 @@ async function resolveFlightAddon(
 
     const pair = `${from}-${to}`;
     const candidates = await fetchLegCandidates(from, to, leg.routeType, targetDate);
-    const r = resolveSingleLeg(candidates, pair, targetDate);
+    const r = await resolveSingleLeg(candidates, pair, targetDate, from, to);
     if (r.source === "unresolved") {
       // Empty ±21 day window. Retry with the most-recent scraped fares for
       // this route so the leg never contributes zero to the total.
       const fallback = await fetchLatestLegFallback(from, to, leg.routeType);
       if (fallback.length > 0) {
-        const stale = resolveSingleLeg(fallback, pair, targetDate);
+        const stale = await resolveSingleLeg(fallback, pair, targetDate, from, to);
         if (stale.source !== "unresolved") {
           const latestScrape = fallback
             .map((c) => c.scrapedAt)
