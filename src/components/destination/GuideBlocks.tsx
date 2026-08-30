@@ -4,8 +4,9 @@ import type { TourBlock, HeadingBlock } from "@/types/tour-block";
 
 // Groups the flat block list into h2 sections. Each h2 becomes a section
 // header; the blocks that follow are split further by h3 into MomentCard-
-// style items rendered in a 2-column grid. Sections with no h3 (just
-// paragraphs directly under the h2) render as a single full-width card.
+// style items in a 2-column grid. Sections without h3 render as a single
+// full-width card. Each card carries a per-icon pastel tint that matches
+// the season-token palette so it stays visible in both light and dark modes.
 
 interface Subsection {
   h3Title: string | null;
@@ -17,11 +18,10 @@ interface Section {
   subsections: Subsection[];
 }
 
-function pickIcon(title: string): IconName {
+// Returns null on no-match so callers can fall back to the parent-section
+// icon (place-name cards like "Baltit and Altit Forts" inherit the h2 icon).
+function pickIcon(title: string): IconName | null {
   const t = title.toLowerCase();
-  // Order matters: more specific matches (air, road) come before catch-alls
-  // (get, reach) so a card titled "By air via Gilgit" picks airplane, not
-  // the parent-section fallback that would match "get to Hunza".
   if (t.includes("air") || t.includes("flight") || t.includes("fly")) return "airplane";
   if (t.includes("road") || t.includes("drive") || t.includes("highway") || t.includes("bus")) return "car";
   if (t.includes("stay") || t.includes("hotel") || t.includes("accommodat")) return "house";
@@ -29,7 +29,27 @@ function pickIcon(title: string): IconName {
   if (t.includes("do") || t.includes("explore") || t.includes("see") || t.includes("visit")) return "list-checks";
   if (t.includes("when") || t.includes("season") || t.includes("time")) return "calendar-check";
   if (t.includes("get") || t.includes("reach") || t.includes("route")) return "map-pin";
-  return "sun-horizon";
+  return null;
+}
+
+function sectionIcon(h2Title: string): IconName {
+  return pickIcon(h2Title) ?? "sun-horizon";
+}
+
+// Reuses the season token palette so dark-mode variants already exist.
+const iconTint: Record<IconName, { bg: string; fg: string; ring: string }> = {
+  airplane:        { bg: "var(--season-winter-bg)", fg: "var(--season-winter-fg)", ring: "var(--season-winter-ring)" },
+  car:             { bg: "var(--season-spring-bg)", fg: "var(--season-spring-fg)", ring: "var(--season-spring-ring)" },
+  house:           { bg: "var(--season-summer-bg)", fg: "var(--season-summer-fg)", ring: "var(--season-summer-ring)" },
+  "fork-knife":    { bg: "var(--season-autumn-bg)", fg: "var(--season-autumn-fg)", ring: "var(--season-autumn-ring)" },
+  "list-checks":   { bg: "var(--season-summer-bg)", fg: "var(--season-summer-fg)", ring: "var(--season-summer-ring)" },
+  "calendar-check":{ bg: "var(--season-autumn-bg)", fg: "var(--season-autumn-fg)", ring: "var(--season-autumn-ring)" },
+  "map-pin":       { bg: "var(--season-winter-bg)", fg: "var(--season-winter-fg)", ring: "var(--season-winter-ring)" },
+  "sun-horizon":   { bg: "var(--season-autumn-bg)", fg: "var(--season-autumn-fg)", ring: "var(--season-autumn-ring)" },
+} as unknown as Record<IconName, { bg: string; fg: string; ring: string }>;
+
+function tintFor(icon: IconName) {
+  return iconTint[icon] ?? { bg: "var(--season-autumn-bg)", fg: "var(--season-autumn-fg)", ring: "var(--season-autumn-ring)" };
 }
 
 function parseSections(blocks: TourBlock[]): Section[] {
@@ -49,7 +69,7 @@ function parseSections(blocks: TourBlock[]): Section[] {
       flushSub();
       if (currentSection) sections.push(currentSection);
       const title = (block as HeadingBlock).text;
-      currentSection = { h2Title: title, icon: pickIcon(title), subsections: [] };
+      currentSection = { h2Title: title, icon: sectionIcon(title), subsections: [] };
       currentSub = null;
       continue;
     }
@@ -79,9 +99,6 @@ export function GuideBlocks({ blocks }: { blocks: TourBlock[] }) {
   return (
     <div className="space-y-14">
       {sections.map((section, i) => {
-        // If any subsection has an h3 title, use the grid layout; otherwise
-        // render the whole section as a single card (avoids the awkward "one
-        // giant column card" for short prose sections like Where-to-stay).
         const hasH3 = section.subsections.some((s) => s.h3Title);
         return (
           <div key={i}>
@@ -92,14 +109,12 @@ export function GuideBlocks({ blocks }: { blocks: TourBlock[] }) {
             )}
             {hasH3 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                {section.subsections.map((sub, j) => (
-                  <GuideCard
-                    key={j}
-                    icon={sub.h3Title ? pickIcon(sub.h3Title) : section.icon}
-                    title={sub.h3Title}
-                    blocks={sub.blocks}
-                  />
-                ))}
+                {section.subsections.map((sub, j) => {
+                  const icon = (sub.h3Title && pickIcon(sub.h3Title)) || section.icon;
+                  return (
+                    <GuideCard key={j} icon={icon} title={sub.h3Title} blocks={sub.blocks} />
+                  );
+                })}
               </div>
             ) : (
               <GuideCard
@@ -127,13 +142,20 @@ function GuideCard({
   blocks: TourBlock[];
   stretched?: boolean;
 }) {
+  const tint = tintFor(icon);
   return (
     <article
-      className={`group flex gap-4 p-5 sm:p-6 rounded-[var(--radius-md)] bg-[var(--bg-elevated)] border border-[var(--border-default)] transition-[border-color,box-shadow,transform] duration-[var(--duration-normal)] ease-[var(--ease-default)] hover:border-[var(--primary)]/30 hover:shadow-[var(--shadow-md)] ${stretched ? "" : "hover:-translate-y-0.5"}`}
+      className={`group flex gap-4 p-5 sm:p-6 rounded-[var(--radius-md)] border transition-[border-color,box-shadow,transform] duration-[var(--duration-normal)] ease-[var(--ease-default)] hover:shadow-[var(--shadow-md)] ${stretched ? "" : "hover:-translate-y-0.5"}`}
+      style={{ backgroundColor: tint.bg, borderColor: tint.ring }}
     >
       <span
         aria-hidden="true"
-        className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center bg-[var(--primary-light)] text-[var(--primary-deep)] ring-1 ring-[var(--primary)]/15 transition-transform duration-[var(--duration-slow)] ease-[var(--ease-default)] group-hover:scale-[1.06]"
+        className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center transition-transform duration-[var(--duration-slow)] ease-[var(--ease-default)] group-hover:scale-[1.06]"
+        style={{
+          backgroundColor: "var(--bg-primary)",
+          color: tint.fg,
+          boxShadow: `inset 0 0 0 1px ${tint.ring}`,
+        }}
       >
         <Icon name={icon} size="lg" weight="regular" />
       </span>
