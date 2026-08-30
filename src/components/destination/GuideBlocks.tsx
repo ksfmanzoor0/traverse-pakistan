@@ -1,45 +1,140 @@
 import { BlockRenderer } from "@/components/ui/BlockList";
+import { Icon, type IconName } from "@/components/ui/Icon";
 import type { TourBlock, HeadingBlock } from "@/types/tour-block";
 
-// Groups the flat block-list into "sections" — each h2 starts a new card,
-// all subsequent non-h2 blocks belong to that card. Renders each card in
-// the elevated-surface style used by MomentCard so the guide reads as
-// discrete topics instead of one long text wall. Blocks that appear before
-// the first h2 render in an "intro" card.
-export function GuideBlocks({ blocks }: { blocks: TourBlock[] }) {
-  if (blocks.length === 0) return null;
+// Groups the flat block list into h2 sections. Each h2 becomes a section
+// header; the blocks that follow are split further by h3 into MomentCard-
+// style items rendered in a 2-column grid. Sections with no h3 (just
+// paragraphs directly under the h2) render as a single full-width card.
 
-  const groups: { title: string | null; children: TourBlock[] }[] = [];
-  let current: { title: string | null; children: TourBlock[] } = { title: null, children: [] };
+interface Subsection {
+  h3Title: string | null;
+  blocks: TourBlock[];
+}
+interface Section {
+  h2Title: string;
+  icon: IconName;
+  subsections: Subsection[];
+}
+
+function pickIcon(h2Title: string): IconName {
+  const t = h2Title.toLowerCase();
+  if (t.includes("get") || t.includes("reach") || t.includes("route")) return "map-pin";
+  if (t.includes("do") || t.includes("explore") || t.includes("see")) return "list-checks";
+  if (t.includes("stay") || t.includes("hotel") || t.includes("accommodat")) return "shield-check";
+  if (t.includes("food") || t.includes("culture") || t.includes("eat")) return "mask-happy";
+  if (t.includes("when") || t.includes("season") || t.includes("time")) return "calendar-check";
+  return "sun-horizon";
+}
+
+function parseSections(blocks: TourBlock[]): Section[] {
+  const sections: Section[] = [];
+  let currentSection: Section | null = null;
+  let currentSub: Subsection | null = null;
+
+  const flushSub = () => {
+    if (currentSection && currentSub && (currentSub.h3Title || currentSub.blocks.length > 0)) {
+      currentSection.subsections.push(currentSub);
+    }
+    currentSub = null;
+  };
+
   for (const block of blocks) {
     if (block.type === "heading" && (block as HeadingBlock).level === 2) {
-      if (current.children.length > 0 || current.title !== null) groups.push(current);
-      current = { title: (block as HeadingBlock).text, children: [] };
-    } else {
-      current.children.push(block);
+      flushSub();
+      if (currentSection) sections.push(currentSection);
+      const title = (block as HeadingBlock).text;
+      currentSection = { h2Title: title, icon: pickIcon(title), subsections: [] };
+      currentSub = null;
+      continue;
     }
+    if (block.type === "heading" && (block as HeadingBlock).level === 3) {
+      flushSub();
+      if (!currentSection) {
+        currentSection = { h2Title: "", icon: "sun-horizon", subsections: [] };
+      }
+      currentSub = { h3Title: (block as HeadingBlock).text, blocks: [] };
+      continue;
+    }
+    if (!currentSection) {
+      currentSection = { h2Title: "", icon: "sun-horizon", subsections: [] };
+    }
+    if (!currentSub) currentSub = { h3Title: null, blocks: [] };
+    currentSub.blocks.push(block);
   }
-  if (current.children.length > 0 || current.title !== null) groups.push(current);
+  flushSub();
+  if (currentSection) sections.push(currentSection);
+  return sections;
+}
+
+export function GuideBlocks({ blocks }: { blocks: TourBlock[] }) {
+  if (blocks.length === 0) return null;
+  const sections = parseSections(blocks);
 
   return (
-    <div className="space-y-5">
-      {groups.map((group, i) => (
-        <article
-          key={i}
-          className="rounded-[var(--radius-md)] bg-[var(--bg-elevated)] border border-[var(--border-default)] p-6 sm:p-8 transition-[border-color,box-shadow] duration-[var(--duration-normal)] ease-[var(--ease-default)] hover:border-[var(--primary)]/30 hover:shadow-[var(--shadow-sm)]"
-        >
-          {group.title && (
-            <h2 className="text-[22px] sm:text-[24px] font-bold tracking-[-0.02em] text-[var(--text-primary)] mb-5">
-              {group.title}
-            </h2>
-          )}
-          <div className="space-y-5">
-            {group.children.map((block) => (
-              <BlockRenderer key={block.id} block={block} />
-            ))}
+    <div className="space-y-14">
+      {sections.map((section, i) => {
+        // If any subsection has an h3 title, use the grid layout; otherwise
+        // render the whole section as a single card (avoids the awkward "one
+        // giant column card" for short prose sections like Where-to-stay).
+        const hasH3 = section.subsections.some((s) => s.h3Title);
+        return (
+          <div key={i}>
+            {section.h2Title && (
+              <h2 className="text-[24px] sm:text-[28px] font-bold tracking-[-0.02em] text-[var(--text-primary)] mb-6">
+                {section.h2Title}
+              </h2>
+            )}
+            {hasH3 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                {section.subsections.map((sub, j) => (
+                  <GuideCard key={j} icon={section.icon} title={sub.h3Title} blocks={sub.blocks} />
+                ))}
+              </div>
+            ) : (
+              <GuideCard
+                icon={section.icon}
+                title={null}
+                blocks={section.subsections.flatMap((s) => s.blocks)}
+                stretched
+              />
+            )}
           </div>
-        </article>
-      ))}
+        );
+      })}
     </div>
+  );
+}
+
+function GuideCard({
+  icon,
+  title,
+  blocks,
+  stretched = false,
+}: {
+  icon: IconName;
+  title: string | null;
+  blocks: TourBlock[];
+  stretched?: boolean;
+}) {
+  return (
+    <article
+      className={`group flex gap-4 p-5 sm:p-6 rounded-[var(--radius-md)] bg-[var(--bg-elevated)] border border-[var(--border-default)] transition-[border-color,box-shadow,transform] duration-[var(--duration-normal)] ease-[var(--ease-default)] hover:border-[var(--primary)]/30 hover:shadow-[var(--shadow-md)] ${stretched ? "" : "hover:-translate-y-0.5"}`}
+    >
+      <span
+        aria-hidden="true"
+        className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center bg-[var(--primary-light)] text-[var(--primary-deep)] ring-1 ring-[var(--primary)]/15 transition-transform duration-[var(--duration-slow)] ease-[var(--ease-default)] group-hover:scale-[1.06]"
+      >
+        <Icon name={icon} size="lg" weight="regular" />
+      </span>
+      <div className="min-w-0 space-y-3 flex-1">
+        {title && (
+          <h3 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">{title}</h3>
+        )}
+        {blocks.map((block) => (
+          <BlockRenderer key={block.id} block={block} />
+        ))}
+      </div>
+    </article>
   );
 }
