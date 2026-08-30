@@ -17,13 +17,18 @@ interface Section {
   subsections: Subsection[];
 }
 
-function pickIcon(h2Title: string): IconName {
-  const t = h2Title.toLowerCase();
-  if (t.includes("get") || t.includes("reach") || t.includes("route")) return "map-pin";
-  if (t.includes("do") || t.includes("explore") || t.includes("see")) return "list-checks";
-  if (t.includes("stay") || t.includes("hotel") || t.includes("accommodat")) return "shield-check";
-  if (t.includes("food") || t.includes("culture") || t.includes("eat")) return "mask-happy";
+function pickIcon(title: string): IconName {
+  const t = title.toLowerCase();
+  // Order matters: more specific matches (air, road) come before catch-alls
+  // (get, reach) so a card titled "By air via Gilgit" picks airplane, not
+  // the parent-section fallback that would match "get to Hunza".
+  if (t.includes("air") || t.includes("flight") || t.includes("fly")) return "airplane";
+  if (t.includes("road") || t.includes("drive") || t.includes("highway") || t.includes("bus")) return "car";
+  if (t.includes("stay") || t.includes("hotel") || t.includes("accommodat")) return "house";
+  if (t.includes("food") || t.includes("eat") || t.includes("cuisine") || t.includes("culture")) return "fork-knife";
+  if (t.includes("do") || t.includes("explore") || t.includes("see") || t.includes("visit")) return "list-checks";
   if (t.includes("when") || t.includes("season") || t.includes("time")) return "calendar-check";
+  if (t.includes("get") || t.includes("reach") || t.includes("route")) return "map-pin";
   return "sun-horizon";
 }
 
@@ -88,7 +93,12 @@ export function GuideBlocks({ blocks }: { blocks: TourBlock[] }) {
             {hasH3 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 {section.subsections.map((sub, j) => (
-                  <GuideCard key={j} icon={section.icon} title={sub.h3Title} blocks={sub.blocks} />
+                  <GuideCard
+                    key={j}
+                    icon={sub.h3Title ? pickIcon(sub.h3Title) : section.icon}
+                    title={sub.h3Title}
+                    blocks={sub.blocks}
+                  />
                 ))}
               </div>
             ) : (
