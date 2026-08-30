@@ -32,7 +32,7 @@ import { getPackagesByDestination } from "@/services/package.service";
 import { getHotelsByDestination } from "@/services/hotel.service";
 import { sortByDestinationRelevance } from "@/lib/packages/sortByDestinationRelevance";
 import { Carousel } from "@/components/ui/Carousel";
-import { BlockList } from "@/components/ui/BlockList";
+import { GuideBlocks } from "@/components/destination/GuideBlocks";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -169,18 +169,6 @@ export default async function DestinationDetailPage({ params }: Props) {
           )}
         </Container>
       </section>
-
-      {/* Long-form guide — admin-editable block content. Rendered before the
-          children rail so travelers meet the story before they browse. */}
-      {(dest.bodyBlocks?.length ?? 0) > 0 && (
-        <section className="py-16 sm:py-20">
-          <Container>
-            <div className="max-w-3xl">
-              <BlockList blocks={dest.bodyBlocks ?? []} />
-            </div>
-          </Container>
-        </section>
-      )}
 
       {/* Child destinations — horizontal rail for discovery */}
       {childDestinations.length > 0 && (
@@ -358,6 +346,34 @@ export default async function DestinationDetailPage({ params }: Props) {
                   />
                 ))}
               </div>
+            </div>
+          </Container>
+        </section>
+      )}
+
+      {/* Long-form guide — admin-editable block content grouped into per-topic
+          cards. Sits below Moments so travelers scan the visual "why here"
+          summary first, then dive into the detailed guide. */}
+      {(dest.bodyBlocks?.length ?? 0) > 0 && (
+        <section className="py-16 sm:py-20 bg-[var(--bg-subtle)]">
+          <Container>
+            <div className="max-w-[1000px] mx-auto">
+              <div className="flex flex-col gap-2 mb-10">
+                <EyebrowLabel>Traveller&rsquo;s guide</EyebrowLabel>
+                <h2
+                  className="font-bold tracking-[-0.025em] leading-[1.15] text-[var(--text-primary)]"
+                  style={{ fontSize: "var(--text-4xl)" }}
+                >
+                  Everything you need to know
+                </h2>
+                <p
+                  className="mt-1 max-w-xl leading-relaxed text-[var(--text-secondary)]"
+                  style={{ fontSize: "var(--text-lg)" }}
+                >
+                  Getting there, what to do, where to stay, and what to eat — the local ground truth.
+                </p>
+              </div>
+              <GuideBlocks blocks={dest.bodyBlocks ?? []} />
             </div>
           </Container>
         </section>
