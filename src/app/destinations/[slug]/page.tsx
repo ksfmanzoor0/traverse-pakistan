@@ -27,6 +27,7 @@ import {
   getAllDestinations,
   getFAQsByDestination,
 } from "@/services/destination.service";
+import { getRegionBySlug } from "@/services/region.service";
 import { getToursByDestination } from "@/services/tour.service";
 import { getPackagesByDestination } from "@/services/package.service";
 import { getHotelsByDestination } from "@/services/hotel.service";
@@ -71,12 +72,13 @@ export default async function DestinationDetailPage({ params }: Props) {
 
   const ancestorSlugs = dest.ancestorSlugs ?? [];
 
-  const [tours, faqs, pkgs, hotels, allDests, ...ancestorResults] = await Promise.all([
+  const [tours, faqs, pkgs, hotels, allDests, region, ...ancestorResults] = await Promise.all([
     getToursByDestination(slug),
     getFAQsByDestination(slug),
     getPackagesByDestination(slug),
     getHotelsByDestination(slug),
     getAllDestinations(),
+    getRegionBySlug(dest.regionSlug),
     ...ancestorSlugs.flatMap((a) => [
       getToursByDestination(a),
       getPackagesByDestination(a),
@@ -96,11 +98,25 @@ export default async function DestinationDetailPage({ params }: Props) {
     aHotels.forEach((h) => { if (!allHotels.some((e) => e.id === h.id)) allHotels.push(h); });
   }
 
+  // Parent chain (root to immediate parent) so children breadcrumb into their parent(s).
+  const parentChain = ancestorSlugs
+    .map((s) => allDests.find((d) => d.slug === s))
+    .filter((d): d is NonNullable<typeof d> => Boolean(d));
+
+  const breadcrumbItems = [
+    { label: "Destinations", href: "/destinations" },
+    ...(region ? [{ label: region.name, href: `/regions/${region.slug}` }] : []),
+    ...parentChain.map((p) => ({ label: p.name, href: `/destinations/${p.slug}` })),
+    { label: dest.name },
+  ];
+
   const schema = combineSchemas(
     destinationSchema(dest),
     breadcrumbSchema([
       { name: "Home", url: "/" },
       { name: "Destinations", url: "/destinations" },
+      ...(region ? [{ name: region.name, url: `/regions/${region.slug}` }] : []),
+      ...parentChain.map((p) => ({ name: p.name, url: `/destinations/${p.slug}` })),
       { name: dest.name, url: `/destinations/${dest.slug}` },
     ]),
     faqs.length > 0 ? faqPageSchema(faqs) : null
@@ -132,14 +148,7 @@ export default async function DestinationDetailPage({ params }: Props) {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
         <Container className="relative pb-10 sm:pb-14 pt-24">
-          <Breadcrumb
-            items={[
-              { label: "Destinations", href: "/destinations" },
-              { label: dest.name },
-            ]}
-            light
-            className="mb-4"
-          />
+          <Breadcrumb items={breadcrumbItems} light className="mb-4" />
           <h1 className="text-[36px] sm:text-[48px] font-bold text-[var(--on-dark)] tracking-tight">
             {dest.name}
           </h1>
