@@ -100,16 +100,10 @@ export const getDestinationBySlug = cache(async (slug: string): Promise<Destinat
 
 export const getDestinationsByRegion = cache(
   async (regionSlug: string): Promise<Destination[]> => {
-    const supabase = getSupabaseAnon();
-    const { data, error } = await supabase
-      .from("destinations")
-      .select(DESTINATION_QUERY)
-      .order("name");
-
-    if (error) throw new Error(`getDestinationsByRegion: ${error.message}`);
-    return (data as unknown as DestinationWithRegion[])
-      .filter((d) => d.regions?.slug === regionSlug)
-      .map(toDestination);
+    // Route through getAllDestinations so parentSlug is properly resolved to a
+    // slug (not a UUID). Cached upstream, so this is a cheap in-memory filter.
+    const all = await getAllDestinations();
+    return all.filter((d) => d.regionSlug === regionSlug);
   }
 );
 
