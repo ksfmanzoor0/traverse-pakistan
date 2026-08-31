@@ -35,6 +35,10 @@ import { sortByDestinationRelevance } from "@/lib/packages/sortByDestinationRele
 import { Carousel } from "@/components/ui/Carousel";
 import { GuideBlocks } from "@/components/destination/GuideBlocks";
 
+const PINNED_CHILDREN: Record<string, string[]> = {
+  chitral: ["kalash"],
+};
+
 interface Props {
   params: Promise<{ slug: string }>;
 }
@@ -127,10 +131,20 @@ export default async function DestinationDetailPage({ params }: Props) {
   const tourCount = allTours.length;
 
   // Direct children only (e.g. Hunza → Altit, Attabad, Passu — not grandchildren).
-  // Sorted by name for stable ordering across builds.
+  // Some parents pin a hero child to the top (e.g. Kalash under Chitral); the rest sort by name.
+  const pinnedChildren = PINNED_CHILDREN[dest.slug] ?? [];
   const childDestinations = allDests
     .filter((d) => d.parentSlug === dest.slug)
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => {
+      const ai = pinnedChildren.indexOf(a.slug);
+      const bi = pinnedChildren.indexOf(b.slug);
+      if (ai !== -1 || bi !== -1) {
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+      }
+      return a.name.localeCompare(b.name);
+    });
 
   return (
     <>
