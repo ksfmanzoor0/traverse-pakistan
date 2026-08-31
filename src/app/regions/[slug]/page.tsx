@@ -7,6 +7,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { EyebrowLabel } from "@/components/ui/EyebrowLabel";
 import { GuideBlocks } from "@/components/destination/GuideBlocks";
 import { TourCard } from "@/components/tours/TourCard";
+import { PackageCard } from "@/components/packages/PackageCard";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { buildMetadata } from "@/lib/seo/metadata";
 import {
@@ -17,6 +18,7 @@ import {
 import { getRegionBySlug, getAllRegions } from "@/services/region.service";
 import { getDestinationsByRegion } from "@/services/destination.service";
 import { getToursByRegion } from "@/services/tour.service";
+import { getPackagesByRegion } from "@/services/package.service";
 import { formatPrice } from "@/lib/utils";
 import Link from "next/link";
 
@@ -70,9 +72,10 @@ export default async function RegionPage({ params }: Props) {
   const region = await getRegionBySlug(slug);
   if (!region) notFound();
 
-  const [allInRegion, tours] = await Promise.all([
+  const [allInRegion, tours, pkgs] = await Promise.all([
     getDestinationsByRegion(slug),
     getToursByRegion(slug),
+    getPackagesByRegion(slug),
   ]);
 
   // Show only top-level destinations in the region grid. Children (e.g. Altit,
@@ -181,6 +184,23 @@ export default async function RegionPage({ params }: Props) {
                   </Link>
                 );
               })}
+            </div>
+          </Container>
+        </section>
+      )}
+
+      {/* Packages in this region, immediately below the destinations grid. */}
+      {pkgs.length > 0 && (
+        <section className="bg-[var(--bg-subtle)] py-16 sm:py-20">
+          <Container>
+            <SectionHeader
+              title={`Packages in ${region.name}`}
+              subtitle={`${pkgs.length} package${pkgs.length !== 1 ? "s" : ""} to explore`}
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {pkgs.map((pkg) => (
+                <PackageCard key={pkg.id} pkg={pkg} variant="grid" />
+              ))}
             </div>
           </Container>
         </section>
