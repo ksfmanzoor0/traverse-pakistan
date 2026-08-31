@@ -210,13 +210,11 @@ export default async function RegionPage({ params }: Props) {
       {(region.bodyBlocks?.length ?? 0) > 0 && (
         <section className="py-16 sm:py-20">
           <Container>
-            <div className="max-w-4xl">
-              <EyebrowLabel>Regional guide</EyebrowLabel>
-              <h2 className="text-[28px] sm:text-[36px] font-bold tracking-[-0.02em] text-[var(--text-primary)] mt-2 mb-8">
-                Travelling in {region.name}
-              </h2>
-              <GuideBlocks blocks={region.bodyBlocks ?? []} />
-            </div>
+            <EyebrowLabel>Regional guide</EyebrowLabel>
+            <h2 className="text-[28px] sm:text-[36px] font-bold tracking-[-0.02em] text-[var(--text-primary)] mt-2 mb-8">
+              Travelling in {region.name}
+            </h2>
+            <GuideBlocks blocks={region.bodyBlocks ?? []} />
           </Container>
         </section>
       )}
