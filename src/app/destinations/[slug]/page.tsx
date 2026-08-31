@@ -136,12 +136,12 @@ export default async function DestinationDetailPage({ params }: Props) {
     <>
       <JsonLd data={schema} id={`destination-${dest.slug}-jsonld`} />
       {/* Hero + description — image is shared background */}
-      <section className="relative flex items-end w-full aspect-[16/9] max-h-[80vh]">
+      <section className="relative flex items-end min-h-[560px] sm:min-h-[640px] bg-black">
         <Image
           src={dest.heroImage}
           alt={dest.name}
           fill
-          className="object-cover"
+          className="object-contain object-center"
           sizes="100vw"
           priority
           quality={80}
