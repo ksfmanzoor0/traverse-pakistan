@@ -152,7 +152,7 @@ function GuideCard({
         aria-hidden="true"
         className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center transition-transform duration-[var(--duration-slow)] ease-[var(--ease-default)] group-hover:scale-[1.06]"
         style={{
-          backgroundColor: "var(--bg-primary)",
+          backgroundColor: "var(--bg-elevated)",
           color: tint.fg,
           boxShadow: `inset 0 0 0 1px ${tint.ring}`,
         }}
