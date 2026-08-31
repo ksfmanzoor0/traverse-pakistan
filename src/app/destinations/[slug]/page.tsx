@@ -37,6 +37,11 @@ import { GuideBlocks } from "@/components/destination/GuideBlocks";
 
 const PINNED_CHILDREN: Record<string, string[]> = {
   chitral: ["kalash"],
+  "interior-sindh": ["mohen-jo-daro"],
+};
+
+const DEMOTED_CHILDREN: Record<string, string[]> = {
+  "interior-sindh": ["larkana"],
 };
 
 interface Props {
@@ -130,21 +135,33 @@ export default async function DestinationDetailPage({ params }: Props) {
   const packageCount = visiblePkgs.length;
   const tourCount = allTours.length;
 
-  // Direct children only (e.g. Hunza → Altit, Attabad, Passu — not grandchildren).
+  // Direct children plus one level of grandchildren so hub parents (e.g. Interior Sindh)
+  // still surface destinations that live under a sub-cluster (e.g. Kirthar → Ranikot).
   // Some parents pin a hero child to the top (e.g. Kalash under Chitral); the rest sort by name.
+  const directChildren = allDests.filter((d) => d.parentSlug === dest.slug);
+  const directChildSlugs = new Set(directChildren.map((d) => d.slug));
+  const grandChildren = allDests.filter(
+    (d) => d.parentSlug && directChildSlugs.has(d.parentSlug)
+  );
   const pinnedChildren = PINNED_CHILDREN[dest.slug] ?? [];
-  const childDestinations = allDests
-    .filter((d) => d.parentSlug === dest.slug)
-    .sort((a, b) => {
-      const ai = pinnedChildren.indexOf(a.slug);
-      const bi = pinnedChildren.indexOf(b.slug);
-      if (ai !== -1 || bi !== -1) {
-        if (ai === -1) return 1;
-        if (bi === -1) return -1;
-        return ai - bi;
-      }
-      return a.name.localeCompare(b.name);
-    });
+  const demotedChildren = DEMOTED_CHILDREN[dest.slug] ?? [];
+  const childDestinations = [...directChildren, ...grandChildren].sort((a, b) => {
+    const ad = demotedChildren.indexOf(a.slug);
+    const bd = demotedChildren.indexOf(b.slug);
+    if (ad !== -1 || bd !== -1) {
+      if (ad === -1) return -1;
+      if (bd === -1) return 1;
+      return ad - bd;
+    }
+    const ai = pinnedChildren.indexOf(a.slug);
+    const bi = pinnedChildren.indexOf(b.slug);
+    if (ai !== -1 || bi !== -1) {
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    }
+    return a.name.localeCompare(b.name);
+  });
 
   return (
     <>
