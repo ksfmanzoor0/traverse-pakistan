@@ -249,6 +249,7 @@ export type RegionRow = {
   description: string | null;
   image_url: string | null;
   created_at: string;
+  body_blocks: unknown | null;
 };
 
 export type DestinationRow = {

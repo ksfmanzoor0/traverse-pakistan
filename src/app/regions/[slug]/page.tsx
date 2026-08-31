@@ -4,6 +4,8 @@ import Image from "next/image";
 import { Container } from "@/components/ui/Container";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { EyebrowLabel } from "@/components/ui/EyebrowLabel";
+import { GuideBlocks } from "@/components/destination/GuideBlocks";
 import { TourCard } from "@/components/tours/TourCard";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { buildMetadata } from "@/lib/seo/metadata";
@@ -152,6 +154,21 @@ export default async function RegionPage({ params }: Props) {
                   </Link>
                 );
               })}
+            </div>
+          </Container>
+        </section>
+      )}
+
+      {/* Long-form regional guide (body_blocks). */}
+      {(region.bodyBlocks?.length ?? 0) > 0 && (
+        <section className="py-16 sm:py-20">
+          <Container>
+            <div className="max-w-4xl">
+              <EyebrowLabel>Regional guide</EyebrowLabel>
+              <h2 className="text-[28px] sm:text-[36px] font-bold tracking-[-0.02em] text-[var(--text-primary)] mt-2 mb-8">
+                Travelling in {region.name}
+              </h2>
+              <GuideBlocks blocks={region.bodyBlocks ?? []} />
             </div>
           </Container>
         </section>

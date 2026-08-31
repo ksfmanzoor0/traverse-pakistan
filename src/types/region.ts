@@ -1,3 +1,5 @@
+import type { TourBlock } from "./tour-block";
+
 export interface Region {
   id: string;
   slug: string;
@@ -8,4 +10,5 @@ export interface Region {
   tourCount: number;
   metaTitle: string;
   metaDescription: string;
+  bodyBlocks?: TourBlock[];
 }
