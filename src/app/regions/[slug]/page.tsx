@@ -20,6 +20,21 @@ import { getToursByRegion } from "@/services/tour.service";
 import { formatPrice } from "@/lib/utils";
 import Link from "next/link";
 
+const PINNED_REGION_DESTINATIONS: Record<string, string[]> = {
+  "gilgit-baltistan": [
+    "hunza",
+    "skardu",
+    "fairy-meadows",
+    "ghizer",
+    "nagar",
+    "gojal",
+    "naltar",
+    "astore",
+    "gilgit",
+    "chilas",
+  ],
+};
+
 interface Props {
   params: Promise<{ slug: string }>;
 }
@@ -63,7 +78,19 @@ export default async function RegionPage({ params }: Props) {
   // Show only top-level destinations in the region grid. Children (e.g. Altit,
   // Passu inside Hunza) show up as a subline on their parent's card and get
   // their own detail pages via /destinations/[slug].
-  const parents = allInRegion.filter((d) => !d.parentSlug);
+  const pinnedForRegion = PINNED_REGION_DESTINATIONS[slug] ?? [];
+  const parents = allInRegion
+    .filter((d) => !d.parentSlug)
+    .sort((a, b) => {
+      const ai = pinnedForRegion.indexOf(a.slug);
+      const bi = pinnedForRegion.indexOf(b.slug);
+      if (ai !== -1 || bi !== -1) {
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+      }
+      return a.name.localeCompare(b.name);
+    });
   const childrenByParent = new Map<string, string[]>();
   for (const d of allInRegion) {
     if (!d.parentSlug) continue;
