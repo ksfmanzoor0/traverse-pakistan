@@ -2,19 +2,35 @@ import { Container } from "@/components/ui/Container";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Carousel } from "@/components/ui/Carousel";
 import { TourCard } from "@/components/tours/TourCard";
-import { getAllTours, getFeaturedTours } from "@/services/tour.service";
+import { getAllTours } from "@/services/tour.service";
 
-const CAROUSEL_SLOTS = 10;
+const MIN_SLOTS = 4;
+const MAX_SLOTS = 10;
 
 export async function PopularToursCarousel() {
-  const [featured, allTours] = await Promise.all([getFeaturedTours(), getAllTours()]);
+  const allTours = await getAllTours();
 
-  // Featured tours come first (ordered by featured_rank via the service), then
-  // any remaining tours fill the carousel up to CAROUSEL_SLOTS to avoid an
-  // empty section when admin has featured fewer than the target count.
-  const seen = new Set(featured.map((t) => t.slug));
-  const filler = allTours.filter((t) => !seen.has(t.slug));
-  const tours = [...featured, ...filler].slice(0, CAROUSEL_SLOTS);
+  // Mirror the admin Home Ordering sort so what admin sees at the top of the
+  // list is exactly what shows on home: featured first, then explicit rank
+  // (nulls last), then earliest upcoming departure, then name. Show at least
+  // MIN_SLOTS so the section never looks half-empty.
+  const sorted = [...allTours].sort((a, b) => {
+    const fa = a.featured ? 1 : 0;
+    const fb = b.featured ? 1 : 0;
+    if (fa !== fb) return fb - fa;
+    const ra = a.featuredRank ?? null;
+    const rb = b.featuredRank ?? null;
+    if (ra !== null && rb !== null && ra !== rb) return ra - rb;
+    if (ra !== null) return -1;
+    if (rb !== null) return 1;
+    const ad = a.departureDate || "￿";
+    const bd = b.departureDate || "￿";
+    if (ad !== bd) return ad.localeCompare(bd);
+    return a.name.localeCompare(b.name);
+  });
+  const featuredCount = sorted.filter((t) => t.featured).length;
+  const target = Math.min(MAX_SLOTS, Math.max(featuredCount, MIN_SLOTS));
+  const tours = sorted.slice(0, target);
 
   return (
     <section id="section-tours" className="relative bg-[var(--bg-primary)] pt-6 pb-20 sm:py-24" style={{ scrollMarginTop: "200px" }}>
