@@ -190,6 +190,20 @@ export const getPackagesByDestination = cache(
   }
 );
 
+export const getPackagesByRegion = cache(
+  async (regionSlug: string): Promise<Package[]> => {
+    const supabase = getSupabaseAnon();
+    const { data, error } = await supabase
+      .from("packages")
+      .select("*")
+      .eq("published", true)
+      .eq("region_slug", regionSlug);
+
+    if (error) throw new Error(`getPackagesByRegion: ${error.message}`);
+    return (data as unknown as PackageRow[]).map(toPackage);
+  }
+);
+
 export const getPackagesByStyle = cache(
   async (styleSlug: string): Promise<Package[]> => {
     const supabase = getSupabaseAnon();

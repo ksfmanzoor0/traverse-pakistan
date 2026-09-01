@@ -13,7 +13,12 @@ export function MomentCard({ icon, title, description }: MomentCardProps) {
     >
       <span
         aria-hidden="true"
-        className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center bg-[var(--primary-light)] text-[var(--primary-deep)] ring-1 ring-[var(--primary)]/15 transition-transform duration-[var(--duration-slow)] ease-[var(--ease-default)] group-hover:scale-[1.06]"
+        className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center transition-transform duration-[var(--duration-slow)] ease-[var(--ease-default)] group-hover:scale-[1.06]"
+        style={{
+          backgroundColor: "var(--bg-elevated)",
+          color: "var(--primary)",
+          boxShadow: "inset 0 0 0 1px color-mix(in oklab, var(--primary) 30%, transparent)",
+        }}
       >
         <Icon name={icon} size="lg" weight="regular" />
       </span>

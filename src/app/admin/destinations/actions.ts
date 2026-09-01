@@ -2,9 +2,27 @@
 
 import { revalidatePath, revalidateTag } from "next/cache";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import type { TourBlock } from "@/types/tour-block";
 
 type Entry = { rank?: number; hidden?: boolean; featured?: boolean };
 type PerPackagePayload = { entry: Entry; published: boolean };
+
+export async function saveDestinationBodyBlocks(
+  destinationSlug: string,
+  blocks: TourBlock[],
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from("destinations")
+    .update({ body_blocks: blocks as never })
+    .eq("slug", destinationSlug);
+  if (error) return { ok: false, error: error.message };
+
+  revalidateTag("destinations", {});
+  revalidatePath(`/destinations/${destinationSlug}`);
+  revalidatePath(`/admin/destinations/${destinationSlug}`);
+  return { ok: true };
+}
 
 function normalizeEntry(entry: Entry): Entry | null {
   const e: Entry = {};

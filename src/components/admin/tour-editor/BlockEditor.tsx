@@ -10,11 +10,18 @@ interface Props {
   tourSlug: string;
   blocks: TourBlock[];
   onChange: (next: TourBlock[]) => void;
+  /** Where in R2 image blocks should point their upload paths. Purely a
+   *  display hint on the image-block form; upload happens in the Gallery tab.
+   *  Defaults to "tours/{tourSlug}/" when omitted. */
+  mediaHint?: string;
+  /** Whether to show the per-block city-visibility chip picker. Tours need it
+   *  (content varies by departure city); destinations don't. Default true. */
+  showCityFilter?: boolean;
 }
 
 // Ordered list editor for TourBlock[]. Each block gets a type-specific form
 // (BlockFields) plus a shared city-visibility chip picker + reorder buttons.
-export function BlockEditor({ tourSlug, blocks, onChange }: Props) {
+export function BlockEditor({ tourSlug, blocks, onChange, mediaHint, showCityFilter = true }: Props) {
   const [addOpen, setAddOpen] = useState(false);
 
   function updateAt(i: number, patch: Partial<TourBlock>) {
@@ -64,15 +71,17 @@ export function BlockEditor({ tourSlug, blocks, onChange }: Props) {
             </div>
           </div>
 
-          <BlockFields tourSlug={tourSlug} block={block} onChange={(patch) => updateAt(i, patch)} />
+          <BlockFields tourSlug={tourSlug} block={block} onChange={(patch) => updateAt(i, patch)} mediaHint={mediaHint} />
 
-          <div className="pt-2 border-t border-[var(--border-default)]">
-            <CityChips
-              label="Visible for:"
-              value={block.cityOnly as Home[] | undefined}
-              onChange={(next) => updateAt(i, { cityOnly: next } as Partial<TourBlock>)}
-            />
-          </div>
+          {showCityFilter && (
+            <div className="pt-2 border-t border-[var(--border-default)]">
+              <CityChips
+                label="Visible for:"
+                value={block.cityOnly as Home[] | undefined}
+                onChange={(next) => updateAt(i, { cityOnly: next } as Partial<TourBlock>)}
+              />
+            </div>
+          )}
         </div>
       ))}
 
@@ -109,10 +118,12 @@ function BlockFields({
   tourSlug,
   block,
   onChange,
+  mediaHint,
 }: {
   tourSlug: string;
   block: TourBlock;
   onChange: (patch: Partial<TourBlock>) => void;
+  mediaHint?: string;
 }) {
   switch (block.type) {
     case "heading":
@@ -209,7 +220,7 @@ function BlockFields({
             className={inputCls}
           />
           <p className="text-[11px] text-[var(--text-tertiary)]">
-            Upload files from the Gallery tab first (they land in <code>tours/{tourSlug}/</code>), then paste the URL here.
+            Upload files from the Gallery tab first (they land in <code>{mediaHint ?? `tours/${tourSlug}/`}</code>), then paste the URL here.
           </p>
         </div>
       );
