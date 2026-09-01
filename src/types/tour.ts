@@ -92,6 +92,13 @@ export interface Tour {
   /** Rich block-editor content shown below the description on the tour
    * page. Filtered client-side by traveler home city. Empty = nothing. */
   bodyBlocks: TourBlock[];
+  /** Per-destination overrides — hide the tour from a specific destination page,
+   *  or pin its position, or mark it as featured on that page. Empty by default. */
+  destinationRank?: Record<string, number | { rank?: number; hidden?: boolean; featured?: boolean }>;
+  /** Whether the tour is flagged for the home Popular Tours carousel. */
+  featured?: boolean;
+  /** Explicit position in the home carousel — lower first, null = auto. */
+  featuredRank?: number | null;
   updatedAt?: string;
   /** True when the tour has tour_addons rows (flight/bus pickers at checkout).
    * Card price shows base + "+ transport" chip instead of the bare number. */

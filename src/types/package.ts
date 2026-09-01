@@ -67,5 +67,9 @@ export interface Package {
   };
   metaTitle: string;
   metaDescription: string;
+  /** Whether the package is flagged for the home Featured Packages carousel. */
+  featured?: boolean;
+  /** Explicit position in the home carousel — lower first, null = auto. */
+  featuredRank?: number | null;
   updatedAt?: string;
 }

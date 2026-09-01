@@ -9,11 +9,6 @@ import { getAllPackages } from "@/services/package.service";
 import { getAllTours } from "@/services/tour.service";
 import { countDestinationOfferings } from "@/lib/destinations/countOfferings";
 
-const FEATURED_ORDER = [
-  "hunza", "skardu", "chitral", "fairy-meadows",
-  "kaghan", "swat", "neelam-valley", "makran",
-];
-
 export async function DestinationsScroll() {
   const [all, allPackages, allTours] = await Promise.all([
     getAllDestinations(),
@@ -23,11 +18,11 @@ export async function DestinationsScroll() {
   const destinations = all
     .filter((d) => !d.parentSlug && d.heroImage)
     .sort((a, b) => {
-      const ai = FEATURED_ORDER.indexOf(a.slug);
-      const bi = FEATURED_ORDER.indexOf(b.slug);
-      if (ai !== -1 && bi !== -1) return ai - bi;
-      if (ai !== -1) return -1;
-      if (bi !== -1) return 1;
+      const ar = a.homeRank ?? null;
+      const br = b.homeRank ?? null;
+      if (ar !== null && br !== null) return ar - br;
+      if (ar !== null) return -1;
+      if (br !== null) return 1;
       return (b.startingPrice ?? 0) - (a.startingPrice ?? 0);
     })
     .slice(0, 8);

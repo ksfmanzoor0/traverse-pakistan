@@ -4,33 +4,33 @@ import { Carousel } from "@/components/ui/Carousel";
 import { TourCard } from "@/components/tours/TourCard";
 import { getAllTours } from "@/services/tour.service";
 
-// Hand-pinned slots in the Popular Tours carousel.
-const PINNED_POSITIONS: Record<number, string> = {
-  0: "skardu-khaplu-deosai-5day-flight",
-  1: "trip-to-hunza-naltar-khunjerab",
-  2: "trip-to-minimarg",
-  3: "k2-base-camp-trek",
-};
+const MIN_SLOTS = 4;
+const MAX_SLOTS = 10;
 
 export async function PopularToursCarousel() {
   const allTours = await getAllTours();
 
-  const pinnedSlugs = new Set(Object.values(PINNED_POSITIONS));
-  const rest = allTours.filter((t) => !pinnedSlugs.has(t.slug));
-  const pinnedBySlug = new Map(allTours.filter((t) => pinnedSlugs.has(t.slug)).map((t) => [t.slug, t]));
-
-  const ordered: typeof allTours = [];
-  let restCursor = 0;
-  for (let i = 0; i < 10; i++) {
-    const pinnedSlug = PINNED_POSITIONS[i];
-    const pinned = pinnedSlug ? pinnedBySlug.get(pinnedSlug) : undefined;
-    if (pinned) {
-      ordered.push(pinned);
-    } else if (restCursor < rest.length) {
-      ordered.push(rest[restCursor++]);
-    }
-  }
-  const tours = ordered;
+  // Mirror the admin Home Ordering sort so what admin sees at the top of the
+  // list is exactly what shows on home: featured first, then explicit rank
+  // (nulls last), then earliest upcoming departure, then name. Show at least
+  // MIN_SLOTS so the section never looks half-empty.
+  const sorted = [...allTours].sort((a, b) => {
+    const fa = a.featured ? 1 : 0;
+    const fb = b.featured ? 1 : 0;
+    if (fa !== fb) return fb - fa;
+    const ra = a.featuredRank ?? null;
+    const rb = b.featuredRank ?? null;
+    if (ra !== null && rb !== null && ra !== rb) return ra - rb;
+    if (ra !== null) return -1;
+    if (rb !== null) return 1;
+    const ad = a.departureDate || "￿";
+    const bd = b.departureDate || "￿";
+    if (ad !== bd) return ad.localeCompare(bd);
+    return a.name.localeCompare(b.name);
+  });
+  const featuredCount = sorted.filter((t) => t.featured).length;
+  const target = Math.min(MAX_SLOTS, Math.max(featuredCount, MIN_SLOTS));
+  const tours = sorted.slice(0, target);
 
   return (
     <section id="section-tours" className="relative bg-[var(--bg-primary)] pt-6 pb-20 sm:py-24" style={{ scrollMarginTop: "200px" }}>

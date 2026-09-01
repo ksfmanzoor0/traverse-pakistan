@@ -55,6 +55,9 @@ export type TourRow = {
   // Per-tour override for group-size tiers, sorted ascending by minAdults.
   // NULL = default [{minAdults:3,pct:0.05},{minAdults:6,pct:0.10}].
   group_discount_tiers: Array<{ minAdults: number; pct: number }> | null;
+  published: boolean;
+  featured_rank: number | null;
+  destination_rank: Record<string, number | { rank?: number; hidden?: boolean; featured?: boolean }>;
   created_at: string;
   updated_at: string;
 };
@@ -264,6 +267,7 @@ export type DestinationRow = {
   hero_image: string | null;
   elevation: string | null;
   featured: boolean;
+  home_rank: number | null;
   lat: number | null;
   lng: number | null;
   starting_price: number | null;
@@ -340,6 +344,8 @@ export type PackageRow = {
   // engine redesign. NULL = no override.
   child_discount_pct: number | null;
   group_discount_tiers: Array<{ minAdults: number; pct: number }> | null;
+  featured: boolean;
+  featured_rank: number | null;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -404,8 +410,8 @@ export type Database = {
     Tables: {
       tours: {
         Row: TourRow;
-        Insert: Omit<TourRow, "id" | "created_at" | "updated_at" | "featured"> &
-          Partial<Pick<TourRow, "id" | "created_at" | "updated_at" | "featured">>;
+        Insert: Omit<TourRow, "id" | "created_at" | "updated_at" | "featured" | "destination_rank"> &
+          Partial<Pick<TourRow, "id" | "created_at" | "updated_at" | "featured" | "destination_rank">>;
         Update: Partial<TourRow>;
         Relationships: [];
       };

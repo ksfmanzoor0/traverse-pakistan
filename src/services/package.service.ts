@@ -68,6 +68,8 @@ function toPackage(row: PackageRow): Package {
     tiers: mergePricing(row.pricing, row.pricing_override) as Package["tiers"],
     metaTitle: row.meta_title ?? row.name,
     metaDescription: row.meta_description ?? "",
+    featured: !!row.featured,
+    featuredRank: row.featured_rank,
     updatedAt: row.updated_at ?? undefined,
   };
 }
@@ -143,32 +145,18 @@ export const getPackageItinerary = cache(async (slug: string): Promise<PackageIt
   };
 });
 
-const FEATURED_PACKAGE_SLUGS = [
-  "hunza-valley-escape",
-  "skardu-heaven-on-earth",
-  "chitral-kailash-gol-4day",
-  "northern-pakistan-grand-tour",
-  "pakistan-historical-12day",
-  "old-lahore-day-tour",
-  "historical-sindh-3day",
-  "sharan-forest-3day",
-  "galiyat-nathiagali-3day",
-  "gwadar-makran-3day",
-  "swat-kalam-malam-jabba-4day",
-];
-
 export const getFeaturedPackages = cache(async (): Promise<Package[]> => {
   const supabase = getSupabaseAnon();
   const { data, error } = await supabase
     .from("packages")
     .select("*")
     .eq("published", true)
-    .in("slug", FEATURED_PACKAGE_SLUGS);
+    .eq("featured", true)
+    .order("featured_rank", { ascending: true, nullsFirst: false })
+    .order("name", { ascending: true });
 
   if (error) throw new Error(`getFeaturedPackages: ${error.message}`);
-  const rows = (data as unknown as PackageRow[]).map(toPackage);
-  // Return in the defined display order
-  return FEATURED_PACKAGE_SLUGS.flatMap((slug) => rows.filter((p) => p.slug === slug));
+  return (data as unknown as PackageRow[]).map(toPackage);
 });
 
 export const getPackagesByDestination = cache(

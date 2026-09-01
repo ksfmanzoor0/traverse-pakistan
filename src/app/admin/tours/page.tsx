@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { ToursListClient, type TourRowLite } from "@/components/admin/ToursListClient";
-import { duplicateTour, deleteTour } from "./actions";
+import { duplicateTour, deleteTour, setTourPublished, setTourFeatured } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +9,7 @@ async function fetchTours(): Promise<TourRowLite[]> {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("tours")
-    .select("slug, name, destination_slug, region_slug, duration, category, anchor_city")
+    .select("slug, name, destination_slug, region_slug, duration, category, anchor_city, published, featured")
     .order("name");
   if (error) throw new Error(error.message);
   return (data as TourRowLite[]) ?? [];
@@ -35,7 +35,7 @@ export default async function AdminToursPage() {
           + New tour
         </Link>
       </div>
-      <ToursListClient rows={rows} duplicateAction={duplicateTour} deleteAction={deleteTour} />
+      <ToursListClient rows={rows} duplicateAction={duplicateTour} deleteAction={deleteTour} setPublishedAction={setTourPublished} setFeaturedAction={setTourFeatured} />
     </div>
   );
 }
