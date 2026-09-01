@@ -56,6 +56,7 @@ export type TourRow = {
   // NULL = default [{minAdults:3,pct:0.05},{minAdults:6,pct:0.10}].
   group_discount_tiers: Array<{ minAdults: number; pct: number }> | null;
   published: boolean;
+  featured_rank: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -341,6 +342,8 @@ export type PackageRow = {
   // engine redesign. NULL = no override.
   child_discount_pct: number | null;
   group_discount_tiers: Array<{ minAdults: number; pct: number }> | null;
+  featured: boolean;
+  featured_rank: number | null;
   created_at: string | null;
   updated_at: string | null;
 };

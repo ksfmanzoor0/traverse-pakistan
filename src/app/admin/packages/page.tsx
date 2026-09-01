@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { PackagesListClient } from "@/components/admin/PackagesListClient";
-import { duplicatePackage } from "./actions";
+import { duplicatePackage, setPackagePublished, setPackageFeatured } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +12,7 @@ type Row = {
   region_slug: string;
   duration: number;
   published: boolean;
+  featured: boolean;
   updated_at: string | null;
 };
 
@@ -19,7 +20,7 @@ async function fetchPackages(): Promise<Row[]> {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("packages")
-    .select("slug, name, destination_slug, region_slug, duration, published, updated_at")
+    .select("slug, name, destination_slug, region_slug, duration, published, featured, updated_at")
     .order("name");
   if (error) throw new Error(error.message);
   return (data as Row[]) ?? [];
@@ -46,7 +47,7 @@ export default async function AdminPackagesPage() {
           + New package
         </Link>
       </div>
-      <PackagesListClient rows={rows} duplicateAction={duplicatePackage} />
+      <PackagesListClient rows={rows} duplicateAction={duplicatePackage} setPublishedAction={setPackagePublished} setFeaturedAction={setPackageFeatured} />
     </div>
   );
 }

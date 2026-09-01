@@ -311,7 +311,14 @@ export const getFeaturedTours = cache(async (limit?: number): Promise<Tour[]> =>
   const supabase = getSupabaseAnon();
   const activeSlugs = await getActiveTourSlugs(supabase);
   if (activeSlugs.length === 0) return [];
-  let query = supabase.from("tours").select("*").eq("published", true).not("badge", "is", null).in("slug", activeSlugs).order("review_count", { ascending: false });
+  let query = supabase
+    .from("tours")
+    .select("*")
+    .eq("published", true)
+    .eq("featured", true)
+    .in("slug", activeSlugs)
+    .order("featured_rank", { ascending: true, nullsFirst: false })
+    .order("review_count", { ascending: false });
   if (limit) query = query.limit(limit);
   const { data, error } = await query;
   if (error) throw new Error(`getFeaturedTours: ${error.message}`);

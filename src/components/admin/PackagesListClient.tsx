@@ -11,6 +11,7 @@ type Row = {
   region_slug: string;
   duration: number;
   published: boolean;
+  featured: boolean;
   updated_at: string | null;
 };
 
@@ -30,14 +31,33 @@ function fmt(iso: string | null): string {
 type Props = {
   rows: Row[];
   duplicateAction: (sourceSlug: string, newSlug: string) => Promise<{ ok: boolean; slug?: string; error?: string }>;
+  setPublishedAction: (slug: string, published: boolean) => Promise<{ ok: boolean; error?: string }>;
+  setFeaturedAction: (slug: string, featured: boolean) => Promise<{ ok: boolean; error?: string }>;
 };
 
-export function PackagesListClient({ rows, duplicateAction }: Props) {
+export function PackagesListClient({ rows, duplicateAction, setPublishedAction, setFeaturedAction }: Props) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [dupPending, startDup] = useTransition();
   const [dupSlug, setDupSlug] = useState<string | null>(null);
+  const [togglePending, startToggle] = useTransition();
+
+  function onTogglePublished(row: Row) {
+    const next = !row.published;
+    if (!confirm(`${next ? "Publish" : "Unpublish"} "${row.name}"?\nUnpublishing hides the package from all public listings and search but keeps the row in the database.`)) return;
+    startToggle(async () => {
+      const res = await setPublishedAction(row.slug, next);
+      if (!res.ok) alert(res.error ?? "Failed"); else router.refresh();
+    });
+  }
+
+  function onToggleFeatured(row: Row) {
+    startToggle(async () => {
+      const res = await setFeaturedAction(row.slug, !row.featured);
+      if (!res.ok) alert(res.error ?? "Failed"); else router.refresh();
+    });
+  }
 
   function onDuplicate(sourceSlug: string) {
     const suggestion = `${sourceSlug}-copy`;
@@ -124,6 +144,7 @@ export function PackagesListClient({ rows, duplicateAction }: Props) {
                 <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Region</th>
                 <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Days</th>
                 <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Home</th>
                 <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider">Updated</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -162,11 +183,32 @@ export function PackagesListClient({ rows, duplicateAction }: Props) {
                       {r.published ? "Published" : "Draft"}
                     </span>
                   </td>
+                  <td className="px-4 py-3">
+                    <button
+                      type="button"
+                      disabled={togglePending}
+                      onClick={() => onToggleFeatured(r)}
+                      title={r.featured ? "Featured on home" : "Not featured"}
+                      className="text-[13px] font-semibold hover:underline disabled:opacity-50"
+                      style={{ color: r.featured ? "var(--warning)" : "var(--text-tertiary)" }}
+                    >
+                      {r.featured ? "★ Featured" : "☆ Feature"}
+                    </button>
+                  </td>
                   <td className="px-4 py-3 text-[12px]" style={{ color: "var(--text-tertiary)" }}>
                     {fmt(r.updated_at)}
                   </td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <div className="inline-flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => onTogglePublished(r)}
+                        disabled={togglePending}
+                        className="text-[12px] font-semibold cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
+                        {r.published ? "Unpublish" : "Publish"}
+                      </button>
                       <button
                         type="button"
                         onClick={() => onDuplicate(r.slug)}
@@ -189,7 +231,7 @@ export function PackagesListClient({ rows, duplicateAction }: Props) {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-12 text-center text-sm" style={{ color: "var(--text-tertiary)" }}>
+                  <td colSpan={8} className="p-12 text-center text-sm" style={{ color: "var(--text-tertiary)" }}>
                     No packages match.
                   </td>
                 </tr>
