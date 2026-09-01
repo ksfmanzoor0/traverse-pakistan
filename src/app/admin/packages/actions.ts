@@ -51,6 +51,34 @@ export type PackagePatch = {
   group_discount_tiers?: Array<{ minAdults: number; pct: number }> | null;
 };
 
+export async function setPackagePublished(slug: string, published: boolean): Promise<{ ok: boolean; error?: string }> {
+  await requireAdmin();
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from("packages")
+    .update({ published, updated_at: new Date().toISOString() })
+    .eq("slug", slug);
+  if (error) return { ok: false, error: error.message };
+  revalidateTag("packages", {});
+  revalidatePath("/admin/packages");
+  revalidatePath(`/packages/${slug}`);
+  return { ok: true };
+}
+
+export async function setPackageFeatured(slug: string, featured: boolean): Promise<{ ok: boolean; error?: string }> {
+  await requireAdmin();
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from("packages")
+    .update({ featured, updated_at: new Date().toISOString() })
+    .eq("slug", slug);
+  if (error) return { ok: false, error: error.message };
+  revalidateTag("packages", {});
+  revalidatePath("/admin/packages");
+  revalidatePath("/");
+  return { ok: true };
+}
+
 export interface RepricePackageActionResult {
   ok: boolean;
   written?: number;

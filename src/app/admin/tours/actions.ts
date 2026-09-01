@@ -63,6 +63,19 @@ export async function setTourPublished(slug: string, published: boolean): Promis
   return { ok: true };
 }
 
+export async function setTourFeatured(slug: string, featured: boolean): Promise<{ ok: boolean; error?: string }> {
+  await requireAdmin();
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from("tours")
+    .update({ featured, updated_at: new Date().toISOString() })
+    .eq("slug", slug);
+  if (error) return { ok: false, error: error.message };
+  bust(slug);
+  revalidatePath("/");
+  return { ok: true };
+}
+
 export async function updateTour(slug: string, patch: TourPatch): Promise<{ ok: boolean; error?: string }> {
   await requireAdmin();
   const supabase = getSupabaseAdmin();
@@ -242,6 +255,7 @@ export async function createTour(input: NewTourInput): Promise<{ ok: boolean; sl
     child_discount_pct: null,
     group_discount_tiers: null,
     published: true,
+    featured_rank: null,
   };
   const { error } = await supabase.from("tours").insert(row);
   if (error) return { ok: false, error: error.message };

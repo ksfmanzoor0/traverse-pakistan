@@ -13,6 +13,7 @@ export type TourRowLite = {
   category: string;
   anchor_city: string | null;
   published: boolean;
+  featured: boolean;
 };
 
 interface Props {
@@ -20,9 +21,10 @@ interface Props {
   duplicateAction: (sourceSlug: string, newSlug: string, newName: string) => Promise<{ ok: boolean; slug?: string; error?: string }>;
   deleteAction: (slug: string) => Promise<{ ok: boolean; error?: string }>;
   setPublishedAction: (slug: string, published: boolean) => Promise<{ ok: boolean; error?: string }>;
+  setFeaturedAction: (slug: string, featured: boolean) => Promise<{ ok: boolean; error?: string }>;
 }
 
-export function ToursListClient({ rows, duplicateAction, deleteAction, setPublishedAction }: Props) {
+export function ToursListClient({ rows, duplicateAction, deleteAction, setPublishedAction, setFeaturedAction }: Props) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [duplicating, setDuplicating] = useState<TourRowLite | null>(null);
@@ -41,6 +43,15 @@ export function ToursListClient({ rows, duplicateAction, deleteAction, setPublis
     startTransition(async () => {
       const r = await setPublishedAction(row.slug, next);
       if (!r.ok) setError(r.error ?? `Failed to ${verb}`);
+      else router.refresh();
+    });
+  }
+
+  function onToggleFeatured(row: TourRowLite) {
+    setError(null);
+    startTransition(async () => {
+      const r = await setFeaturedAction(row.slug, !row.featured);
+      if (!r.ok) setError(r.error ?? "Failed to update featured");
       else router.refresh();
     });
   }
@@ -71,6 +82,7 @@ export function ToursListClient({ rows, duplicateAction, deleteAction, setPublis
               <th className="px-4 py-2.5 font-semibold">Category</th>
               <th className="px-4 py-2.5 font-semibold">Anchor</th>
               <th className="px-4 py-2.5 font-semibold">Status</th>
+              <th className="px-4 py-2.5 font-semibold">Home</th>
               <th className="px-4 py-2.5" />
             </tr>
           </thead>
@@ -97,6 +109,18 @@ export function ToursListClient({ rows, duplicateAction, deleteAction, setPublis
                   >
                     {r.published ? "Published" : "Draft"}
                   </span>
+                </td>
+                <td className="px-4 py-2.5">
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => onToggleFeatured(r)}
+                    title={r.featured ? "Featured on home" : "Not featured"}
+                    className="inline-flex items-center gap-1 text-[13px] font-semibold hover:underline disabled:opacity-50"
+                    style={{ color: r.featured ? "var(--warning)" : "var(--text-tertiary)" }}
+                  >
+                    {r.featured ? "★ Featured" : "☆ Feature"}
+                  </button>
                 </td>
                 <td className="px-4 py-2.5 text-right space-x-3 whitespace-nowrap">
                   <Link href={`/admin/tours/${r.slug}`} className="text-[13px] font-semibold text-[var(--primary)] hover:underline">
