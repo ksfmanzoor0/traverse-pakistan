@@ -2,35 +2,19 @@ import { Container } from "@/components/ui/Container";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Carousel } from "@/components/ui/Carousel";
 import { TourCard } from "@/components/tours/TourCard";
-import { getAllTours } from "@/services/tour.service";
+import { getAllTours, getFeaturedTours } from "@/services/tour.service";
 
-// Hand-pinned slots in the Popular Tours carousel.
-const PINNED_POSITIONS: Record<number, string> = {
-  0: "skardu-khaplu-deosai-5day-flight",
-  1: "trip-to-hunza-naltar-khunjerab",
-  2: "trip-to-minimarg",
-  3: "k2-base-camp-trek",
-};
+const CAROUSEL_SLOTS = 10;
 
 export async function PopularToursCarousel() {
-  const allTours = await getAllTours();
+  const [featured, allTours] = await Promise.all([getFeaturedTours(), getAllTours()]);
 
-  const pinnedSlugs = new Set(Object.values(PINNED_POSITIONS));
-  const rest = allTours.filter((t) => !pinnedSlugs.has(t.slug));
-  const pinnedBySlug = new Map(allTours.filter((t) => pinnedSlugs.has(t.slug)).map((t) => [t.slug, t]));
-
-  const ordered: typeof allTours = [];
-  let restCursor = 0;
-  for (let i = 0; i < 10; i++) {
-    const pinnedSlug = PINNED_POSITIONS[i];
-    const pinned = pinnedSlug ? pinnedBySlug.get(pinnedSlug) : undefined;
-    if (pinned) {
-      ordered.push(pinned);
-    } else if (restCursor < rest.length) {
-      ordered.push(rest[restCursor++]);
-    }
-  }
-  const tours = ordered;
+  // Featured tours come first (ordered by featured_rank via the service), then
+  // any remaining tours fill the carousel up to CAROUSEL_SLOTS to avoid an
+  // empty section when admin has featured fewer than the target count.
+  const seen = new Set(featured.map((t) => t.slug));
+  const filler = allTours.filter((t) => !seen.has(t.slug));
+  const tours = [...featured, ...filler].slice(0, CAROUSEL_SLOTS);
 
   return (
     <section id="section-tours" className="relative bg-[var(--bg-primary)] pt-6 pb-20 sm:py-24" style={{ scrollMarginTop: "200px" }}>
