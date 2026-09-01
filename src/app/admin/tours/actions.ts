@@ -51,6 +51,18 @@ function bust(slug: string) {
   revalidatePath(`/grouptours/${slug}`);
 }
 
+export async function setTourPublished(slug: string, published: boolean): Promise<{ ok: boolean; error?: string }> {
+  await requireAdmin();
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from("tours")
+    .update({ published, updated_at: new Date().toISOString() })
+    .eq("slug", slug);
+  if (error) return { ok: false, error: error.message };
+  bust(slug);
+  return { ok: true };
+}
+
 export async function updateTour(slug: string, patch: TourPatch): Promise<{ ok: boolean; error?: string }> {
   await requireAdmin();
   const supabase = getSupabaseAdmin();
@@ -229,6 +241,7 @@ export async function createTour(input: NewTourInput): Promise<{ ok: boolean; sl
     body_blocks: [] as TourBlock[],
     child_discount_pct: null,
     group_discount_tiers: null,
+    published: true,
   };
   const { error } = await supabase.from("tours").insert(row);
   if (error) return { ok: false, error: error.message };

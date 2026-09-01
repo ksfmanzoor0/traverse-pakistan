@@ -216,7 +216,7 @@ const _fetchAllTours = unstable_cache(
     const supabase = getSupabaseAnon();
     const activeSlugs = await getActiveTourSlugs(supabase);
     if (activeSlugs.length === 0) return [];
-    const { data, error } = await supabase.from("tours").select("*").in("slug", activeSlugs).order("departure_date", { nullsFirst: false });
+    const { data, error } = await supabase.from("tours").select("*").eq("published", true).in("slug", activeSlugs).order("departure_date", { nullsFirst: false });
     if (error) throw new Error(`getAllTours: ${error.message}`);
     const rows = data as TourRow[];
     const priceMap = await buildPriceMap(supabase, rows.map((r) => r.slug));
@@ -265,6 +265,7 @@ export const getToursByDestination = cache(async (destinationSlug: string): Prom
   const { data, error } = await supabase
     .from("tours")
     .select("*")
+    .eq("published", true)
     .or(`destination_slug.in.(${slugList}),related_destination_slugs.ov.{${slugList}}`)
     .in("slug", activeSlugs);
   if (error) throw new Error(`getToursByDestination: ${error.message}`);
@@ -277,7 +278,7 @@ export const getToursByRegion = cache(async (regionSlug: string): Promise<Tour[]
   const supabase = getSupabaseAnon();
   const activeSlugs = await getActiveTourSlugs(supabase);
   if (activeSlugs.length === 0) return [];
-  const { data, error } = await supabase.from("tours").select("*").eq("region_slug", regionSlug).in("slug", activeSlugs);
+  const { data, error } = await supabase.from("tours").select("*").eq("published", true).eq("region_slug", regionSlug).in("slug", activeSlugs);
   if (error) throw new Error(`getToursByRegion: ${error.message}`);
   const rows = data as TourRow[];
   const priceMap = await buildPriceMap(supabase, rows.map((r) => r.slug));
@@ -288,7 +289,7 @@ export const getToursByCategory = cache(async (category: TourCategory): Promise<
   const supabase = getSupabaseAnon();
   const activeSlugs = await getActiveTourSlugs(supabase);
   if (activeSlugs.length === 0) return [];
-  const { data, error } = await supabase.from("tours").select("*").eq("category", category).in("slug", activeSlugs);
+  const { data, error } = await supabase.from("tours").select("*").eq("published", true).eq("category", category).in("slug", activeSlugs);
   if (error) throw new Error(`getToursByCategory: ${error.message}`);
   const rows = data as TourRow[];
   const priceMap = await buildPriceMap(supabase, rows.map((r) => r.slug));
@@ -299,7 +300,7 @@ export const getToursByStyle = cache(async (styleSlug: string): Promise<Tour[]> 
   const supabase = getSupabaseAnon();
   const activeSlugs = await getActiveTourSlugs(supabase);
   if (activeSlugs.length === 0) return [];
-  const { data, error } = await supabase.from("tours").select("*").contains("travel_style_slugs", [styleSlug]).in("slug", activeSlugs).order("created_at", { ascending: false });
+  const { data, error } = await supabase.from("tours").select("*").eq("published", true).contains("travel_style_slugs", [styleSlug]).in("slug", activeSlugs).order("created_at", { ascending: false });
   if (error) throw new Error(`getToursByStyle: ${error.message}`);
   const rows = data as TourRow[];
   const priceMap = await buildPriceMap(supabase, rows.map((r) => r.slug));
@@ -310,7 +311,7 @@ export const getFeaturedTours = cache(async (limit?: number): Promise<Tour[]> =>
   const supabase = getSupabaseAnon();
   const activeSlugs = await getActiveTourSlugs(supabase);
   if (activeSlugs.length === 0) return [];
-  let query = supabase.from("tours").select("*").not("badge", "is", null).in("slug", activeSlugs).order("review_count", { ascending: false });
+  let query = supabase.from("tours").select("*").eq("published", true).not("badge", "is", null).in("slug", activeSlugs).order("review_count", { ascending: false });
   if (limit) query = query.limit(limit);
   const { data, error } = await query;
   if (error) throw new Error(`getFeaturedTours: ${error.message}`);
@@ -332,6 +333,7 @@ export const getSimilarTours = cache(async (tourSlug: string, limit = 4): Promis
   const { data, error } = await supabase
     .from("tours")
     .select("*")
+    .eq("published", true)
     .eq("destination_slug", tour.destination_slug)
     .neq("slug", tourSlug)
     .in("slug", activeSlugs)
@@ -361,6 +363,7 @@ export const searchTours = cache(async (query: string): Promise<Tour[]> => {
   const { data, error } = await supabase
     .from("tours")
     .select("*")
+    .eq("published", true)
     .or(`name.ilike.%${query}%,description.ilike.%${query}%,destination_slug.ilike.%${query}%,route.ilike.%${query}%`);
   if (error) throw new Error(`searchTours: ${error.message}`);
   const rows = data as TourRow[];

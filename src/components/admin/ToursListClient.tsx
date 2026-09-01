@@ -12,15 +12,17 @@ export type TourRowLite = {
   duration: number;
   category: string;
   anchor_city: string | null;
+  published: boolean;
 };
 
 interface Props {
   rows: TourRowLite[];
   duplicateAction: (sourceSlug: string, newSlug: string, newName: string) => Promise<{ ok: boolean; slug?: string; error?: string }>;
   deleteAction: (slug: string) => Promise<{ ok: boolean; error?: string }>;
+  setPublishedAction: (slug: string, published: boolean) => Promise<{ ok: boolean; error?: string }>;
 }
 
-export function ToursListClient({ rows, duplicateAction, deleteAction }: Props) {
+export function ToursListClient({ rows, duplicateAction, deleteAction, setPublishedAction }: Props) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [duplicating, setDuplicating] = useState<TourRowLite | null>(null);
@@ -29,6 +31,18 @@ export function ToursListClient({ rows, duplicateAction, deleteAction }: Props) 
   function onDuplicateClick(row: TourRowLite) {
     setError(null);
     setDuplicating(row);
+  }
+
+  function onTogglePublish(row: TourRowLite) {
+    setError(null);
+    const next = !row.published;
+    const verb = next ? "publish" : "unpublish";
+    if (!confirm(`${next ? "Publish" : "Unpublish"} "${row.name}"?\nUnpublishing hides the tour from all public listings and search but keeps the row in the database.`)) return;
+    startTransition(async () => {
+      const r = await setPublishedAction(row.slug, next);
+      if (!r.ok) setError(r.error ?? `Failed to ${verb}`);
+      else router.refresh();
+    });
   }
 
   function onDelete(row: TourRowLite) {
@@ -56,6 +70,7 @@ export function ToursListClient({ rows, duplicateAction, deleteAction }: Props) 
               <th className="px-4 py-2.5 font-semibold">Days</th>
               <th className="px-4 py-2.5 font-semibold">Category</th>
               <th className="px-4 py-2.5 font-semibold">Anchor</th>
+              <th className="px-4 py-2.5 font-semibold">Status</th>
               <th className="px-4 py-2.5" />
             </tr>
           </thead>
@@ -72,10 +87,29 @@ export function ToursListClient({ rows, duplicateAction, deleteAction }: Props) 
                 <td className="px-4 py-2.5 text-[var(--text-secondary)]">{r.duration}</td>
                 <td className="px-4 py-2.5 text-[var(--text-secondary)]">{r.category}</td>
                 <td className="px-4 py-2.5 text-[var(--text-secondary)]">{r.anchor_city ?? "—"}</td>
+                <td className="px-4 py-2.5">
+                  <span
+                    className="inline-block px-2 py-0.5 rounded-full text-[10.5px] font-bold uppercase tracking-wider"
+                    style={{
+                      background: r.published ? "var(--primary-light)" : "var(--bg-subtle)",
+                      color: r.published ? "var(--success)" : "var(--text-tertiary)",
+                    }}
+                  >
+                    {r.published ? "Published" : "Draft"}
+                  </span>
+                </td>
                 <td className="px-4 py-2.5 text-right space-x-3 whitespace-nowrap">
                   <Link href={`/admin/tours/${r.slug}`} className="text-[13px] font-semibold text-[var(--primary)] hover:underline">
                     Edit
                   </Link>
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => onTogglePublish(r)}
+                    className="text-[13px] font-semibold text-[var(--text-secondary)] hover:underline disabled:opacity-50"
+                  >
+                    {r.published ? "Unpublish" : "Publish"}
+                  </button>
                   <button
                     type="button"
                     onClick={() => onDuplicateClick(r)}
