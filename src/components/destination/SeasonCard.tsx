@@ -60,7 +60,7 @@ export function SeasonCard({ info }: SeasonCardProps) {
         aria-hidden="true"
         className="inline-flex w-12 h-12 rounded-full items-center justify-center transition-transform duration-[600ms] ease-[var(--ease-default)] group-hover:scale-[1.06] group-hover:rotate-[6deg]"
         style={{
-          backgroundColor: "var(--bg-primary)",
+          backgroundColor: "var(--bg-elevated)",
           color: tint.fg,
           boxShadow: `inset 0 0 0 1px ${tint.ring}`,
         }}

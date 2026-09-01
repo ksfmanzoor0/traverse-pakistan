@@ -67,6 +67,8 @@ import {
   YoutubeLogo,
   Bookmark,
   PencilSimple,
+  AirplaneTilt,
+  ForkKnife,
 } from "@phosphor-icons/react/dist/ssr";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 
@@ -139,6 +141,8 @@ export const iconMap = {
   youtube: YoutubeLogo,
   bookmark: Bookmark,
   edit: PencilSimple,
+  airplane: AirplaneTilt,
+  "fork-knife": ForkKnife,
 } satisfies Record<string, PhosphorIcon>;
 
 export type IconName = keyof typeof iconMap;

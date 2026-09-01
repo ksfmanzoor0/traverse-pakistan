@@ -2,8 +2,10 @@ import { cache } from "react";
 import { getSupabaseAnon } from "@/lib/supabase/server";
 import type { RegionRow } from "@/lib/supabase/types";
 import type { Region } from "@/types/region";
+import type { TourBlock } from "@/types/tour-block";
 
 function toRegion(row: RegionRow & { destinations: { slug: string }[] }): Region {
+  const blocks = Array.isArray(row.body_blocks) ? (row.body_blocks as TourBlock[]) : [];
   return {
     id: row.id,
     slug: row.slug,
@@ -14,6 +16,7 @@ function toRegion(row: RegionRow & { destinations: { slug: string }[] }): Region
     tourCount: 0,
     metaTitle: row.name,
     metaDescription: row.description ?? "",
+    bodyBlocks: blocks,
   };
 }
 

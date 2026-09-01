@@ -3,6 +3,7 @@ import { unstable_cache } from "next/cache";
 import { getSupabaseAnon } from "@/lib/supabase/server";
 import type { DestinationRow, RegionRow } from "@/lib/supabase/types";
 import type { Destination } from "@/types/destination";
+import type { TourBlock } from "@/types/tour-block";
 import type { DestinationOption } from "@/components/home/SearchWidget";
 import type { FAQ } from "@/types/faq";
 import { destinations as localDestinations } from "@/data/destinations";
@@ -43,6 +44,7 @@ function toDestination(row: DestinationWithRegion): Destination {
     seasons: ((row.seasons as Destination["seasons"] | null)?.length
       ? row.seasons as Destination["seasons"]
       : local?.seasons ?? []),
+    bodyBlocks: (row.body_blocks as TourBlock[] | null) ?? [],
     metaTitle: row.meta_title ?? row.name,
     metaDescription: row.meta_description ?? row.description ?? "",
     updatedAt: row.updated_at ?? undefined,

@@ -1,4 +1,5 @@
 import type { IconName } from "@/components/ui/Icon";
+import type { TourBlock } from "./tour-block";
 
 export interface WhyVisitCard {
   icon: IconName;
@@ -31,6 +32,11 @@ export interface Destination {
   rating: number;
   whyVisitCards: WhyVisitCard[];
   seasons: SeasonInfo[];
+  /** Long-form guide content — heading/paragraph/list/image/callout/embed/divider
+   *  blocks. Rendered on the destination page between the hero and children rail.
+   *  Optional so legacy static data (`src/data/destinations.ts`) doesn't have to
+   *  fill it; DB rows default to []. */
+  bodyBlocks?: TourBlock[];
   metaTitle: string;
   metaDescription: string;
   updatedAt?: string;

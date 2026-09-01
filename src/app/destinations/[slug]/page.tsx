@@ -27,11 +27,22 @@ import {
   getAllDestinations,
   getFAQsByDestination,
 } from "@/services/destination.service";
+import { getRegionBySlug } from "@/services/region.service";
 import { getToursByDestination } from "@/services/tour.service";
 import { getPackagesByDestination } from "@/services/package.service";
 import { getHotelsByDestination } from "@/services/hotel.service";
 import { sortByDestinationRelevance } from "@/lib/packages/sortByDestinationRelevance";
 import { Carousel } from "@/components/ui/Carousel";
+import { GuideBlocks } from "@/components/destination/GuideBlocks";
+
+const PINNED_CHILDREN: Record<string, string[]> = {
+  chitral: ["kalash"],
+  "interior-sindh": ["mohen-jo-daro"],
+};
+
+const DEMOTED_CHILDREN: Record<string, string[]> = {
+  "interior-sindh": ["larkana"],
+};
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -70,12 +81,13 @@ export default async function DestinationDetailPage({ params }: Props) {
 
   const ancestorSlugs = dest.ancestorSlugs ?? [];
 
-  const [tours, faqs, pkgs, hotels, allDests, ...ancestorResults] = await Promise.all([
+  const [tours, faqs, pkgs, hotels, allDests, region, ...ancestorResults] = await Promise.all([
     getToursByDestination(slug),
     getFAQsByDestination(slug),
     getPackagesByDestination(slug),
     getHotelsByDestination(slug),
     getAllDestinations(),
+    getRegionBySlug(dest.regionSlug),
     ...ancestorSlugs.flatMap((a) => [
       getToursByDestination(a),
       getPackagesByDestination(a),
@@ -95,11 +107,25 @@ export default async function DestinationDetailPage({ params }: Props) {
     aHotels.forEach((h) => { if (!allHotels.some((e) => e.id === h.id)) allHotels.push(h); });
   }
 
+  // Parent chain (root to immediate parent) so children breadcrumb into their parent(s).
+  const parentChain = ancestorSlugs
+    .map((s) => allDests.find((d) => d.slug === s))
+    .filter((d): d is NonNullable<typeof d> => Boolean(d));
+
+  const breadcrumbItems = [
+    { label: "Destinations", href: "/destinations" },
+    ...(region ? [{ label: region.name, href: `/regions/${region.slug}` }] : []),
+    ...parentChain.map((p) => ({ label: p.name, href: `/destinations/${p.slug}` })),
+    { label: dest.name },
+  ];
+
   const schema = combineSchemas(
     destinationSchema(dest),
     breadcrumbSchema([
       { name: "Home", url: "/" },
       { name: "Destinations", url: "/destinations" },
+      ...(region ? [{ name: region.name, url: `/regions/${region.slug}` }] : []),
+      ...parentChain.map((p) => ({ name: p.name, url: `/destinations/${p.slug}` })),
       { name: dest.name, url: `/destinations/${dest.slug}` },
     ]),
     faqs.length > 0 ? faqPageSchema(faqs) : null
@@ -109,36 +135,51 @@ export default async function DestinationDetailPage({ params }: Props) {
   const packageCount = visiblePkgs.length;
   const tourCount = allTours.length;
 
-  // Direct children only (e.g. Hunza → Altit, Attabad, Passu — not grandchildren).
-  // Sorted by name for stable ordering across builds.
-  const childDestinations = allDests
-    .filter((d) => d.parentSlug === dest.slug)
-    .sort((a, b) => a.name.localeCompare(b.name));
+  // Direct children plus one level of grandchildren so hub parents (e.g. Interior Sindh)
+  // still surface destinations that live under a sub-cluster (e.g. Kirthar → Ranikot).
+  // Some parents pin a hero child to the top (e.g. Kalash under Chitral); the rest sort by name.
+  const directChildren = allDests.filter((d) => d.parentSlug === dest.slug);
+  const directChildSlugs = new Set(directChildren.map((d) => d.slug));
+  const grandChildren = allDests.filter(
+    (d) => d.parentSlug && directChildSlugs.has(d.parentSlug)
+  );
+  const pinnedChildren = PINNED_CHILDREN[dest.slug] ?? [];
+  const demotedChildren = DEMOTED_CHILDREN[dest.slug] ?? [];
+  const childDestinations = [...directChildren, ...grandChildren].sort((a, b) => {
+    const ad = demotedChildren.indexOf(a.slug);
+    const bd = demotedChildren.indexOf(b.slug);
+    if (ad !== -1 || bd !== -1) {
+      if (ad === -1) return -1;
+      if (bd === -1) return 1;
+      return ad - bd;
+    }
+    const ai = pinnedChildren.indexOf(a.slug);
+    const bi = pinnedChildren.indexOf(b.slug);
+    if (ai !== -1 || bi !== -1) {
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    }
+    return a.name.localeCompare(b.name);
+  });
 
   return (
     <>
       <JsonLd data={schema} id={`destination-${dest.slug}-jsonld`} />
       {/* Hero + description — image is shared background */}
-      <section className="relative flex items-end min-h-[560px] sm:min-h-[640px]">
+      <section className="relative flex items-end min-h-[560px] sm:min-h-[640px] overflow-hidden">
         <Image
           src={dest.heroImage}
           alt={dest.name}
           fill
-          className="object-cover"
+          className="object-cover object-center"
           sizes="100vw"
           priority
           quality={80}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
         <Container className="relative pb-10 sm:pb-14 pt-24">
-          <Breadcrumb
-            items={[
-              { label: "Destinations", href: "/destinations" },
-              { label: dest.name },
-            ]}
-            light
-            className="mb-4"
-          />
+          <Breadcrumb items={breadcrumbItems} light className="mb-4" />
           <h1 className="text-[36px] sm:text-[48px] font-bold text-[var(--on-dark)] tracking-tight">
             {dest.name}
           </h1>
@@ -345,6 +386,34 @@ export default async function DestinationDetailPage({ params }: Props) {
                   />
                 ))}
               </div>
+            </div>
+          </Container>
+        </section>
+      )}
+
+      {/* Long-form guide — admin-editable block content grouped into per-topic
+          cards. Sits below Moments so travelers scan the visual "why here"
+          summary first, then dive into the detailed guide. */}
+      {(dest.bodyBlocks?.length ?? 0) > 0 && (
+        <section className="py-16 sm:py-20 bg-[var(--bg-subtle)]">
+          <Container>
+            <div className="max-w-[1000px] mx-auto">
+              <div className="flex flex-col gap-2 mb-10">
+                <EyebrowLabel>Traveller&rsquo;s guide</EyebrowLabel>
+                <h2
+                  className="font-bold tracking-[-0.025em] leading-[1.15] text-[var(--text-primary)]"
+                  style={{ fontSize: "var(--text-4xl)" }}
+                >
+                  Everything you need to know
+                </h2>
+                <p
+                  className="mt-1 max-w-xl leading-relaxed text-[var(--text-secondary)]"
+                  style={{ fontSize: "var(--text-lg)" }}
+                >
+                  Getting there, what to do, where to stay, and what to eat — the local ground truth.
+                </p>
+              </div>
+              <GuideBlocks blocks={dest.bodyBlocks ?? []} />
             </div>
           </Container>
         </section>
