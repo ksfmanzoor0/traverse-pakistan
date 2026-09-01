@@ -45,6 +45,7 @@ function toDestination(row: DestinationWithRegion): Destination {
       ? row.seasons as Destination["seasons"]
       : local?.seasons ?? []),
     bodyBlocks: (row.body_blocks as TourBlock[] | null) ?? [],
+    homeRank: row.home_rank ?? null,
     metaTitle: row.meta_title ?? row.name,
     metaDescription: row.meta_description ?? row.description ?? "",
     updatedAt: row.updated_at ?? undefined,

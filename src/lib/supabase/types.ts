@@ -57,6 +57,7 @@ export type TourRow = {
   group_discount_tiers: Array<{ minAdults: number; pct: number }> | null;
   published: boolean;
   featured_rank: number | null;
+  destination_rank: Record<string, number | { rank?: number; hidden?: boolean; featured?: boolean }>;
   created_at: string;
   updated_at: string;
 };
@@ -266,6 +267,7 @@ export type DestinationRow = {
   hero_image: string | null;
   elevation: string | null;
   featured: boolean;
+  home_rank: number | null;
   lat: number | null;
   lng: number | null;
   starting_price: number | null;
@@ -408,8 +410,8 @@ export type Database = {
     Tables: {
       tours: {
         Row: TourRow;
-        Insert: Omit<TourRow, "id" | "created_at" | "updated_at" | "featured"> &
-          Partial<Pick<TourRow, "id" | "created_at" | "updated_at" | "featured">>;
+        Insert: Omit<TourRow, "id" | "created_at" | "updated_at" | "featured" | "destination_rank"> &
+          Partial<Pick<TourRow, "id" | "created_at" | "updated_at" | "featured" | "destination_rank">>;
         Update: Partial<TourRow>;
         Relationships: [];
       };

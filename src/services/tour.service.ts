@@ -64,6 +64,7 @@ function toTour(
     metaTitle: row.meta_title,
     metaDescription: row.meta_description,
     bodyBlocks: (row.body_blocks as TourBlock[] | null) ?? [],
+    destinationRank: (row.destination_rank ?? {}) as Tour["destinationRank"],
     updatedAt: row.updated_at ?? undefined,
     hasAddons,
     anchorCity: row.anchor_city,
@@ -271,7 +272,9 @@ export const getToursByDestination = cache(async (destinationSlug: string): Prom
   if (error) throw new Error(`getToursByDestination: ${error.message}`);
   const rows = data as TourRow[];
   const priceMap = await buildPriceMap(supabase, rows.map((r) => r.slug));
-  return rows.map((r) => toTour(r, priceMap));
+  const tours = rows.map((r) => toTour(r, priceMap));
+  const { sortToursByDestinationRelevance } = await import("@/lib/tours/sortByDestinationRelevance");
+  return sortToursByDestinationRelevance(tours, destinationSlug);
 });
 
 export const getToursByRegion = cache(async (regionSlug: string): Promise<Tour[]> => {
