@@ -38,6 +38,7 @@ import { GuideBlocks } from "@/components/destination/GuideBlocks";
 const PINNED_CHILDREN: Record<string, string[]> = {
   chitral: ["kalash"],
   "interior-sindh": ["mohen-jo-daro"],
+  "neelam-valley": ["arang-kel", "ratti-galli", "chitha-katha-lake", "taobut", "keran"],
 };
 
 const DEMOTED_CHILDREN: Record<string, string[]> = {
