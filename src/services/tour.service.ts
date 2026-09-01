@@ -65,6 +65,8 @@ function toTour(
     metaDescription: row.meta_description,
     bodyBlocks: (row.body_blocks as TourBlock[] | null) ?? [],
     destinationRank: (row.destination_rank ?? {}) as Tour["destinationRank"],
+    featured: !!row.featured,
+    featuredRank: row.featured_rank,
     updatedAt: row.updated_at ?? undefined,
     hasAddons,
     anchorCity: row.anchor_city,

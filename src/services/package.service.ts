@@ -68,6 +68,8 @@ function toPackage(row: PackageRow): Package {
     tiers: mergePricing(row.pricing, row.pricing_override) as Package["tiers"],
     metaTitle: row.meta_title ?? row.name,
     metaDescription: row.meta_description ?? "",
+    featured: !!row.featured,
+    featuredRank: row.featured_rank,
     updatedAt: row.updated_at ?? undefined,
   };
 }
