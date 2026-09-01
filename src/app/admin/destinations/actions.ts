@@ -66,3 +66,40 @@ export async function saveDestinationPackageOverrides(
   revalidatePath("/packages");
   return { ok: true };
 }
+
+type PerTourPayload = { entry: Entry; published: boolean };
+
+export async function saveDestinationTourOverrides(
+  destinationSlug: string,
+  payload: Record<string, PerTourPayload>,
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = getSupabaseAdmin();
+  const tourSlugs = Object.keys(payload);
+  if (tourSlugs.length === 0) return { ok: true };
+
+  const { data: rows, error: readErr } = await supabase
+    .from("tours")
+    .select("slug, destination_rank")
+    .in("slug", tourSlugs);
+  if (readErr) return { ok: false, error: readErr.message };
+
+  for (const row of (rows as Array<{ slug: string; destination_rank: Record<string, unknown> | null }>)) {
+    const current = { ...(row.destination_rank ?? {}) };
+    const p = payload[row.slug];
+    const normalized = normalizeEntry(p.entry);
+    if (normalized === null) delete current[destinationSlug];
+    else current[destinationSlug] = normalized;
+
+    const { error } = await supabase
+      .from("tours")
+      .update({ destination_rank: current as never, published: p.published })
+      .eq("slug", row.slug);
+    if (error) return { ok: false, error: error.message };
+  }
+
+  revalidateTag("tours", {});
+  revalidatePath(`/destinations/${destinationSlug}`);
+  revalidatePath(`/admin/destinations/${destinationSlug}`);
+  revalidatePath("/grouptours");
+  return { ok: true };
+}

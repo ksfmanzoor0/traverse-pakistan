@@ -2,58 +2,65 @@
 
 import { useMemo, useState, useTransition } from "react";
 
-type Row = {
+export type HomeEditorRow = {
   slug: string;
   name: string;
-  duration: number;
-  isPrimary: boolean;
+  subtitle?: string | null;
   published: boolean;
-  hidden: boolean;
   featured: boolean;
   rank: number | null;
+  nextDeparture?: string | null;
 };
+
+export type HomeEditorSavePayload = Record<
+  string,
+  { featured: boolean; rank: number | null }
+>;
 
 type SaveResult = { ok: boolean; error?: string };
 
 type Props = {
-  destinationSlug: string;
-  initial: Row[];
-  /** Singular noun used in UI copy — defaults to "package". */
-  resourceLabel?: string;
-  /** Header label for the "days" column — defaults to "Days". */
-  daysLabel?: string;
-  saveAction: (
-    destinationSlug: string,
-    payload: Record<string, {
-      entry: { rank?: number; hidden?: boolean; featured?: boolean };
-      published: boolean;
-    }>,
-  ) => Promise<SaveResult>;
+  initial: HomeEditorRow[];
+  emptyMessage?: string;
+  showFeaturedToggle?: boolean;
+  saveAction: (payload: HomeEditorSavePayload) => Promise<SaveResult>;
 };
 
-function sortRows(rows: Row[]): Row[] {
+function fmtDeparture(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function sortRows(rows: HomeEditorRow[]): HomeEditorRow[] {
   return [...rows].sort((a, b) => {
-    const fa = a.featured ? 1 : 0;
-    const fb = b.featured ? 1 : 0;
-    if (fa !== fb) return fb - fa;
-    const ra = a.rank ?? Number.MAX_SAFE_INTEGER;
-    const rb = b.rank ?? Number.MAX_SAFE_INTEGER;
-    if (ra !== rb) return ra - rb;
-    const pa = a.isPrimary ? 0 : 1;
-    const pb = b.isPrimary ? 0 : 1;
-    return pa - pb;
+    if (a.published !== b.published) return a.published ? -1 : 1;
+    const af = a.featured ? 1 : 0;
+    const bf = b.featured ? 1 : 0;
+    if (af !== bf) return bf - af;
+    const ar = a.rank ?? null;
+    const br = b.rank ?? null;
+    if (ar !== null && br !== null && ar !== br) return ar - br;
+    if (ar !== null) return -1;
+    if (br !== null) return 1;
+    const ad = a.nextDeparture ? new Date(a.nextDeparture).getTime() : Number.MAX_SAFE_INTEGER;
+    const bd = b.nextDeparture ? new Date(b.nextDeparture).getTime() : Number.MAX_SAFE_INTEGER;
+    if (ad !== bd) return ad - bd;
+    return a.name.localeCompare(b.name);
   });
 }
 
-function ToggleButton({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
+function ToggleButton({ on, onChange, label, disabled }: { on: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={on}
       aria-label={label}
+      disabled={disabled}
       onClick={() => onChange(!on)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-40 ${
         on ? "bg-[var(--primary)]" : "bg-[var(--border-default)]"
       }`}
     >
@@ -66,18 +73,15 @@ function ToggleButton({ on, onChange, label }: { on: boolean; onChange: (v: bool
   );
 }
 
-export function DestinationPackagesEditor({ destinationSlug, initial, saveAction, resourceLabel = "package", daysLabel = "Days" }: Props) {
-  const [rows, setRows] = useState<Row[]>(() => sortRows(initial));
+export function HomeFeaturedEditor({ initial, emptyMessage, showFeaturedToggle = true, saveAction }: Props) {
+  const [rows, setRows] = useState<HomeEditorRow[]>(() => sortRows(initial));
   const [dirty, setDirty] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const visibleCount = useMemo(
-    () => rows.filter((r) => r.published && !r.hidden).length,
-    [rows],
-  );
+  const featuredCount = useMemo(() => rows.filter((r) => r.featured && r.published).length, [rows]);
 
-  function bump(slug: string, patch: Partial<Row>) {
+  function bump(slug: string, patch: Partial<HomeEditorRow>) {
     setRows((prev) => prev.map((r) => (r.slug === slug ? { ...r, ...patch } : r)));
     setDirty(true);
     setSaveMsg(null);
@@ -89,33 +93,33 @@ export function DestinationPackagesEditor({ destinationSlug, initial, saveAction
       const j = index + delta;
       if (j < 0 || j >= next.length) return prev;
       [next[index], next[j]] = [next[j], next[index]];
-      // Assign explicit ranks so ordering persists
-      return next.map((r, i) => ({ ...r, rank: i + 1 }));
+      // Assign explicit rank to featured rows to preserve the new order
+      let rank = 1;
+      return next.map((r) => {
+        if (showFeaturedToggle && !r.featured) return { ...r, rank: null };
+        return { ...r, rank: rank++ };
+      });
     });
     setDirty(true);
     setSaveMsg(null);
   }
 
   function resetOrder() {
-    setRows((prev) => prev.map((r) => ({ ...r, rank: null })));
+    setRows((prev) => sortRows(prev.map((r) => ({ ...r, rank: null }))));
     setDirty(true);
     setSaveMsg(null);
   }
 
   function save() {
-    const payload: Record<string, {
-      entry: { rank?: number; hidden?: boolean; featured?: boolean };
-      published: boolean;
-    }> = {};
+    const payload: HomeEditorSavePayload = {};
     for (const r of rows) {
-      const e: { rank?: number; hidden?: boolean; featured?: boolean } = {};
-      if (typeof r.rank === "number") e.rank = r.rank;
-      if (r.hidden) e.hidden = true;
-      if (r.featured) e.featured = true;
-      payload[r.slug] = { entry: e, published: r.published };
+      payload[r.slug] = {
+        featured: showFeaturedToggle ? r.featured : true,
+        rank: typeof r.rank === "number" ? r.rank : null,
+      };
     }
     startTransition(async () => {
-      const res = await saveAction(destinationSlug, payload);
+      const res = await saveAction(payload);
       if (res.ok) {
         setSaveMsg("Saved.");
         setDirty(false);
@@ -129,7 +133,9 @@ export function DestinationPackagesEditor({ destinationSlug, initial, saveAction
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="text-[14px] text-[var(--text-secondary)]">
-          {visibleCount} of {rows.length} {resourceLabel}{rows.length === 1 ? "" : "s"} visible on public page.
+          {showFeaturedToggle
+            ? `${featuredCount} featured on home · ${rows.length} total`
+            : `${rows.length} total on home carousel`}
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -160,18 +166,16 @@ export function DestinationPackagesEditor({ destinationSlug, initial, saveAction
             <tr>
               <th className="text-left p-3 w-20">Move</th>
               <th className="text-left p-3 w-24">Order #</th>
-              <th className="text-left p-3">{resourceLabel[0].toUpperCase() + resourceLabel.slice(1)}</th>
-              <th className="text-left p-3 w-20">{daysLabel}</th>
-              <th className="text-center p-3 w-24">Published</th>
-              <th className="text-center p-3 w-24">Featured</th>
-              <th className="text-center p-3 w-24">Hidden</th>
+              <th className="text-left p-3">Item</th>
+              <th className="text-left p-3 w-36">Next departure</th>
+              {showFeaturedToggle && <th className="text-center p-3 w-24">Featured</th>}
             </tr>
           </thead>
           <tbody>
             {rows.map((r, i) => (
               <tr
                 key={r.slug}
-                className={`border-t border-[var(--border-default)] ${r.hidden ? "opacity-50" : ""}`}
+                className={`border-t border-[var(--border-default)] ${!r.published ? "opacity-50" : ""}`}
               >
                 <td className="p-3">
                   <div className="flex items-center gap-1">
@@ -212,9 +216,9 @@ export function DestinationPackagesEditor({ destinationSlug, initial, saveAction
                   <div className="text-[var(--text-primary)] font-medium">{r.name}</div>
                   <div className="text-[12px] text-[var(--text-tertiary)] font-mono mt-0.5">
                     {r.slug}
-                    {!r.isPrimary && (
-                      <span className="ml-2 inline-block px-1.5 py-0.5 rounded bg-[var(--bg-subtle)] text-[10px] uppercase tracking-wider">
-                        related
+                    {r.subtitle && (
+                      <span className="ml-2 font-sans text-[var(--text-secondary)]">
+                        · {r.subtitle}
                       </span>
                     )}
                     {!r.published && (
@@ -224,34 +228,24 @@ export function DestinationPackagesEditor({ destinationSlug, initial, saveAction
                     )}
                   </div>
                 </td>
-                <td className="p-3 text-[var(--text-secondary)]">{r.duration}</td>
-                <td className="p-3 text-center">
-                  <ToggleButton
-                    on={r.published}
-                    onChange={(v) => bump(r.slug, { published: v })}
-                    label="Published"
-                  />
+                <td className="p-3 text-[var(--text-secondary)]">
+                  {fmtDeparture(r.nextDeparture)}
                 </td>
-                <td className="p-3 text-center">
-                  <ToggleButton
-                    on={r.featured}
-                    onChange={(v) => bump(r.slug, { featured: v })}
-                    label="Featured"
-                  />
-                </td>
-                <td className="p-3 text-center">
-                  <ToggleButton
-                    on={r.hidden}
-                    onChange={(v) => bump(r.slug, { hidden: v })}
-                    label="Hidden"
-                  />
-                </td>
+                {showFeaturedToggle && (
+                  <td className="p-3 text-center">
+                    <ToggleButton
+                      on={r.featured}
+                      onChange={(v) => bump(r.slug, { featured: v })}
+                      label="Featured"
+                    />
+                  </td>
+                )}
               </tr>
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-6 text-center text-[var(--text-tertiary)]">
-                  No {resourceLabel}s currently link to this destination.
+                <td colSpan={showFeaturedToggle ? 5 : 4} className="p-6 text-center text-[var(--text-tertiary)]">
+                  {emptyMessage ?? "Nothing to show."}
                 </td>
               </tr>
             )}

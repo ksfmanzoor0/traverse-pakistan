@@ -37,6 +37,9 @@ export interface Destination {
    *  Optional so legacy static data (`src/data/destinations.ts`) doesn't have to
    *  fill it; DB rows default to []. */
   bodyBlocks?: TourBlock[];
+  /** Order slot on the home DestinationsScroll carousel. NULL = not manually
+   *  ranked; those destinations fall through to the starting-price fallback. */
+  homeRank?: number | null;
   metaTitle: string;
   metaDescription: string;
   updatedAt?: string;
