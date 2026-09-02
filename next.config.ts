@@ -35,24 +35,6 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "traversepakistan.com",
-        pathname: "/wp-content/uploads/**",
-      },
-      {
-        protocol: "https",
-        hostname: "www.traversepakistan.com",
-        pathname: "/wp-content/uploads/**",
-      },
-      {
-        // WordPress moved to wp.traversepakistan.com so the apex can point at
-        // Vercel. Blog images + a handful of legacy static-data hero shots
-        // (travel-styles, about) still fetch from here.
-        protocol: "https",
-        hostname: "wp.traversepakistan.com",
-        pathname: "/wp-content/uploads/**",
-      },
-      {
-        protocol: "https",
         hostname: "img.youtube.com",
         pathname: "/vi/**",
       },
