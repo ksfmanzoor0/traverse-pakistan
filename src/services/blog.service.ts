@@ -1,7 +1,6 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { blogPosts as STATIC_BLOG_POSTS } from "@/data/blog-posts";
 import type { BlogPost, BlogSection } from "@/types/blog";
 
 // Raw Supabase row (snake_case) → BlogPost (camelCase) shape adapter.
@@ -69,18 +68,7 @@ const _fetchAllPublishedBlogPosts = unstable_cache(
   { tags: ["blog"], revalidate: 3600 },
 );
 
-export const getAllBlogPosts = cache(async (): Promise<BlogPost[]> => {
-  try {
-    return await _fetchAllPublishedBlogPosts();
-  } catch (err) {
-    // Error-only fallback (never on empty result): if Supabase itself is
-    // unreachable, serve the static import so the blog stays online. Empty
-    // arrays from a healthy DB pass through — that's a legitimate "no
-    // published posts" state, not a fallback trigger.
-    console.error("[blog.service] Supabase read failed, falling back to static data:", err);
-    return STATIC_BLOG_POSTS;
-  }
-});
+export const getAllBlogPosts = cache(_fetchAllPublishedBlogPosts);
 
 const _fetchBlogPostBySlug = unstable_cache(
   async (slug: string): Promise<BlogPost | null> => {
@@ -98,16 +86,7 @@ const _fetchBlogPostBySlug = unstable_cache(
   { tags: ["blog"], revalidate: 3600 },
 );
 
-export const getBlogPostBySlug = cache(
-  async (slug: string): Promise<BlogPost | null> => {
-    try {
-      return await _fetchBlogPostBySlug(slug);
-    } catch (err) {
-      console.error("[blog.service] Supabase read failed, falling back to static data:", err);
-      return STATIC_BLOG_POSTS.find((p) => p.slug === slug) ?? null;
-    }
-  },
-);
+export const getBlogPostBySlug = cache(_fetchBlogPostBySlug);
 
 export const getBlogPostsByDestination = cache(
   async (destinationSlug: string): Promise<BlogPost[]> => {
