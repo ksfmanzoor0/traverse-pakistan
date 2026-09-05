@@ -40,7 +40,19 @@ export async function POST(req: NextRequest) {
   }
 
   if (!body.departureId || !body.seats || !body.contact?.name || !body.homeCity) {
-    return NextResponse.json({ error: "missing required fields" }, { status: 400 });
+    console.error("[api/tours/create-booking] rejected 400 with body:", JSON.stringify(body));
+    return NextResponse.json(
+      {
+        error: "missing required fields",
+        missing: {
+          departureId: !body.departureId,
+          seats: !body.seats,
+          contactName: !body.contact?.name,
+          homeCity: !body.homeCity,
+        },
+      },
+      { status: 400 },
+    );
   }
 
   const supabase = getSupabaseAdmin();

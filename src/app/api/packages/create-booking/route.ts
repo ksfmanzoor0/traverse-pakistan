@@ -36,10 +36,13 @@ export async function POST(req: NextRequest) {
 
   // Minimal top-level shape check only — the SQL RPC has its own validation
   // and returns a proper error message. Match the tour route's minimalist
-  // pattern so we don't accidentally reject valid edge cases (e.g. placeholder
-  // 0-priced packages).
+  // pattern so we don't accidentally reject valid edge cases.
   if (!body.packageSlug || !body.contact?.name) {
-    return NextResponse.json({ error: "missing required fields" }, { status: 400 });
+    console.error("[api/packages/create-booking] rejected 400 with body:", JSON.stringify(body));
+    return NextResponse.json(
+      { error: "missing required fields", missing: { packageSlug: !body.packageSlug, contactName: !body.contact?.name } },
+      { status: 400 },
+    );
   }
 
   const supabase = getSupabaseAdmin();

@@ -43,16 +43,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid json" }, { status: 400 });
   }
 
-  if (
-    !body.hotelSlug ||
-    !Array.isArray(body.lineItems) || body.lineItems.length === 0 ||
-    !body.contact?.name ||
-    !body.contact?.email ||
-    !body.contact?.phone ||
-    !(body.nights > 0) ||
-    !(body.totalAmount > 0)
-  ) {
-    return NextResponse.json({ error: "missing required fields" }, { status: 400 });
+  // Minimal shape check — RPC does its own field validation and returns a
+  // proper error message on bad input.
+  if (!body.hotelSlug || !body.contact?.name) {
+    console.error("[api/hotels/create-booking] rejected 400 with body:", JSON.stringify(body));
+    return NextResponse.json(
+      { error: "missing required fields", missing: { hotelSlug: !body.hotelSlug, contactName: !body.contact?.name } },
+      { status: 400 },
+    );
   }
 
   const supabase = getSupabaseAdmin();
