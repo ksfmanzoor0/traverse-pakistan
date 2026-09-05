@@ -4,14 +4,10 @@ import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import type {
   BookingRow,
-  CreateBookingArgs,
-  CreateBookingResult,
   DepartureRow,
 } from "@/lib/supabase/types";
 import type {
   Booking,
-  BookingSummary,
-  CreateBookingInput,
   Departure,
   DepartureCity,
 } from "@/types/booking";
@@ -93,49 +89,6 @@ function toBooking(row: BookingRow): Booking {
   };
 }
 
-export async function createBooking(
-  input: CreateBookingInput
-): Promise<BookingSummary> {
-  if (!isSupabaseConfigured) {
-    throw new Error("Online booking is not available. Please use WhatsApp.");
-  }
-  const supabase = getSupabaseBrowser();
-
-  const args: CreateBookingArgs = {
-    p_departure_id: input.departureId,
-    p_seats: input.seats,
-    p_single_rooms: input.singleRooms,
-    p_contact_name: input.contact.name,
-    p_contact_email: input.contact.email,
-    p_contact_phone: input.contact.phone,
-    p_participants: input.participants.map((p) => ({
-      full_name: p.fullName ?? "",
-      cnic_or_passport: p.cnicOrPassport ?? null,
-      date_of_birth: p.dateOfBirth ?? null,
-      dietary: p.dietary ?? null,
-      emergency_contact: p.emergencyContact ?? null,
-    })),
-    p_notes: input.notes ?? null,
-    p_payment_plan: input.paymentPlan ?? "full",
-  };
-
-  const { data, error } = await supabase.rpc("create_booking", { ...args, p_submit_uuid: input.submitUuid ?? null } as never);
-
-  if (error) {
-    console.error("[createBooking] rpc failed:", error);
-    throw new Error("We couldn't reserve that seat. Please try again in a moment, or contact us on WhatsApp.");
-  }
-
-  const result = Array.isArray(data) ? (data[0] as CreateBookingResult) : null;
-  if (!result) throw new Error("We couldn't reserve that seat. Please try again in a moment, or contact us on WhatsApp.");
-
-  return {
-    bookingId: result.booking_id,
-    bookingRef: result.booking_ref,
-    totalAmount: result.total_amount,
-  };
-}
-
 export async function getMyBookings(): Promise<Booking[]> {
   const supabase = getSupabaseBrowser();
   const { data, error } = await supabase
@@ -157,127 +110,4 @@ export async function getBookingByRef(ref: string): Promise<Booking | null> {
 
   if (error) throw new Error(error.message);
   return data ? toBooking(data) : null;
-}
-
-export interface CreatePackageBookingInput {
-  packageSlug: string;
-  tier: "deluxe" | "luxury";
-  departureCity: string;
-  startDate: string | null;
-  adults: number;
-  rooms: number;
-  totalAmount: number;
-  contact: { name: string; email: string; phone: string };
-  notes?: string;
-  submitUuid?: string;
-  paymentPlan?: "full" | "installments";
-}
-
-export interface PackageBookingSummary {
-  bookingId: string;
-  bookingRef: string;
-  totalAmount: number;
-}
-
-export async function createPackageBooking(
-  input: CreatePackageBookingInput
-): Promise<PackageBookingSummary> {
-  if (!isSupabaseConfigured) {
-    throw new Error("Online booking is not available.");
-  }
-  const supabase = getSupabaseBrowser();
-
-  const { data, error } = await supabase.rpc("create_package_booking", {
-    p_package_slug: input.packageSlug,
-    p_tier: input.tier,
-    p_departure_city: input.departureCity,
-    p_start_date: input.startDate ?? null,
-    p_adults: input.adults,
-    p_rooms: input.rooms,
-    p_total_amount: input.totalAmount,
-    p_contact_name: input.contact.name,
-    p_contact_email: input.contact.email,
-    p_contact_phone: input.contact.phone,
-    p_notes: input.notes ?? null,
-    p_submit_uuid: input.submitUuid ?? null,
-    p_payment_plan: input.paymentPlan ?? "full",
-  } as never);
-
-  if (error) throw new Error(error.message);
-
-  const result = Array.isArray(data) ? (data[0] as { booking_id: string; booking_ref: string; total_amount: number }) : null;
-  if (!result) throw new Error("Package booking creation returned no data");
-
-  return {
-    bookingId: result.booking_id,
-    bookingRef: result.booking_ref,
-    totalAmount: result.total_amount,
-  };
-}
-
-export interface HotelBookingLineItem {
-  roomName: string;
-  qty: number;
-  adults: number;
-  children: number;
-  pricePerNight: number;
-}
-
-export interface CreateHotelBookingInput {
-  hotelSlug: string;
-  lineItems: HotelBookingLineItem[];
-  checkinDate: string | null;
-  checkoutDate: string | null;
-  adults: number;      // booking total — sum of per-room adults
-  children: number;   // booking total — sum of per-room children
-  nights: number;
-  totalAmount: number;
-  contact: { name: string; email: string; phone: string };
-  arrivalTime?: string;
-  notes?: string;
-  submitUuid?: string;
-}
-
-export interface HotelBookingSummary {
-  bookingId: string;
-  bookingRef: string;
-  totalAmount: number;
-}
-
-export async function createHotelBooking(
-  input: CreateHotelBookingInput
-): Promise<HotelBookingSummary> {
-  if (!isSupabaseConfigured) {
-    throw new Error("Online booking is not available.");
-  }
-  const supabase = getSupabaseBrowser();
-
-  // TODO(backend-testing): update RPC to accept line_items[] and insert hotel_booking_rooms rows
-  const { data, error } = await supabase.rpc("create_hotel_booking", {
-    p_hotel_slug: input.hotelSlug,
-    p_checkin_date: input.checkinDate ?? null,
-    p_checkout_date: input.checkoutDate ?? null,
-    p_adults: input.adults,
-    p_children: input.children,
-    p_nights: input.nights,
-    p_total_amount: input.totalAmount,
-    p_contact_name: input.contact.name,
-    p_contact_email: input.contact.email,
-    p_contact_phone: input.contact.phone,
-    p_arrival_time: input.arrivalTime ?? null,
-    p_notes: input.notes ?? null,
-    p_line_items: input.lineItems,
-    p_submit_uuid: input.submitUuid ?? null,
-  } as never);
-
-  if (error) throw new Error(error.message);
-
-  const result = Array.isArray(data) ? (data[0] as { booking_id: string; booking_ref: string; total_amount: number }) : null;
-  if (!result) throw new Error("Hotel booking creation returned no data");
-
-  return {
-    bookingId: result.booking_id,
-    bookingRef: result.booking_ref,
-    totalAmount: result.total_amount,
-  };
 }
