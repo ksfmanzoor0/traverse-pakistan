@@ -34,17 +34,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid json" }, { status: 400 });
   }
 
-  if (
-    !body.packageSlug ||
-    !body.tier ||
-    !body.departureCity ||
-    !body.contact?.name ||
-    !body.contact?.email ||
-    !body.contact?.phone ||
-    !(body.adults > 0) ||
-    !(body.rooms > 0) ||
-    !(body.totalAmount > 0)
-  ) {
+  // Minimal top-level shape check only — the SQL RPC has its own validation
+  // and returns a proper error message. Match the tour route's minimalist
+  // pattern so we don't accidentally reject valid edge cases (e.g. placeholder
+  // 0-priced packages).
+  if (!body.packageSlug || !body.contact?.name) {
     return NextResponse.json({ error: "missing required fields" }, { status: 400 });
   }
 
