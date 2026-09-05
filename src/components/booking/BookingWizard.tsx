@@ -357,11 +357,7 @@ export function BookingWizard({ tour, reviews, onClose, compact }: BookingWizard
             selectedAddonIds: Array.from(selectedIds),
           }),
         });
-        if (!res.ok) {
-          const detail = await res.json().catch(() => null);
-          console.error("[wizard/tour] create-booking failed:", res.status, detail);
-          throw new Error(`create-booking failed (${res.status})${detail?.error ? `: ${detail.error}` : ""}`);
-        }
+        if (!res.ok) throw new Error(`create-booking failed (${res.status})`);
         const result: { bookingId: string; bookingRef: string; totalAmount: number } = await res.json();
         trackAddToCart({
           bookingRef: result.bookingRef,
