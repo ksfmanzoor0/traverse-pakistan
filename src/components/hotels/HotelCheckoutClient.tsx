@@ -161,7 +161,11 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
           headers: { "content-type": "application/json" },
           body: JSON.stringify(input),
         });
-        if (!res.ok) throw new Error(`create-booking failed (${res.status})`);
+        if (!res.ok) {
+          const detail = await res.json().catch(() => null);
+          console.error("[checkout/hotel] create-booking failed:", res.status, detail);
+          throw new Error(`create-booking failed (${res.status})${detail?.error ? `: ${detail.error}` : ""}`);
+        }
         const result: { bookingId: string; bookingRef: string; totalAmount: number } = await res.json();
         trackAddToCart({
           bookingRef: result.bookingRef,

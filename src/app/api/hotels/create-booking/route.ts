@@ -53,38 +53,48 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const supabase = getSupabaseAdmin();
+  try {
+    const supabase = getSupabaseAdmin();
 
-  const { data, error } = await supabase.rpc("create_hotel_booking" as never, {
-    p_hotel_slug: body.hotelSlug,
-    p_checkin_date: body.checkinDate ?? null,
-    p_checkout_date: body.checkoutDate ?? null,
-    p_adults: body.adults,
-    p_children: body.children,
-    p_nights: body.nights,
-    p_total_amount: body.totalAmount,
-    p_contact_name: body.contact.name,
-    p_contact_email: body.contact.email,
-    p_contact_phone: body.contact.phone,
-    p_arrival_time: body.arrivalTime ?? null,
-    p_notes: body.notes ?? null,
-    p_line_items: body.lineItems,
-    p_submit_uuid: body.submitUuid ?? null,
-  } as never);
+    const { data, error } = await supabase.rpc("create_hotel_booking" as never, {
+      p_hotel_slug: body.hotelSlug,
+      p_checkin_date: body.checkinDate ?? null,
+      p_checkout_date: body.checkoutDate ?? null,
+      p_adults: body.adults,
+      p_children: body.children,
+      p_nights: body.nights,
+      p_total_amount: body.totalAmount,
+      p_contact_name: body.contact.name,
+      p_contact_email: body.contact.email,
+      p_contact_phone: body.contact.phone,
+      p_arrival_time: body.arrivalTime ?? null,
+      p_notes: body.notes ?? null,
+      p_line_items: body.lineItems,
+      p_submit_uuid: body.submitUuid ?? null,
+    } as never);
 
-  if (error) {
-    console.error("[api/hotels/create-booking] rpc failed:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      console.error("[api/hotels/create-booking] rpc failed:", error);
+      return NextResponse.json({ error: `rpc: ${error.message}`, code: error.code, details: error.details, hint: error.hint }, { status: 500 });
+    }
+
+    const result = Array.isArray(data)
+      ? (data[0] as { booking_id: string; booking_ref: string; total_amount: number })
+      : null;
+    if (!result) {
+      console.error("[api/hotels/create-booking] rpc returned empty:", data);
+      return NextResponse.json({ error: "no booking returned" }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      bookingId: result.booking_id,
+      bookingRef: result.booking_ref,
+      totalAmount: result.total_amount,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack : undefined;
+    console.error("[api/hotels/create-booking] uncaught:", message, stack);
+    return NextResponse.json({ error: `uncaught: ${message}` }, { status: 500 });
   }
-
-  const result = Array.isArray(data)
-    ? (data[0] as { booking_id: string; booking_ref: string; total_amount: number })
-    : null;
-  if (!result) return NextResponse.json({ error: "no booking returned" }, { status: 500 });
-
-  return NextResponse.json({
-    bookingId: result.booking_id,
-    bookingRef: result.booking_ref,
-    totalAmount: result.total_amount,
-  });
 }

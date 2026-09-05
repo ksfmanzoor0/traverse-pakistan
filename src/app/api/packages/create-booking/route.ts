@@ -45,9 +45,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const supabase = getSupabaseAdmin();
+  try {
+    const supabase = getSupabaseAdmin();
 
-  const { data, error } = await supabase.rpc("create_package_booking" as never, {
+    const { data, error } = await supabase.rpc("create_package_booking" as never, {
     p_package_slug: body.packageSlug,
     p_tier: body.tier,
     p_departure_city: body.departureCity,
@@ -63,19 +64,28 @@ export async function POST(req: NextRequest) {
     p_payment_plan: body.paymentPlan ?? "full",
   } as never);
 
-  if (error) {
-    console.error("[api/packages/create-booking] rpc failed:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      console.error("[api/packages/create-booking] rpc failed:", error);
+      return NextResponse.json({ error: `rpc: ${error.message}`, code: error.code, details: error.details, hint: error.hint }, { status: 500 });
+    }
+
+    const result = Array.isArray(data)
+      ? (data[0] as { booking_id: string; booking_ref: string; total_amount: number })
+      : null;
+    if (!result) {
+      console.error("[api/packages/create-booking] rpc returned empty:", data);
+      return NextResponse.json({ error: "no booking returned" }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      bookingId: result.booking_id,
+      bookingRef: result.booking_ref,
+      totalAmount: result.total_amount,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack : undefined;
+    console.error("[api/packages/create-booking] uncaught:", message, stack);
+    return NextResponse.json({ error: `uncaught: ${message}` }, { status: 500 });
   }
-
-  const result = Array.isArray(data)
-    ? (data[0] as { booking_id: string; booking_ref: string; total_amount: number })
-    : null;
-  if (!result) return NextResponse.json({ error: "no booking returned" }, { status: 500 });
-
-  return NextResponse.json({
-    bookingId: result.booking_id,
-    bookingRef: result.booking_ref,
-    totalAmount: result.total_amount,
-  });
 }
