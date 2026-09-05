@@ -6,8 +6,7 @@ export const dynamic = "force-dynamic";
 
 // Server-side booking creation for tours that carry flight/bus addons.
 // The client cannot be trusted to compute the addon amount, so we re-quote
-// here and forward the trusted total to the create_booking RPC. Non-addon
-// tours should keep using the direct client RPC path in booking.service.ts.
+// here and forward the trusted total to the create_booking RPC.
 interface CreateBody {
   departureId: string;
   seats: number;
@@ -96,10 +95,7 @@ export async function POST(req: NextRequest) {
     })),
   } as never);
 
-  if (error) {
-    console.error("[api/tours/create-booking] rpc failed:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const result = Array.isArray(data) ? (data[0] as { booking_id: string; booking_ref: string; total_amount: number }) : null;
   if (!result) return NextResponse.json({ error: "no booking returned" }, { status: 500 });

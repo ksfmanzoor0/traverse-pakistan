@@ -3,14 +3,10 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-// Server-side booking creation for hotels. Moving the create_hotel_booking
-// RPC call behind this route lets us revoke public EXECUTE on the RPC —
-// without this indirection, anyone with the anon key could POST directly to
-// /rest/v1/rpc/create_hotel_booking with arbitrary input.
-//
-// Server-side line-item re-quote is intentionally NOT wired here yet; that
-// lands in a follow-up. This route mirrors the exact behavior of the previous
-// client call so the migration is surgical.
+// Server-side booking creation for hotels. Routing the create_hotel_booking
+// RPC call through this endpoint lets us revoke public EXECUTE on the RPC —
+// without this indirection anyone with the anon key could POST directly to
+// /rest/v1/rpc/create_hotel_booking.
 
 interface HotelBookingLineItem {
   roomName: string;
@@ -43,15 +39,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid json" }, { status: 400 });
   }
 
-  if (
-    !body.hotelSlug ||
-    !Array.isArray(body.lineItems) || body.lineItems.length === 0 ||
-    !body.contact?.name ||
-    !body.contact?.email ||
-    !body.contact?.phone ||
-    !(body.nights > 0) ||
-    !(body.totalAmount > 0)
-  ) {
+  if (!body.hotelSlug || !body.contact?.name) {
     return NextResponse.json({ error: "missing required fields" }, { status: 400 });
   }
 
@@ -74,10 +62,7 @@ export async function POST(req: NextRequest) {
     p_submit_uuid: body.submitUuid ?? null,
   } as never);
 
-  if (error) {
-    console.error("[api/hotels/create-booking] rpc failed:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const result = Array.isArray(data)
     ? (data[0] as { booking_id: string; booking_ref: string; total_amount: number })

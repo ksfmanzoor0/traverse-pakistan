@@ -3,14 +3,10 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-// Server-side booking creation for packages. Moving the create_package_booking
-// RPC call behind this route lets us revoke public EXECUTE on the RPC —
-// without this indirection, anyone with the anon key could POST directly to
-// /rest/v1/rpc/create_package_booking with arbitrary input.
-//
-// Server-side price re-quote (via quotePackage) is intentionally NOT wired
-// here yet; that lands in a follow-up. This route mirrors the exact behavior
-// of the previous client call so the migration is surgical.
+// Server-side booking creation for packages. Routing the create_package_booking
+// RPC call through this endpoint lets us revoke public EXECUTE on the RPC —
+// without this indirection anyone with the anon key could POST directly to
+// /rest/v1/rpc/create_package_booking.
 
 interface CreateBody {
   packageSlug: string;
@@ -34,10 +30,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid json" }, { status: 400 });
   }
 
-  // Minimal top-level shape check only — the SQL RPC has its own validation
-  // and returns a proper error message. Match the tour route's minimalist
-  // pattern so we don't accidentally reject valid edge cases (e.g. placeholder
-  // 0-priced packages).
   if (!body.packageSlug || !body.contact?.name) {
     return NextResponse.json({ error: "missing required fields" }, { status: 400 });
   }
@@ -60,10 +52,7 @@ export async function POST(req: NextRequest) {
     p_payment_plan: body.paymentPlan ?? "full",
   } as never);
 
-  if (error) {
-    console.error("[api/packages/create-booking] rpc failed:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const result = Array.isArray(data)
     ? (data[0] as { booking_id: string; booking_ref: string; total_amount: number })
