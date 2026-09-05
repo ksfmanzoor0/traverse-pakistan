@@ -106,10 +106,12 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
   }, 0);
   const gstRate = hotel.taxRate ?? 0;
   const bedRate = hotel.bedTaxRate ?? 0;
+  const levyRate = hotel.levyRate ?? 0;
   const gstAmount = Math.round(subtotal * gstRate);
   const bedAmount = Math.round(subtotal * bedRate);
-  const grandTotal = subtotal + gstAmount + bedAmount;
-  const hasAnyTax = gstAmount > 0 || bedAmount > 0;
+  const levyAmount = Math.round(subtotal * levyRate);
+  const grandTotal = subtotal + gstAmount + bedAmount + levyAmount;
+  const hasAnyTax = gstAmount > 0 || bedAmount > 0 || levyAmount > 0;
 
   const [form, setForm] = useState({
     firstName: "",
@@ -357,6 +359,12 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
                     <div className="flex justify-between text-[13px]">
                       <span className="text-[var(--text-secondary)]">Bed Tax ({Math.round(bedRate * 100)}%)</span>
                       <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(bedAmount)}</span>
+                    </div>
+                  )}
+                  {levyAmount > 0 && (
+                    <div className="flex justify-between text-[13px]">
+                      <span className="text-[var(--text-secondary)]">Tourism Levy ({Math.round(levyRate * 100)}%)</span>
+                      <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(levyAmount)}</span>
                     </div>
                   )}
                 </>

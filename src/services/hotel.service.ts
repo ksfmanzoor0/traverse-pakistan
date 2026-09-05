@@ -57,6 +57,7 @@ type RawHotel = {
   margin: number;
   tax_rate: number;
   bed_tax_rate: number;
+  levy_rate: number;
   guest_favourite: boolean;
   check_in: string;
   check_out: string;
@@ -73,7 +74,7 @@ type RawHotel = {
 
 const HOTEL_SELECT = `
   id, slug, name, destination_slug, location, tier, property_type, image,
-  rating, review_count, price_per_night, margin, tax_rate, bed_tax_rate, guest_favourite, check_in, check_out,
+  rating, review_count, price_per_night, margin, tax_rate, bed_tax_rate, levy_rate, guest_favourite, check_in, check_out,
   tax_note, description, amenities, highlights, policies, updated_at,
   hotel_rooms (
     id, name, beds, price, single_price, available, extra_occupancy_charge,
@@ -172,6 +173,7 @@ function toHotel(raw: RawHotel): Hotel {
     margin: Number(raw.margin),
     taxRate: Number(raw.tax_rate ?? 0),
     bedTaxRate: Number(raw.bed_tax_rate ?? 0),
+    levyRate: Number(raw.levy_rate ?? 0),
     guestFavourite: raw.guest_favourite,
     checkIn: raw.check_in,
     checkOut: raw.check_out,

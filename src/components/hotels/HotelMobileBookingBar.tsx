@@ -182,10 +182,12 @@ export function HotelMobileBookingBar({ hotel }: { hotel: Hotel }) {
   const subtotal = lineItems.reduce((s, li) => s + li.roomTotal + li.extraTotal, 0);
   const gstRate = hotel.taxRate ?? 0;
   const bedRate = hotel.bedTaxRate ?? 0;
+  const levyRate = hotel.levyRate ?? 0;
   const gstAmount = Math.round(subtotal * gstRate);
   const bedAmount = Math.round(subtotal * bedRate);
-  const grandTotal = subtotal + gstAmount + bedAmount;
-  const hasAnyTax = gstAmount > 0 || bedAmount > 0;
+  const levyAmount = Math.round(subtotal * levyRate);
+  const grandTotal = subtotal + gstAmount + bedAmount + levyAmount;
+  const hasAnyTax = gstAmount > 0 || bedAmount > 0 || levyAmount > 0;
   // "from" = lowest room rate for the current season (entryPriceForToday), never the absolute floor.
   const minRoomPrice = hotel.pricePerNight;
 
@@ -397,6 +399,12 @@ export function HotelMobileBookingBar({ hotel }: { hotel: Hotel }) {
                     <div className={`flex justify-between text-[13px] ${gstAmount > 0 ? "" : "pt-2 border-t border-[var(--border-default)]"}`}>
                       <span className="text-[var(--text-secondary)]">Bed Tax ({Math.round(bedRate * 100)}%)</span>
                       <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(bedAmount)}</span>
+                    </div>
+                  )}
+                  {nights > 0 && levyAmount > 0 && (
+                    <div className={`flex justify-between text-[13px] ${(gstAmount > 0 || bedAmount > 0) ? "" : "pt-2 border-t border-[var(--border-default)]"}`}>
+                      <span className="text-[var(--text-secondary)]">Tourism Levy ({Math.round(levyRate * 100)}%)</span>
+                      <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(levyAmount)}</span>
                     </div>
                   )}
                   {nights > 0 ? (

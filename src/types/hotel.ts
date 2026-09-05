@@ -59,6 +59,7 @@ export interface Hotel {
   margin: number;               // per-hotel markup applied to corporate/base rates → display price
   taxRate?: number;             // GST rate as decimal (e.g. 0.16). Applied at sidebar/checkout, never baked into room.price. Absent → 0.
   bedTaxRate?: number;          // Bed/occupancy tax rate as decimal (e.g. 0.07). Applied independently of GST. Absent → 0.
+  levyRate?: number;            // Tourism levy rate as decimal (e.g. 0.05 for Gilgit-Baltistan). Applied independently of GST + bed tax. Absent → 0.
   guestFavourite?: boolean;
   seasons?: HotelSeasonDefinition[];
   taxNote?: string;             // e.g. "No GST — Gilgit-Baltistan tax-free zone"
