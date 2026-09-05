@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { formatPrice } from "@/lib/utils";
-import { createPackageBooking } from "@/services/booking.service";
 import type { Package, PackageTier } from "@/types/package";
 import type { Review } from "@/types/review";
 import { WizardProgress } from "@/components/booking/WizardProgress";
@@ -339,7 +338,13 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
     let lastErr: unknown = null;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const result = await createPackageBooking(input);
+        const res = await fetch("/api/packages/create-booking", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(input),
+        });
+        if (!res.ok) throw new Error(`create-booking failed (${res.status})`);
+        const result: { bookingId: string; bookingRef: string; totalAmount: number } = await res.json();
         // Attach promo code to the booking so IPN-side consumption on payment
         // success can find + burn it. Non-fatal — if this fails the booking
         // still goes through, just without the discount recorded.

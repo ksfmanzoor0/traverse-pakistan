@@ -4,7 +4,6 @@ import { useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { formatPrice } from "@/lib/utils";
-import { createHotelBooking } from "@/services/booking.service";
 import { trackAddToCart } from "@/lib/analytics/track";
 import { Icon } from "@/components/ui/Icon";
 import { InlineAlert } from "@/components/ui/InlineAlert";
@@ -157,7 +156,13 @@ export function HotelCheckoutClient({ hotel }: { hotel: Hotel }) {
     let lastErr: unknown = null;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const result = await createHotelBooking(input);
+        const res = await fetch("/api/hotels/create-booking", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(input),
+        });
+        if (!res.ok) throw new Error(`create-booking failed (${res.status})`);
+        const result: { bookingId: string; bookingRef: string; totalAmount: number } = await res.json();
         trackAddToCart({
           bookingRef: result.bookingRef,
           bookingType: "hotel",
