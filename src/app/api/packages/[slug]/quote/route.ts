@@ -41,15 +41,19 @@ export async function GET(
   if (!Number.isFinite(start) || start < now - 30 * 24 * 60 * 60 * 1000 || start > now + ONE_YEAR_MS) {
     return NextResponse.json({ error: "startDate must be within the next 12 months" }, { status: 400 });
   }
-  const pax = Math.max(1, Math.min(40, Number(paxRaw) || 2));
+  const adults = Math.max(1, Math.min(40, Number(paxRaw) || 2));
+  const children_5_12 = Math.max(0, Math.min(20, Number(url.searchParams.get("children_5_12")) || 0));
+  const children_2_5 = Math.max(0, Math.min(20, Number(url.searchParams.get("children_2_5")) || 0));
+  const infants = Math.max(0, Math.min(10, Number(url.searchParams.get("infants")) || 0));
   const roomsRaw = url.searchParams.get("rooms");
   const roomsParsed = roomsRaw === null ? undefined : Math.floor(Number(roomsRaw));
+  const paxBillable = adults + children_5_12 + children_2_5;
   const rooms = Number.isFinite(roomsParsed) && (roomsParsed as number) > 0
-    ? Math.min(pax, roomsParsed as number)
+    ? Math.min(paxBillable, roomsParsed as number)
     : undefined;
 
   try {
-    const quote = await quotePackage({ slug, home, tier, pax, startDate, rooms });
+    const quote = await quotePackage({ slug, home, tier, pax: adults, adults, children_5_12, children_2_5, infants, startDate, rooms });
     if (!quote) return NextResponse.json({ error: "Package not found" }, { status: 404 });
     // Only ship customer-safe fields — margin / internal breakdown stays server-side.
     return NextResponse.json({
@@ -58,11 +62,19 @@ export async function GET(
       nights: quote.nights,
       tier: quote.tier,
       pax: quote.pax,
+      adults: quote.adults,
+      children_5_12: quote.children_5_12,
+      children_2_5: quote.children_2_5,
+      infants: quote.infants,
       rooms: quote.rooms,
       home: quote.home,
       startDate: quote.startDate,
       total: quote.total,
       perPerson: quote.perPerson,
+      perAdult: quote.perAdult,
+      perChild_5_12: quote.perChild_5_12,
+      perChild_2_5: quote.perChild_2_5,
+      perInfant: quote.perInfant,
       unresolved: quote.unresolved,
       vehicle: quote.vehicle,
       flightPerPerson: quote.flightPerPerson,
