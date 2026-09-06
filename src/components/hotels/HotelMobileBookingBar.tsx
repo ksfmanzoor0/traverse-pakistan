@@ -403,7 +403,7 @@ export function HotelMobileBookingBar({ hotel }: { hotel: Hotel }) {
                   )}
                   {nights > 0 && levyAmount > 0 && (
                     <div className={`flex justify-between text-[13px] ${(gstAmount > 0 || bedAmount > 0) ? "" : "pt-2 border-t border-[var(--border-default)]"}`}>
-                      <span className="text-[var(--text-secondary)]">Tourism Levy ({Math.round(levyRate * 100)}%)</span>
+                      <span className="text-[var(--text-secondary)]">Levy Tax ({Math.round(levyRate * 100)}%)</span>
                       <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(levyAmount)}</span>
                     </div>
                   )}
