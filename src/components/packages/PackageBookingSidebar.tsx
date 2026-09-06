@@ -198,9 +198,12 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
   const [rooms, setRooms] = useState<number | null>(null);
   const [naturalRooms, setNaturalRooms] = useState(1);
   const [adults, setAdults] = useState(2);
+  // Sidebar collapses "children 2-12" into a single stepper (pricing follows
+  // the older-child bracket = conservative estimate). Wizard step 2 lets the
+  // user split into 5-12 vs 2-5 for the exact per-bracket total.
   const [children_5_12, setChildren512] = useState(0);
-  const [children_2_5, setChildren25] = useState(0);
   const [infants, setInfants] = useState(0);
+  const children_2_5 = 0;
   // Clamp at render time: a stale fetch from a higher-pax click can write
   // naturalRooms > adults, but the floor can never exceed the party size.
   const safeNaturalRooms = Math.min(naturalRooms, adults);
@@ -639,11 +642,11 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
 
           <div className="h-px bg-[var(--border-default)]" />
 
-          {/* Children 5–12 */}
+          {/* Children — sidebar folds 5-12 + 2-5 into one row; wizard splits by age */}
           <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-subtle)]">
             <div>
               <p className="text-[13px] font-semibold text-[var(--text-primary)]">Children</p>
-              <p className="text-[11px] text-[var(--text-tertiary)]">Age 5–12 · {engineQuote ? formatPrice(engineQuote.perChild_5_12 || engineQuote.perAdult) : "—"} / person</p>
+              <p className="text-[11px] text-[var(--text-tertiary)]">Age 2–12 · {engineQuote ? formatPrice(engineQuote.perChild_5_12 || engineQuote.perAdult) : "—"} / person</p>
             </div>
             <div className="flex items-center gap-3">
               <button type="button"
@@ -656,31 +659,6 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
               <button type="button"
                 onClick={() => setChildren512(Math.min(Math.max(0, pkg.maxGroupSize - adults), children_5_12 + 1))}
                 disabled={adults + children_5_12 >= pkg.maxGroupSize}
-                className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
-                +
-              </button>
-            </div>
-          </div>
-
-          <div className="h-px bg-[var(--border-default)]" />
-
-          {/* Young children 2–5 */}
-          <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-subtle)]">
-            <div>
-              <p className="text-[13px] font-semibold text-[var(--text-primary)]">Young children</p>
-              <p className="text-[11px] text-[var(--text-tertiary)]">Age 2–5 · {engineQuote ? formatPrice(engineQuote.perChild_2_5 || 0) : "—"} / person</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <button type="button"
-                onClick={() => setChildren25(Math.max(0, children_2_5 - 1))}
-                disabled={children_2_5 <= 0}
-                className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
-                −
-              </button>
-              <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{children_2_5}</span>
-              <button type="button"
-                onClick={() => setChildren25(Math.min(6, children_2_5 + 1))}
-                disabled={children_2_5 >= 6}
                 className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
                 +
               </button>
@@ -723,12 +701,6 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
             <div className="flex justify-between text-[13px]">
               <span className="text-[var(--text-secondary)]">{formatPrice(engineQuote?.perChild_5_12 ?? 0)} × {children_5_12} child 5–12</span>
               <span className="text-[var(--text-primary)] font-medium tabular-nums">{formatPrice((engineQuote?.perChild_5_12 ?? 0) * children_5_12)}</span>
-            </div>
-          )}
-          {children_2_5 > 0 && (
-            <div className="flex justify-between text-[13px]">
-              <span className="text-[var(--text-secondary)]">{formatPrice(engineQuote?.perChild_2_5 ?? 0)} × {children_2_5} child 2–5</span>
-              <span className="text-[var(--text-primary)] font-medium tabular-nums">{formatPrice((engineQuote?.perChild_2_5 ?? 0) * children_2_5)}</span>
             </div>
           )}
           {infants > 0 && (
