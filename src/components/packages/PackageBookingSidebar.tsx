@@ -198,12 +198,31 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
   const [rooms, setRooms] = useState<number | null>(null);
   const [naturalRooms, setNaturalRooms] = useState(1);
   const [adults, setAdults] = useState(2);
-  // Sidebar collapses "children 2-12" into a single stepper (pricing follows
-  // the older-child bracket = conservative estimate). Wizard step 2 lets the
-  // user split into 5-12 vs 2-5 for the exact per-bracket total.
+  // Total children = 5-12 + 2-5. Main stepper adjusts the total (bumps 5-12
+  // by default). An inline "under 5" sub-picker shifts count between the
+  // two brackets so the engine sees the correct under-5 free treatment
+  // without adding a full row to the sidebar.
   const [children_5_12, setChildren512] = useState(0);
+  const [children_2_5, setChildren25] = useState(0);
   const [infants, setInfants] = useState(0);
-  const children_2_5 = 0;
+  const totalChildren = children_5_12 + children_2_5;
+  const incChildren = () => setChildren512((n) => n + 1);
+  const decChildren = () => {
+    if (children_5_12 > 0) setChildren512((n) => n - 1);
+    else if (children_2_5 > 0) setChildren25((n) => n - 1);
+  };
+  const incUnder5 = () => {
+    if (children_5_12 > 0) {
+      setChildren512((n) => n - 1);
+      setChildren25((n) => n + 1);
+    }
+  };
+  const decUnder5 = () => {
+    if (children_2_5 > 0) {
+      setChildren25((n) => n - 1);
+      setChildren512((n) => n + 1);
+    }
+  };
   // Clamp at render time: a stale fetch from a higher-pax click can write
   // naturalRooms > adults, but the floor can never exceed the party size.
   const safeNaturalRooms = Math.min(naturalRooms, adults);
@@ -642,27 +661,51 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
 
           <div className="h-px bg-[var(--border-default)]" />
 
-          {/* Children — sidebar folds 5-12 + 2-5 into one row; wizard splits by age */}
-          <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-subtle)]">
-            <div>
-              <p className="text-[13px] font-semibold text-[var(--text-primary)]">Children</p>
-              <p className="text-[11px] text-[var(--text-tertiary)]">Age 2–12 · {engineQuote ? formatPrice(engineQuote.perChild_5_12 || engineQuote.perAdult) : "—"} / person</p>
+          {/* Children — total stepper + inline "under 5" split */}
+          <div className="px-4 py-3 bg-[var(--bg-subtle)] space-y-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[13px] font-semibold text-[var(--text-primary)]">Children</p>
+                <p className="text-[11px] text-[var(--text-tertiary)]">Age 2–12</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button type="button"
+                  onClick={decChildren}
+                  disabled={totalChildren <= 0}
+                  className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
+                  −
+                </button>
+                <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{totalChildren}</span>
+                <button type="button"
+                  onClick={incChildren}
+                  disabled={adults + totalChildren >= pkg.maxGroupSize}
+                  className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
+                  +
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <button type="button"
-                onClick={() => setChildren512(Math.max(0, children_5_12 - 1))}
-                disabled={children_5_12 <= 0}
-                className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
-                −
-              </button>
-              <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{children_5_12}</span>
-              <button type="button"
-                onClick={() => setChildren512(Math.min(Math.max(0, pkg.maxGroupSize - adults), children_5_12 + 1))}
-                disabled={adults + children_5_12 >= pkg.maxGroupSize}
-                className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
-                +
-              </button>
-            </div>
+            {totalChildren > 0 && (
+              <div className="flex items-center justify-between pl-1">
+                <p className="text-[11px] text-[var(--text-tertiary)]">
+                  Of which under 5 <span className="text-[var(--text-secondary)]">(free hotel & meals)</span>
+                </p>
+                <div className="flex items-center gap-2">
+                  <button type="button"
+                    onClick={decUnder5}
+                    disabled={children_2_5 <= 0}
+                    className="w-6 h-6 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[11px] text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
+                    −
+                  </button>
+                  <span className="w-3 text-center text-[12px] font-semibold tabular-nums text-[var(--text-primary)]">{children_2_5}</span>
+                  <button type="button"
+                    onClick={incUnder5}
+                    disabled={children_5_12 <= 0}
+                    className="w-6 h-6 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[11px] text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
+                    +
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="h-px bg-[var(--border-default)]" />
@@ -701,6 +744,12 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
             <div className="flex justify-between text-[13px]">
               <span className="text-[var(--text-secondary)]">{formatPrice(engineQuote?.perChild_5_12 ?? 0)} × {children_5_12} child 5–12</span>
               <span className="text-[var(--text-primary)] font-medium tabular-nums">{formatPrice((engineQuote?.perChild_5_12 ?? 0) * children_5_12)}</span>
+            </div>
+          )}
+          {children_2_5 > 0 && (
+            <div className="flex justify-between text-[13px]">
+              <span className="text-[var(--text-secondary)]">{formatPrice(engineQuote?.perChild_2_5 ?? 0)} × {children_2_5} child under 5</span>
+              <span className="text-[var(--text-primary)] font-medium tabular-nums">{formatPrice((engineQuote?.perChild_2_5 ?? 0) * children_2_5)}</span>
             </div>
           )}
           {infants > 0 && (
