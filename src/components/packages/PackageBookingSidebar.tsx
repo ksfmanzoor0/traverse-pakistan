@@ -620,6 +620,7 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
               <button type="button"
                 onClick={() => setAdults(Math.max(1, adults - 1))}
                 disabled={adults <= 1 || adults <= infants || (adults - 1) * 2 < children_2_5}
+                title={adults <= infants ? "Each infant needs an adult companion" : (adults - 1) * 2 < children_2_5 ? "Each adult can supervise up to 2 young children" : undefined}
                 className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
                 −
               </button>
@@ -676,7 +677,16 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
               <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{children_2_5}</span>
               <button type="button"
                 onClick={() => setChildren25((n) => n + 1)}
-                disabled={adults + totalChildren >= pkg.maxGroupSize || children_2_5 >= adults * 2}
+                disabled={
+                  adults + totalChildren >= pkg.maxGroupSize
+                  || children_2_5 >= adults * 2
+                  || children_2_5 + infants >= displayRooms * 2
+                }
+                title={
+                  children_2_5 >= adults * 2 ? "Max 2 young children per adult"
+                  : children_2_5 + infants >= displayRooms * 2 ? "Max 2 under-5s per room — add a room to include more"
+                  : undefined
+                }
                 className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
                 +
               </button>
@@ -701,7 +711,12 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
               <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{infants}</span>
               <button type="button"
                 onClick={() => setInfants((n) => n + 1)}
-                disabled={infants >= adults}
+                disabled={infants >= adults || children_2_5 + infants >= displayRooms * 2}
+                title={
+                  infants >= adults ? "One lap per adult"
+                  : children_2_5 + infants >= displayRooms * 2 ? "Max 2 under-5s per room — add a room to include more"
+                  : undefined
+                }
                 className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
                 +
               </button>

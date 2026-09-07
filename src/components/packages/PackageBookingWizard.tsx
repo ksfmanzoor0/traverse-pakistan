@@ -563,32 +563,44 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
               <div className="border-t border-[var(--border-default)]" />
               <Stepper
                 label="Young children"
-                sub="Age 2–5 · free hotel/entries/meals · child flight fare · up to 2 per adult"
+                sub="Age 2–5 · free hotel/entries/meals · child flight fare · 2 per adult, 2 under-5s per room"
                 value={state.children_2_5}
                 min={0}
-                max={state.adults * 2}
+                max={Math.min(state.adults * 2, Math.max(0, state.rooms * 2 - state.infants))}
                 onDecrement={() => patch({ children_2_5: Math.max(0, state.children_2_5 - 1) })}
-                onIncrement={() => patch({ children_2_5: Math.min(state.adults * 2, state.children_2_5 + 1) })}
+                onIncrement={() => patch({
+                  children_2_5: Math.min(
+                    state.adults * 2,
+                    Math.max(0, state.rooms * 2 - state.infants),
+                    state.children_2_5 + 1,
+                  ),
+                })}
               />
               <div className="border-t border-[var(--border-default)]" />
               <Stepper
                 label="Infants"
-                sub="Under 2 · free · infant flight fare only · one lap per adult"
+                sub="Under 2 · free · infant flight fare only · one lap per adult, 2 under-5s per room"
                 value={state.infants}
                 min={0}
-                max={Math.max(0, state.adults)}
+                max={Math.min(state.adults, Math.max(0, state.rooms * 2 - state.children_2_5))}
                 onDecrement={() => patch({ infants: Math.max(0, state.infants - 1) })}
-                onIncrement={() => patch({ infants: Math.min(state.adults, state.infants + 1) })}
+                onIncrement={() => patch({
+                  infants: Math.min(
+                    state.adults,
+                    Math.max(0, state.rooms * 2 - state.children_2_5),
+                    state.infants + 1,
+                  ),
+                })}
               />
               <div className="border-t border-[var(--border-default)]" />
               <Stepper
                 label="Rooms"
-                sub="Up to 3 per room (adults + children 5–12)"
+                sub="Up to 3 per room (adults + children 5–12) · each room fits 2 under-5s free"
                 value={state.rooms}
                 min={Math.max(1, Math.ceil((state.adults + state.children_5_12) / 3))}
-                max={state.adults + state.children_5_12}
+                max={state.adults}
                 onDecrement={() => patch({ rooms: Math.max(Math.max(1, Math.ceil((state.adults + state.children_5_12) / 3)), state.rooms - 1) })}
-                onIncrement={() => patch({ rooms: Math.min(state.adults + state.children_5_12, state.rooms + 1) })}
+                onIncrement={() => patch({ rooms: Math.min(state.adults, state.rooms + 1) })}
               />
             </div>
           </section>
