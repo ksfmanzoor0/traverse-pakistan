@@ -651,52 +651,56 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
 
           <div className="h-px bg-[var(--border-default)]" />
 
-          {/* Children — total stepper + inline "under 5" split */}
-          <div className="px-4 py-3 bg-[var(--bg-subtle)] space-y-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[13px] font-semibold text-[var(--text-primary)]">Children</p>
-                <p className="text-[11px] text-[var(--text-tertiary)]">Age 2–12</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <button type="button"
-                  onClick={decChildren}
-                  disabled={totalChildren <= 0}
-                  className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
-                  −
-                </button>
-                <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{totalChildren}</span>
-                <button type="button"
-                  onClick={incChildren}
-                  disabled={adults + totalChildren >= pkg.maxGroupSize}
-                  className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
-                  +
-                </button>
-              </div>
+          {/* Children — total stepper. When count > 0, a separate "Under 5"
+              row appears below so the age split gets full visual weight. */}
+          <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-subtle)]">
+            <div>
+              <p className="text-[13px] font-semibold text-[var(--text-primary)]">Children</p>
+              <p className="text-[11px] text-[var(--text-tertiary)]">Age 2–12</p>
             </div>
-            {totalChildren > 0 && (
-              <div className="flex items-center justify-between pl-1">
-                <p className="text-[11px] text-[var(--text-tertiary)]">
-                  Of which under 5 <span className="text-[var(--text-secondary)]">(free hotel & meals)</span>
-                </p>
-                <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <button type="button"
+                onClick={decChildren}
+                disabled={totalChildren <= 0}
+                className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
+                −
+              </button>
+              <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{totalChildren}</span>
+              <button type="button"
+                onClick={incChildren}
+                disabled={adults + totalChildren >= pkg.maxGroupSize}
+                className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
+                +
+              </button>
+            </div>
+          </div>
+
+          {totalChildren > 0 && (
+            <>
+              <div className="h-px bg-[var(--border-default)]" />
+              <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-subtle)]">
+                <div>
+                  <p className="text-[13px] font-semibold text-[var(--text-primary)]">Of which under 5</p>
+                  <p className="text-[11px] text-[var(--text-tertiary)]">Free hotel, meals & entries</p>
+                </div>
+                <div className="flex items-center gap-3">
                   <button type="button"
                     onClick={decUnder5}
                     disabled={children_2_5 <= 0}
-                    className="w-6 h-6 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[11px] text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
+                    className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
                     −
                   </button>
-                  <span className="w-3 text-center text-[12px] font-semibold tabular-nums text-[var(--text-primary)]">{children_2_5}</span>
+                  <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{children_2_5}</span>
                   <button type="button"
                     onClick={incUnder5}
                     disabled={children_5_12 <= 0}
-                    className="w-6 h-6 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[11px] text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
+                    className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
                     +
                   </button>
                 </div>
               </div>
-            )}
-          </div>
+            </>
+          )}
 
           <div className="h-px bg-[var(--border-default)]" />
 
