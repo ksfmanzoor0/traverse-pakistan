@@ -510,7 +510,7 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
           )}
         </div>
         {/* Composition chips — engine-picked flight + transport */}
-        <QuoteCompositionChips quote={engineQuote} pax={adults} />
+        <QuoteCompositionChips quote={engineQuote} pax={adults + children_5_12 + children_2_5 + infants} />
 
         <hr className="my-5 border-[var(--border-default)]" />
 
