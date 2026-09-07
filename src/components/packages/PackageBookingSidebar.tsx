@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { formatPrice, getWhatsAppUrl } from "@/lib/utils";
-import { StarRating } from "@/components/ui/StarRating";
 import type { Package, PackageTier } from "@/types/package";
 import { PromoTeaser } from "./PromoTeaser";
 
@@ -526,17 +525,8 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
             <span className="text-[11px] text-[var(--text-tertiary)] animate-pulse" aria-live="polite">recalculating…</span>
           )}
         </div>
-        <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
-          {formatPrice(pricePerPerson)} × {adults} person{adults > 1 ? "s" : ""}
-        </p>
-
         {/* Composition chips — engine-picked flight + transport */}
         <QuoteCompositionChips quote={engineQuote} pax={adults} />
-
-        {/* Rating */}
-        <div className="mt-2">
-          <StarRating rating={pkg.rating} reviewCount={pkg.reviewCount} size="sm" />
-        </div>
 
         <hr className="my-5 border-[var(--border-default)]" />
 
