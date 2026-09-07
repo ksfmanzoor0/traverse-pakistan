@@ -619,14 +619,14 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
             <div className="flex items-center gap-3">
               <button type="button"
                 onClick={() => setAdults(Math.max(1, adults - 1))}
-                disabled={adults <= 1}
+                disabled={adults <= 1 || adults <= infants || (adults - 1) * 2 < children_2_5}
                 className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
                 −
               </button>
               <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{adults}</span>
               <button type="button"
-                onClick={() => setAdults(Math.min(pkg.maxGroupSize, adults + 1))}
-                disabled={adults >= pkg.maxGroupSize}
+                onClick={() => setAdults(Math.min(pkg.maxGroupSize - totalChildren - infants, adults + 1))}
+                disabled={adults + totalChildren + infants >= pkg.maxGroupSize}
                 className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
                 +
               </button>
@@ -676,7 +676,7 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
               <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{children_2_5}</span>
               <button type="button"
                 onClick={() => setChildren25((n) => n + 1)}
-                disabled={adults + totalChildren >= pkg.maxGroupSize}
+                disabled={adults + totalChildren >= pkg.maxGroupSize || children_2_5 >= adults * 2}
                 className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
                 +
               </button>
@@ -700,7 +700,7 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
               </button>
               <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{infants}</span>
               <button type="button"
-                onClick={() => setInfants(Math.min(adults, infants + 1))}
+                onClick={() => setInfants((n) => n + 1)}
                 disabled={infants >= adults}
                 className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
                 +

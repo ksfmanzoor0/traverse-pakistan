@@ -531,10 +531,12 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
                 label="Adults"
                 sub="Age 12 and over"
                 value={state.adults}
-                min={1}
+                min={Math.max(1, state.infants, Math.ceil(state.children_2_5 / 2))}
                 max={effectiveMax}
                 onDecrement={() => {
-                  const next = Math.max(1, state.adults - 1);
+                  // Adult floor also respects: infants ≤ adults + kids 2-5 ≤ adults × 2
+                  const floor = Math.max(1, state.infants, Math.ceil(state.children_2_5 / 2));
+                  const next = Math.max(floor, state.adults - 1);
                   patch({ adults: next, rooms: Math.min(state.rooms, Math.ceil((next + state.children_5_12) / 3)) });
                 }}
                 onIncrement={() => {
@@ -561,17 +563,17 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
               <div className="border-t border-[var(--border-default)]" />
               <Stepper
                 label="Young children"
-                sub="Age 2–5 · free hotel/entries/meals · child flight fare"
+                sub="Age 2–5 · free hotel/entries/meals · child flight fare · up to 2 per adult"
                 value={state.children_2_5}
                 min={0}
-                max={6}
+                max={state.adults * 2}
                 onDecrement={() => patch({ children_2_5: Math.max(0, state.children_2_5 - 1) })}
-                onIncrement={() => patch({ children_2_5: Math.min(6, state.children_2_5 + 1) })}
+                onIncrement={() => patch({ children_2_5: Math.min(state.adults * 2, state.children_2_5 + 1) })}
               />
               <div className="border-t border-[var(--border-default)]" />
               <Stepper
                 label="Infants"
-                sub="Under 2 · free · infant flight fare only"
+                sub="Under 2 · free · infant flight fare only · one lap per adult"
                 value={state.infants}
                 min={0}
                 max={Math.max(0, state.adults)}
