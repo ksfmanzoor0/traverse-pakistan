@@ -563,15 +563,15 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
               <div className="border-t border-[var(--border-default)]" />
               <Stepper
                 label="Young children"
-                sub="Age 2–5 · free hotel/entries/meals · child flight fare · 2 per adult, 2 under-5s per room"
+                sub="Age 2–5 · free hotel/entries/meals · child flight fare · 2 per adult, 2 under-5s per room (+1 when no older kids)"
                 value={state.children_2_5}
                 min={0}
-                max={Math.min(state.adults * 2, Math.max(0, state.rooms * 2 - state.infants))}
+                max={Math.min(state.adults * 2, Math.max(0, state.rooms * 2 + (state.children_5_12 === 0 ? 1 : 0) - state.infants))}
                 onDecrement={() => patch({ children_2_5: Math.max(0, state.children_2_5 - 1) })}
                 onIncrement={() => patch({
                   children_2_5: Math.min(
                     state.adults * 2,
-                    Math.max(0, state.rooms * 2 - state.infants),
+                    Math.max(0, state.rooms * 2 + (state.children_5_12 === 0 ? 1 : 0) - state.infants),
                     state.children_2_5 + 1,
                   ),
                 })}
@@ -579,15 +579,15 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
               <div className="border-t border-[var(--border-default)]" />
               <Stepper
                 label="Infants"
-                sub="Under 2 · free · infant flight fare only · one lap per adult, 2 under-5s per room"
+                sub="Under 2 · free · infant flight fare only · one lap per adult, 2 under-5s per room (+1 when no older kids)"
                 value={state.infants}
                 min={0}
-                max={Math.min(state.adults, Math.max(0, state.rooms * 2 - state.children_2_5))}
+                max={Math.min(state.adults, Math.max(0, state.rooms * 2 + (state.children_5_12 === 0 ? 1 : 0) - state.children_2_5))}
                 onDecrement={() => patch({ infants: Math.max(0, state.infants - 1) })}
                 onIncrement={() => patch({
                   infants: Math.min(
                     state.adults,
-                    Math.max(0, state.rooms * 2 - state.children_2_5),
+                    Math.max(0, state.rooms * 2 + (state.children_5_12 === 0 ? 1 : 0) - state.children_2_5),
                     state.infants + 1,
                   ),
                 })}

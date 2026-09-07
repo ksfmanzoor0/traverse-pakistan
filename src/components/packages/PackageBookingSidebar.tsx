@@ -680,11 +680,11 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
                 disabled={
                   adults + totalChildren >= pkg.maxGroupSize
                   || children_2_5 >= adults * 2
-                  || children_2_5 + infants >= displayRooms * 2
+                  || children_2_5 + infants >= displayRooms * 2 + (children_5_12 === 0 ? 1 : 0)
                 }
                 title={
                   children_2_5 >= adults * 2 ? "Max 2 young children per adult"
-                  : children_2_5 + infants >= displayRooms * 2 ? "Max 2 under-5s per room — add a room to include more"
+                  : children_2_5 + infants >= displayRooms * 2 + (children_5_12 === 0 ? 1 : 0) ? "Room capacity reached — add a room to include more under-5s"
                   : undefined
                 }
                 className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
@@ -711,10 +711,10 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
               <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{infants}</span>
               <button type="button"
                 onClick={() => setInfants((n) => n + 1)}
-                disabled={infants >= adults || children_2_5 + infants >= displayRooms * 2}
+                disabled={infants >= adults || children_2_5 + infants >= displayRooms * 2 + (children_5_12 === 0 ? 1 : 0)}
                 title={
                   infants >= adults ? "One lap per adult"
-                  : children_2_5 + infants >= displayRooms * 2 ? "Max 2 under-5s per room — add a room to include more"
+                  : children_2_5 + infants >= displayRooms * 2 + (children_5_12 === 0 ? 1 : 0) ? "Room capacity reached — add a room to include more under-5s"
                   : undefined
                 }
                 className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
