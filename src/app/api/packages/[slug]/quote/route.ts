@@ -55,6 +55,15 @@ export async function GET(
   try {
     const quote = await quotePackage({ slug, home, tier, pax: adults, adults, children_5_12, children_2_5, infants, startDate, rooms });
     if (!quote) return NextResponse.json({ error: "Package not found" }, { status: 404 });
+    // TEMP diagnostic — verify whether engine resolves for today+30d fallback
+    // (wizard's cold-mount date). Remove once we've confirmed A vs B path.
+    console.log("[quote-diag]", JSON.stringify({
+      slug, home, tier, startDate, adults, children_5_12, children_2_5, infants,
+      total: quote.total, perPerson: quote.perPerson,
+      unresolved: quote.unresolved,
+      flightPerPerson: quote.flightPerPerson,
+      flightTicketType: quote.flightTicketType,
+    }));
     // Only ship customer-safe fields — margin / internal breakdown stays server-side.
     return NextResponse.json({
       slug: quote.slug,
