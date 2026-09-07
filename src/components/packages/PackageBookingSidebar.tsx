@@ -197,31 +197,11 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
   const [rooms, setRooms] = useState<number | null>(null);
   const [naturalRooms, setNaturalRooms] = useState(1);
   const [adults, setAdults] = useState(2);
-  // Total children = 5-12 + 2-5. Main stepper adjusts the total (bumps 5-12
-  // by default). An inline "under 5" sub-picker shifts count between the
-  // two brackets so the engine sees the correct under-5 free treatment
-  // without adding a full row to the sidebar.
+  // Independent steppers for each age bracket.
   const [children_5_12, setChildren512] = useState(0);
   const [children_2_5, setChildren25] = useState(0);
   const [infants, setInfants] = useState(0);
   const totalChildren = children_5_12 + children_2_5;
-  const incChildren = () => setChildren512((n) => n + 1);
-  const decChildren = () => {
-    if (children_5_12 > 0) setChildren512((n) => n - 1);
-    else if (children_2_5 > 0) setChildren25((n) => n - 1);
-  };
-  const incUnder5 = () => {
-    if (children_5_12 > 0) {
-      setChildren512((n) => n - 1);
-      setChildren25((n) => n + 1);
-    }
-  };
-  const decUnder5 = () => {
-    if (children_2_5 > 0) {
-      setChildren25((n) => n - 1);
-      setChildren512((n) => n + 1);
-    }
-  };
   // Clamp at render time: a stale fetch from a higher-pax click can write
   // naturalRooms > adults, but the floor can never exceed the party size.
   const safeNaturalRooms = Math.min(naturalRooms, adults);
@@ -465,7 +445,11 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
     `Adults: ${adults}\n${isDayTrip ? "" : `Rooms: ${displayRooms}\n`}Total: ${formatPrice(totalPrice)}\n\nPlease confirm availability.`;
 
   return (
-    <div className="sticky top-[120px]">
+    // Sticky wrapper allows the sidebar to stay in view while the main
+    // column (itinerary + sections) scrolls. When the sidebar's own content
+    // is taller than the viewport (adding kids, calendar open) the inner
+    // container scrolls independently so Book Now is always reachable.
+    <div className="sticky top-[120px] max-h-[calc(100vh-140px)] overflow-y-auto">
       <div className="bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-[var(--radius-md)] p-6" style={{ boxShadow: "var(--shadow-sm)" }}>
 
         {/* Tier */}
@@ -651,23 +635,22 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
 
           <div className="h-px bg-[var(--border-default)]" />
 
-          {/* Children — total stepper. When count > 0, a separate "Under 5"
-              row appears below so the age split gets full visual weight. */}
+          {/* Children 5–12 — independent stepper */}
           <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-subtle)]">
             <div>
               <p className="text-[13px] font-semibold text-[var(--text-primary)]">Children</p>
-              <p className="text-[11px] text-[var(--text-tertiary)]">Age 2–12</p>
+              <p className="text-[11px] text-[var(--text-tertiary)]">Age 5–12</p>
             </div>
             <div className="flex items-center gap-3">
               <button type="button"
-                onClick={decChildren}
-                disabled={totalChildren <= 0}
+                onClick={() => setChildren512((n) => Math.max(0, n - 1))}
+                disabled={children_5_12 <= 0}
                 className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
                 −
               </button>
-              <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{totalChildren}</span>
+              <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{children_5_12}</span>
               <button type="button"
-                onClick={incChildren}
+                onClick={() => setChildren512((n) => n + 1)}
                 disabled={adults + totalChildren >= pkg.maxGroupSize}
                 className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
                 +
@@ -675,32 +658,30 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
             </div>
           </div>
 
-          {totalChildren > 0 && (
-            <>
-              <div className="h-px bg-[var(--border-default)]" />
-              <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-subtle)]">
-                <div>
-                  <p className="text-[13px] font-semibold text-[var(--text-primary)]">Of which under 5</p>
-                  <p className="text-[11px] text-[var(--text-tertiary)]">Free hotel, meals & entries</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <button type="button"
-                    onClick={decUnder5}
-                    disabled={children_2_5 <= 0}
-                    className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
-                    −
-                  </button>
-                  <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{children_2_5}</span>
-                  <button type="button"
-                    onClick={incUnder5}
-                    disabled={children_5_12 <= 0}
-                    className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
-                    +
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
+          <div className="h-px bg-[var(--border-default)]" />
+
+          {/* Children 2–5 — independent stepper */}
+          <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-subtle)]">
+            <div>
+              <p className="text-[13px] font-semibold text-[var(--text-primary)]">Children</p>
+              <p className="text-[11px] text-[var(--text-tertiary)]">Age 2–5</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button type="button"
+                onClick={() => setChildren25((n) => Math.max(0, n - 1))}
+                disabled={children_2_5 <= 0}
+                className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
+                −
+              </button>
+              <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{children_2_5}</span>
+              <button type="button"
+                onClick={() => setChildren25((n) => n + 1)}
+                disabled={adults + totalChildren >= pkg.maxGroupSize}
+                className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
+                +
+              </button>
+            </div>
+          </div>
 
           <div className="h-px bg-[var(--border-default)]" />
 
