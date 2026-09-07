@@ -302,7 +302,11 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
 
   useEffect(() => {
     const home = HOME_FROM_CITY[departureCity];
-    const startDate = toIsoDate(checkIn) ?? toIsoDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))!;
+    // Before the user picks a date, ask the engine to anchor on the earliest
+    // upcoming scraped-fare date so the mount price matches what they'll see
+    // for near-term dates — a blind today+30d can grab an off-peak fare and
+    // then the total jumps when the user picks a date.
+    const startDate = toIsoDate(checkIn) ?? "auto";
     const mySeq = ++requestSeqRef.current;
     const roomsKey = rooms === null ? "auto" : String(rooms);
     const cacheKey = `${pkg.slug}|${home}|${selectedTier}|${adults}|${children_5_12}|${children_2_5}|${infants}|${startDate}|${roomsKey}`;

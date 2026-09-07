@@ -219,8 +219,13 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
   useEffect(() => {
     const mySeq = ++requestSeqRef.current;
     const home = state.city === "lahore" ? "LHE" : state.city === "karachi" ? "KHI" : "ISB";
-    const start = state.startDate ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    const startDate = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
+    // Before the user picks a date, ask the engine to anchor the quote on the
+    // earliest upcoming date with a scraped fare for this package's flight
+    // leg — otherwise a blind today+30d can land on a stale off-peak fare and
+    // the total then jumps when the user picks a near date.
+    const startDate = state.startDate
+      ? `${state.startDate.getFullYear()}-${String(state.startDate.getMonth() + 1).padStart(2, "0")}-${String(state.startDate.getDate()).padStart(2, "0")}`
+      : "auto";
     const params = new URLSearchParams({
       home,
       tier: state.tier,

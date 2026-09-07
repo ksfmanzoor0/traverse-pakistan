@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { quotePackage, type Tier } from "@/services/package-quote.service";
 import type { HomeCity } from "@/services/addon-cost.service";
+import { pickEarliestQuotableStartDate } from "@/services/next-quotable-date.service";
 
 const VALID_HOMES = new Set(["ISB", "LHE", "KHI"]);
 const VALID_TIERS = new Set(["deluxe", "luxury", "premium"]);
@@ -23,7 +24,7 @@ export async function GET(
   const home = url.searchParams.get("home");
   const tier = url.searchParams.get("tier");
   const paxRaw = url.searchParams.get("pax");
-  const startDate = url.searchParams.get("startDate");
+  let startDate = url.searchParams.get("startDate");
 
   if (!isHome(home)) {
     return NextResponse.json({ error: "home must be ISB | LHE | KHI" }, { status: 400 });
@@ -31,8 +32,15 @@ export async function GET(
   if (!isTier(tier)) {
     return NextResponse.json({ error: "tier must be deluxe | luxury | premium" }, { status: 400 });
   }
+  // `startDate=auto` → server picks the earliest upcoming date that has a
+  // scraped flight fare for this package's outbound leg from `home`. Used by
+  // the wizard/sidebar mount fetch so the quote reflects a date the customer
+  // could realistically pick, not a blind today+30d anchor.
+  if (startDate === "auto") {
+    startDate = await pickEarliestQuotableStartDate(slug, home);
+  }
   if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
-    return NextResponse.json({ error: "startDate must be YYYY-MM-DD" }, { status: 400 });
+    return NextResponse.json({ error: "startDate must be YYYY-MM-DD or 'auto'" }, { status: 400 });
   }
   // Reject far-past / far-future dates so a malicious caller can't churn the
   // flight resolver on dates that will never match a scraped fare.
@@ -55,15 +63,6 @@ export async function GET(
   try {
     const quote = await quotePackage({ slug, home, tier, pax: adults, adults, children_5_12, children_2_5, infants, startDate, rooms });
     if (!quote) return NextResponse.json({ error: "Package not found" }, { status: 404 });
-    // TEMP diagnostic — verify whether engine resolves for today+30d fallback
-    // (wizard's cold-mount date). Remove once we've confirmed A vs B path.
-    console.log("[quote-diag]", JSON.stringify({
-      slug, home, tier, startDate, adults, children_5_12, children_2_5, infants,
-      total: quote.total, perPerson: quote.perPerson,
-      unresolved: quote.unresolved,
-      flightPerPerson: quote.flightPerPerson,
-      flightTicketType: quote.flightTicketType,
-    }));
     // Only ship customer-safe fields — margin / internal breakdown stays server-side.
     return NextResponse.json({
       slug: quote.slug,
