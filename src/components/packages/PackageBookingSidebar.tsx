@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { formatPrice, getWhatsAppUrl } from "@/lib/utils";
+import { PAX_RULES, computeUnder5Capacity } from "@/lib/pax-rules";
 import type { Package, PackageTier } from "@/types/package";
 import { PromoTeaser } from "./PromoTeaser";
 
@@ -619,8 +620,8 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
             <div className="flex items-center gap-3">
               <button type="button"
                 onClick={() => setAdults(Math.max(1, adults - 1))}
-                disabled={adults <= 1 || adults <= infants || (adults - 1) * 2 < children_2_5}
-                title={adults <= infants ? "Each infant needs an adult companion" : (adults - 1) * 2 < children_2_5 ? "Each adult can supervise up to 2 young children" : undefined}
+                disabled={adults <= 1 || adults * PAX_RULES.INFANTS_PER_ADULT <= infants || (adults - 1) * PAX_RULES.KIDS_2_5_PER_ADULT < children_2_5}
+                title={adults * PAX_RULES.INFANTS_PER_ADULT <= infants ? `One lap per adult (max ${PAX_RULES.INFANTS_PER_ADULT} infant per adult)` : (adults - 1) * PAX_RULES.KIDS_2_5_PER_ADULT < children_2_5 ? `Each adult can supervise up to ${PAX_RULES.KIDS_2_5_PER_ADULT} young children` : undefined}
                 className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
                 −
               </button>
@@ -679,12 +680,12 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
                 onClick={() => setChildren25((n) => n + 1)}
                 disabled={
                   adults + totalChildren >= pkg.maxGroupSize
-                  || children_2_5 >= adults * 2
-                  || children_2_5 + infants >= displayRooms * 2 + (children_5_12 === 0 ? 1 : 0)
+                  || children_2_5 >= adults * PAX_RULES.KIDS_2_5_PER_ADULT
+                  || children_2_5 + infants >= computeUnder5Capacity(displayRooms, children_5_12)
                 }
                 title={
-                  children_2_5 >= adults * 2 ? "Max 2 young children per adult"
-                  : children_2_5 + infants >= displayRooms * 2 + (children_5_12 === 0 ? 1 : 0) ? "Room capacity reached — add a room to include more under-5s"
+                  children_2_5 >= adults * PAX_RULES.KIDS_2_5_PER_ADULT ? `Max ${PAX_RULES.KIDS_2_5_PER_ADULT} young children per adult`
+                  : children_2_5 + infants >= computeUnder5Capacity(displayRooms, children_5_12) ? "Room capacity reached — add a room to include more under-5s"
                   : undefined
                 }
                 className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
@@ -711,10 +712,10 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
               <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{infants}</span>
               <button type="button"
                 onClick={() => setInfants((n) => n + 1)}
-                disabled={infants >= adults || children_2_5 + infants >= displayRooms * 2 + (children_5_12 === 0 ? 1 : 0)}
+                disabled={infants >= adults * PAX_RULES.INFANTS_PER_ADULT || children_2_5 + infants >= computeUnder5Capacity(displayRooms, children_5_12)}
                 title={
-                  infants >= adults ? "One lap per adult"
-                  : children_2_5 + infants >= displayRooms * 2 + (children_5_12 === 0 ? 1 : 0) ? "Room capacity reached — add a room to include more under-5s"
+                  infants >= adults * PAX_RULES.INFANTS_PER_ADULT ? `Max ${PAX_RULES.INFANTS_PER_ADULT} lap infant per adult`
+                  : children_2_5 + infants >= computeUnder5Capacity(displayRooms, children_5_12) ? "Room capacity reached — add a room to include more under-5s"
                   : undefined
                 }
                 className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">

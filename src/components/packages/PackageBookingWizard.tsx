@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { formatPrice } from "@/lib/utils";
+import { PAX_RULES, computeUnder5Capacity, computeMinRooms } from "@/lib/pax-rules";
 import type { Package, PackageTier } from "@/types/package";
 import type { Review } from "@/types/review";
 import { WizardProgress } from "@/components/booking/WizardProgress";
@@ -199,7 +200,7 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
     state.city === "karachi" && pricing.KHI ? pricing.KHI :
     (pricing.ISB ?? pricing.LHE ?? pricing.KHI ?? 0);
 
-  const defaultRooms = Math.max(1, Math.ceil((state.adults + state.children_5_12) / 3));
+  const defaultRooms = computeMinRooms(state.adults + state.children_5_12);
   const staticTotal = staticPerPerson * state.adults;
 
   // Engine-driven quote — same endpoint the sidebar uses so checkout shows
@@ -531,17 +532,16 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
                 label="Adults"
                 sub="Age 12 and over"
                 value={state.adults}
-                min={Math.max(1, state.infants, Math.ceil(state.children_2_5 / 2))}
+                min={Math.max(1, Math.ceil(state.infants / PAX_RULES.INFANTS_PER_ADULT), Math.ceil(state.children_2_5 / PAX_RULES.KIDS_2_5_PER_ADULT))}
                 max={effectiveMax}
                 onDecrement={() => {
-                  // Adult floor also respects: infants ≤ adults + kids 2-5 ≤ adults × 2
-                  const floor = Math.max(1, state.infants, Math.ceil(state.children_2_5 / 2));
+                  const floor = Math.max(1, Math.ceil(state.infants / PAX_RULES.INFANTS_PER_ADULT), Math.ceil(state.children_2_5 / PAX_RULES.KIDS_2_5_PER_ADULT));
                   const next = Math.max(floor, state.adults - 1);
-                  patch({ adults: next, rooms: Math.min(state.rooms, Math.ceil((next + state.children_5_12) / 3)) });
+                  patch({ adults: next, rooms: Math.min(state.rooms, computeMinRooms(next + state.children_5_12)) });
                 }}
                 onIncrement={() => {
                   const next = Math.min(effectiveMax, state.adults + 1);
-                  patch({ adults: next, rooms: Math.max(state.rooms, Math.ceil((next + state.children_5_12) / 3)) });
+                  patch({ adults: next, rooms: Math.max(state.rooms, computeMinRooms(next + state.children_5_12)) });
                 }}
               />
               <div className="border-t border-[var(--border-default)]" />
@@ -553,25 +553,25 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
                 max={Math.max(0, effectiveMax - state.adults)}
                 onDecrement={() => {
                   const next = Math.max(0, state.children_5_12 - 1);
-                  patch({ children_5_12: next, rooms: Math.min(state.rooms, Math.ceil((state.adults + next) / 3)) });
+                  patch({ children_5_12: next, rooms: Math.min(state.rooms, computeMinRooms(state.adults + next)) });
                 }}
                 onIncrement={() => {
                   const next = Math.min(Math.max(0, effectiveMax - state.adults), state.children_5_12 + 1);
-                  patch({ children_5_12: next, rooms: Math.max(state.rooms, Math.ceil((state.adults + next) / 3)) });
+                  patch({ children_5_12: next, rooms: Math.max(state.rooms, computeMinRooms(state.adults + next)) });
                 }}
               />
               <div className="border-t border-[var(--border-default)]" />
               <Stepper
                 label="Young children"
-                sub="Age 2–5 · free hotel/entries/meals · child flight fare · 2 per adult, 2 under-5s per room (+1 when no older kids)"
+                sub={`Age 2–5 · free hotel/entries/meals · child flight fare · ${PAX_RULES.KIDS_2_5_PER_ADULT} per adult, ${PAX_RULES.UNDER_5_PER_ROOM} under-5s per room (+${PAX_RULES.UNDER_5_BONUS_NO_OLDER_KIDS} when no older kids)`}
                 value={state.children_2_5}
                 min={0}
-                max={Math.min(state.adults * 2, Math.max(0, state.rooms * 2 + (state.children_5_12 === 0 ? 1 : 0) - state.infants))}
+                max={Math.min(state.adults * PAX_RULES.KIDS_2_5_PER_ADULT, Math.max(0, computeUnder5Capacity(state.rooms, state.children_5_12) - state.infants))}
                 onDecrement={() => patch({ children_2_5: Math.max(0, state.children_2_5 - 1) })}
                 onIncrement={() => patch({
                   children_2_5: Math.min(
-                    state.adults * 2,
-                    Math.max(0, state.rooms * 2 + (state.children_5_12 === 0 ? 1 : 0) - state.infants),
+                    state.adults * PAX_RULES.KIDS_2_5_PER_ADULT,
+                    Math.max(0, computeUnder5Capacity(state.rooms, state.children_5_12) - state.infants),
                     state.children_2_5 + 1,
                   ),
                 })}
@@ -579,15 +579,15 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
               <div className="border-t border-[var(--border-default)]" />
               <Stepper
                 label="Infants"
-                sub="Under 2 · free · infant flight fare only · one lap per adult, 2 under-5s per room (+1 when no older kids)"
+                sub={`Under 2 · free · infant flight fare only · ${PAX_RULES.INFANTS_PER_ADULT} lap per adult, ${PAX_RULES.UNDER_5_PER_ROOM} under-5s per room (+${PAX_RULES.UNDER_5_BONUS_NO_OLDER_KIDS} when no older kids)`}
                 value={state.infants}
                 min={0}
-                max={Math.min(state.adults, Math.max(0, state.rooms * 2 + (state.children_5_12 === 0 ? 1 : 0) - state.children_2_5))}
+                max={Math.min(state.adults * PAX_RULES.INFANTS_PER_ADULT, Math.max(0, computeUnder5Capacity(state.rooms, state.children_5_12) - state.children_2_5))}
                 onDecrement={() => patch({ infants: Math.max(0, state.infants - 1) })}
                 onIncrement={() => patch({
                   infants: Math.min(
-                    state.adults,
-                    Math.max(0, state.rooms * 2 + (state.children_5_12 === 0 ? 1 : 0) - state.children_2_5),
+                    state.adults * PAX_RULES.INFANTS_PER_ADULT,
+                    Math.max(0, computeUnder5Capacity(state.rooms, state.children_5_12) - state.children_2_5),
                     state.infants + 1,
                   ),
                 })}
@@ -595,11 +595,11 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
               <div className="border-t border-[var(--border-default)]" />
               <Stepper
                 label="Rooms"
-                sub="Up to 3 per room (adults + children 5–12) · each room fits 2 under-5s free"
+                sub={`Up to ${PAX_RULES.MAX_ROOM_OCCUPANCY} per room (adults + children 5–12) · each room fits ${PAX_RULES.UNDER_5_PER_ROOM} under-5s free`}
                 value={state.rooms}
-                min={Math.max(1, Math.ceil((state.adults + state.children_5_12) / 3))}
+                min={computeMinRooms(state.adults + state.children_5_12)}
                 max={state.adults}
-                onDecrement={() => patch({ rooms: Math.max(Math.max(1, Math.ceil((state.adults + state.children_5_12) / 3)), state.rooms - 1) })}
+                onDecrement={() => patch({ rooms: Math.max(computeMinRooms(state.adults + state.children_5_12), state.rooms - 1) })}
                 onIncrement={() => patch({ rooms: Math.min(state.adults, state.rooms + 1) })}
               />
             </div>
