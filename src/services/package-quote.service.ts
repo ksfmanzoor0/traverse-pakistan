@@ -309,8 +309,13 @@ async function computeQuote(args: {
   const rawChild512 = (perBearerShare + childFlightPerPerson) * marginMul;
   const rawChild25 = childFlightPerPerson * marginMul;             // no hotel/transport/meals/entries
   const rawInfant = infantFlightPerPerson * marginMul;
-  const perAdult = Math.round(rawAdult / 1000) * 1000;
-  const perChild_5_12 = children_5_12 > 0 ? Math.round(rawChild512 / 1000) * 1000 : 0;
+  // Signup credit is a flat PKR pad on each fully-priced bracket (adult +
+  // child 5-12) so the client-side Traverse-NN promo (equal PKR off subtotal)
+  // nets to the engine's true number. Under-5s / infants stay unpadded — they
+  // are near-zero brackets and the promo isn't applied per-child.
+  const signupCredit = engineConfig.signupCreditPkr ?? 0;
+  const perAdult = Math.round(rawAdult / 1000) * 1000 + signupCredit;
+  const perChild_5_12 = children_5_12 > 0 ? Math.round(rawChild512 / 1000) * 1000 + signupCredit : 0;
   const perChild_2_5 = children_2_5 > 0 ? Math.round(rawChild25 / 1000) * 1000 : 0;
   const perInfant = infants > 0 ? Math.round(rawInfant / 1000) * 1000 : 0;
   const total =
