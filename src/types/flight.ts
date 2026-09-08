@@ -12,7 +12,9 @@ export interface FlightRouteRow {
   routeType: FlightRouteType;
   departDate: string;          // YYYY-MM-DD
   returnDate: string | null;
-  fareTotal: number;
+  fareTotal: number;             // adult gross_fare
+  childFareTotal: number | null;  // scraped child gross_fare; null until scraper backfills
+  infantFareTotal: number | null; // scraped infant gross_fare; null until scraper backfills
   baseFare: number | null;
   tax: number | null;
   rbd: string | null;
