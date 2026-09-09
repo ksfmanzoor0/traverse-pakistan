@@ -20,6 +20,7 @@ export async function POST(req: Request) {
     packageBufferKm?: number;
     lheExtensionKm?: number;
     guidePerDay?: number;
+    signupCreditPkr?: number;
   } | null;
   if (!body) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
 
