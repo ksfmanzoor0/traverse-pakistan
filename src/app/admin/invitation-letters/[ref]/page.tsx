@@ -7,7 +7,14 @@ import { defaultLetterData, type LetterData } from "@/lib/invitation/letterData"
 import { getInvitationSignatureDataUrl } from "@/lib/invitation/config";
 import { InvitationLetterEditor } from "@/components/admin/InvitationLetterEditor";
 import { DeleteInvitationButton } from "@/components/admin/DeleteInvitationButton";
+import { InvitationShareLink } from "@/components/admin/InvitationShareLink";
 import { saveInvitationLetterData, sendInvitationLetter, deleteInvitationRequest } from "../actions";
+
+function siteUrl(): string {
+  const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/+$/, "");
+  if (!raw) return "https://traversepakistan.com";
+  return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +64,8 @@ export default async function AdminInvitationLetterDetail({ params }: { params: 
         </div>
         <DeleteInvitationButton bookingRef={row.ref} deleteAction={deleteInvitationRequest} />
       </div>
+
+      <InvitationShareLink href={`${siteUrl()}/invitation-letter/${row.ref}`} />
 
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="p-4 rounded-[var(--radius-md)] border border-[var(--border-default)]">

@@ -22,7 +22,8 @@ export function EngineSettingsForm({ initial, overriddenPackageCount }: Props) {
     values.profitPercentage !== initial.profitPercentage ||
     values.packageBufferKm !== initial.packageBufferKm ||
     values.lheExtensionKm !== initial.lheExtensionKm ||
-    values.guidePerDay !== initial.guidePerDay;
+    values.guidePerDay !== initial.guidePerDay ||
+    values.signupCreditPkr !== initial.signupCreditPkr;
 
   async function save() {
     setSaving(true);
@@ -77,6 +78,7 @@ export function EngineSettingsForm({ initial, overriddenPackageCount }: Props) {
         <Field label="Guide / day (PKR)" value={values.guidePerDay} onChange={(n) => setValues((v) => ({ ...v, guidePerDay: n }))} inputCls={inputCls} inputStyle={inputStyle} />
         <Field label="Package buffer km" value={values.packageBufferKm} onChange={(n) => setValues((v) => ({ ...v, packageBufferKm: n }))} inputCls={inputCls} inputStyle={inputStyle} />
         <Field label="LHE extension km" value={values.lheExtensionKm} onChange={(n) => setValues((v) => ({ ...v, lheExtensionKm: n }))} inputCls={inputCls} inputStyle={inputStyle} />
+        <Field label="Signup credit (PKR)" value={values.signupCreditPkr} onChange={(n) => setValues((v) => ({ ...v, signupCreditPkr: n }))} inputCls={inputCls} inputStyle={inputStyle} />
       </div>
 
       <div className="flex flex-wrap items-center gap-3 pt-3" style={{ borderTop: "1px solid var(--border-default)" }}>
