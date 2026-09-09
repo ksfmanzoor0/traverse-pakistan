@@ -22,8 +22,6 @@ interface FlightRouteDbRow {
   depart_date: string;
   return_date: string | null;
   fare_total: number;
-  child_fare_total: number | null;
-  infant_fare_total: number | null;
   base_fare: number | null;
   tax: number | null;
   rbd: string | null;
@@ -46,8 +44,6 @@ function rowFromDb(r: FlightRouteDbRow): FlightRouteRow {
     departDate: r.depart_date,
     returnDate: r.return_date,
     fareTotal: r.fare_total,
-    childFareTotal: r.child_fare_total,
-    infantFareTotal: r.infant_fare_total,
     baseFare: r.base_fare,
     tax: r.tax,
     rbd: r.rbd,

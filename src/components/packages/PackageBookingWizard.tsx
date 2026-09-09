@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { formatPrice } from "@/lib/utils";
-import { PAX_RULES, computeUnder5Capacity, computeMinRooms } from "@/lib/pax-rules";
 import type { Package, PackageTier } from "@/types/package";
 import type { Review } from "@/types/review";
 import { WizardProgress } from "@/components/booking/WizardProgress";
@@ -137,9 +136,6 @@ interface WizardState {
   city: DepartureCity;
   startDate: Date | null;
   adults: number;
-  children_5_12: number;   // hotel: charged extra-occupancy; flight: aviation child fare
-  children_2_5: number;    // hotel/entries/meals: free (under 5); flight: aviation child fare
-  infants: number;         // under 2: free everything except infant flight fare
   rooms: number;
   firstName: string;
   phone: string;
@@ -175,9 +171,6 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
     city: initCity,
     startDate: initStartDate,
     adults: initAdults,
-    children_5_12: Math.max(0, Number(searchParams?.get("children_5_12") ?? 0)),
-    children_2_5: Math.max(0, Number(searchParams?.get("children_2_5") ?? 0)),
-    infants: Math.max(0, Number(searchParams?.get("infants") ?? 0)),
     rooms: initRooms,
     firstName: "",
     phone: "",
@@ -200,67 +193,37 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
     state.city === "karachi" && pricing.KHI ? pricing.KHI :
     (pricing.ISB ?? pricing.LHE ?? pricing.KHI ?? 0);
 
-  const defaultRooms = computeMinRooms(state.adults + state.children_5_12);
+  const defaultRooms = Math.ceil(state.adults / 3);
   const staticTotal = staticPerPerson * state.adults;
 
   // Engine-driven quote — same endpoint the sidebar uses so checkout shows
   // the same number quoted at booking time (jeep legs + meals + entries +
   // LHE extension + min-rooms allocation). Falls back to staticTotal while
   // loading or if the engine returns an unresolved combo.
-  const [engineQuote, setEngineQuote] = useState<{
-    total: number;
-    perPerson: number;
-    perAdult: number;
-    perChild_5_12: number;
-    perChild_2_5: number;
-    perInfant: number;
-  } | null>(null);
+  const [engineQuote, setEngineQuote] = useState<{ total: number; perPerson: number } | null>(null);
   const requestSeqRef = useRef(0);
   useEffect(() => {
     const mySeq = ++requestSeqRef.current;
     const home = state.city === "lahore" ? "LHE" : state.city === "karachi" ? "KHI" : "ISB";
-    // Before the user picks a date, ask the engine to anchor the quote on the
-    // earliest upcoming date with a scraped fare for this package's flight
-    // leg — otherwise a blind today+30d can land on a stale off-peak fare and
-    // the total then jumps when the user picks a near date.
-    const startDate = state.startDate
-      ? `${state.startDate.getFullYear()}-${String(state.startDate.getMonth() + 1).padStart(2, "0")}-${String(state.startDate.getDate()).padStart(2, "0")}`
-      : "auto";
+    const start = state.startDate ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const startDate = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
     const params = new URLSearchParams({
       home,
       tier: state.tier,
       pax: String(state.adults),
-      children_5_12: String(state.children_5_12),
-      children_2_5: String(state.children_2_5),
-      infants: String(state.infants),
       startDate,
       rooms: String(state.rooms),
     });
     const controller = new AbortController();
     fetch(`/api/packages/${pkg.slug}/quote?${params.toString()}`, { signal: controller.signal })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then((j: {
-        total: number;
-        perPerson: number;
-        perAdult: number;
-        perChild_5_12: number;
-        perChild_2_5: number;
-        perInfant: number;
-        unresolved?: string[];
-      }) => {
+      .then((j: { total: number; perPerson: number; unresolved?: string[] }) => {
         if (mySeq !== requestSeqRef.current) return;
         if ((j.unresolved && j.unresolved.length > 0) || !(j.perPerson > 0)) {
           setEngineQuote(null);
           return;
         }
-        setEngineQuote({
-          total: j.total,
-          perPerson: j.perPerson,
-          perAdult: j.perAdult,
-          perChild_5_12: j.perChild_5_12,
-          perChild_2_5: j.perChild_2_5,
-          perInfant: j.perInfant,
-        });
+        setEngineQuote({ total: j.total, perPerson: j.perPerson });
       })
       .catch((err) => {
         if (mySeq !== requestSeqRef.current) return;
@@ -268,7 +231,7 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
         setEngineQuote(null);
       });
     return () => controller.abort();
-  }, [pkg.slug, state.tier, state.city, state.adults, state.children_5_12, state.children_2_5, state.infants, state.rooms, state.startDate]);
+  }, [pkg.slug, state.tier, state.city, state.adults, state.rooms, state.startDate]);
 
   const pricePerPerson = engineQuote?.perPerson ?? staticPerPerson;
   const subtotal = engineQuote?.total ?? staticTotal;
@@ -355,9 +318,6 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
       departureCity: state.city,
       startDate: state.startDate ? state.startDate.toISOString().slice(0, 10) : null,
       adults: state.adults,
-      children_5_12: state.children_5_12,
-      children_2_5: state.children_2_5,
-      infants: state.infants,
       rooms: state.rooms,
       totalAmount: total,
       contact: {
@@ -535,76 +495,27 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
             <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] p-5 space-y-5">
               <Stepper
                 label="Adults"
-                sub="Age 12 and over"
+                sub="Age 13 and over"
                 value={state.adults}
-                min={Math.max(1, Math.ceil(state.infants / PAX_RULES.INFANTS_PER_ADULT), Math.ceil(state.children_2_5 / PAX_RULES.KIDS_2_5_PER_ADULT))}
+                min={1}
                 max={effectiveMax}
                 onDecrement={() => {
-                  const floor = Math.max(1, Math.ceil(state.infants / PAX_RULES.INFANTS_PER_ADULT), Math.ceil(state.children_2_5 / PAX_RULES.KIDS_2_5_PER_ADULT));
-                  const next = Math.max(floor, state.adults - 1);
-                  patch({ adults: next, rooms: Math.min(state.rooms, computeMinRooms(next + state.children_5_12)) });
+                  const next = Math.max(1, state.adults - 1);
+                  patch({ adults: next, rooms: Math.min(state.rooms, Math.ceil(next / 3)) });
                 }}
                 onIncrement={() => {
                   const next = Math.min(effectiveMax, state.adults + 1);
-                  patch({ adults: next, rooms: Math.max(state.rooms, computeMinRooms(next + state.children_5_12)) });
+                  patch({ adults: next, rooms: Math.max(state.rooms, Math.ceil(next / 3)) });
                 }}
-              />
-              <div className="border-t border-[var(--border-default)]" />
-              <Stepper
-                label="Children"
-                sub="Age 5–12 · shares room (extra-occupancy) · adult flight/entries/meals"
-                value={state.children_5_12}
-                min={0}
-                max={Math.max(0, effectiveMax - state.adults)}
-                onDecrement={() => {
-                  const next = Math.max(0, state.children_5_12 - 1);
-                  patch({ children_5_12: next, rooms: Math.min(state.rooms, computeMinRooms(state.adults + next)) });
-                }}
-                onIncrement={() => {
-                  const next = Math.min(Math.max(0, effectiveMax - state.adults), state.children_5_12 + 1);
-                  patch({ children_5_12: next, rooms: Math.max(state.rooms, computeMinRooms(state.adults + next)) });
-                }}
-              />
-              <div className="border-t border-[var(--border-default)]" />
-              <Stepper
-                label="Young children"
-                sub={`Age 2–5 · free hotel/entries/meals · child flight fare · ${PAX_RULES.KIDS_2_5_PER_ADULT} per adult, ${PAX_RULES.UNDER_5_PER_ROOM} under-5s per room (+${PAX_RULES.UNDER_5_BONUS_NO_OLDER_KIDS} when no older kids)`}
-                value={state.children_2_5}
-                min={0}
-                max={Math.min(state.adults * PAX_RULES.KIDS_2_5_PER_ADULT, Math.max(0, computeUnder5Capacity(state.rooms, state.children_5_12) - state.infants))}
-                onDecrement={() => patch({ children_2_5: Math.max(0, state.children_2_5 - 1) })}
-                onIncrement={() => patch({
-                  children_2_5: Math.min(
-                    state.adults * PAX_RULES.KIDS_2_5_PER_ADULT,
-                    Math.max(0, computeUnder5Capacity(state.rooms, state.children_5_12) - state.infants),
-                    state.children_2_5 + 1,
-                  ),
-                })}
-              />
-              <div className="border-t border-[var(--border-default)]" />
-              <Stepper
-                label="Infants"
-                sub={`Under 2 · free · infant flight fare only · ${PAX_RULES.INFANTS_PER_ADULT} lap per adult, ${PAX_RULES.UNDER_5_PER_ROOM} under-5s per room (+${PAX_RULES.UNDER_5_BONUS_NO_OLDER_KIDS} when no older kids)`}
-                value={state.infants}
-                min={0}
-                max={Math.min(state.adults * PAX_RULES.INFANTS_PER_ADULT, Math.max(0, computeUnder5Capacity(state.rooms, state.children_5_12) - state.children_2_5))}
-                onDecrement={() => patch({ infants: Math.max(0, state.infants - 1) })}
-                onIncrement={() => patch({
-                  infants: Math.min(
-                    state.adults * PAX_RULES.INFANTS_PER_ADULT,
-                    Math.max(0, computeUnder5Capacity(state.rooms, state.children_5_12) - state.children_2_5),
-                    state.infants + 1,
-                  ),
-                })}
               />
               <div className="border-t border-[var(--border-default)]" />
               <Stepper
                 label="Rooms"
-                sub={`Up to ${PAX_RULES.MAX_ROOM_OCCUPANCY} per room (adults + children 5–12) · each room fits ${PAX_RULES.UNDER_5_PER_ROOM} under-5s free`}
+                sub="Up to 3 per room"
                 value={state.rooms}
-                min={computeMinRooms(state.adults + state.children_5_12)}
+                min={defaultRooms}
                 max={state.adults}
-                onDecrement={() => patch({ rooms: Math.max(computeMinRooms(state.adults + state.children_5_12), state.rooms - 1) })}
+                onDecrement={() => patch({ rooms: Math.max(defaultRooms, state.rooms - 1) })}
                 onIncrement={() => patch({ rooms: Math.min(state.adults, state.rooms + 1) })}
               />
             </div>
@@ -660,14 +571,7 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
                 <span className="text-[var(--text-tertiary)]">Duration</span>
                 <span className="text-right text-[var(--text-primary)] font-medium">{pkg.duration} days / {nights} nights</span>
                 <span className="text-[var(--text-tertiary)]">Travellers</span>
-                <span className="text-right text-[var(--text-primary)] font-medium">
-                  {[
-                    `${state.adults} adult${state.adults !== 1 ? "s" : ""}`,
-                    state.children_5_12 > 0 && `${state.children_5_12} child 5–12`,
-                    state.children_2_5 > 0 && `${state.children_2_5} child 2–5`,
-                    state.infants > 0 && `${state.infants} infant`,
-                  ].filter(Boolean).join(" · ")}
-                </span>
+                <span className="text-right text-[var(--text-primary)] font-medium">{state.adults} adult{state.adults !== 1 ? "s" : ""}</span>
                 <span className="text-[var(--text-tertiary)]">Rooms</span>
                 <span className="text-right text-[var(--text-primary)] font-medium">{state.rooms}</span>
               </div>
@@ -676,28 +580,7 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
             {/* Price breakdown */}
             <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] p-5 space-y-2">
               <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--text-secondary)] mb-3">Price breakdown</p>
-              <SummaryRow
-                label={`${formatPrice(engineQuote?.perAdult ?? pricePerPerson)} × ${state.adults} adult${state.adults !== 1 ? "s" : ""}`}
-                value={formatPrice((engineQuote?.perAdult ?? pricePerPerson) * state.adults)}
-              />
-              {state.children_5_12 > 0 && (
-                <SummaryRow
-                  label={`${formatPrice(engineQuote?.perChild_5_12 ?? 0)} × ${state.children_5_12} child 5–12`}
-                  value={formatPrice((engineQuote?.perChild_5_12 ?? 0) * state.children_5_12)}
-                />
-              )}
-              {state.children_2_5 > 0 && (
-                <SummaryRow
-                  label={`${formatPrice(engineQuote?.perChild_2_5 ?? 0)} × ${state.children_2_5} child 2–5`}
-                  value={formatPrice((engineQuote?.perChild_2_5 ?? 0) * state.children_2_5)}
-                />
-              )}
-              {state.infants > 0 && (
-                <SummaryRow
-                  label={`${formatPrice(engineQuote?.perInfant ?? 0)} × ${state.infants} infant`}
-                  value={formatPrice((engineQuote?.perInfant ?? 0) * state.infants)}
-                />
-              )}
+              <SummaryRow label={`${formatPrice(pricePerPerson)} × ${state.adults} person${state.adults !== 1 ? "s" : ""}`} value={formatPrice(pricePerPerson * state.adults)} />
               {promoDiscount > 0 && (
                 <SummaryRow label={`Promo ${promoState.code}`} value={`− ${formatPrice(promoDiscount)}`} />
               )}
@@ -846,9 +729,6 @@ export function PackageBookingWizard({ pkg, reviews }: { pkg: Package; reviews: 
             <SummaryRow label="Start date" value={state.startDate ? fmtShort(state.startDate) : "Not selected"} />
             <SummaryRow label="Duration" value={`${pkg.duration} days`} />
             <SummaryRow label="Adults" value={`${state.adults}`} />
-            {state.children_5_12 > 0 && <SummaryRow label="Children 5–12" value={`${state.children_5_12}`} />}
-            {state.children_2_5 > 0 && <SummaryRow label="Children 2–5" value={`${state.children_2_5}`} />}
-            {state.infants > 0 && <SummaryRow label="Infants" value={`${state.infants}`} />}
             <SummaryRow label="Rooms" value={`${state.rooms}`} />
             <div className="border-t border-[var(--border-default)] pt-3 flex justify-between text-[15px] font-bold">
               <span>Total</span>
