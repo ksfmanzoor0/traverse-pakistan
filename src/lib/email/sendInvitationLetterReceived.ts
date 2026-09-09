@@ -72,10 +72,6 @@ export async function sendInvitationLetterReceived(input: Input): Promise<void> 
       <p>Hi ${esc(input.contact_name)},</p>
       <p>We've received your invitation letter request. Your reference is <strong>${esc(input.ref)}</strong>.</p>
       <p>Once your payment of <strong>PKR ${input.pricePkr.toLocaleString()}</strong> (equivalent to USD ${INVITATION_LETTER_PRICE_USD}) is confirmed, our team will prepare your letter and email it back within 1 business day.</p>
-      <p style="margin:20px 0">
-        <a href="${site}/invitation-letter/${input.ref}" style="display:inline-block;padding:12px 22px;background:#0f172a;color:#ffffff;border-radius:6px;text-decoration:none;font-weight:600">Pay PKR ${input.pricePkr.toLocaleString()} now</a>
-      </p>
-      <p style="font-size:12px;color:#6b7280;margin-top:-8px">Or open this link on any device: <a href="${site}/invitation-letter/${input.ref}" style="color:#0ea5e9">${site}/invitation-letter/${input.ref}</a></p>
       ${summary}
       <p style="margin-top:20px">If your plans change, reply to this email and we'll help.</p>
       <p>— Traverse Pakistan</p>

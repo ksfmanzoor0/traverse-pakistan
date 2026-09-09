@@ -5,14 +5,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { quoteNotifyLimiter, checkRateLimit, clientIp } from "@/lib/ratelimit";
 import { getInvitationLetterPricePkr, generateInvitationRef } from "@/lib/invitation/config";
 import { sendInvitationLetterReceived } from "@/lib/email/sendInvitationLetterReceived";
-import { sendBookingReceivedViaWhatsApp } from "@/lib/whatsapp/cloud";
 import { stampBookingWithUser } from "@/lib/auth/stampBookingWithUser";
-
-function siteUrl(): string {
-  const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/+$/, "");
-  if (!raw) return "https://traversepakistan.com";
-  return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
-}
 
 const TravelerSchema = z.object({
   surname: z.string().max(120).default(""),
@@ -87,23 +80,6 @@ export async function POST(req: NextRequest) {
         await sendInvitationLetterReceived({ ref, pricePkr, ...input });
       } catch (err) {
         console.error("[invitation-letter] received email failed:", err);
-      }
-    });
-
-    // WhatsApp with the payment link — reuses the booking-received template
-    // (name, ref, magic-link body variable) so the client can pay from their
-    // phone even if they miss the email.
-    after(async () => {
-      try {
-        const paymentUrl = `${siteUrl()}/invitation-letter/${ref}`;
-        await sendBookingReceivedViaWhatsApp({
-          toPhone: input.contact_phone,
-          name: input.contact_name.split(" ")[0] || input.contact_name,
-          bookingRef: ref,
-          magicLinkPath: paymentUrl,
-        });
-      } catch (err) {
-        console.error("[invitation-letter] whatsapp failed:", err);
       }
     });
 
