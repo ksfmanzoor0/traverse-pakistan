@@ -6,11 +6,15 @@ import { getInvitationSignatureDataUrl } from "./config";
 import { readTravelerName } from "./types";
 
 // react-pdf's default hyphenation would break plain words like "MANZOOR"
-// across lines with a "-", which reads as broken text. Suppress that, but
-// keep real hyphens as legal wrap points so "ONSTAD-BAULD" can wrap after
-// the hyphen instead of overflowing its column.
+// across lines with a "-", which reads as broken text. Suppress that, but:
+//  - Keep real hyphens as legal wrap points ("ONSTAD-BAULD" → wraps at "-").
+//  - For very long unbroken strings (e.g. a single-word surname that
+//    exceeds its column, or a long passport number), fall back to
+//    character-chunk splits so react-pdf can still wrap them onto the
+//    next line instead of letting the text overflow into the next cell.
 Font.registerHyphenationCallback((word) => {
   if (word.includes("-")) return word.split(/(-)/).filter(Boolean);
+  if (word.length > 12) return word.match(/.{1,8}/g) ?? [word];
   return [word];
 });
 
