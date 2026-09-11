@@ -723,7 +723,6 @@ export type Database = {
           package_buffer_km: number;
           lhe_extension_km: number;
           guide_per_day: number;
-          signup_credit_pkr: number;
           updated_at: string | null;
           updated_by: string | null;
         };
@@ -733,7 +732,6 @@ export type Database = {
           package_buffer_km: number;
           lhe_extension_km: number;
           guide_per_day: number;
-          signup_credit_pkr: number;
         }>;
         Update: Partial<{
           fuel_price_per_litre: number;
@@ -741,7 +739,6 @@ export type Database = {
           package_buffer_km: number;
           lhe_extension_km: number;
           guide_per_day: number;
-          signup_credit_pkr: number;
         }>;
         Relationships: [];
       };

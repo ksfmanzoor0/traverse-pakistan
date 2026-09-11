@@ -14,9 +14,6 @@ interface CreateBody {
   departureCity: string;
   startDate: string | null;
   adults: number;
-  children_5_12?: number;
-  children_2_5?: number;
-  infants?: number;
   rooms: number;
   totalAmount: number;
   contact: { name: string; email: string; phone: string };
@@ -45,9 +42,6 @@ export async function POST(req: NextRequest) {
     p_departure_city: body.departureCity,
     p_start_date: body.startDate ?? null,
     p_adults: body.adults,
-    p_children_5_12: body.children_5_12 ?? 0,
-    p_children_2_5: body.children_2_5 ?? 0,
-    p_infants: body.infants ?? 0,
     p_rooms: body.rooms,
     p_total_amount: body.totalAmount,
     p_contact_name: body.contact.name,

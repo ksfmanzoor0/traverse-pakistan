@@ -27,9 +27,7 @@ export interface ResolvedFlightLeg {
   to: string;
   routeType: FlightRouteType;
   departDate: string;
-  perPerson: number;               // adult per-leg fare
-  childPerPerson: number;          // scraped child fare or adult × child multiplier fallback
-  infantPerPerson: number;         // scraped infant fare or adult × infant multiplier fallback
+  perPerson: number;
   source: "manual" | "averaged" | "single" | "stale" | "unresolved";
   carriers: { airline: string; fare: number; scrapedAt: string }[];
   manualOverride?: { airline: string; fare: number; notes: string | null };
@@ -59,9 +57,7 @@ export interface PackageQuote {
   duration: number;
   startingCities: string[];
   homeInStartingCities: boolean;
-  addonCostPerPerson: number;       // adult required-addon total
-  addonChildPerPerson: number;      // child (2-12) required-addon total
-  addonInfantPerPerson: number;     // infant (0-2) required-addon total
+  addonCostPerPerson: number;
   addons: ResolvedAddon[];
   unresolvedLegs: ResolvedFlightLeg[];
 }
@@ -96,9 +92,7 @@ function legDate(leg: FlightLegConfig, startDate: string, duration: number): str
 
 interface FareCandidate {
   airline: string;
-  fare: number;                    // adult
-  childFare: number | null;        // null when scraper hasn't sampled this row yet
-  infantFare: number | null;
+  fare: number;
   source: string;
   scrapedAt: string;
   departDate: string;
@@ -117,7 +111,7 @@ async function fetchLatestLegFallback(
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("flight_routes")
-    .select("airline, fare_total, child_fare_total, infant_fare_total, source, scraped_at, depart_date, notes")
+    .select("airline, fare_total, source, scraped_at, depart_date, notes")
     .eq("origin", origin)
     .eq("destination", destination)
     .eq("route_type", routeType)
@@ -127,8 +121,6 @@ async function fetchLatestLegFallback(
   return ((data ?? []) as Array<{
     airline: string;
     fare_total: number;
-    child_fare_total: number | null;
-    infant_fare_total: number | null;
     source: string;
     scraped_at: string;
     depart_date: string;
@@ -136,8 +128,6 @@ async function fetchLatestLegFallback(
   }>).map((r) => ({
     airline: r.airline,
     fare: r.fare_total,
-    childFare: r.child_fare_total,
-    infantFare: r.infant_fare_total,
     source: r.source,
     scrapedAt: r.scraped_at,
     departDate: r.depart_date,
@@ -156,7 +146,7 @@ async function fetchLegCandidates(
   const hi = addDays(targetDate, FARE_DATE_WINDOW_DAYS);
   const { data, error } = await supabase
     .from("flight_routes")
-    .select("airline, fare_total, child_fare_total, infant_fare_total, source, scraped_at, depart_date, notes")
+    .select("airline, fare_total, source, scraped_at, depart_date, notes")
     .eq("origin", origin)
     .eq("destination", destination)
     .eq("route_type", routeType)
@@ -166,8 +156,6 @@ async function fetchLegCandidates(
   return ((data ?? []) as Array<{
     airline: string;
     fare_total: number;
-    child_fare_total: number | null;
-    infant_fare_total: number | null;
     source: string;
     scraped_at: string;
     depart_date: string;
@@ -175,8 +163,6 @@ async function fetchLegCandidates(
   }>).map((r) => ({
     airline: r.airline,
     fare: r.fare_total,
-    childFare: r.child_fare_total,
-    infantFare: r.infant_fare_total,
     source: r.source,
     scrapedAt: r.scraped_at,
     departDate: r.depart_date,
@@ -228,11 +214,10 @@ async function resolveSingleLeg(
   targetDate: string,
   origin: string,
   destination: string,
-  fallbackMultipliers: { child: number; infant: number; childMinRatio: number; infantMinRatio: number },
-): Promise<Pick<ResolvedFlightLeg, "perPerson" | "childPerPerson" | "infantPerPerson" | "source" | "carriers" | "manualOverride" | "unresolvedReason">> {
+): Promise<Pick<ResolvedFlightLeg, "perPerson" | "source" | "carriers" | "manualOverride" | "unresolvedReason">> {
   const hardcoded = ELIGIBLE_CARRIERS[pair];
   if (!hardcoded) {
-    return { perPerson: 0, childPerPerson: 0, infantPerPerson: 0, source: "unresolved", carriers: [], unresolvedReason: `No carrier rules for ${pair}` };
+    return { perPerson: 0, source: "unresolved", carriers: [], unresolvedReason: `No carrier rules for ${pair}` };
   }
   const eligible = await seasonalEligibleCarriers(origin, destination, targetDate, hardcoded);
 
@@ -240,9 +225,6 @@ async function resolveSingleLeg(
   if (manual) {
     return {
       perPerson: manual.fare,
-      // Manual overrides have no per-pax breakdown — fall back to multipliers.
-      childPerPerson: Math.round(manual.fare * fallbackMultipliers.child),
-      infantPerPerson: Math.round(manual.fare * fallbackMultipliers.infant),
       source: "manual",
       carriers: [{ airline: manual.airline, fare: manual.fare, scrapedAt: manual.scrapedAt }],
       manualOverride: { airline: manual.airline, fare: manual.fare, notes: manual.notes },
@@ -262,31 +244,13 @@ async function resolveSingleLeg(
 
   const picked = Array.from(byCarrier.values());
   if (picked.length === 0) {
-    return { perPerson: 0, childPerPerson: 0, infantPerPerson: 0, source: "unresolved", carriers: [],
+    return { perPerson: 0, source: "unresolved", carriers: [],
       unresolvedReason: `No fares within ±${FARE_DATE_WINDOW_DAYS} days for ${pair} on ${targetDate}` };
   }
 
   const avg = Math.round(picked.reduce((s, c) => s + c.fare, 0) / picked.length);
-  // Per-pax: prefer scraped value; if a row's scraped value is null (scraper
-  // hasn't sampled that combo yet) OR is below the floor ratio × adult
-  // (carrier waiver / promo — not a booking-time price), fall back to
-  // adult × multiplier so the customer sees a defensible number.
-  const pickChild = (c: FareCandidate): number => {
-    const floor = c.fare * fallbackMultipliers.childMinRatio;
-    if (c.childFare != null && c.childFare >= floor) return c.childFare;
-    return c.fare * fallbackMultipliers.child;
-  };
-  const pickInfant = (c: FareCandidate): number => {
-    const floor = c.fare * fallbackMultipliers.infantMinRatio;
-    if (c.infantFare != null && c.infantFare >= floor) return c.infantFare;
-    return c.fare * fallbackMultipliers.infant;
-  };
-  const childAvg = Math.round(picked.reduce((s, c) => s + pickChild(c), 0) / picked.length);
-  const infantAvg = Math.round(picked.reduce((s, c) => s + pickInfant(c), 0) / picked.length);
   return {
     perPerson: avg,
-    childPerPerson: childAvg,
-    infantPerPerson: infantAvg,
     source: picked.length === 1 ? "single" : "averaged",
     carriers: picked.map((c) => ({ airline: c.airline, fare: c.fare, scrapedAt: c.scrapedAt })),
   };
@@ -317,8 +281,7 @@ async function resolveFlightAddon(
   home: HomeCity,
   startDate: string,
   duration: number,
-  fallbackMultipliers: { child: number; infant: number; childMinRatio: number; infantMinRatio: number },
-): Promise<{ perPerson: number; childPerPerson: number; infantPerPerson: number; legs: ResolvedFlightLeg[] }> {
+): Promise<{ perPerson: number; legs: ResolvedFlightLeg[] }> {
   const legs = (addon.config.legs ?? []) as FlightLegConfig[];
   const resolved: ResolvedFlightLeg[] = [];
 
@@ -333,8 +296,6 @@ async function resolveFlightAddon(
       resolved.push({
         from, to, routeType: leg.routeType, departDate: targetDate,
         perPerson: leg.farePerPerson,
-        childPerPerson: Math.round(leg.farePerPerson * fallbackMultipliers.child),
-        infantPerPerson: Math.round(leg.farePerPerson * fallbackMultipliers.infant),
         source: "manual",
         carriers: [],
         manualOverride: { airline: leg.carrier ?? "manual", fare: leg.farePerPerson, notes: null },
@@ -344,13 +305,13 @@ async function resolveFlightAddon(
 
     const pair = `${from}-${to}`;
     const candidates = await fetchLegCandidates(from, to, leg.routeType, targetDate);
-    const r = await resolveSingleLeg(candidates, pair, targetDate, from, to, fallbackMultipliers);
+    const r = await resolveSingleLeg(candidates, pair, targetDate, from, to);
     if (r.source === "unresolved") {
       // Empty ±21 day window. Retry with the most-recent scraped fares for
       // this route so the leg never contributes zero to the total.
       const fallback = await fetchLatestLegFallback(from, to, leg.routeType);
       if (fallback.length > 0) {
-        const stale = await resolveSingleLeg(fallback, pair, targetDate, from, to, fallbackMultipliers);
+        const stale = await resolveSingleLeg(fallback, pair, targetDate, from, to);
         if (stale.source !== "unresolved") {
           const latestScrape = fallback
             .map((c) => c.scrapedAt)
@@ -359,8 +320,6 @@ async function resolveFlightAddon(
           resolved.push({
             from, to, routeType: leg.routeType, departDate: targetDate,
             perPerson: stale.perPerson,
-            childPerPerson: stale.childPerPerson,
-            infantPerPerson: stale.infantPerPerson,
             source: "stale",
             carriers: stale.carriers,
             manualOverride: stale.manualOverride,
@@ -373,12 +332,7 @@ async function resolveFlightAddon(
     resolved.push({ from, to, routeType: leg.routeType, departDate: targetDate, ...r });
   }
 
-  return {
-    perPerson: resolved.reduce((s, l) => s + l.perPerson, 0),
-    childPerPerson: resolved.reduce((s, l) => s + l.childPerPerson, 0),
-    infantPerPerson: resolved.reduce((s, l) => s + l.infantPerPerson, 0),
-    legs: resolved,
-  };
+  return { perPerson: resolved.reduce((s, l) => s + l.perPerson, 0), legs: resolved };
 }
 
 export interface QuoteArgs {
@@ -399,27 +353,6 @@ export async function quotePackageAddons(args: QuoteArgs): Promise<PackageQuote 
 
   const pkg = pkgRow as { slug: string; duration: number; starting_cities: string[] };
   const startingCities = pkg.starting_cities ?? [];
-
-  // Fallback multipliers used when the scraper hasn't yet populated child/
-  // infant fares on a candidate row — OR when the scraped value is a data
-  // quirk (near-zero promo/waiver). Loaded once per quote from engine_config.
-  const { data: cfgRow } = await supabase
-    .from("engine_config")
-    .select("child_flight_multiplier, infant_flight_multiplier, child_fare_min_ratio, infant_fare_min_ratio")
-    .eq("id", "default")
-    .maybeSingle();
-  const cfg = (cfgRow ?? {}) as {
-    child_flight_multiplier?: number;
-    infant_flight_multiplier?: number;
-    child_fare_min_ratio?: number;
-    infant_fare_min_ratio?: number;
-  };
-  const fallbackMultipliers = {
-    child: Number(cfg.child_flight_multiplier ?? 0.86),
-    infant: Number(cfg.infant_flight_multiplier ?? 0.09),
-    childMinRatio: Number(cfg.child_fare_min_ratio ?? 0.60),
-    infantMinRatio: Number(cfg.infant_fare_min_ratio ?? 0.03),
-  };
 
   // Trust the addons table as the source of truth for "does this traveler
   // need extra transport." We used to bail early when `starting_cities`
@@ -443,15 +376,9 @@ export async function quotePackageAddons(args: QuoteArgs): Promise<PackageQuote 
   const resolved: ResolvedAddon[] = [];
   const unresolved: ResolvedFlightLeg[] = [];
 
-  let childRequiredTotal = 0;
-  let infantRequiredTotal = 0;
   for (const addon of matching) {
     if (addon.type === "flight") {
-      const { perPerson, childPerPerson, infantPerPerson, legs } = await resolveFlightAddon(addon, args.homeCity, args.startDate, pkg.duration, fallbackMultipliers);
-      if (addon.is_required) {
-        childRequiredTotal += childPerPerson;
-        infantRequiredTotal += infantPerPerson;
-      }
+      const { perPerson, legs } = await resolveFlightAddon(addon, args.homeCity, args.startDate, pkg.duration);
       resolved.push({
         addonId: addon.id,
         type: "flight",
@@ -484,8 +411,6 @@ export async function quotePackageAddons(args: QuoteArgs): Promise<PackageQuote 
     startingCities,
     homeInStartingCities: noJoinTransport,
     addonCostPerPerson: totalPerPerson,
-    addonChildPerPerson: childRequiredTotal,
-    addonInfantPerPerson: infantRequiredTotal,
     addons: resolved,
     unresolvedLegs: unresolved,
   };
@@ -582,9 +507,7 @@ export async function quoteTourAddons(args: TourQuoteArgs): Promise<TourQuote | 
     switch (addon.type) {
       case "flight":
       case "bus": {
-        // Tour engine doesn't expose child pricing yet; multipliers still passed
-        // so leg totals are computed but child/infant sums are discarded here.
-        const { perPerson: p, legs } = await resolveFlightAddon(addon, args.homeCity, args.startDate, tour.duration, { child: 0.86, infant: 0.09, childMinRatio: 0.60, infantMinRatio: 0.03 });
+        const { perPerson: p, legs } = await resolveFlightAddon(addon, args.homeCity, args.startDate, tour.duration);
         perPerson = p;
         flightLegs = legs;
         for (const l of legs) if (l.source === "unresolved") unresolved.push(l);

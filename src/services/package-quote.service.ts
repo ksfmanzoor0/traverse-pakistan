@@ -13,27 +13,22 @@ export interface PublicPackageQuote {
   duration: number;
   nights: number;
   tier: Tier;
-  pax: number;           // adults + children_5_12 + children_2_5 (infants excluded — lap)
-  adults: number;
-  children_5_12: number;
-  children_2_5: number;
-  infants: number;
-  rooms: number;         // rooms used in the allocation (the floor the UI clamps to)
+  pax: number;
+  rooms: number;        // rooms used in the allocation (the floor the UI clamps to)
   home: HomeCity;
   startDate: string;
-  total: number;         // grand total for the whole party, post-margin
-  perPerson: number;     // adult per-person (kept for backward-compat + main sidebar line)
-  perAdult: number;
-  perChild_5_12: number; // 0 when no such kids requested
-  perChild_2_5: number;
-  perInfant: number;
-  unresolved: string[];
+  total: number;        // grand total for the whole party, post-margin
+  perPerson: number;    // total / pax, rounded to nearest PKR 1,000
+  unresolved: string[]; // soft warnings — e.g. missing flight fares, room shortfall
+  /** Vehicle the engine allocated for this quote. Null if allocation failed. */
   vehicle: {
     code: VehicleCode;
     isNcp: boolean;
     count: number;
   } | null;
+  /** Per-person flight fare added to this quote. 0 when quote is drive-only. */
   flightPerPerson: number;
+  /** Which kind of ticket the engine booked. null when there's no flight. */
   flightTicketType: "return" | "oneway" | null;
 }
 
@@ -109,11 +104,7 @@ async function computeQuote(args: {
   slug: string;
   home: HomeCity;
   tier: Tier;
-  pax: number;                    // legacy — treated as `adults` when adults not provided
-  adults?: number;
-  children_5_12?: number;
-  children_2_5?: number;
-  infants?: number;
+  pax: number;
   startDate: string;
   rooms?: number;
 }): Promise<PublicPackageQuote | null> {
@@ -149,34 +140,18 @@ async function computeQuote(args: {
   // (reprice only writes/overwrites — never deletes keys) — a one-time SQL
   // cleanup strips current phantoms. See memory engine-skip-unreachable-homes.
   // Empty starting_cities (legacy unseeded packages) keeps the prior behavior.
-  // Normalize pax breakdown once. `pax` legacy arg is treated as adults when
-  // adults not provided (keeps every existing caller working).
-  const adults = Math.max(1, Math.floor(args.adults ?? args.pax));
-  const children_5_12 = Math.max(0, Math.floor(args.children_5_12 ?? 0));
-  const children_2_5 = Math.max(0, Math.floor(args.children_2_5 ?? 0));
-  const infants = Math.max(0, Math.floor(args.infants ?? 0));
-  const paxBillable = adults + children_5_12 + children_2_5; // vehicle capacity (infants on lap)
-
   if (startingCities.length > 0 && !startingCities.includes(args.home)) {
     return {
       slug: pkg.slug,
       duration: pkg.duration,
       nights: Math.max(1, pkg.duration - 1),
       tier: args.tier,
-      pax: paxBillable,
-      adults,
-      children_5_12,
-      children_2_5,
-      infants,
+      pax: Math.max(1, Math.floor(args.pax)),
       home: args.home,
       startDate: args.startDate,
       rooms: 0,
       total: 0,
       perPerson: 0,
-      perAdult: 0,
-      perChild_5_12: 0,
-      perChild_2_5: 0,
-      perInfant: 0,
       unresolved: [`Home ${args.home} not in starting_cities for ${pkg.slug}`],
       vehicle: null,
       flightPerPerson: 0,
@@ -198,20 +173,12 @@ async function computeQuote(args: {
       duration: pkg.duration,
       nights: Math.max(1, pkg.duration - 1),
       tier: args.tier,
-      pax: paxBillable,
-      adults,
-      children_5_12,
-      children_2_5,
-      infants,
+      pax: Math.max(1, Math.floor(args.pax)),
       home: args.home,
       startDate: args.startDate,
       rooms: 0,
       total: 0,
       perPerson: 0,
-      perAdult: 0,
-      perChild_5_12: 0,
-      perChild_2_5: 0,
-      perInfant: 0,
       unresolved: [`Package ${pkg.slug} has no positive total_distance_km — engine cannot compute transport cost.`],
       vehicle: null,
       flightPerPerson: 0,
@@ -219,16 +186,11 @@ async function computeQuote(args: {
     };
   }
   const baseDistance = pkg.total_distance_km;
-  // Hotel room capacity + party costs (transport, meals, entries, jeeps)
-  // are borne by adults + older children (5-12). Under-5s share beds and
-  // ride laps/seats without a paid share.
-  const paxCostBearing = adults + children_5_12;
+  const pax = Math.max(1, Math.floor(args.pax));
 
   const [flightQuote, hotelQuote, vehicles, engineConfig] = await Promise.all([
     quotePackageAddons({ packageSlug: args.slug, homeCity: args.home, startDate: args.startDate }),
-    // Hotel allocation counts adults + older children (5-12) as bed-consuming.
-    // Younger kids share beds. Infants are lap-free.
-    quotePackageHotels({ packageSlug: args.slug, tier: args.tier, people: paxCostBearing, startDate: args.startDate, rooms: args.rooms, homeCity: args.home }),
+    quotePackageHotels({ packageSlug: args.slug, tier: args.tier, people: pax, startDate: args.startDate, rooms: args.rooms, homeCity: args.home }),
     listVehicleTypes(),
     getEngineConfig(),
   ]);
@@ -252,9 +214,7 @@ async function computeQuote(args: {
   );
 
   const luxuryDayTrip = pkg.duration === 1 && args.tier === "luxury";
-  // Vehicle sized for all seated bodies (adults + all children). Infants are
-  // on laps so they don't need a seat.
-  const vehiclePlan = planVehicles(vehicles, paxBillable, ncpEligible, luxuryDayTrip);
+  const vehiclePlan = planVehicles(vehicles, pax, ncpEligible, luxuryDayTrip);
   const unresolved: string[] = [];
   if (!vehiclePlan) unresolved.push("Could not allocate a vehicle for the requested party size.");
 
@@ -272,82 +232,52 @@ async function computeQuote(args: {
   }
 
   const flightRequired = !(flightQuote?.homeInStartingCities ?? true) && (flightQuote?.addons.length ?? 0) > 0;
-  const adultFlightPerPerson = flightQuote?.addonCostPerPerson ?? 0;
-  const childFlightPerPerson = flightQuote?.addonChildPerPerson ?? 0;
-  const infantFlightPerPerson = flightQuote?.addonInfantPerPerson ?? 0;
-  // Flight cost is billed per-bracket in the per-person totals below, not via
-  // a party subtotal — kids (2-12) get the aviation "child" fare and infants
-  // (0-2) get the "infant" fare, all separately from adults.
+  const flightPerPerson = flightQuote?.addonCostPerPerson ?? 0;
+  const flightCost = flightRequired ? flightPerPerson * pax : 0;
+  // Ticket type for the UI chip. RETURN legs → return; else if any ONEWAY
+  // legs → oneway. Multiple ONEWAY legs (out + back booked separately) also
+  // count as a return trip end-user side.
   const flightLegs = flightQuote?.addons.flatMap((a) => a.flightLegs ?? []) ?? [];
   const flightTicketType: "return" | "oneway" | null = flightRequired && flightLegs.length > 0
     ? (flightLegs.some((l) => l.routeType === "RETURN") || flightLegs.length >= 2 ? "return" : "oneway")
     : null;
-  if (flightRequired && adultFlightPerPerson === 0) {
+  if (flightRequired && flightPerPerson === 0) {
     unresolved.push("Flight cost could not be resolved for the requested dates.");
   }
 
-  // Meals + entries billed to adults + older children (5-12) only. Under-5
-  // travel free per policy (rule: "entry above 5 is adult price, same for
-  // meal"; under 5 free).
-  const mealsCost = (pkg.meals_per_person ?? 0) * paxCostBearing * pkg.duration;
-  const entriesCost = (pkg.entries_per_person ?? 0) * paxCostBearing;
+  const mealsCost = (pkg.meals_per_person ?? 0) * pax * pkg.duration;
+  const entriesCost = (pkg.entries_per_person ?? 0) * pax;
+  // Each jeep leg is a fixed cost per jeep; we replicate jeeps when pax
+  // exceeds capacity. Total is a party-wide line, not a per-person rate,
+  // because the legs are shared transport.
   const jeepCost = (pkg.jeep_legs ?? []).reduce((sum, leg) => {
     const cap = Math.max(1, leg.capacity);
-    const jeeps = Math.max(1, Math.ceil(paxBillable / cap));
+    const jeeps = Math.max(1, Math.ceil(pax / cap));
     return sum + jeeps * leg.costPerJeep;
   }, 0);
-
-  // Party-wide subtotal + adult subtotal for per-adult display.
-  // Adult per-person share of party-wide costs (transport + hotel + meals +
-  // entries + jeeps) split across cost bearers (adults + kids 5-12); each
-  // pays their own flight on top.
-  const partyBase = transportCost + hotelCost + mealsCost + entriesCost + jeepCost;
-  const perBearerShare = paxCostBearing > 0 ? partyBase / paxCostBearing : partyBase;
-  const marginMul = 1 + effectiveProfitPct / 100;
-  // Per-bracket raw totals (before rounding).
-  const rawAdult = (perBearerShare + adultFlightPerPerson) * marginMul;
-  const rawChild512 = (perBearerShare + childFlightPerPerson) * marginMul;
-  const rawChild25 = childFlightPerPerson * marginMul;             // no hotel/transport/meals/entries
-  const rawInfant = infantFlightPerPerson * marginMul;
-  // Signup credit is a flat PKR pad on each fully-priced bracket (adult +
-  // child 5-12) so the client-side Traverse-NN promo (equal PKR off subtotal)
-  // nets to the engine's true number. Under-5s / infants stay unpadded — they
-  // are near-zero brackets and the promo isn't applied per-child.
-  const signupCredit = engineConfig.signupCreditPkr ?? 0;
-  const perAdult = Math.round(rawAdult / 1000) * 1000 + signupCredit;
-  const perChild_5_12 = children_5_12 > 0 ? Math.round(rawChild512 / 1000) * 1000 + signupCredit : 0;
-  const perChild_2_5 = children_2_5 > 0 ? Math.round(rawChild25 / 1000) * 1000 : 0;
-  const perInfant = infants > 0 ? Math.round(rawInfant / 1000) * 1000 : 0;
-  const total =
-    perAdult * adults
-    + perChild_5_12 * children_5_12
-    + perChild_2_5 * children_2_5
-    + perInfant * infants;
+  const subtotal = transportCost + hotelCost + flightCost + mealsCost + entriesCost + jeepCost;
+  const rawTotal = subtotal * (1 + effectiveProfitPct / 100);
+  // Round per-person to nearest 1k, then derive the total from it so the
+  // displayed total = perPerson × pax exactly (no odd 396,666-style endings).
+  const perPerson = Math.round(rawTotal / pax / 1000) * 1000;
+  const total = perPerson * pax;
 
   return {
     slug: pkg.slug,
     duration: pkg.duration,
     nights: Math.max(1, pkg.duration - 1),
     tier: args.tier,
-    pax: paxBillable,
-    adults,
-    children_5_12,
-    children_2_5,
-    infants,
+    pax,
     rooms: allocatedRooms,
     home: args.home,
     startDate: args.startDate,
     total,
-    perPerson: perAdult,
-    perAdult,
-    perChild_5_12,
-    perChild_2_5,
-    perInfant,
+    perPerson,
     unresolved,
     vehicle: vehiclePlan
       ? { code: vehiclePlan.code, isNcp: vehiclePlan.isNcp, count: vehiclePlan.count }
       : null,
-    flightPerPerson: flightRequired && adultFlightPerPerson > 0 ? adultFlightPerPerson : 0,
+    flightPerPerson: flightRequired && flightPerPerson > 0 ? flightPerPerson : 0,
     flightTicketType,
   };
 }

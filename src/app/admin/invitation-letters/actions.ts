@@ -91,6 +91,25 @@ export async function createInvitationRequestAdmin(formData: FormData): Promise<
   redirect(`/admin/invitation-letters/${ref}`);
 }
 
+export async function setInvitationAdminPaymentStatus(
+  ref: string,
+  status: string | null,
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = getSupabaseAdmin();
+  const allowed = ["pending_payment", "paid", "failed", "refunded", "cancelled"];
+  if (status !== null && !allowed.includes(status)) {
+    return { ok: false, error: `Invalid status: ${status}` };
+  }
+  const { error } = await supabase
+    .from("invitation_requests" as never)
+    .update({ admin_payment_status: status, updated_at: new Date().toISOString() } as never)
+    .eq("ref", ref);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/admin/invitation-letters/${ref}`);
+  revalidatePath("/admin/invitation-letters");
+  return { ok: true };
+}
+
 export async function deleteInvitationRequest(ref: string): Promise<void> {
   const supabase = getSupabaseAdmin();
   const { error } = await supabase

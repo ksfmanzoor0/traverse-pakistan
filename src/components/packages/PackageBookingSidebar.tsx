@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { formatPrice, getWhatsAppUrl } from "@/lib/utils";
-import { PAX_RULES, computeUnder5Capacity } from "@/lib/pax-rules";
+import { StarRating } from "@/components/ui/StarRating";
 import type { Package, PackageTier } from "@/types/package";
 import { PromoTeaser } from "./PromoTeaser";
 
@@ -22,18 +22,7 @@ function toIsoDate(d: Date | null) {
 type VehicleCode = "corolla" | "brv" | "prado" | "hiace" | "coaster";
 type VehicleInfo = { code: VehicleCode; isNcp: boolean; count: number } | null;
 type FlightTicketType = "return" | "oneway" | null;
-const quoteSessionCache = new Map<string, {
-  total: number;
-  perPerson: number;
-  perAdult: number;
-  perChild_5_12: number;
-  perChild_2_5: number;
-  perInfant: number;
-  rooms: number;
-  vehicle: VehicleInfo;
-  flightPerPerson: number;
-  flightTicketType: FlightTicketType;
-}>();
+const quoteSessionCache = new Map<string, { total: number; perPerson: number; rooms: number; vehicle: VehicleInfo; flightPerPerson: number; flightTicketType: FlightTicketType }>();
 
 /* ─── Calendar helpers ─────────────────────────────────────────────────────── */
 
@@ -198,11 +187,6 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
   const [rooms, setRooms] = useState<number | null>(null);
   const [naturalRooms, setNaturalRooms] = useState(1);
   const [adults, setAdults] = useState(2);
-  // Independent steppers for each age bracket.
-  const [children_5_12, setChildren512] = useState(0);
-  const [children_2_5, setChildren25] = useState(0);
-  const [infants, setInfants] = useState(0);
-  const totalChildren = children_5_12 + children_2_5;
   // Clamp at render time: a stale fetch from a higher-pax click can write
   // naturalRooms > adults, but the floor can never exceed the party size.
   const safeNaturalRooms = Math.min(naturalRooms, adults);
@@ -279,17 +263,7 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
     lahore: "LHE",
     karachi: "KHI",
   };
-  const [engineQuote, setEngineQuote] = useState<{
-    total: number;
-    perPerson: number;
-    perAdult: number;
-    perChild_5_12: number;
-    perChild_2_5: number;
-    perInfant: number;
-    vehicle: VehicleInfo;
-    flightPerPerson: number;
-    flightTicketType: FlightTicketType;
-  } | null>(null);
+  const [engineQuote, setEngineQuote] = useState<{ total: number; perPerson: number; vehicle: VehicleInfo; flightPerPerson: number; flightTicketType: FlightTicketType } | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   // Monotonic counter — every effect run captures the value at the time of
   // dispatch; only the response whose captured token still equals the
@@ -302,27 +276,13 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
 
   useEffect(() => {
     const home = HOME_FROM_CITY[departureCity];
-    // Before the user picks a date, ask the engine to anchor on the earliest
-    // upcoming scraped-fare date so the mount price matches what they'll see
-    // for near-term dates — a blind today+30d can grab an off-peak fare and
-    // then the total jumps when the user picks a date.
-    const startDate = toIsoDate(checkIn) ?? "auto";
+    const startDate = toIsoDate(checkIn) ?? toIsoDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))!;
     const mySeq = ++requestSeqRef.current;
     const roomsKey = rooms === null ? "auto" : String(rooms);
-    const cacheKey = `${pkg.slug}|${home}|${selectedTier}|${adults}|${children_5_12}|${children_2_5}|${infants}|${startDate}|${roomsKey}`;
+    const cacheKey = `${pkg.slug}|${home}|${selectedTier}|${adults}|${startDate}|${roomsKey}`;
     const cached = quoteSessionCache.get(cacheKey);
     if (cached) {
-      setEngineQuote({
-        total: cached.total,
-        perPerson: cached.perPerson,
-        perAdult: cached.perAdult,
-        perChild_5_12: cached.perChild_5_12,
-        perChild_2_5: cached.perChild_2_5,
-        perInfant: cached.perInfant,
-        vehicle: cached.vehicle,
-        flightPerPerson: cached.flightPerPerson,
-        flightTicketType: cached.flightTicketType,
-      });
+      setEngineQuote({ total: cached.total, perPerson: cached.perPerson, vehicle: cached.vehicle, flightPerPerson: cached.flightPerPerson, flightTicketType: cached.flightTicketType });
       if (rooms === null && cached.rooms > 0) setNaturalRooms(cached.rooms);
       setQuoteLoading(false);
       return;
@@ -333,31 +293,11 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
     // the engine fires almost immediately once the user pauses — the rooms
     // counter visibly lags less. requestSeq guard drops stale responses.
     const t = window.setTimeout(() => {
-      const params = new URLSearchParams({
-        home,
-        tier: selectedTier,
-        pax: String(adults),
-        children_5_12: String(children_5_12),
-        children_2_5: String(children_2_5),
-        infants: String(infants),
-        startDate,
-      });
+      const params = new URLSearchParams({ home, tier: selectedTier, pax: String(adults), startDate });
       if (rooms !== null) params.set("rooms", String(rooms));
       fetch(`/api/packages/${pkg.slug}/quote?${params.toString()}`, { signal: controller.signal })
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-        .then((j: {
-          total: number;
-          perPerson: number;
-          perAdult: number;
-          perChild_5_12: number;
-          perChild_2_5: number;
-          perInfant: number;
-          rooms: number;
-          unresolved?: string[];
-          vehicle: VehicleInfo;
-          flightPerPerson: number;
-          flightTicketType: FlightTicketType;
-        }) => {
+        .then((j: { total: number; perPerson: number; rooms: number; unresolved?: string[]; vehicle: VehicleInfo; flightPerPerson: number; flightTicketType: FlightTicketType }) => {
           if (mySeq !== requestSeqRef.current) return;
           if ((j.unresolved && j.unresolved.length > 0) || !(j.perPerson > 0)) {
             setEngineQuote(null);
@@ -367,29 +307,8 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
           const vehicle = j.vehicle ?? null;
           const flightPerPerson = j.flightPerPerson ?? 0;
           const flightTicketType = j.flightTicketType ?? null;
-          quoteSessionCache.set(cacheKey, {
-            total: j.total,
-            perPerson: j.perPerson,
-            perAdult: j.perAdult,
-            perChild_5_12: j.perChild_5_12,
-            perChild_2_5: j.perChild_2_5,
-            perInfant: j.perInfant,
-            rooms: engineRooms,
-            vehicle,
-            flightPerPerson,
-            flightTicketType,
-          });
-          setEngineQuote({
-            total: j.total,
-            perPerson: j.perPerson,
-            perAdult: j.perAdult,
-            perChild_5_12: j.perChild_5_12,
-            perChild_2_5: j.perChild_2_5,
-            perInfant: j.perInfant,
-            vehicle,
-            flightPerPerson,
-            flightTicketType,
-          });
+          quoteSessionCache.set(cacheKey, { total: j.total, perPerson: j.perPerson, rooms: engineRooms, vehicle, flightPerPerson, flightTicketType });
+          setEngineQuote({ total: j.total, perPerson: j.perPerson, vehicle, flightPerPerson, flightTicketType });
           if (rooms === null) setNaturalRooms(engineRooms);
         })
         .catch((err) => {
@@ -406,7 +325,7 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
       controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pkg.slug, departureCity, selectedTier, adults, children_5_12, children_2_5, infants, checkIn, rooms]);
+  }, [pkg.slug, departureCity, selectedTier, adults, checkIn, rooms]);
 
   // On adults/tier/slug change, clear any explicit rooms override so the
   // engine's natural pick wins again. We deliberately don't reset
@@ -450,11 +369,7 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
     `Adults: ${adults}\n${isDayTrip ? "" : `Rooms: ${displayRooms}\n`}Total: ${formatPrice(totalPrice)}\n\nPlease confirm availability.`;
 
   return (
-    // Sticky wrapper allows the sidebar to stay in view while the main
-    // column (itinerary + sections) scrolls. When the sidebar's own content
-    // is taller than the viewport (adding kids, calendar open) the inner
-    // container scrolls independently so Book Now is always reachable.
-    <div className="sticky top-[120px] max-h-[calc(100vh-140px)] overflow-y-auto">
+    <div className="sticky top-[120px]">
       <div className="bg-[var(--bg-primary)] border border-[var(--border-default)] rounded-[var(--radius-md)] p-6" style={{ boxShadow: "var(--shadow-sm)" }}>
 
         {/* Tier */}
@@ -514,8 +429,17 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
             <span className="text-[11px] text-[var(--text-tertiary)] animate-pulse" aria-live="polite">recalculating…</span>
           )}
         </div>
+        <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
+          {formatPrice(pricePerPerson)} × {adults} person{adults > 1 ? "s" : ""}
+        </p>
+
         {/* Composition chips — engine-picked flight + transport */}
-        <QuoteCompositionChips quote={engineQuote} pax={adults + children_5_12 + children_2_5 + infants} />
+        <QuoteCompositionChips quote={engineQuote} pax={adults} />
+
+        {/* Rating */}
+        <div className="mt-2">
+          <StarRating rating={pkg.rating} reviewCount={pkg.reviewCount} size="sm" />
+        </div>
 
         <hr className="my-5 border-[var(--border-default)]" />
 
@@ -619,109 +543,19 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
           <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-subtle)]">
             <div>
               <p className="text-[13px] font-semibold text-[var(--text-primary)]">Adults</p>
-              <p className="text-[11px] text-[var(--text-tertiary)]">Age 12+ · {formatPrice(engineQuote?.perAdult ?? pricePerPerson)} / person</p>
+              <p className="text-[11px] text-[var(--text-tertiary)]">{formatPrice(pricePerPerson)} / person</p>
             </div>
             <div className="flex items-center gap-3">
               <button type="button"
                 onClick={() => setAdults(Math.max(1, adults - 1))}
-                disabled={adults <= 1 || adults * PAX_RULES.INFANTS_PER_ADULT <= infants || (adults - 1) * PAX_RULES.KIDS_2_5_PER_ADULT < children_2_5}
-                title={adults * PAX_RULES.INFANTS_PER_ADULT <= infants ? `One lap per adult (max ${PAX_RULES.INFANTS_PER_ADULT} infant per adult)` : (adults - 1) * PAX_RULES.KIDS_2_5_PER_ADULT < children_2_5 ? `Each adult can supervise up to ${PAX_RULES.KIDS_2_5_PER_ADULT} young children` : undefined}
+                disabled={adults <= 1}
                 className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
                 −
               </button>
               <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{adults}</span>
               <button type="button"
-                onClick={() => setAdults(Math.min(pkg.maxGroupSize - totalChildren - infants, adults + 1))}
-                disabled={adults + totalChildren + infants >= pkg.maxGroupSize}
-                className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
-                +
-              </button>
-            </div>
-          </div>
-
-          <div className="h-px bg-[var(--border-default)]" />
-
-          {/* Children 5–12 — independent stepper */}
-          <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-subtle)]">
-            <div>
-              <p className="text-[13px] font-semibold text-[var(--text-primary)]">Children</p>
-              <p className="text-[11px] text-[var(--text-tertiary)]">Age 5–12</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <button type="button"
-                onClick={() => setChildren512((n) => Math.max(0, n - 1))}
-                disabled={children_5_12 <= 0}
-                className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
-                −
-              </button>
-              <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{children_5_12}</span>
-              <button type="button"
-                onClick={() => setChildren512((n) => n + 1)}
-                disabled={adults + totalChildren >= pkg.maxGroupSize}
-                className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
-                +
-              </button>
-            </div>
-          </div>
-
-          <div className="h-px bg-[var(--border-default)]" />
-
-          {/* Children 2–5 — independent stepper */}
-          <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-subtle)]">
-            <div>
-              <p className="text-[13px] font-semibold text-[var(--text-primary)]">Children</p>
-              <p className="text-[11px] text-[var(--text-tertiary)]">Age 2–5</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <button type="button"
-                onClick={() => setChildren25((n) => Math.max(0, n - 1))}
-                disabled={children_2_5 <= 0}
-                className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
-                −
-              </button>
-              <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{children_2_5}</span>
-              <button type="button"
-                onClick={() => setChildren25((n) => n + 1)}
-                disabled={
-                  adults + totalChildren >= pkg.maxGroupSize
-                  || children_2_5 >= adults * PAX_RULES.KIDS_2_5_PER_ADULT
-                  || children_2_5 + infants >= computeUnder5Capacity(displayRooms, children_5_12)
-                }
-                title={
-                  children_2_5 >= adults * PAX_RULES.KIDS_2_5_PER_ADULT ? `Max ${PAX_RULES.KIDS_2_5_PER_ADULT} young children per adult`
-                  : children_2_5 + infants >= computeUnder5Capacity(displayRooms, children_5_12) ? "Room capacity reached — add a room to include more under-5s"
-                  : undefined
-                }
-                className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
-                +
-              </button>
-            </div>
-          </div>
-
-          <div className="h-px bg-[var(--border-default)]" />
-
-          {/* Infants */}
-          <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-subtle)]">
-            <div>
-              <p className="text-[13px] font-semibold text-[var(--text-primary)]">Infants</p>
-              <p className="text-[11px] text-[var(--text-tertiary)]">Under 2 · {engineQuote ? formatPrice(engineQuote.perInfant || 0) : "—"} / person</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <button type="button"
-                onClick={() => setInfants(Math.max(0, infants - 1))}
-                disabled={infants <= 0}
-                className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
-                −
-              </button>
-              <span className="w-4 text-center text-[15px] font-semibold tabular-nums text-[var(--text-primary)]">{infants}</span>
-              <button type="button"
-                onClick={() => setInfants((n) => n + 1)}
-                disabled={infants >= adults * PAX_RULES.INFANTS_PER_ADULT || children_2_5 + infants >= computeUnder5Capacity(displayRooms, children_5_12)}
-                title={
-                  infants >= adults * PAX_RULES.INFANTS_PER_ADULT ? `Max ${PAX_RULES.INFANTS_PER_ADULT} lap infant per adult`
-                  : children_2_5 + infants >= computeUnder5Capacity(displayRooms, children_5_12) ? "Room capacity reached — add a room to include more under-5s"
-                  : undefined
-                }
+                onClick={() => setAdults(Math.min(pkg.maxGroupSize, adults + 1))}
+                disabled={adults >= pkg.maxGroupSize}
                 className="w-8 h-8 border border-[var(--border-default)] rounded-full flex items-center justify-center text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors cursor-pointer disabled:opacity-30 bg-[var(--bg-primary)]">
                 +
               </button>
@@ -732,27 +566,9 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
         {/* Price breakdown */}
         <div className="mb-4 space-y-1.5">
           <div className="flex justify-between text-[13px]">
-            <span className="text-[var(--text-secondary)]">{formatPrice(engineQuote?.perAdult ?? pricePerPerson)} × {adults} adult{adults > 1 ? "s" : ""}</span>
-            <span className="text-[var(--text-primary)] font-medium tabular-nums">{formatPrice((engineQuote?.perAdult ?? pricePerPerson) * adults)}</span>
+            <span className="text-[var(--text-secondary)]">{formatPrice(pricePerPerson)} × {adults} person{adults > 1 ? "s" : ""}</span>
+            <span className="text-[var(--text-primary)] font-medium tabular-nums">{formatPrice(totalPrice)}</span>
           </div>
-          {children_5_12 > 0 && (
-            <div className="flex justify-between text-[13px]">
-              <span className="text-[var(--text-secondary)]">{formatPrice(engineQuote?.perChild_5_12 ?? 0)} × {children_5_12} child 5–12</span>
-              <span className="text-[var(--text-primary)] font-medium tabular-nums">{formatPrice((engineQuote?.perChild_5_12 ?? 0) * children_5_12)}</span>
-            </div>
-          )}
-          {children_2_5 > 0 && (
-            <div className="flex justify-between text-[13px]">
-              <span className="text-[var(--text-secondary)]">{formatPrice(engineQuote?.perChild_2_5 ?? 0)} × {children_2_5} child under 5</span>
-              <span className="text-[var(--text-primary)] font-medium tabular-nums">{formatPrice((engineQuote?.perChild_2_5 ?? 0) * children_2_5)}</span>
-            </div>
-          )}
-          {infants > 0 && (
-            <div className="flex justify-between text-[13px]">
-              <span className="text-[var(--text-secondary)]">{formatPrice(engineQuote?.perInfant ?? 0)} × {infants} infant{infants > 1 ? "s" : ""}</span>
-              <span className="text-[var(--text-primary)] font-medium tabular-nums">{formatPrice((engineQuote?.perInfant ?? 0) * infants)}</span>
-            </div>
-          )}
           <div className="flex justify-between text-[15px] font-bold pt-2 border-t border-[var(--border-default)]">
             <span className="text-[var(--text-primary)]">Total</span>
             <span className="text-[var(--text-primary)] tabular-nums">{formatPrice(totalPrice)}</span>
@@ -765,7 +581,7 @@ export function PackageBookingSidebar({ pkg, selectedTier, onTierChange, departu
             the user isn't bounced. */}
         {checkIn ? (
           <a
-            href={`/packages/${pkg.slug}/checkout?adults=${adults}&children_5_12=${children_5_12}&children_2_5=${children_2_5}&infants=${infants}&rooms=${displayRooms}&tier=${selectedTier}&city=${departureCity}&checkin=${toIsoDate(checkIn)}`}
+            href={`/packages/${pkg.slug}/checkout?adults=${adults}&rooms=${displayRooms}&tier=${selectedTier}&city=${departureCity}&checkin=${toIsoDate(checkIn)}`}
             rel="nofollow"
             className="w-full h-[52px] bg-[var(--primary)] text-[var(--text-inverse)] text-[15px] font-semibold rounded-[var(--radius-sm)] flex items-center justify-center gap-2 hover:bg-[var(--primary-hover)] active:scale-[0.98] transition-all"
           >
