@@ -8,7 +8,13 @@ import { getInvitationSignatureDataUrl } from "@/lib/invitation/config";
 import { InvitationLetterEditor } from "@/components/admin/InvitationLetterEditor";
 import { DeleteInvitationButton } from "@/components/admin/DeleteInvitationButton";
 import { InvitationShareLink } from "@/components/admin/InvitationShareLink";
-import { saveInvitationLetterData, sendInvitationLetter, deleteInvitationRequest } from "../actions";
+import { InvitationAdminPaymentStatus } from "@/components/admin/InvitationAdminPaymentStatus";
+import {
+  saveInvitationLetterData,
+  sendInvitationLetter,
+  deleteInvitationRequest,
+  setInvitationAdminPaymentStatus,
+} from "../actions";
 
 function siteUrl(): string {
   const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/+$/, "");
@@ -66,6 +72,13 @@ export default async function AdminInvitationLetterDetail({ params }: { params: 
       </div>
 
       <InvitationShareLink href={`${siteUrl()}/invitation-letter/${row.ref}`} />
+
+      <InvitationAdminPaymentStatus
+        bookingRef={row.ref}
+        currentAdminStatus={row.admin_payment_status ?? null}
+        fallbackSystemStatus={row.status}
+        saveAction={setInvitationAdminPaymentStatus}
+      />
 
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="p-4 rounded-[var(--radius-md)] border border-[var(--border-default)]">
