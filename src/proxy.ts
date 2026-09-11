@@ -30,15 +30,55 @@ const WP_LEGACY_QUERY_PARAMS = [
   "service",
 ];
 
-// Three independent concerns share the proxy so we only pay one middleware pass:
-//   1. CSRF + request-id injection on /api/*
-//   2. Legacy WordPress /st_location/{region}/{slug}/ → /destinations/{slug}
+// Pure-legacy WordPress paths that used to redirect to homepage / listing.
+// Redirects preserve link equity, but for paths with no meaningful canonical
+// destination that's just noise — Google keeps them in "Page with redirect"
+// reports for months. 410 Gone tells Google "permanently dead, drop it,"
+// clearing the entries within days.
+//
+// Regex list is faster to evaluate than iterating string prefixes when the
+// proxy fires on every request. `test()` short-circuits on the first match.
+const GONE_PATTERNS: readonly RegExp[] = [
+  /^\/wp-login\.php$/,
+  /^\/wp-admin(\/|$)/,
+  /^\/my-account(\/|$)/,
+  /^\/order-received(\/|$)/,
+  /^\/product-tag(\/|$)/,
+  /^\/product-category(\/|$)/,
+  /^\/author(\/|$)/,
+  /^\/st_car(\/|$)/,
+  /^\/st_template_email(\/|$)/,
+  /^\/en(\/|$)(?!blog\/)/,     // /en, /en/, /en/anything — but /en/blog/* stays 301
+  /^\/type(\/|$)/,
+  /^\/footer-page-new(\/|$)/,
+  /^\/search-hotel-half-map(\/|$)/,
+  /^\/feed$/,
+  /^\/feed\/$/,
+  /^\/feed\.xml$/,
+  /^\/comments(\/|$)/,
+  /\/feed\/?$/,                // any /:path*/feed[/] tail
+];
+
+// Four independent concerns share the proxy so we only pay one middleware pass:
+//   1. 410 Gone for pure-legacy WP paths (fastest short-circuit).
+//   2. CSRF + request-id injection on /api/*.
+//   3. Legacy WordPress /st_location/{region}/{slug}/ → /destinations/{slug}
 //      redirect (needs slug lookup — can't be a static next.config redirect
 //      because WP mis-tagged regions and used typo variants).
-//   3. Strip WP legacy query params (see WP_LEGACY_QUERY_PARAMS) — 301 to the
+//   4. Strip WP legacy query params (see WP_LEGACY_QUERY_PARAMS) — 301 to the
 //      same path minus the params so Google collapses the duplicates.
 export default function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // ── 410 Gone for pure-legacy paths ───────────────────────────────────────
+  for (const pattern of GONE_PATTERNS) {
+    if (pattern.test(pathname)) {
+      return new NextResponse(null, {
+        status: 410,
+        headers: { "cache-control": "public, max-age=31536000, immutable" },
+      });
+    }
+  }
 
   // ── Legacy /st_location redirect ─────────────────────────────────────────
   if (pathname.startsWith("/st_location/")) {
