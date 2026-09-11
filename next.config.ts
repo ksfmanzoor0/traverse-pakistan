@@ -88,15 +88,9 @@ const nextConfig: NextConfig = {
         // would risk 301 → 404 because WP mis-tagged regions.
         { source: "/st_room/:slug*", destination: "/hotels", permanent: true },
         { source: "/st_packages/:slug*", destination: "/packages", permanent: true },
-        // WP transport (cars): no equivalent on the new site — send home.
-        { source: "/st_car/:slug*", destination: "/", permanent: true },
-        // WP admin junk (email templates) — should never have been indexed.
-        { source: "/st_template_email/:slug*", destination: "/", permanent: true },
-        // WP admin surfaces Google occasionally discovers via login redirects.
-        { source: "/wp-login.php", destination: "/", permanent: true },
-        { source: "/wp-admin/:slug*", destination: "/", permanent: true },
-        { source: "/my-account", destination: "/", permanent: true },
-        { source: "/my-account/:slug*", destination: "/", permanent: true },
+        // /st_car, /st_template_email, /wp-login.php, /wp-admin, /my-account
+        // are now handled by src/middleware.ts as 410 Gone — they had no
+        // meaningful destination anyway. See middleware.ts for the full set.
 
         // Singular WP taxonomy paths shared with any old third-party listings.
         { source: "/tour/:slug*", destination: "/grouptours", permanent: true },
@@ -112,30 +106,15 @@ const nextConfig: NextConfig = {
         // on the new site, no standalone URLs). Send to /hotels listing.
         { source: "/hotel_room/:slug*", destination: "/hotels", permanent: true },
 
-        // WooCommerce (WP product pages) — the old site sold trips + cars +
-        // rooms as products. Most were trip-flavoured; safe fallback = /grouptours.
-        // Product taxonomies + author + order pages have no equivalent → home.
+        // WooCommerce trip products still redirect to /grouptours (real
+        // destination). Taxonomy/order/author variants that would redirect
+        // to home are handled as 410 in middleware.ts.
         { source: "/product/:slug*", destination: "/grouptours", permanent: true },
-        { source: "/product-tag/:slug*", destination: "/", permanent: true },
-        { source: "/product-category/:slug*", destination: "/", permanent: true },
-        { source: "/order-received/:slug*", destination: "/", permanent: true },
-        { source: "/author/:slug*", destination: "/", permanent: true },
 
-        // Old WP language variants (en/) — new site is English-only, drop prefix.
-        // /en/blog/* → /blog listing (blog post slugs from WP don't match current
-        // blog set, so we send to the listing rather than /). Order matters:
-        // this must come BEFORE the /en/:path* catch-all.
+        // Old WP language variant. Both /en and /en/:path* now return 410
+        // via middleware.ts. /en/blog/* keeps 301 because /blog is a real
+        // destination worth preserving link equity to.
         { source: "/en/blog/:slug*", destination: "/blog", permanent: true },
-        { source: "/en", destination: "/", permanent: true },
-        { source: "/en/:path*", destination: "/", permanent: true },
-
-        // Misc WP legacy pages — /type/gallery, /feed suffixes on any path.
-        { source: "/type/:path*", destination: "/", permanent: true },
-        { source: "/feed", destination: "/", permanent: true },
-        { source: "/feed/", destination: "/", permanent: true },
-        { source: "/feed.xml", destination: "/", permanent: true },
-        { source: "/:path*/feed", destination: "/:path*", permanent: true },
-        { source: "/:path*/feed/", destination: "/:path*", permanent: true },
 
         // WP date-archived blog posts: /YYYY/MM/slug → /blog
         {
@@ -171,10 +150,8 @@ const nextConfig: NextConfig = {
         { source: "/st_location", destination: "/destinations", permanent: true },
         { source: "/st_location/", destination: "/destinations", permanent: true },
         // WP theme leftovers — safe to send home.
-        { source: "/footer-page-new", destination: "/", permanent: true },
-        { source: "/footer-page-new/", destination: "/", permanent: true },
-        { source: "/search-hotel-half-map", destination: "/", permanent: true },
-        { source: "/search-hotel-half-map/", destination: "/", permanent: true },
+        // /footer-page-new and /search-hotel-half-map now return 410 via
+        // middleware.ts — no meaningful destination.
 
         // WP root-level blog posts — new site nests them under /blog/{slug}.
         // Every slug in the 404 report matches a current blog post.
