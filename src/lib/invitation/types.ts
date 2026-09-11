@@ -57,6 +57,7 @@ export type InvitationRequest = InvitationRequestInput & {
   payment_attempts: number;
   paid_at: string | null;
   issued_at: string | null;
+  admin_payment_status: string | null;
   created_at: string;
   updated_at: string;
 };
