@@ -13,17 +13,17 @@ Traverse Pakistan is a licensed tour operator headquartered in Islamabad, operat
 - **Rating**: 4.9 / 5 stars (1,300+ reviews)
 - **Recommendation rate**: 98%
 - **Awards**: TripAdvisor Travelers' Choice 2025; #1 Top Rated Tour Agency in Islamabad
-- **Founded coverage**: 22 group tours, 8 destinations, 5 regions, 6 hotels, 10 travel guides
+- **Coverage**: 22 group tours, 59 holiday packages, 206 destination guides, 7 regions, 65 hotels, 10 travel guides
 - **Languages**: English, Urdu
 
 ## Core pages
 
 - [Homepage](https://traversepakistan.com/): Brand overview, featured tours, featured hotels, top destinations
 - [All Group Tours](https://traversepakistan.com/grouptours): 22 fixed-departure group tours with seat availability
-- [Holiday Packages](https://traversepakistan.com/packages): Custom-date tours (Deluxe + Luxury tiers)
-- [Destinations](https://traversepakistan.com/destinations): 8 destination guides (Hunza, Skardu, Chitral, etc.)
-- [Hotels](https://traversepakistan.com/hotels): Curated mountain hotels and resorts
-- [Travel Styles](https://traversepakistan.com/travel-styles): Filter tours by type (adventure, family, honeymoon, solo, cultural)
+- [Holiday Packages](https://traversepakistan.com/packages): 59 custom-date tours (Deluxe + Luxury tiers)
+- [Destinations](https://traversepakistan.com/destinations): 206 destination guides (Hunza, Skardu, Chitral, Kalash, Deosai, Fairy Meadows, Gwadar, and more)
+- [Hotels](https://traversepakistan.com/hotels): 65 curated mountain hotels, resorts, and alpine camps
+- [Travel Styles](https://traversepakistan.com/travel-styles): Filter tours by type (trekking, family, honeymoon, solo, culture, coastal)
 - [Blog](https://traversepakistan.com/blog): 10 in-depth guides on peaks, trekking, culture, seasons
 - [About](https://traversepakistan.com/about): Company history, team, awards
 - [Contact](https://traversepakistan.com/contact): Office, phone, email, WhatsApp
