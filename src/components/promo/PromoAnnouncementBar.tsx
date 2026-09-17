@@ -11,9 +11,14 @@ const DISMISS_KEY = "traverse_promo_bar_dismissed";
  * Site-wide top announcement bar for logged-out visitors. Nudges signup
  * with the PKR 14,000 first-package discount.
  *
- * Renders nothing when: auth still loading, user is logged in, user
- * dismissed it this session, or on auth pages (avoids nudging on the very
- * page it links to).
+ * Shown by default — matches the anonymous, non-dismissed majority of
+ * traffic (most pageviews are first-time organic visitors), so the initial
+ * server-rendered HTML already has it right and no post-hydration layout
+ * shift is needed to reveal it. Auth/dismiss state is only ever used to
+ * HIDE it after mount, never to show it after mount — hiding shifts the
+ * page back up for the minority of visitors who are logged in or already
+ * dismissed it this session, which is the trade we want: eliminating the
+ * shift for the majority at the cost of a smaller one for the minority.
  *
  * Dismiss is per session (sessionStorage) — re-appears on next visit,
  * which is intentional: a discount nudge is not a modal to be permanently
@@ -26,16 +31,20 @@ const DISMISS_KEY = "traverse_promo_bar_dismissed";
 export function PromoAnnouncementBar() {
   const { user, loading } = useAuth();
   const pathname = usePathname() ?? "/";
-  const [dismissed, setDismissed] = useState(true); // Start hidden; enable post-hydration only
+  const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
-    if (loading || user) return;
-    try {
-      if (sessionStorage.getItem(DISMISS_KEY)) return;
-    } catch {
-      return; // Private mode / storage denied
+    if (loading) return; // recheck once auth resolves
+    if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setHidden(true);
+      return;
     }
-    setDismissed(false);
+    try {
+      if (sessionStorage.getItem(DISMISS_KEY)) setHidden(true);
+    } catch {
+      // Private mode / storage denied — can't verify dismiss state, leave shown.
+    }
   }, [loading, user]);
 
   function dismiss(e: React.MouseEvent) {
@@ -44,10 +53,10 @@ export function PromoAnnouncementBar() {
     try {
       sessionStorage.setItem(DISMISS_KEY, "1");
     } catch {}
-    setDismissed(true);
+    setHidden(true);
   }
 
-  if (dismissed || loading || user) return null;
+  if (hidden) return null;
   if (pathname.startsWith("/auth")) return null;
 
   const signInHref = `/auth/sign-in?next=${encodeURIComponent(pathname)}`;
