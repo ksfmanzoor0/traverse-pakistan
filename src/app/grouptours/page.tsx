@@ -6,6 +6,8 @@ import { GroupToursClient } from "@/components/tours/GroupToursClient";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { getAllTours } from "@/services/tour.service";
 import { getAllDestinations } from "@/services/destination.service";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { breadcrumbSchema, itemListSchema, combineSchemas } from "@/lib/seo/schema";
 
 export const metadata: Metadata = buildMetadata({
   title: "Pakistan Group Tours — 22 Fixed-Departure Trips from Islamabad & Lahore",
@@ -24,8 +26,21 @@ export default async function GroupToursPage() {
     parentSlug: d.parentSlug ?? null,
   }));
 
+  const schema = combineSchemas(
+    breadcrumbSchema([
+      { name: "Home", url: "/" },
+      { name: "Group Tours", url: "/grouptours" },
+    ]),
+    itemListSchema({
+      name: "Pakistan Group Tours",
+      path: "/grouptours",
+      items: tours.map((i) => ({ name: i.name, path: `/grouptours/${i.slug}` })),
+    })
+  );
+
   return (
     <div className="pb-12">
+      <JsonLd data={schema} id="grouptours-jsonld" />
       <div className="py-4 sm:py-10 border-b border-[var(--border-default)]">
         <Container>
           <Breadcrumb items={[{ label: "Group Tours" }]} />

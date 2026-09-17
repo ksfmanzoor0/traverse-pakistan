@@ -6,6 +6,8 @@ import { PackagesClient } from "@/components/packages/PackagesClient";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { getAllPackages } from "@/services/package.service";
 import { getDestinationOptions } from "@/services/destination.service";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { breadcrumbSchema, itemListSchema, combineSchemas } from "@/lib/seo/schema";
 
 export const metadata: Metadata = buildMetadata({
   title: "Pakistan Holiday Packages — Custom Dates, Deluxe & Luxury Tiers",
@@ -21,8 +23,21 @@ export default async function PackagesPage() {
     getDestinationOptions().catch(() => []),
   ]);
 
+  const schema = combineSchemas(
+    breadcrumbSchema([
+      { name: "Home", url: "/" },
+      { name: "Packages", url: "/packages" },
+    ]),
+    itemListSchema({
+      name: "Pakistan Holiday Packages",
+      path: "/packages",
+      items: packages.map((i) => ({ name: i.name, path: `/packages/${i.slug}` })),
+    })
+  );
+
   return (
     <div className="pb-12">
+      <JsonLd data={schema} id="packages-jsonld" />
       <div className="py-4 sm:py-10 border-b border-[var(--border-default)]">
         <Container>
           <Breadcrumb items={[{ label: "Packages" }]} />
