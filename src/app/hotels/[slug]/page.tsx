@@ -8,6 +8,7 @@ import { AccordionItem } from "@/components/ui/Accordion";
 import { Icon } from "@/components/ui/Icon";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { buildMetadata } from "@/lib/seo/metadata";
+import { hotelTitle, hotelDescription } from "@/lib/seo/titles";
 import {
   hotelSchema,
   breadcrumbSchema,
@@ -46,10 +47,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       noIndex: true,
     });
   }
-  const tierLabel = hotel.tier.charAt(0).toUpperCase() + hotel.tier.slice(1);
-  const destLabel = hotel.location.split(",")[0]?.trim() || hotel.location;
-  const title = `${hotel.name} — ${tierLabel} Stay in ${destLabel}`;
-  const description = `${hotel.description.slice(0, 150)}${hotel.description.length > 150 ? "…" : ""}`;
+  const title = hotelTitle(hotel);
+  const description = hotelDescription(hotel);
   return buildMetadata({
     title,
     description,
