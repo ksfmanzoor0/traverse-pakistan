@@ -5,23 +5,38 @@ import { Container } from "@/components/ui/Container";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { travelStyles } from "@/data/travel-styles";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { breadcrumbSchema, itemListSchema, combineSchemas } from "@/lib/seo/schema";
 
 export const metadata: Metadata = buildMetadata({
   title: "Travel Styles — Trekking, Family, Honeymoon, Solo, Cultural Tours",
   description:
-    "Browse Pakistan tours by travel style: trekking, family-friendly, honeymoon, solo, cultural, adventure, or coastal. Find the trip that matches your pace.",
+    "Browse Pakistan tours by travel style: trekking, family, honeymoon, solo, culture, or coastal. Find the trip that matches your pace.",
   path: "/travel-styles",
   tags: ["Pakistan honeymoon tour", "trekking Pakistan", "family tour Pakistan", "solo travel Pakistan"],
 });
 
 export default function TravelStylesPage() {
+  const schema = combineSchemas(
+    breadcrumbSchema([
+      { name: "Home", url: "/" },
+      { name: "Travel Styles", url: "/travel-styles" },
+    ]),
+    itemListSchema({
+      name: "Pakistan Tours by Travel Style",
+      path: "/travel-styles",
+      items: travelStyles.map((i) => ({ name: i.name, path: `/travel-styles/${i.slug}` })),
+    })
+  );
+
   return (
     <div className="py-8 sm:py-12">
+      <JsonLd data={schema} id="travel-styles-jsonld" />
       <Container>
         <Breadcrumb items={[{ label: "Travel Styles" }]} />
         <div className="mt-6 mb-10">
           <h1 className="text-[32px] sm:text-[42px] font-bold text-[var(--text-primary)] tracking-tight">
-            Travel Your Way
+            Pakistan Tours by Travel Style
           </h1>
           <p className="text-lg text-[var(--text-tertiary)] mt-2 max-w-xl">
             Choose a travel style that matches your vibe

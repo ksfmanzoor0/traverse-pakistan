@@ -5,6 +5,8 @@ import { Container } from "@/components/ui/Container";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { getLatestBlogPosts } from "@/services/blog.service";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { breadcrumbSchema, itemListSchema, combineSchemas } from "@/lib/seo/schema";
 
 export const metadata: Metadata = buildMetadata({
   title: "Pakistan Travel Blog — Guides, Treks, Culture & Seasons",
@@ -19,13 +21,26 @@ export default async function BlogPage() {
   const featured = posts[0];
   const rest = posts.slice(1);
 
+  const schema = combineSchemas(
+    breadcrumbSchema([
+      { name: "Home", url: "/" },
+      { name: "Blog", url: "/blog" },
+    ]),
+    itemListSchema({
+      name: "Pakistan Travel Blog",
+      path: "/blog",
+      items: posts.map((i) => ({ name: i.title, path: `/blog/${i.slug}` })),
+    })
+  );
+
   return (
     <div className="py-8 sm:py-12">
+      <JsonLd data={schema} id="blog-jsonld" />
       <Container>
         <Breadcrumb items={[{ label: "Blog" }]} />
         <div className="mt-6 mb-10">
           <h1 className="text-[32px] sm:text-[42px] font-bold text-[var(--text-primary)] tracking-tight">
-            Stories & Guides
+            Pakistan Travel Blog
           </h1>
           <p className="text-lg text-[var(--text-tertiary)] mt-2">
             Travel tips, destination guides, and inspiration for your next adventure
