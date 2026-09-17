@@ -5,9 +5,25 @@ import type { LetterData } from "./letterData";
 import { getInvitationSignatureDataUrl } from "./config";
 import { readTravelerName } from "./types";
 
-// Prevent react-pdf's default hyphenation from breaking words like
-// "MANZOOR" across lines with a "-".
+// Suppress react-pdf's default hyphenation so plain words like "MANZOOR"
+// don't get split with a "-" across lines. Line breaks for long names/IDs
+// in table cells are handled explicitly by wrapForCell() below, which is
+// far more predictable than the hyphenation engine.
 Font.registerHyphenationCallback((word) => [word]);
+
+/**
+ * Force a line break for values that would overflow a narrow table cell.
+ * Prefers hyphen breaks ("ONSTAD-BAULD" → "ONSTAD-\nBAULD"), then space
+ * breaks (natural), then chunks every N chars as a last resort so a long
+ * unbroken surname or passport ID can't spill into the next column.
+ */
+function wrapForCell(s: string, chunk = 10): string {
+  if (!s) return s;
+  if (s.length <= chunk) return s;
+  if (s.includes("-")) return s.replace(/-/g, "-\n");
+  if (/\s/.test(s)) return s;
+  return s.replace(new RegExp(`(.{${chunk}})`, "g"), "$1\n").replace(/\n$/, "");
+}
 
 const GREEN = "#1E6A52";
 const GREY = "#e5e7eb";
@@ -28,10 +44,12 @@ const styles = StyleSheet.create({
   paragraph: { marginTop: 10 },
   table: { marginTop: 12, borderWidth: 1, borderColor: GREY },
   tr: { flexDirection: "row" },
-  thCell: { flex: 1, padding: 6, backgroundColor: GREEN, color: "#ffffff", fontFamily: "Helvetica-Bold", textAlign: "center", borderRightWidth: 1, borderRightColor: GREEN },
-  thCellLast: { flex: 1, padding: 6, backgroundColor: GREEN, color: "#ffffff", fontFamily: "Helvetica-Bold", textAlign: "center" },
-  td: { flex: 1, padding: 6, borderRightWidth: 1, borderRightColor: GREY, borderTopWidth: 1, borderTopColor: GREY },
-  tdLast: { flex: 1, padding: 6, borderTopWidth: 1, borderTopColor: GREY },
+  // Table cells drop to 9pt (from the page's 11pt) so long surnames + 9-char
+  // passport IDs have breathing room without shrinking the whole page.
+  thCell: { padding: 5, fontSize: 9, backgroundColor: GREEN, color: "#ffffff", fontFamily: "Helvetica-Bold", textAlign: "center", borderRightWidth: 1, borderRightColor: GREEN },
+  thCellLast: { padding: 5, fontSize: 9, backgroundColor: GREEN, color: "#ffffff", fontFamily: "Helvetica-Bold", textAlign: "center" },
+  td: { padding: 5, fontSize: 9, borderRightWidth: 1, borderRightColor: GREY, borderTopWidth: 1, borderTopColor: GREY },
+  tdLast: { padding: 5, fontSize: 9, borderTopWidth: 1, borderTopColor: GREY },
   signBlock: { marginTop: 20 },
   signRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 14 },
   signLine: { width: 200, borderTopWidth: 1, borderTopColor: BLACK, marginTop: 44 },
@@ -102,26 +120,43 @@ export async function generateInvitationLetterPdf(data: LetterData): Promise<Buf
           <Text key={i} style={styles.paragraph}>{para}</Text>
         ))}
 
-        <View style={styles.table}>
-          <View style={styles.tr}>
-            {["First Name", "Surname", "Date of Birth", "Nationality", "Passport No.", "Expiry Date"].map((h, i, arr) => (
-              <Text key={h} style={i === arr.length - 1 ? styles.thCellLast : styles.thCell}>{h}</Text>
-            ))}
-          </View>
-          {data.travelers.map((t, i) => {
-            const { surname, first_name } = readTravelerName(t);
-            return (
-              <View key={i} style={styles.tr}>
-                <Text style={styles.td}>{first_name.toUpperCase()}</Text>
-                <Text style={styles.td}>{surname.toUpperCase()}</Text>
-                <Text style={styles.td}>{t.date_of_birth}</Text>
-                <Text style={styles.td}>{t.nationality}</Text>
-                <Text style={styles.td}>{t.passport_number}</Text>
-                <Text style={styles.tdLast}>{t.passport_expiry}</Text>
+        {(() => {
+          // Weighted column widths — names get more room since surnames like
+          // "ONSTAD-BAULD" would otherwise overflow into the DOB column.
+          // Dates are fixed-width (10 chars) so they can be tighter.
+          const COL_FLEX = [1.3, 1.7, 1.0, 1.0, 1.3, 0.9];
+          return (
+            <View style={styles.table}>
+              <View style={styles.tr}>
+                {["First Name", "Surname", "Date of Birth", "Nationality", "Passport No.", "Expiry Date"].map((h, i, arr) => (
+                  <Text key={h} style={[i === arr.length - 1 ? styles.thCellLast : styles.thCell, { flex: COL_FLEX[i] }]}>{h}</Text>
+                ))}
               </View>
-            );
-          })}
-        </View>
+              {data.travelers.map((t, i) => {
+                const { surname, first_name } = readTravelerName(t);
+                // Names + passport numbers get explicit line breaks when
+                // they're long enough to overflow their cell — see
+                // wrapForCell(). Dates + nationality are short enough to
+                // pass through untouched.
+                const cells = [
+                  wrapForCell(first_name.toUpperCase()),
+                  wrapForCell(surname.toUpperCase()),
+                  t.date_of_birth,
+                  t.nationality,
+                  wrapForCell(t.passport_number, 12),
+                  t.passport_expiry,
+                ];
+                return (
+                  <View key={i} style={styles.tr}>
+                    {cells.map((c, j) => (
+                      <Text key={j} style={[j === cells.length - 1 ? styles.tdLast : styles.td, { flex: COL_FLEX[j] }]}>{c}</Text>
+                    ))}
+                  </View>
+                );
+              })}
+            </View>
+          );
+        })()}
 
         <Text style={styles.paragraph}>{data.body_close}</Text>
 

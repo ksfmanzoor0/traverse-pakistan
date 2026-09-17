@@ -4,6 +4,13 @@ import { getInvitationLetterPricePkr, getInvitationSignatureDataUrl, INVITATION_
 import { updateInvitationLetterPrice, updateInvitationSignature, deleteInvitationRequest } from "./actions";
 import { InvitationSignatureUpload } from "@/components/admin/InvitationSignatureUpload";
 import { DeleteInvitationButton } from "@/components/admin/DeleteInvitationButton";
+import { InvitationShareLink } from "@/components/admin/InvitationShareLink";
+
+function siteUrl(): string {
+  const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/+$/, "");
+  if (!raw) return "https://traversepakistan.com";
+  return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -93,6 +100,7 @@ export default async function AdminInvitationLetters() {
               <th className="text-left p-3">Contact</th>
               <th className="text-left p-3">Embassy</th>
               <th className="text-left p-3">Status</th>
+              <th className="text-left p-3">Share link</th>
               <th className="text-right p-3">Paid</th>
               <th className="text-left p-3">Created</th>
               <th className="text-right p-3"></th>
@@ -121,6 +129,9 @@ export default async function AdminInvitationLetters() {
                     {r.status.replace(/_/g, " ")}
                   </span>
                 </td>
+                <td className="p-3">
+                  <InvitationShareLink href={`${siteUrl()}/invitation-letter/${r.ref}`} compact />
+                </td>
                 <td className="p-3 text-right text-[var(--text-primary)]">
                   {r.amount_paid ? `PKR ${Number(r.amount_paid).toLocaleString()}` : "—"}
                 </td>
@@ -132,7 +143,7 @@ export default async function AdminInvitationLetters() {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-6 text-center text-[var(--text-tertiary)]">No requests yet.</td>
+                <td colSpan={8} className="p-6 text-center text-[var(--text-tertiary)]">No requests yet.</td>
               </tr>
             )}
           </tbody>
