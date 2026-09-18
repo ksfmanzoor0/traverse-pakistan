@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
+import { EyebrowLabel } from "@/components/ui/EyebrowLabel";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { getLatestBlogPosts } from "@/services/blog.service";
 import { JsonLd } from "@/components/seo/JsonLd";
@@ -39,6 +40,7 @@ export default async function BlogPage() {
       <Container>
         <Breadcrumb items={[{ label: "Blog" }]} />
         <div className="mt-6 mb-10">
+          <EyebrowLabel className="mb-2">Stories & Guides</EyebrowLabel>
           <h1 className="text-[32px] sm:text-[42px] font-bold text-[var(--text-primary)] tracking-tight">
             Pakistan Travel Blog
           </h1>

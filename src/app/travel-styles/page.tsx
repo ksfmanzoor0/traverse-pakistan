@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
+import { EyebrowLabel } from "@/components/ui/EyebrowLabel";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { travelStyles } from "@/data/travel-styles";
 import { JsonLd } from "@/components/seo/JsonLd";
@@ -35,6 +36,7 @@ export default function TravelStylesPage() {
       <Container>
         <Breadcrumb items={[{ label: "Travel Styles" }]} />
         <div className="mt-6 mb-10">
+          <EyebrowLabel className="mb-2">Travel Your Way</EyebrowLabel>
           <h1 className="text-[32px] sm:text-[42px] font-bold text-[var(--text-primary)] tracking-tight">
             Pakistan Tours by Travel Style
           </h1>

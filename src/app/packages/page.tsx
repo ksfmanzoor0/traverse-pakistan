@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Container } from "@/components/ui/Container";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
+import { EyebrowLabel } from "@/components/ui/EyebrowLabel";
 import { PackagesClient } from "@/components/packages/PackagesClient";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { getAllPackages } from "@/services/package.service";
@@ -42,6 +43,7 @@ export default async function PackagesPage() {
         <Container>
           <Breadcrumb items={[{ label: "Packages" }]} />
           <div className="mt-2 sm:mt-4">
+            <EyebrowLabel className="mb-2">Design Your Dream Journey</EyebrowLabel>
             <h1 className="text-[22px] sm:text-[42px] font-semibold sm:font-bold text-[var(--text-primary)] tracking-[-0.015em] sm:tracking-[-0.025em] leading-[1.15]">
               Pakistan Tour Packages
             </h1>
