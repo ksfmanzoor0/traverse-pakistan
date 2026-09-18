@@ -2,10 +2,13 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Container } from "@/components/ui/Container";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
+import { EyebrowLabel } from "@/components/ui/EyebrowLabel";
 import { GroupToursClient } from "@/components/tours/GroupToursClient";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { getAllTours } from "@/services/tour.service";
 import { getAllDestinations } from "@/services/destination.service";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { breadcrumbSchema, itemListSchema, combineSchemas } from "@/lib/seo/schema";
 
 export const metadata: Metadata = buildMetadata({
   title: "Pakistan Group Tours — 22 Fixed-Departure Trips from Islamabad & Lahore",
@@ -24,14 +27,28 @@ export default async function GroupToursPage() {
     parentSlug: d.parentSlug ?? null,
   }));
 
+  const schema = combineSchemas(
+    breadcrumbSchema([
+      { name: "Home", url: "/" },
+      { name: "Group Tours", url: "/grouptours" },
+    ]),
+    itemListSchema({
+      name: "Pakistan Group Tours",
+      path: "/grouptours",
+      items: tours.map((i) => ({ name: i.name, path: `/grouptours/${i.slug}` })),
+    })
+  );
+
   return (
     <div className="pb-12">
+      <JsonLd data={schema} id="grouptours-jsonld" />
       <div className="py-4 sm:py-10 border-b border-[var(--border-default)]">
         <Container>
           <Breadcrumb items={[{ label: "Group Tours" }]} />
           <div className="mt-2 sm:mt-4">
+            <EyebrowLabel className="mb-2">Explore All Group Tours</EyebrowLabel>
             <h1 className="text-[22px] sm:text-[42px] font-semibold sm:font-bold text-[var(--text-primary)] tracking-[-0.015em] sm:tracking-[-0.025em] leading-[1.15]">
-              Explore All Group Tours
+              Pakistan Group Tours
             </h1>
             <p className="mt-1.5 text-[15px] sm:text-lg text-[var(--text-secondary)]">
               Curated Journeys — Expert Guides
