@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { getInvitationLetterPricePkr, getInvitationSignatureDataUrl, INVITATION_LETTER_PRICE_USD } from "@/lib/invitation/config";
-import { updateInvitationLetterPrice, updateInvitationSignature, deleteInvitationRequest } from "./actions";
-import { InvitationSignatureUpload } from "@/components/admin/InvitationSignatureUpload";
+import { getInvitationLetterPricePkr, getInvitationSignatures, INVITATION_LETTER_PRICE_USD } from "@/lib/invitation/config";
+import { updateInvitationLetterPrice, updateInvitationSignatureSlot, deleteInvitationRequest } from "./actions";
+import { InvitationSignatureSlotsEditor } from "@/components/admin/InvitationSignatureSlotsEditor";
 import { DeleteInvitationButton } from "@/components/admin/DeleteInvitationButton";
 import { InvitationShareLink } from "@/components/admin/InvitationShareLink";
 
@@ -50,10 +50,10 @@ async function fetchRows(): Promise<Row[]> {
 }
 
 export default async function AdminInvitationLetters() {
-  const [rows, pricePkr, signatureDataUrl] = await Promise.all([
+  const [rows, pricePkr, signatureSlots] = await Promise.all([
     fetchRows(),
     getInvitationLetterPricePkr(),
-    getInvitationSignatureDataUrl(),
+    getInvitationSignatures(),
   ]);
 
   return (
@@ -69,7 +69,7 @@ export default async function AdminInvitationLetters() {
       </div>
 
       <div className="mb-6">
-        <InvitationSignatureUpload currentDataUrl={signatureDataUrl} saveAction={updateInvitationSignature} />
+        <InvitationSignatureSlotsEditor slots={signatureSlots} saveAction={updateInvitationSignatureSlot} />
       </div>
 
       <form action={updateInvitationLetterPrice} className="mb-8 p-4 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-subtle)] flex items-end gap-3 max-w-lg">
