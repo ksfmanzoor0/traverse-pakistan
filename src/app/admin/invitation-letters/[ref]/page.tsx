@@ -4,16 +4,18 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import type { InvitationRequest, Traveler } from "@/lib/invitation/types";
 import { readTravelerName } from "@/lib/invitation/types";
 import { defaultLetterData, type LetterData } from "@/lib/invitation/letterData";
-import { getInvitationSignatureDataUrl } from "@/lib/invitation/config";
+import { getInvitationSignatures } from "@/lib/invitation/config";
 import { InvitationLetterEditor } from "@/components/admin/InvitationLetterEditor";
 import { DeleteInvitationButton } from "@/components/admin/DeleteInvitationButton";
 import { InvitationShareLink } from "@/components/admin/InvitationShareLink";
 import { InvitationAdminPaymentStatus } from "@/components/admin/InvitationAdminPaymentStatus";
+import { InvitationLetterSignaturePicker } from "@/components/admin/InvitationLetterSignaturePicker";
 import {
   saveInvitationLetterData,
   sendInvitationLetter,
   deleteInvitationRequest,
   setInvitationAdminPaymentStatus,
+  setLetterSignatureSlot,
 } from "../actions";
 
 function siteUrl(): string {
@@ -46,10 +48,15 @@ async function fetchRow(ref: string): Promise<InvitationRequest | null> {
 
 export default async function AdminInvitationLetterDetail({ params }: { params: Promise<{ ref: string }> }) {
   const { ref } = await params;
-  const [row, signatureDataUrl] = await Promise.all([fetchRow(ref), getInvitationSignatureDataUrl()]);
+  const [row, signatureSlots] = await Promise.all([fetchRow(ref), getInvitationSignatures()]);
   if (!row) notFound();
 
   const travelers = (row.travelers as Traveler[]) ?? [];
+  const rowSlot = (row as unknown as { signature_slot?: number | null }).signature_slot ?? null;
+  // Preview pane uses the currently-selected slot (or slot 0 fallback) so the
+  // admin sees what the PDF will actually look like when they hit Download.
+  const previewSignature =
+    signatureSlots[rowSlot ?? 0]?.dataUrl ?? signatureSlots.find((s) => s.dataUrl)?.dataUrl ?? null;
 
   return (
     <div className="p-6 sm:p-8 space-y-8 max-w-[1400px]">
@@ -152,12 +159,22 @@ export default async function AdminInvitationLetterDetail({ params }: { params: 
       </section>
 
       <section>
+        <h2 className="text-[14px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-3">Signature</h2>
+        <InvitationLetterSignaturePicker
+          bookingRef={row.ref}
+          slots={signatureSlots}
+          currentSlot={rowSlot}
+          saveAction={setLetterSignatureSlot}
+        />
+      </section>
+
+      <section>
         <h2 className="text-[14px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-3">Letter editor</h2>
         <InvitationLetterEditor
           bookingRef={row.ref}
           initialData={(row.letter_data as LetterData | null) ?? defaultLetterData(row)}
           status={row.status}
-          signatureDataUrl={signatureDataUrl}
+          signatureDataUrl={previewSignature}
           saveAction={saveInvitationLetterData}
           sendAction={sendInvitationLetter}
         />
