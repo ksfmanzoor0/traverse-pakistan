@@ -586,6 +586,45 @@ export function faqPageSchema(faqs: FAQ[]): SchemaNode {
 
 // ── Group combinator ──
 
+// ── ItemList (hub / listing pages) ──
+
+export interface ListEntry {
+  name: string;
+  path: string;
+}
+
+/**
+ * Summary-page ItemList for a hub route (/grouptours, /packages, /hotels,
+ * /destinations). Gives Google an explicit, ordered map of what the hub
+ * links to instead of leaving it to infer one from the DOM.
+ *
+ * Capped at 50 entries: /destinations carries 200+ and the full list would
+ * bloat the document for no additional signal.
+ */
+export function itemListSchema(opts: {
+  name: string;
+  path: string;
+  items: ListEntry[];
+}): SchemaNode {
+  const url = absoluteUrl(opts.path);
+  const items = opts.items.slice(0, 50);
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "@id": `${url}#itemlist`,
+    name: opts.name,
+    url,
+    numberOfItems: opts.items.length,
+    itemListOrder: "https://schema.org/ItemListUnordered",
+    itemListElement: items.map((it, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: it.name,
+      url: absoluteUrl(it.path),
+    })),
+  };
+}
+
 export function combineSchemas(...schemas: (SchemaNode | null | undefined | false)[]): SchemaNode {
   return {
     "@context": "https://schema.org",

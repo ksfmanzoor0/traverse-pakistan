@@ -108,6 +108,8 @@ type Input = {
   contactName: string;
   contactEmail: string;
   letterData: LetterData;
+  /** Explicit signature to embed. If omitted, falls back to the admin default. */
+  signatureDataUrl?: string | null;
 };
 
 export async function sendInvitationLetterIssued(input: Input): Promise<void> {
@@ -115,11 +117,12 @@ export async function sendInvitationLetterIssued(input: Input): Promise<void> {
   if (!resend) throw new Error("Resend not configured");
 
   const [pdfBuffer, storedSig, fileSig] = await Promise.all([
-    generateInvitationLetterPdf(input.letterData),
-    getInvitationSignatureDataUrl(),
+    generateInvitationLetterPdf(input.letterData, { signatureDataUrl: input.signatureDataUrl }),
+    input.signatureDataUrl === undefined ? getInvitationSignatureDataUrl() : Promise.resolve<string | null>(null),
     loadSignatureFileDataUrl(),
   ]);
-  const letterHtml = renderLetterHtml(input.letterData, storedSig ?? fileSig);
+  const emailSig = input.signatureDataUrl !== undefined ? input.signatureDataUrl : storedSig ?? fileSig;
+  const letterHtml = renderLetterHtml(input.letterData, emailSig);
 
   const wrapper = `<div style="font-family:system-ui,-apple-system,sans-serif;color:#111827;max-width:820px;margin:0 auto;padding:16px">
     <p>Hi ${esc(input.contactName)},</p>

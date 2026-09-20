@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { setInvitationLetterPricePkr, setInvitationSignatureDataUrl, generateInvitationRef } from "@/lib/invitation/config";
+import { setInvitationLetterPricePkr, setInvitationSignatureDataUrl, setInvitationSignatures, getInvitationSignatures, generateInvitationRef, SIGNATURE_SLOT_COUNT, type SignatureSlot } from "@/lib/invitation/config";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import type { LetterData } from "@/lib/invitation/letterData";
 import { sendInvitationLetterIssued } from "@/lib/email/sendInvitationLetterIssued";
@@ -24,6 +24,41 @@ export async function updateInvitationSignature(dataUrl: string | null): Promise
   }
   await setInvitationSignatureDataUrl(dataUrl);
   revalidatePath("/admin/invitation-letters");
+  return { ok: true };
+}
+
+export async function updateInvitationSignatureSlot(
+  slot: number,
+  patch: { dataUrl?: string | null; label?: string | null },
+): Promise<{ ok: boolean; error?: string }> {
+  if (!Number.isInteger(slot) || slot < 0 || slot >= SIGNATURE_SLOT_COUNT) {
+    return { ok: false, error: `Invalid slot ${slot}` };
+  }
+  if (patch.dataUrl != null) {
+    if (!patch.dataUrl.startsWith("data:image/") || patch.dataUrl.length > 2_500_000) {
+      return { ok: false, error: "Invalid image (max ~1.8 MB PNG/JPG)" };
+    }
+  }
+  const current = await getInvitationSignatures();
+  const next: SignatureSlot[] = current.map((s) => ({ ...s }));
+  if ("dataUrl" in patch) next[slot].dataUrl = patch.dataUrl ?? null;
+  if ("label" in patch) next[slot].label = patch.label?.trim() || null;
+  await setInvitationSignatures(next);
+  revalidatePath("/admin/invitation-letters");
+  return { ok: true };
+}
+
+export async function setLetterSignatureSlot(ref: string, slot: number | null): Promise<{ ok: boolean; error?: string }> {
+  if (slot !== null && (!Number.isInteger(slot) || slot < 0 || slot >= SIGNATURE_SLOT_COUNT)) {
+    return { ok: false, error: `Invalid slot ${slot}` };
+  }
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from("invitation_requests" as never)
+    .update({ signature_slot: slot, updated_at: new Date().toISOString() } as never)
+    .eq("ref", ref);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/admin/invitation-letters/${ref}`);
   return { ok: true };
 }
 
@@ -128,12 +163,18 @@ export async function sendInvitationLetter(ref: string): Promise<{ ok: boolean; 
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("invitation_requests" as never)
-    .select("status, letter_data, contact_name, contact_email")
+    .select("status, letter_data, contact_name, contact_email, signature_slot")
     .eq("ref", ref)
     .maybeSingle();
   if (error || !data) return { ok: false, error: "Request not found" };
-  const row = data as { status: string; letter_data: LetterData | null; contact_name: string; contact_email: string };
+  const row = data as { status: string; letter_data: LetterData | null; contact_name: string; contact_email: string; signature_slot: number | null };
   if (!row.letter_data) return { ok: false, error: "Save the letter draft first" };
+
+  const slots = await getInvitationSignatures();
+  const slotIdx = typeof row.signature_slot === "number" && row.signature_slot >= 0 && row.signature_slot < SIGNATURE_SLOT_COUNT
+    ? row.signature_slot
+    : 0;
+  const signatureDataUrl = slots[slotIdx]?.dataUrl ?? slots.find((s) => s.dataUrl)?.dataUrl ?? null;
 
   try {
     await sendInvitationLetterIssued({
@@ -141,6 +182,7 @@ export async function sendInvitationLetter(ref: string): Promise<{ ok: boolean; 
       contactName: row.contact_name,
       contactEmail: row.contact_email,
       letterData: row.letter_data,
+      signatureDataUrl,
     });
   } catch (e) {
     console.error("[sendInvitationLetter] email failed:", e);

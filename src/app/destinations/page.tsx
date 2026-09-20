@@ -10,6 +10,8 @@ import { getAllDestinations } from "@/services/destination.service";
 import { getAllPackages } from "@/services/package.service";
 import { getAllTours } from "@/services/tour.service";
 import { countDestinationOfferings } from "@/lib/destinations/countOfferings";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { breadcrumbSchema, itemListSchema, combineSchemas } from "@/lib/seo/schema";
 
 export const metadata: Metadata = buildMetadata({
   title: "Pakistan Destinations — Hunza, Skardu, Chitral, Kalash & More",
@@ -32,8 +34,21 @@ export default async function DestinationsPage() {
     allTours,
   );
 
+  const schema = combineSchemas(
+    breadcrumbSchema([
+      { name: "Home", url: "/" },
+      { name: "Destinations", url: "/destinations" },
+    ]),
+    itemListSchema({
+      name: "Pakistan Destinations",
+      path: "/destinations",
+      items: destinations.map((i) => ({ name: i.name, path: `/destinations/${i.slug}` })),
+    })
+  );
+
   return (
     <div className="py-8 sm:py-12">
+      <JsonLd data={schema} id="destinations-jsonld" />
       <Container>
         <Breadcrumb items={[{ label: "Destinations" }]} />
         <div className="mt-6 mb-10">

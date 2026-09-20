@@ -29,34 +29,49 @@ const GREEN = "#1E6A52";
 const GREY = "#e5e7eb";
 const BLACK = "#111111";
 
-const styles = StyleSheet.create({
-  page: { paddingTop: 32, paddingBottom: 32, paddingHorizontal: 48, fontFamily: "Helvetica", fontSize: 11, color: BLACK, lineHeight: 1.35 },
-  topRule: { borderTopWidth: 2, borderTopColor: GREEN, paddingTop: 12 },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
-  logo: { height: 60, width: 180, objectFit: "contain" },
-  addressBlock: { textAlign: "right", fontSize: 10, color: GREEN },
-  addressLine: { marginBottom: 1 },
-  metaBlock: { textAlign: "right", fontSize: 10, marginTop: 6, color: GREEN },
-  metaNtn: { color: BLACK, marginTop: 2 },
-  toBlock: { marginTop: 20 },
-  subject: { marginTop: 12 },
-  subjectValue: { textDecoration: "underline" },
-  paragraph: { marginTop: 10 },
-  table: { marginTop: 12, borderWidth: 1, borderColor: GREY },
-  tr: { flexDirection: "row" },
-  // Table cells drop to 9pt (from the page's 11pt) so long surnames + 9-char
-  // passport IDs have breathing room without shrinking the whole page.
-  thCell: { padding: 5, fontSize: 9, backgroundColor: GREEN, color: "#ffffff", fontFamily: "Helvetica-Bold", textAlign: "center", borderRightWidth: 1, borderRightColor: GREEN },
-  thCellLast: { padding: 5, fontSize: 9, backgroundColor: GREEN, color: "#ffffff", fontFamily: "Helvetica-Bold", textAlign: "center" },
-  td: { padding: 5, fontSize: 9, borderRightWidth: 1, borderRightColor: GREY, borderTopWidth: 1, borderTopColor: GREY },
-  tdLast: { padding: 5, fontSize: 9, borderTopWidth: 1, borderTopColor: GREY },
-  signBlock: { marginTop: 20 },
-  signRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 14 },
-  signLine: { width: 200, borderTopWidth: 1, borderTopColor: BLACK, marginTop: 44 },
-  signLabel: { fontSize: 10, marginTop: 2 },
-  dateText: { fontSize: 11 },
-  pageNumber: { position: "absolute", bottom: 20, right: 48, fontSize: 9, color: "#6b7280" },
-});
+// Tiered sizing keeps the letter on a single A4 page regardless of traveller
+// count. Each extra traveller adds ~18-20pt of table height at the compact
+// tier, so we step down font + margins in bands rather than smoothly scaling
+// (avoids sub-point sizes that render inconsistently).
+//   ≤5 travellers : roomy layout, 10.5pt body
+//   6-8           : mid, 9.5pt body
+//   9+            : compact, 9pt body + tighter margins
+function buildStyles(travellerCount: number) {
+  const tier = travellerCount >= 9 ? "compact" : travellerCount >= 6 ? "mid" : "roomy";
+  const body = tier === "compact" ? 9 : tier === "mid" ? 9.5 : 10.5;
+  const tableFont = tier === "compact" ? 7.5 : tier === "mid" ? 8 : 9;
+  const tablePad = tier === "compact" ? 2.5 : tier === "mid" ? 3 : 4;
+  const para = tier === "compact" ? 4 : tier === "mid" ? 5 : 7;
+  const section = tier === "compact" ? 8 : tier === "mid" ? 11 : 14;
+  const signGap = tier === "compact" ? 12 : tier === "mid" ? 16 : 20;
+  const lineH = tier === "compact" ? 1.25 : 1.3;
+  return StyleSheet.create({
+    page: { paddingTop: 22, paddingBottom: 18, paddingHorizontal: 44, fontFamily: "Helvetica", fontSize: body, color: BLACK, lineHeight: lineH },
+    topRule: { borderTopWidth: 2, borderTopColor: GREEN, paddingTop: 8 },
+    headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+    logo: { height: 56, width: 172, objectFit: "contain" },
+    addressBlock: { textAlign: "right", fontSize: 9.5, color: GREEN },
+    addressLine: { marginBottom: 1 },
+    metaBlock: { textAlign: "right", fontSize: 9.5, marginTop: 4, color: GREEN },
+    metaNtn: { color: BLACK, marginTop: 2 },
+    toBlock: { marginTop: section },
+    subject: { marginTop: Math.round(section * 0.6) },
+    subjectValue: { textDecoration: "underline" },
+    paragraph: { marginTop: para },
+    table: { marginTop: Math.round(para * 1.2), borderWidth: 1, borderColor: GREY },
+    tr: { flexDirection: "row" },
+    thCell: { padding: tablePad, fontSize: tableFont, backgroundColor: GREEN, color: "#ffffff", fontFamily: "Helvetica-Bold", textAlign: "center", borderRightWidth: 1, borderRightColor: GREEN },
+    thCellLast: { padding: tablePad, fontSize: tableFont, backgroundColor: GREEN, color: "#ffffff", fontFamily: "Helvetica-Bold", textAlign: "center" },
+    td: { padding: tablePad, fontSize: tableFont, borderRightWidth: 1, borderRightColor: GREY, borderTopWidth: 1, borderTopColor: GREY },
+    tdLast: { padding: tablePad, fontSize: tableFont, borderTopWidth: 1, borderTopColor: GREY },
+    signBlock: { marginTop: section },
+    signRow: { flexDirection: "row", justifyContent: "space-between", marginTop: Math.round(section * 0.6) },
+    signLine: { width: 200, borderTopWidth: 1, borderTopColor: BLACK, marginTop: signGap },
+    signLabel: { fontSize: 10, marginTop: 2 },
+    dateText: { fontSize: body },
+    pageNumber: { position: "absolute", bottom: 14, right: 44, fontSize: 9, color: "#6b7280" },
+  });
+}
 
 async function loadPublicImage(rel: string): Promise<string | null> {
   try {
@@ -71,13 +86,30 @@ async function loadPublicImage(rel: string): Promise<string | null> {
   }
 }
 
-export async function generateInvitationLetterPdf(data: LetterData): Promise<Buffer> {
-  const [logoData, stored, filePng] = await Promise.all([
+export type PdfOptions = {
+  /** Override the signature image. If undefined, falls back to the admin default. */
+  signatureDataUrl?: string | null;
+  /** If true, skip the signature image entirely (blank signature line for wet-signing). */
+  omitSignature?: boolean;
+};
+
+export async function generateInvitationLetterPdf(
+  data: LetterData,
+  options: PdfOptions = {},
+): Promise<Buffer> {
+  const [logoData, storedDefault, filePng] = await Promise.all([
     loadPublicImage("logo-day.png"),
-    getInvitationSignatureDataUrl(),
+    options.signatureDataUrl === undefined ? getInvitationSignatureDataUrl() : Promise.resolve<string | null>(null),
     loadPublicImage("signature.png"),
   ]);
-  const signatureData = stored ?? filePng;
+  // Precedence: explicit override (including null-to-clear) > admin default > bundled PNG.
+  // omitSignature short-circuits all of that so the caller can produce a wet-sign copy.
+  const signatureData = options.omitSignature
+    ? null
+    : options.signatureDataUrl !== undefined
+      ? options.signatureDataUrl
+      : storedDefault ?? filePng;
+  const styles = buildStyles(data.travelers.length);
 
   const doc = (
     <Document>
@@ -168,9 +200,15 @@ export async function generateInvitationLetterPdf(data: LetterData): Promise<Buf
               <Text style={{ fontSize: 10, marginBottom: 4 }}>Signature:</Text>
               <View style={{ alignItems: "center", width: 220 }} wrap={false}>
                 {signatureData && (
-                  <Image src={signatureData} style={{ height: 44, width: 180, objectFit: "contain", marginBottom: -3 }} />
+                  // Double-render with a sub-pixel offset thickens the stroke
+                  // without needing the admin to upload a bolder image.
+                  <View style={{ position: "relative", width: 180, height: 44, marginBottom: -3 }}>
+                    <Image src={signatureData} style={{ position: "absolute", top: 0, left: 0, height: 44, width: 180, objectFit: "contain" }} />
+                    <Image src={signatureData} style={{ position: "absolute", top: 0, left: 0.7, height: 44, width: 180, objectFit: "contain" }} />
+                    <Image src={signatureData} style={{ position: "absolute", top: 0.5, left: 0, height: 44, width: 180, objectFit: "contain" }} />
+                  </View>
                 )}
-                <View style={{ width: 180, borderTopWidth: 1, borderTopColor: BLACK, marginTop: signatureData ? 0 : 30 }} />
+                <View style={{ width: 180, borderTopWidth: 1, borderTopColor: BLACK, marginTop: signatureData ? 0 : 20 }} />
               </View>
             </View>
             <Text style={styles.dateText}>Date: {data.issued_date}</Text>

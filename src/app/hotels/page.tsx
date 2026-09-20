@@ -6,6 +6,8 @@ import { HotelsClient } from "@/components/hotels/HotelsClient";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { getAllHotels } from "@/services/hotel.service";
 import { getAllDestinations } from "@/services/destination.service";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { breadcrumbSchema, itemListSchema, combineSchemas } from "@/lib/seo/schema";
 
 export const metadata: Metadata = buildMetadata({
   title: "Hotels in Pakistan — Handpicked Mountain Retreats, Resorts & Camps",
@@ -24,8 +26,21 @@ export default async function HotelsPage() {
     parentSlug: d.parentSlug ?? null,
   }));
 
+  const schema = combineSchemas(
+    breadcrumbSchema([
+      { name: "Home", url: "/" },
+      { name: "Hotels", url: "/hotels" },
+    ]),
+    itemListSchema({
+      name: "Hotels in Pakistan",
+      path: "/hotels",
+      items: hotels.map((i) => ({ name: i.name, path: `/hotels/${i.slug}` })),
+    })
+  );
+
   return (
     <div className="pb-12">
+      <JsonLd data={schema} id="hotels-jsonld" />
       <div className="py-4 sm:py-10 border-b border-[var(--border-default)]">
         <Container>
           <Breadcrumb items={[{ label: "Hotels" }]} />
