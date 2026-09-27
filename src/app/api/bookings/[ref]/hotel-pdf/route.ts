@@ -24,6 +24,7 @@ type HotelBookingRow = {
   contact_phone: string;
   arrival_time: string | null;
   notes: string | null;
+  reservation_code: string | null;
 };
 
 type RoomRow = {
@@ -41,13 +42,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ ref: st
   const { data: booking } = await supabase
     .from("hotel_bookings")
     .select(
-      "id, booking_ref, hotel_slug, checkin_date, checkout_date, nights, adults, children, total_amount, currency, booking_status, payment_status, contact_name, contact_email, contact_phone, arrival_time, notes",
+      "id, booking_ref, hotel_slug, checkin_date, checkout_date, nights, adults, children, total_amount, currency, booking_status, payment_status, contact_name, contact_email, contact_phone, arrival_time, notes, reservation_code",
     )
     .eq("booking_ref", ref)
     .maybeSingle();
 
   if (!booking) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const row = booking as HotelBookingRow;
+  const row = booking as unknown as HotelBookingRow;
 
   const [roomsRes, hotel] = await Promise.all([
     supabase
@@ -69,6 +70,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ ref: st
 
   const pdf = await generateHotelReservationPdf({
     bookingRef: row.booking_ref,
+    reservationCode: row.reservation_code,
     bookingStatus: row.booking_status ?? "pending",
     paymentStatus: row.payment_status ?? "pending",
     hotelName: hotel?.name ?? row.hotel_slug,

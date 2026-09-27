@@ -6,9 +6,11 @@ import { formatPrice } from "@/lib/utils";
 import { GenericStatusSelect } from "@/components/admin/GenericStatusSelect";
 import { DeleteBookingButton } from "@/components/admin/DeleteBookingButton";
 import { SendHotelConfirmationButton } from "@/components/admin/SendHotelConfirmationButton";
+import { HotelReservationCodeEditor } from "@/components/admin/HotelReservationCodeEditor";
 import {
   updateHotelBookingStatus,
   updateHotelPaymentStatus,
+  updateHotelReservationCode,
   resendHotelBookingConfirmation,
   deleteHotelBooking,
 } from "../actions";
@@ -48,6 +50,7 @@ type HotelBookingRow = {
   contact_email: string;
   contact_phone: string;
   arrival_time: string | null;
+  reservation_code: string | null;
   notes: string | null;
   confirmation_sent_at: string | null;
   submit_uuid: string | null;
@@ -226,6 +229,20 @@ export default async function AdminHotelBookingDetail({
           />
         </div>
       </div>
+
+      <section className="p-4 rounded-[var(--radius-md)] border border-[var(--border-default)]">
+        <h2 className="text-[14px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
+          Hotel reservation code
+        </h2>
+        <p className="text-[12px] text-[var(--text-tertiary)] mb-3">
+          The confirmation code the property gave us. Appears on the guest PDF once saved.
+        </p>
+        <HotelReservationCodeEditor
+          id={row.id}
+          initial={row.reservation_code}
+          saveAction={updateHotelReservationCode}
+        />
+      </section>
 
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card title="Hotel">
