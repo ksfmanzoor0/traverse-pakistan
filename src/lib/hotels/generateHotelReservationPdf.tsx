@@ -20,17 +20,24 @@ const styles = StyleSheet.create({
     color: BODY_GREY,
     lineHeight: 1.5,
   },
+  heroWrap: { position: "relative", width: "100%", height: 260 },
   hero: { width: "100%", height: 260, objectFit: "cover" },
   heroPlaceholder: { width: "100%", height: 32, backgroundColor: GREEN },
-  contentPad: { paddingTop: 36, paddingHorizontal: 56 },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    marginBottom: 24,
+  logoOnHero: {
+    position: "absolute",
+    left: 40,
+    bottom: 22,
+    height: 76,
+    width: 200,
+    objectFit: "contain",
   },
-  logo: { height: 36, width: 108, objectFit: "contain" },
-  greeting: { fontSize: 26, fontFamily: "Helvetica-Bold", color: BLACK },
+  contentPad: { paddingTop: 36, paddingHorizontal: 56 },
+  greeting: {
+    fontSize: 14,
+    fontFamily: "Helvetica-Bold",
+    color: BLACK,
+    marginBottom: 6,
+  },
   intro: { fontSize: 14, color: BODY_GREY, marginBottom: 40 },
   columns: { flexDirection: "row", gap: 40 },
   colLeft: { flex: 1 },
@@ -217,7 +224,7 @@ function greetingFromName(fullName: string): string {
 export async function generateHotelReservationPdf(input: HotelReservationPdfInput): Promise<Buffer> {
   const heroUrl = destinationCoverUrl(input.destinationSlug);
   const [logoData, heroData] = await Promise.all([
-    loadPublicImage("logo-day.png"),
+    loadPublicImage("logo-white.png"),
     heroUrl ? loadRemoteImage(heroUrl) : Promise.resolve<string | null>(null),
   ]);
   const tone = statusTone(input.bookingStatus, input.paymentStatus);
@@ -227,24 +234,23 @@ export async function generateHotelReservationPdf(input: HotelReservationPdfInpu
   const occupancy = occupancyLine(input.adults, input.children);
   const breakfast = input.breakfastIncluded !== false;
 
-  const greeting = greetingFromName(input.contactName);
+  const fullName = greetingFromName(input.contactName);
   const bookingNameUpper = (input.contactName ?? "Guest").toUpperCase();
 
   const doc = (
     <Document>
       <Page size="A4" style={styles.page}>
         {heroData ? (
-          <Image src={heroData} style={styles.hero} />
+          <View style={styles.heroWrap}>
+            <Image src={heroData} style={styles.hero} />
+            {logoData ? <Image src={logoData} style={styles.logoOnHero} /> : null}
+          </View>
         ) : (
           <View style={styles.heroPlaceholder} />
         )}
 
         <View style={styles.contentPad}>
-        <View style={styles.headerRow}>
-          {logoData ? <Image src={logoData} style={styles.logo} /> : null}
-          <Text style={styles.greeting}>{greeting}</Text>
-        </View>
-
+        <Text style={styles.greeting}>Dear {fullName},</Text>
         <Text style={styles.intro}>
           We are pleased to confirm following reservations with Traverse Pakistan.
         </Text>
