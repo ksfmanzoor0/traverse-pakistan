@@ -141,9 +141,13 @@ export default async function HotelBookingsPage({
                     style={{ borderTop: "1px solid var(--border-default)", color: "var(--text-secondary)" }}
                   >
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="font-mono font-semibold" style={{ color: "var(--text-primary)" }}>
+                      <Link
+                        href={`/admin/hotel-bookings/${row.booking_ref}`}
+                        className="font-mono font-semibold hover:underline"
+                        style={{ color: "var(--text-primary)" }}
+                      >
                         {row.booking_ref}
-                      </span>
+                      </Link>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">{formatDate(row.created_at)}</td>
                     <td className="px-4 py-3">
