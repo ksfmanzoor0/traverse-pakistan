@@ -211,6 +211,14 @@ export default async function AdminHotelBookingDetail({
             alreadySentAt={row.confirmation_sent_at}
             sendAction={resendHotelBookingConfirmation}
           />
+          <a
+            href={`/api/bookings/${encodeURIComponent(row.booking_ref)}/hotel-pdf`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center px-4 py-2 rounded-[var(--radius-sm)] border border-[var(--border-default)] text-[13px] font-semibold text-[var(--text-primary)] hover:border-[var(--primary)] hover:text-[var(--primary)]"
+          >
+            Download PDF
+          </a>
           <DeleteBookingButton
             id={row.id}
             refLabel={row.booking_ref}
