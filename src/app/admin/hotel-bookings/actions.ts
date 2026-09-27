@@ -92,6 +92,22 @@ export async function resendHotelBookingConfirmation(
   return { ok: true };
 }
 
+export async function updateHotelReservationCode(
+  id: string,
+  code: string,
+): Promise<{ ok: boolean; error?: string }> {
+  await requireAdmin();
+  const trimmed = code.trim().slice(0, 60);
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from("hotel_bookings")
+    .update({ reservation_code: trimmed === "" ? null : trimmed } as never)
+    .eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/admin/hotel-bookings");
+  return { ok: true };
+}
+
 export async function deleteHotelBooking(id: string): Promise<{ ok: boolean; error?: string }> {
   await requireAdmin();
   const supabase = getSupabaseAdmin();

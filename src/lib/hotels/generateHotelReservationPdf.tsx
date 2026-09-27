@@ -20,7 +20,7 @@ const styles = StyleSheet.create({
     color: BODY_GREY,
     lineHeight: 1.5,
   },
-  hero: { width: "100%", height: 180, objectFit: "cover" },
+  hero: { width: "100%", height: 260, objectFit: "cover" },
   heroPlaceholder: { width: "100%", height: 32, backgroundColor: GREEN },
   contentPad: { paddingTop: 36, paddingHorizontal: 56 },
   headerRow: {
@@ -131,6 +131,7 @@ export type HotelPdfRoom = {
 
 export type HotelReservationPdfInput = {
   bookingRef: string;
+  reservationCode?: string | null;
   bookingStatus: string;
   paymentStatus: string;
   hotelName: string;
@@ -259,6 +260,9 @@ export async function generateHotelReservationPdf(input: HotelReservationPdfInpu
               <Text style={styles.metaLine}>Booking Name: Traverse Pakistan</Text>
               <Text style={styles.metaLine}>Guest Name: {bookingNameUpper}</Text>
               <Text style={styles.metaLine}>Booking Reference # {input.bookingRef}</Text>
+              {input.reservationCode ? (
+                <Text style={styles.metaLine}>Reservation Code: {input.reservationCode}</Text>
+              ) : null}
             </View>
 
             {tone && (
