@@ -190,23 +190,27 @@ function occupancyLine(adults: number, children: number): string {
 }
 
 /**
- * Try to detect a leading title from the contact name (Mr, Ms, Mrs, Miss, Dr,
- * Sir, Madam). If found, keep the title + first name for the greeting; else
- * fall back to the first name only.
+ * Return the guest's full name, title-cased word by word so
+ * "ott rabi" → "Ott Rabi" and "MS MARIA QAZI" → "Ms Maria Qazi".
+ * Recognised salutations (Mr/Ms/Mrs/Miss/Dr/Sir/Madam) are kept in
+ * their conventional capitalisation.
  */
 function greetingFromName(fullName: string): string {
   const trimmed = (fullName ?? "").trim();
   if (!trimmed) return "Guest";
-  const parts = trimmed.split(/\s+/);
-  const titles = new Set(["mr", "ms", "mrs", "miss", "dr", "sir", "madam", "mr.", "ms.", "mrs.", "dr."]);
-  const first = parts[0]!;
-  const firstBare = first.replace(/\./g, "").toLowerCase();
-  if (titles.has(firstBare) && parts.length >= 2) {
-    const title = firstBare.charAt(0).toUpperCase() + firstBare.slice(1);
-    const given = parts[1]!.charAt(0).toUpperCase() + parts[1]!.slice(1).toLowerCase();
-    return `${title} ${given}`;
-  }
-  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+  const titles: Record<string, string> = {
+    mr: "Mr", "mr.": "Mr", ms: "Ms", "ms.": "Ms",
+    mrs: "Mrs", "mrs.": "Mrs", miss: "Miss",
+    dr: "Dr", "dr.": "Dr", sir: "Sir", madam: "Madam",
+  };
+  return trimmed
+    .split(/\s+/)
+    .map((word) => {
+      const bare = word.toLowerCase();
+      if (titles[bare]) return titles[bare];
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(" ");
 }
 
 export async function generateHotelReservationPdf(input: HotelReservationPdfInput): Promise<Buffer> {
@@ -252,7 +256,8 @@ export async function generateHotelReservationPdf(input: HotelReservationPdfInpu
             </Text>
 
             <View style={styles.metaBlock}>
-              <Text style={styles.metaLine}>Booking Name: {bookingNameUpper}</Text>
+              <Text style={styles.metaLine}>Booking Name: Traverse Pakistan</Text>
+              <Text style={styles.metaLine}>Guest Name: {bookingNameUpper}</Text>
               <Text style={styles.metaLine}>Booking Reference # {input.bookingRef}</Text>
             </View>
 
