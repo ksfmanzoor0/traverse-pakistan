@@ -256,7 +256,8 @@ export async function generateHotelReservationPdf(input: HotelReservationPdfInpu
             </Text>
 
             <View style={styles.metaBlock}>
-              <Text style={styles.metaLine}>Booking Name: {bookingNameUpper}</Text>
+              <Text style={styles.metaLine}>Booking Name: Traverse Pakistan</Text>
+              <Text style={styles.metaLine}>Guest Name: {bookingNameUpper}</Text>
               <Text style={styles.metaLine}>Booking Reference # {input.bookingRef}</Text>
             </View>
 
