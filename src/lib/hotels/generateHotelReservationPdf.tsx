@@ -4,115 +4,85 @@ import path from "node:path";
 
 Font.registerHyphenationCallback((word) => [word]);
 
-const GREEN = "#1E6A52";
-const GREY = "#e5e7eb";
-const GREY_TEXT = "#6b7280";
 const BLACK = "#111111";
+const GREY_TEXT = "#6b7280";
+const BODY_GREY = "#4b5563";
+const HAIRLINE = "#e5e7eb";
+const GREEN = "#1E6A52";
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 28,
-    paddingBottom: 24,
-    paddingHorizontal: 44,
+    paddingTop: 0,
+    paddingBottom: 40,
+    paddingHorizontal: 0,
     fontFamily: "Helvetica",
-    fontSize: 10.5,
-    color: BLACK,
-    lineHeight: 1.35,
+    fontSize: 12,
+    color: BODY_GREY,
+    lineHeight: 1.5,
   },
-  topRule: { borderTopWidth: 2, borderTopColor: GREEN, paddingTop: 10 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
-  logo: { height: 48, width: 148, objectFit: "contain" },
-  refBlock: { alignItems: "flex-end" },
-  refLabel: { fontSize: 8.5, color: GREY_TEXT, letterSpacing: 0.6, textTransform: "uppercase" },
-  refValue: { fontSize: 14, fontFamily: "Helvetica-Bold", color: BLACK, marginTop: 2 },
+  hero: { width: "100%", height: 180, objectFit: "cover" },
+  heroPlaceholder: { width: "100%", height: 32, backgroundColor: GREEN },
+  contentPad: { paddingTop: 36, paddingHorizontal: 56 },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    marginBottom: 24,
+  },
+  logo: { height: 36, width: 108, objectFit: "contain" },
+  greeting: { fontSize: 26, fontFamily: "Helvetica-Bold", color: BLACK },
+  intro: { fontSize: 14, color: BODY_GREY, marginBottom: 40 },
+  columns: { flexDirection: "row", gap: 40 },
+  colLeft: { flex: 1 },
+  colRight: { flex: 1.2 },
+  hotelName: { fontSize: 16, fontFamily: "Helvetica-Bold", color: BLACK, marginBottom: 22 },
+  metaBlock: { marginTop: 12 },
+  metaLine: {
+    fontSize: 11,
+    fontFamily: "Helvetica-Bold",
+    color: BODY_GREY,
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  rightLine: { fontSize: 13, color: BODY_GREY, marginBottom: 4 },
+  rightAmp: { fontSize: 13, color: BODY_GREY, marginBottom: 6 },
+  statusRow: { marginTop: 18, flexDirection: "row", alignItems: "center", gap: 6 },
   statusPill: {
-    marginTop: 6,
     paddingVertical: 3,
     paddingHorizontal: 8,
     borderRadius: 3,
-    fontSize: 8.5,
+    fontSize: 9,
     fontFamily: "Helvetica-Bold",
     letterSpacing: 0.6,
     textTransform: "uppercase",
   },
-  title: {
-    fontSize: 18,
-    fontFamily: "Helvetica-Bold",
-    color: GREEN,
-    marginTop: 18,
-    marginBottom: 4,
+  divider: {
+    borderTopWidth: 1,
+    borderTopColor: HAIRLINE,
+    marginTop: 40,
+    marginBottom: 16,
   },
-  subtitle: { fontSize: 10, color: GREY_TEXT, marginBottom: 18 },
-  sectionLabel: {
-    fontSize: 8.5,
+  notesTitle: {
+    fontSize: 10,
+    fontFamily: "Helvetica-Bold",
     color: GREY_TEXT,
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
     textTransform: "uppercase",
     marginBottom: 6,
-    fontFamily: "Helvetica-Bold",
   },
-  gridRow: { flexDirection: "row", gap: 20, marginBottom: 16 },
-  gridCol: { flex: 1 },
-  card: {
-    borderWidth: 1,
-    borderColor: GREY,
-    borderRadius: 4,
-    padding: 12,
-  },
-  kv: { flexDirection: "row", marginBottom: 4 },
-  kvLabel: { width: 82, color: GREY_TEXT, fontSize: 9.5 },
-  kvValue: { flex: 1, color: BLACK, fontSize: 9.5 },
-  kvValueBold: { flex: 1, color: BLACK, fontSize: 10.5, fontFamily: "Helvetica-Bold" },
-  table: { borderWidth: 1, borderColor: GREY, borderRadius: 4, marginTop: 4 },
-  tableHead: {
-    flexDirection: "row",
-    backgroundColor: "#f9fafb",
-    borderBottomWidth: 1,
-    borderBottomColor: GREY,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-  },
-  tableRow: {
-    flexDirection: "row",
+  notesBody: { fontSize: 11, color: BODY_GREY, lineHeight: 1.45 },
+  footer: {
+    position: "absolute",
+    bottom: 28,
+    left: 56,
+    right: 56,
     borderTopWidth: 1,
-    borderTopColor: GREY,
-    paddingVertical: 7,
-    paddingHorizontal: 8,
+    borderTopColor: HAIRLINE,
+    paddingTop: 10,
   },
-  th: { fontSize: 8.5, color: GREY_TEXT, fontFamily: "Helvetica-Bold", letterSpacing: 0.4, textTransform: "uppercase" },
-  td: { fontSize: 10, color: BLACK },
-  colRoom: { flex: 3 },
-  colQty: { flex: 1, textAlign: "right" },
-  colRate: { flex: 1.4, textAlign: "right" },
-  colTotal: { flex: 1.6, textAlign: "right" },
-  totalsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  totalsLabel: { fontSize: 9.5, color: GREY_TEXT },
-  totalsValue: { fontSize: 10, color: BLACK },
-  grandTotalRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    backgroundColor: "#f9fafb",
-    borderTopWidth: 1,
-    borderTopColor: GREY,
-    borderRadius: 4,
-  },
-  grandTotalLabel: { fontSize: 11, color: BLACK, fontFamily: "Helvetica-Bold" },
-  grandTotalValue: { fontSize: 12, color: GREEN, fontFamily: "Helvetica-Bold" },
-  notesBlock: { marginTop: 16, padding: 12, borderRadius: 4, backgroundColor: "#f9fafb" },
-  notesTitle: { fontSize: 9, color: GREY_TEXT, fontFamily: "Helvetica-Bold", letterSpacing: 0.6, textTransform: "uppercase", marginBottom: 4 },
-  notesBody: { fontSize: 9.5, color: BLACK, lineHeight: 1.4 },
-  footer: { position: "absolute", bottom: 20, left: 44, right: 44, borderTopWidth: 1, borderTopColor: GREY, paddingTop: 8 },
-  footerText: { fontSize: 8.5, color: GREY_TEXT, textAlign: "center" },
-  footerBrand: { fontSize: 9, color: GREEN, fontFamily: "Helvetica-Bold" },
+  footerBrand: { fontSize: 10, fontFamily: "Helvetica-Bold", color: GREEN, textAlign: "center" },
+  footerText: { fontSize: 9, color: GREY_TEXT, textAlign: "center", marginTop: 2 },
 });
 
 async function loadPublicImage(rel: string): Promise<string | null> {
@@ -126,6 +96,29 @@ async function loadPublicImage(rel: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+async function loadRemoteImage(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    const mime = res.headers.get("content-type") ?? "image/jpeg";
+    // Cap at ~1MB to keep the PDF small; if the source is huge just skip.
+    if (buf.byteLength > 1_500_000) return null;
+    return `data:${mime};base64,${buf.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Destination cover image URL — R2/media host. Tries the destination slug
+ * first, then falls back to jpg then null. Caller handles null gracefully.
+ */
+function destinationCoverUrl(destinationSlug: string | null | undefined): string | null {
+  if (!destinationSlug) return null;
+  return `https://media.traversepakistan.com/destinations/${destinationSlug}/cover.jpg`;
 }
 
 export type HotelPdfRoom = {
@@ -142,6 +135,7 @@ export type HotelReservationPdfInput = {
   paymentStatus: string;
   hotelName: string;
   hotelLocation?: string | null;
+  destinationSlug?: string | null;
   checkinDate: string;
   checkoutDate: string;
   nights: number;
@@ -155,15 +149,15 @@ export type HotelReservationPdfInput = {
   totalAmount: number;
   currency: string;
   notes?: string | null;
+  breakfastIncluded?: boolean;
 };
 
-function fmtDate(iso: string): string {
-  if (!iso) return "—";
+function fmtDateShort(iso: string): string {
+  if (!iso) return "";
   try {
     return new Date(iso).toLocaleDateString("en-GB", {
-      weekday: "short",
       day: "2-digit",
-      month: "short",
+      month: "2-digit",
       year: "numeric",
     });
   } catch {
@@ -171,182 +165,138 @@ function fmtDate(iso: string): string {
   }
 }
 
-function fmtMoney(n: number, currency: string): string {
-  const rounded = Math.round(n);
-  const withCommas = rounded.toLocaleString("en-PK");
-  return `${currency} ${withCommas}`;
-}
-
-function statusTone(booking: string, payment: string): { label: string; bg: string; color: string } {
+function statusTone(booking: string, payment: string): { label: string; bg: string; color: string } | null {
   const b = booking.toLowerCase();
   const p = payment.toLowerCase();
   if (b === "confirmed" || p === "paid") return { label: "Confirmed", bg: "#e7f5ef", color: GREEN };
   if (b === "cancelled") return { label: "Cancelled", bg: "#fee2e2", color: "#991b1b" };
   if (b === "refunded" || p === "refunded") return { label: "Refunded", bg: "#fef3c7", color: "#92400e" };
-  if (p === "failed") return { label: "Payment failed", bg: "#fee2e2", color: "#991b1b" };
+  if (p === "failed") return { label: "Payment pending", bg: "#fef3c7", color: "#92400e" };
   return { label: "Pending", bg: "#fef3c7", color: "#92400e" };
 }
 
+/** Build "1 x Deluxe Room / 1 x Deluxe Family Room" style entries. */
+function roomLabelLines(rooms: HotelPdfRoom[]): string[] {
+  if (rooms.length === 0) return ["Room to be assigned at check-in"];
+  return rooms.map((r) => `${r.qty} x ${r.roomName}`);
+}
+
+/** Occupancy line: "9 Adults, 1 Child" */
+function occupancyLine(adults: number, children: number): string {
+  const parts: string[] = [];
+  parts.push(`${adults} Adult${adults === 1 ? "" : "s"}`);
+  if (children > 0) parts.push(`${children} Child${children === 1 ? "" : "ren"}`);
+  return parts.join(", ");
+}
+
+/**
+ * Try to detect a leading title from the contact name (Mr, Ms, Mrs, Miss, Dr,
+ * Sir, Madam). If found, keep the title + first name for the greeting; else
+ * fall back to the first name only.
+ */
+function greetingFromName(fullName: string): string {
+  const trimmed = (fullName ?? "").trim();
+  if (!trimmed) return "Guest";
+  const parts = trimmed.split(/\s+/);
+  const titles = new Set(["mr", "ms", "mrs", "miss", "dr", "sir", "madam", "mr.", "ms.", "mrs.", "dr."]);
+  const first = parts[0]!;
+  const firstBare = first.replace(/\./g, "").toLowerCase();
+  if (titles.has(firstBare) && parts.length >= 2) {
+    const title = firstBare.charAt(0).toUpperCase() + firstBare.slice(1);
+    const given = parts[1]!.charAt(0).toUpperCase() + parts[1]!.slice(1).toLowerCase();
+    return `${title} ${given}`;
+  }
+  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+}
+
 export async function generateHotelReservationPdf(input: HotelReservationPdfInput): Promise<Buffer> {
-  const logoData = await loadPublicImage("logo-day.png");
+  const heroUrl = destinationCoverUrl(input.destinationSlug);
+  const [logoData, heroData] = await Promise.all([
+    loadPublicImage("logo-day.png"),
+    heroUrl ? loadRemoteImage(heroUrl) : Promise.resolve<string | null>(null),
+  ]);
   const tone = statusTone(input.bookingStatus, input.paymentStatus);
 
-  const roomsSubtotal = input.rooms.reduce(
-    (acc, r) => acc + r.pricePerNight * r.qty * input.nights,
-    0,
-  );
-  const taxesFees = Math.max(0, input.totalAmount - roomsSubtotal);
+  const roomLines = roomLabelLines(input.rooms);
+  const dateRange = `${fmtDateShort(input.checkinDate)} - ${fmtDateShort(input.checkoutDate)}`;
+  const occupancy = occupancyLine(input.adults, input.children);
+  const breakfast = input.breakfastIncluded !== false;
+
+  const greeting = greetingFromName(input.contactName);
+  const bookingNameUpper = (input.contactName ?? "Guest").toUpperCase();
 
   const doc = (
     <Document>
       <Page size="A4" style={styles.page}>
-        <View style={styles.topRule}>
-          <View style={styles.header}>
-            {logoData ? <Image src={logoData} style={styles.logo} /> : <View style={styles.logo} />}
-            <View style={styles.refBlock}>
-              <Text style={styles.refLabel}>Booking reference</Text>
-              <Text style={styles.refValue}>{input.bookingRef}</Text>
-              <Text style={[styles.statusPill, { backgroundColor: tone.bg, color: tone.color }]}>
-                {tone.label}
-              </Text>
-            </View>
-          </View>
+        {heroData ? (
+          <Image src={heroData} style={styles.hero} />
+        ) : (
+          <View style={styles.heroPlaceholder} />
+        )}
+
+        <View style={styles.contentPad}>
+        <View style={styles.headerRow}>
+          {logoData ? <Image src={logoData} style={styles.logo} /> : null}
+          <Text style={styles.greeting}>{greeting}</Text>
         </View>
 
-        <Text style={styles.title}>Hotel Reservation Voucher</Text>
-        <Text style={styles.subtitle}>
-          Present this voucher at check-in. For any changes or assistance, contact us anytime.
+        <Text style={styles.intro}>
+          We are pleased to confirm following reservations with Traverse Pakistan.
         </Text>
 
-        <View style={styles.gridRow}>
-          <View style={styles.gridCol}>
-            <Text style={styles.sectionLabel}>Property</Text>
-            <View style={styles.card}>
-              <View style={styles.kv}>
-                <Text style={styles.kvLabel}>Hotel</Text>
-                <Text style={styles.kvValueBold}>{input.hotelName}</Text>
-              </View>
-              {input.hotelLocation ? (
-                <View style={styles.kv}>
-                  <Text style={styles.kvLabel}>Location</Text>
-                  <Text style={styles.kvValue}>{input.hotelLocation}</Text>
-                </View>
-              ) : null}
-              <View style={styles.kv}>
-                <Text style={styles.kvLabel}>Check-in</Text>
-                <Text style={styles.kvValue}>{fmtDate(input.checkinDate)}</Text>
-              </View>
-              <View style={styles.kv}>
-                <Text style={styles.kvLabel}>Check-out</Text>
-                <Text style={styles.kvValue}>{fmtDate(input.checkoutDate)}</Text>
-              </View>
-              <View style={styles.kv}>
-                <Text style={styles.kvLabel}>Nights</Text>
-                <Text style={styles.kvValue}>{input.nights}</Text>
-              </View>
-              {input.arrivalTime ? (
-                <View style={styles.kv}>
-                  <Text style={styles.kvLabel}>Arrival</Text>
-                  <Text style={styles.kvValue}>{input.arrivalTime}</Text>
-                </View>
-              ) : null}
+        <View style={styles.columns}>
+          <View style={styles.colLeft}>
+            <Text style={styles.hotelName}>
+              {input.hotelName}
+              {input.hotelLocation ? `, ${input.hotelLocation}` : ""}
+            </Text>
+
+            <View style={styles.metaBlock}>
+              <Text style={styles.metaLine}>Booking Name: {bookingNameUpper}</Text>
+              <Text style={styles.metaLine}>Booking Reference # {input.bookingRef}</Text>
             </View>
+
+            {tone && (
+              <View style={styles.statusRow}>
+                <Text style={[styles.statusPill, { backgroundColor: tone.bg, color: tone.color }]}>
+                  {tone.label}
+                </Text>
+              </View>
+            )}
           </View>
 
-          <View style={styles.gridCol}>
-            <Text style={styles.sectionLabel}>Guest</Text>
-            <View style={styles.card}>
-              <View style={styles.kv}>
-                <Text style={styles.kvLabel}>Name</Text>
-                <Text style={styles.kvValueBold}>{input.contactName}</Text>
-              </View>
-              <View style={styles.kv}>
-                <Text style={styles.kvLabel}>Email</Text>
-                <Text style={styles.kvValue}>{input.contactEmail}</Text>
-              </View>
-              <View style={styles.kv}>
-                <Text style={styles.kvLabel}>Phone</Text>
-                <Text style={styles.kvValue}>{input.contactPhone}</Text>
-              </View>
-              <View style={styles.kv}>
-                <Text style={styles.kvLabel}>Adults</Text>
-                <Text style={styles.kvValue}>{input.adults}</Text>
-              </View>
-              <View style={styles.kv}>
-                <Text style={styles.kvLabel}>Children</Text>
-                <Text style={styles.kvValue}>{input.children}</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        <Text style={styles.sectionLabel}>Rooms</Text>
-        <View style={styles.table}>
-          <View style={styles.tableHead}>
-            <Text style={[styles.th, styles.colRoom]}>Room</Text>
-            <Text style={[styles.th, styles.colQty]}>Qty</Text>
-            <Text style={[styles.th, styles.colRate]}>Rate / night</Text>
-            <Text style={[styles.th, styles.colTotal]}>Line total ({input.nights}n)</Text>
-          </View>
-          {input.rooms.length === 0 ? (
-            <View style={styles.tableRow}>
-              <Text style={[styles.td, { flex: 1, color: GREY_TEXT }]}>
-                Room details will be provided at check-in.
+          <View style={styles.colRight}>
+            <Text style={styles.rightAmp}>{dateRange} &</Text>
+            {roomLines.map((line, i) => (
+              <Text key={i} style={styles.rightLine}>
+                {line}
               </Text>
-            </View>
-          ) : (
-            input.rooms.map((r, i) => (
-              <View key={i} style={styles.tableRow}>
-                <View style={styles.colRoom}>
-                  <Text style={styles.td}>{r.roomName}</Text>
-                  <Text style={[styles.td, { fontSize: 8.5, color: GREY_TEXT }]}>
-                    {r.adults} adult{r.adults === 1 ? "" : "s"}
-                    {r.children > 0 ? ` · ${r.children} child` : ""}
-                  </Text>
-                </View>
-                <Text style={[styles.td, styles.colQty]}>{r.qty}</Text>
-                <Text style={[styles.td, styles.colRate]}>
-                  {fmtMoney(r.pricePerNight, input.currency)}
-                </Text>
-                <Text style={[styles.td, styles.colTotal]}>
-                  {fmtMoney(r.pricePerNight * r.qty * input.nights, input.currency)}
-                </Text>
-              </View>
-            ))
-          )}
-        </View>
-
-        {roomsSubtotal > 0 && taxesFees > 0.5 && (
-          <View style={styles.totalsRow}>
-            <Text style={styles.totalsLabel}>Rooms subtotal</Text>
-            <Text style={styles.totalsValue}>{fmtMoney(roomsSubtotal, input.currency)}</Text>
+            ))}
+            <Text style={[styles.rightLine, { marginTop: 6 }]}>Occupancy: {occupancy}</Text>
+            {breakfast && (
+              <Text style={styles.rightLine}>Breakfast Included for: {occupancy}</Text>
+            )}
+            {input.arrivalTime ? (
+              <Text style={[styles.rightLine, { marginTop: 6, color: GREY_TEXT }]}>
+                Expected arrival: {input.arrivalTime}
+              </Text>
+            ) : null}
           </View>
-        )}
-        {taxesFees > 0.5 && (
-          <View style={styles.totalsRow}>
-            <Text style={styles.totalsLabel}>Taxes and fees</Text>
-            <Text style={styles.totalsValue}>{fmtMoney(taxesFees, input.currency)}</Text>
-          </View>
-        )}
-        <View style={styles.grandTotalRow}>
-          <Text style={styles.grandTotalLabel}>Total</Text>
-          <Text style={styles.grandTotalValue}>{fmtMoney(input.totalAmount, input.currency)}</Text>
         </View>
 
         {input.notes ? (
-          <View style={styles.notesBlock}>
+          <>
+            <View style={styles.divider} />
             <Text style={styles.notesTitle}>Notes</Text>
             <Text style={styles.notesBody}>{input.notes}</Text>
-          </View>
+          </>
         ) : null}
+        </View>
 
         <View style={styles.footer}>
           <Text style={styles.footerBrand}>Traverse Pakistan</Text>
           <Text style={styles.footerText}>
-            Pakistan{"'"}s highest-rated tourism company · TripAdvisor Travellers{"'"} Choice 2025
-          </Text>
-          <Text style={styles.footerText}>
-            info@traversepakistan.com · +92 321 6650670 · traversepakistan.com
+            info@traversepakistan.com{"    "}·{"    "}+92 321 6650670{"    "}·{"    "}traversepakistan.com
           </Text>
         </View>
       </Page>

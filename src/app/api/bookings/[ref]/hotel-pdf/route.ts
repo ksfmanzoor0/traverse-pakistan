@@ -75,6 +75,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ ref: st
     hotelLocation: hotel?.destinationSlug
       ? hotel.destinationSlug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
       : null,
+    destinationSlug: hotel?.destinationSlug ?? null,
     checkinDate: row.checkin_date,
     checkoutDate: row.checkout_date,
     nights: row.nights,
