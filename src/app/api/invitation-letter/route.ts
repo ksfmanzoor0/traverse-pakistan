@@ -3,6 +3,8 @@ import { z } from "zod";
 import { after } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { quoteNotifyLimiter, checkRateLimit, clientIp } from "@/lib/ratelimit";
+import { isAllowedOrigin } from "@/lib/security/originCheck";
+import { verifyTurnstileToken } from "@/lib/security/turnstile";
 import { getInvitationLetterPricePkr, generateInvitationRef } from "@/lib/invitation/config";
 import { sendInvitationLetterReceived } from "@/lib/email/sendInvitationLetterReceived";
 import { sendBookingReceivedViaWhatsApp } from "@/lib/whatsapp/cloud";
@@ -33,6 +35,9 @@ const Schema = z.object({
   departure_date: z.string().max(20).default(""),
   destinations: z.array(z.string().max(80)).max(20).default([]),
   travelers: z.array(TravelerSchema).max(20).default([]),
+  // Honeypot: real browsers never fill this. If present + non-empty, it's a bot.
+  website: z.string().max(200).optional(),
+  turnstile_token: z.string().max(4096).optional(),
 }).refine(
   (v) => !v.arrival_date || !v.departure_date || v.departure_date >= v.arrival_date,
   { message: "Departure date must be on or after arrival date", path: ["departure_date"] },
@@ -40,12 +45,28 @@ const Schema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const rlHit = await checkRateLimit(quoteNotifyLimiter, clientIp(req));
+    if (!isAllowedOrigin(req)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const ip = clientIp(req);
+    const rlHit = await checkRateLimit(quoteNotifyLimiter, ip);
     if (rlHit) return rlHit;
 
     const parsed = Schema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid request", issues: parsed.error.issues }, { status: 400 });
+    }
+
+    // Honeypot — return a success shape so the bot's happy-path logs look
+    // identical to a real submit, but never touch the DB / email / WhatsApp.
+    if (parsed.data.website && parsed.data.website.trim() !== "") {
+      return NextResponse.json({ ok: true, ref: "HONEYPOT", amount_pkr: 0 });
+    }
+
+    const turnstileOk = await verifyTurnstileToken(parsed.data.turnstile_token, ip);
+    if (!turnstileOk) {
+      return NextResponse.json({ error: "Verification failed. Please refresh and try again." }, { status: 400 });
     }
 
     const supabase = getSupabaseAdmin();

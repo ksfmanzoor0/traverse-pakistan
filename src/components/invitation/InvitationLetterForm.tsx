@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { DateField } from "@/components/ui/DateField";
+import { TurnstileWidget } from "@/components/security/TurnstileWidget";
 import { COUNTRIES, NATIONALITIES } from "@/lib/invitation/countries";
 import type { Traveler } from "@/lib/invitation/types";
 
@@ -40,6 +41,9 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
   const [travelers, setTravelers] = useState<TravelerDraft[]>([{ ...emptyTraveler }]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [website, setWebsite] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const handleTurnstileToken = useCallback((t: string) => setTurnstileToken(t), []);
 
   function updateTraveler(i: number, patch: Partial<TravelerDraft>) {
     setTravelers((prev) => prev.map((t, idx) => (idx === i ? { ...t, ...patch } : t)));
@@ -79,6 +83,8 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
         departure_date: departureDate,
         destinations: destinations.split(",").map((s) => s.trim()).filter(Boolean),
         travelers: mappedTravelers,
+        website,
+        turnstile_token: turnstileToken,
       };
       const res = await fetch("/api/invitation-letter", {
         method: "POST",
@@ -222,6 +228,23 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
         </div>
         <p className="text-[13px] text-[var(--text-tertiary)]">Non-refundable. Letter delivered to your email within 1 business day of payment.</p>
       </div>
+
+      {/* Honeypot — hidden from real users, offered to bots that fill every field. */}
+      <div aria-hidden="true" className="absolute left-[-9999px] w-px h-px overflow-hidden" style={{ position: "absolute" }}>
+        <label>
+          Website
+          <input
+            type="text"
+            name="website"
+            tabIndex={-1}
+            autoComplete="off"
+            value={website}
+            onChange={(e) => setWebsite(e.target.value)}
+          />
+        </label>
+      </div>
+
+      <TurnstileWidget onToken={handleTurnstileToken} />
 
       {error && (
         <div className="p-3 rounded-[var(--radius-sm)] bg-[var(--error)]/10 text-[var(--error)] text-[14px]">{error}</div>
