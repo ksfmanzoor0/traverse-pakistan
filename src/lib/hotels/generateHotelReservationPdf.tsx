@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
   },
   rightLine: { fontSize: 13, color: BODY_GREY, marginBottom: 4 },
   rightAmp: { fontSize: 13, color: BODY_GREY, marginBottom: 6 },
-  statusRow: { marginTop: 18, flexDirection: "row", alignItems: "center", gap: 6 },
+  statusRow: { marginTop: 18, flexDirection: "row", alignItems: "flex-start", gap: 6, flexWrap: "wrap" },
   statusPill: {
     paddingVertical: 3,
     paddingHorizontal: 8,
@@ -173,14 +173,29 @@ function fmtDateShort(iso: string): string {
   }
 }
 
-function statusTone(booking: string, payment: string): { label: string; bg: string; color: string } | null {
-  const b = booking.toLowerCase();
-  const p = payment.toLowerCase();
-  if (b === "confirmed" || p === "paid") return { label: "Confirmed", bg: "#e7f5ef", color: GREEN };
-  if (b === "cancelled") return { label: "Cancelled", bg: "#fee2e2", color: "#991b1b" };
-  if (b === "refunded" || p === "refunded") return { label: "Refunded", bg: "#fef3c7", color: "#92400e" };
-  if (p === "failed") return { label: "Payment pending", bg: "#fef3c7", color: "#92400e" };
-  return { label: "Pending", bg: "#fef3c7", color: "#92400e" };
+type Pill = { label: string; bg: string; color: string };
+
+const PILL_SUCCESS = { bg: "#e7f5ef", color: GREEN };
+const PILL_WARN = { bg: "#fef3c7", color: "#92400e" };
+const PILL_ERROR = { bg: "#fee2e2", color: "#991b1b" };
+const PILL_NEUTRAL = { bg: "#f3f4f6", color: "#4b5563" };
+
+function bookingStatusPill(status: string): Pill {
+  const s = status.toLowerCase();
+  if (s === "confirmed") return { label: "Booking: Confirmed", ...PILL_SUCCESS };
+  if (s === "cancelled") return { label: "Booking: Cancelled", ...PILL_ERROR };
+  if (s === "refunded") return { label: "Booking: Refunded", ...PILL_WARN };
+  return { label: "Booking: Pending", ...PILL_WARN };
+}
+
+function paymentStatusPill(status: string): Pill {
+  const s = status.toLowerCase();
+  if (s === "paid") return { label: "Payment: Paid", ...PILL_SUCCESS };
+  if (s === "failed") return { label: "Payment: Failed", ...PILL_ERROR };
+  if (s === "refunded") return { label: "Payment: Refunded", ...PILL_WARN };
+  if (s === "deposit_paid") return { label: "Payment: Deposit paid", ...PILL_SUCCESS };
+  if (s === "pending" || !s) return { label: "Payment: Pending", ...PILL_WARN };
+  return { label: `Payment: ${status}`, ...PILL_NEUTRAL };
 }
 
 /** Build "1 x Deluxe Room / 1 x Deluxe Family Room" style entries. */
@@ -227,7 +242,8 @@ export async function generateHotelReservationPdf(input: HotelReservationPdfInpu
     loadPublicImage("logo-white.png"),
     heroUrl ? loadRemoteImage(heroUrl) : Promise.resolve<string | null>(null),
   ]);
-  const tone = statusTone(input.bookingStatus, input.paymentStatus);
+  const bookingPill = bookingStatusPill(input.bookingStatus);
+  const paymentPill = paymentStatusPill(input.paymentStatus);
 
   const roomLines = roomLabelLines(input.rooms);
   const dateRange = `${fmtDateShort(input.checkinDate)} - ${fmtDateShort(input.checkoutDate)}`;
@@ -271,13 +287,14 @@ export async function generateHotelReservationPdf(input: HotelReservationPdfInpu
               ) : null}
             </View>
 
-            {tone && (
-              <View style={styles.statusRow}>
-                <Text style={[styles.statusPill, { backgroundColor: tone.bg, color: tone.color }]}>
-                  {tone.label}
-                </Text>
-              </View>
-            )}
+            <View style={styles.statusRow}>
+              <Text style={[styles.statusPill, { backgroundColor: bookingPill.bg, color: bookingPill.color }]}>
+                {bookingPill.label}
+              </Text>
+              <Text style={[styles.statusPill, { backgroundColor: paymentPill.bg, color: paymentPill.color }]}>
+                {paymentPill.label}
+              </Text>
+            </View>
           </View>
 
           <View style={styles.colRight}>
