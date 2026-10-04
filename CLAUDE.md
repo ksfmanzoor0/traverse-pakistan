@@ -188,8 +188,8 @@ Required for full functionality. Most are also set in [.env.example](.env.exampl
 ### Neelam Valley packages (pkg-52–56) — key conventions
 - `destinationSlug: "neelam-valley"`, `regionSlug: "azad-kashmir"`
 - KHI pricing = null for all (no direct Karachi departure)
-- ISB and LHR priced separately; lahore: 0 placeholder for ISB-only packages too — confirm per package
-- All pricing currently 0 (placeholder) — fill before launch
+- ISB and LHR priced separately; KHI also priced (adds return flight to Islamabad)
+- Pricing populated and published (verified 2026-09-26); each row also carries a `pricing_override` layer ~+8-20k above base
 - Images use MEDIA CDN: `${MEDIA}/destinations/{arang-kel,keran,ratti-galli,sharda,neelam-valley}/cover.jpg`
 - Taobut hotels: `shabistan-inn-taobut` (hotel-28), `corner-view-guest-house-taobut` (hotel-29)
 
@@ -258,7 +258,6 @@ Required for full functionality. Most are also set in [.env.example](.env.exampl
 - **Kashmir media images** — `media.traversepakistan.com/destinations/arang-kel/`, `/keran/`, `/ratti-galli/`, `/sharda/` CDN paths used in pkg-52–56. Upload images before launch.
 - **Skardu packages itineraries (pkg-31–40)** — package-itineraries.ts entries not yet written for these. Gwadar (pkg-41–43) itineraries are complete.
 - **Pricing on pkg-41–43** — single supplements are estimates (~15% of deluxe KHI). Confirm if adjustment needed.
-- **Pricing on pkg-52–56** — all tiers currently 0 placeholder. Fill before launch.
 - **Hotel IDs 14–23 gap** — hotel-24 through hotel-29 are Kashmir hotels; IDs 14–23 may be assigned to Sindh/other hotels added in a prior session not reflected here.
 - **Himmel Skardu off-season rates** — Sep 15 onwards rates not yet received; add a third season when available.
 - **Himmel Skardu cover image** — `media.traversepakistan.com/hotels/himmel-skardu/cover.jpg` must be uploaded before launch.
