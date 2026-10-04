@@ -1,16 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { getHotelBySlug } from "@/services/hotel.service";
+import { getHotelBySlug, getAllHotels } from "@/services/hotel.service";
 import { formatPrice } from "@/lib/utils";
 import { GenericStatusSelect } from "@/components/admin/GenericStatusSelect";
 import { DeleteBookingButton } from "@/components/admin/DeleteBookingButton";
 import { SendHotelConfirmationButton } from "@/components/admin/SendHotelConfirmationButton";
 import { HotelReservationCodeEditor } from "@/components/admin/HotelReservationCodeEditor";
+import { HotelBookingEditor } from "@/components/admin/HotelBookingEditor";
 import {
   updateHotelBookingStatus,
   updateHotelPaymentStatus,
   updateHotelReservationCode,
+  updateHotelBookingDetails,
   resendHotelBookingConfirmation,
   deleteHotelBooking,
 } from "../actions";
@@ -163,11 +165,12 @@ export default async function AdminHotelBookingDetail({
   const row = await fetchBooking(ref);
   if (!row) notFound();
 
-  const [rooms, transactions, user, hotel] = await Promise.all([
+  const [rooms, transactions, user, hotel, allHotels] = await Promise.all([
     fetchRooms(row.id),
     fetchTransactions(row.booking_ref),
     fetchAuthUser(row.user_id),
     getHotelBySlug(row.hotel_slug),
+    getAllHotels(),
   ]);
 
   const hotelName = hotel?.name ?? row.hotel_slug;
@@ -241,6 +244,33 @@ export default async function AdminHotelBookingDetail({
           id={row.id}
           initial={row.reservation_code}
           saveAction={updateHotelReservationCode}
+        />
+      </section>
+
+      <section className="p-4 rounded-[var(--radius-md)] border border-[var(--border-default)]">
+        <h2 className="text-[14px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
+          Edit reservation
+        </h2>
+        <p className="text-[12px] text-[var(--text-tertiary)] mb-4">
+          Change hotel, dates, guest details or amount. Nights auto-recompute from check-in/check-out.
+        </p>
+        <HotelBookingEditor
+          id={row.id}
+          initial={{
+            hotel_slug: row.hotel_slug,
+            checkin_date: row.checkin_date,
+            checkout_date: row.checkout_date,
+            adults: row.adults,
+            children: row.children,
+            arrival_time: row.arrival_time,
+            notes: row.notes,
+            contact_name: row.contact_name,
+            contact_email: row.contact_email,
+            contact_phone: row.contact_phone,
+            total_amount: Number(row.total_amount),
+          }}
+          hotels={allHotels.map((h) => ({ slug: h.slug, name: h.name }))}
+          saveAction={updateHotelBookingDetails}
         />
       </section>
 
