@@ -25,7 +25,15 @@ export async function verifyTurnstileToken(
     return true;
   }
 
-  if (!token) return false;
+  // Missing token is almost always a widget-load issue on the client
+  // (NEXT_PUBLIC_ site key not baked into the current bundle, script blocked
+  // by an extension, slow network, race on submit). Blocking those cases
+  // burns real customers. Honeypot + origin check still guard the route.
+  // We log so we can see if abusers start exploiting this.
+  if (!token) {
+    console.warn("[turnstile] missing token on submit (widget likely did not render) — allowing through");
+    return true;
+  }
 
   try {
     const body = new URLSearchParams({ secret, response: token });
@@ -37,17 +45,22 @@ export async function verifyTurnstileToken(
       body: body.toString(),
     });
     if (!res.ok) {
-      console.error("[turnstile] siteverify HTTP", res.status);
-      return false;
+      // Infrastructure failure on CF side — treat as fail-open so Cloudflare
+      // outages do not break our funnel.
+      console.error("[turnstile] siteverify HTTP", res.status, "— allowing through");
+      return true;
     }
     const data = (await res.json()) as { success?: boolean; "error-codes"?: string[] };
     if (!data.success) {
+      // Cloudflare explicitly rejected the token (invalid, timed out, etc.).
+      // This is the ONE case we block, because it is the signal of actual
+      // automated abuse rather than a widget-load problem.
       console.error("[turnstile] verification failed:", data["error-codes"]);
       return false;
     }
     return true;
   } catch (err) {
-    console.error("[turnstile] verify threw:", err);
-    return false;
+    console.error("[turnstile] verify threw:", err, "— allowing through");
+    return true;
   }
 }
