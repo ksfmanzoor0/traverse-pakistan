@@ -126,6 +126,27 @@ export async function createInvitationRequestAdmin(formData: FormData): Promise<
   redirect(`/admin/invitation-letters/${ref}`);
 }
 
+export async function setInvitationApprovedForPayment(
+  ref: string,
+  approved: boolean,
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = getSupabaseAdmin();
+  const update: Record<string, unknown> = {
+    admin_approved_for_payment: approved,
+    admin_approved_at: approved ? new Date().toISOString() : null,
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = await supabase
+    .from("invitation_requests" as never)
+    .update(update as never)
+    .eq("ref", ref);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/admin/invitation-letters/${ref}`);
+  revalidatePath("/admin/invitation-letters");
+  revalidatePath(`/invitation-letter/${ref}`);
+  return { ok: true };
+}
+
 export async function setInvitationAdminPaymentStatus(
   ref: string,
   status: string | null,
