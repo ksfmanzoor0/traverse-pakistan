@@ -43,6 +43,7 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [website, setWebsite] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [affidavitAccepted, setAffidavitAccepted] = useState(false);
   const handleTurnstileToken = useCallback((t: string) => setTurnstileToken(t), []);
 
   function updateTraveler(i: number, patch: Partial<TravelerDraft>) {
@@ -85,6 +86,7 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
         travelers: mappedTravelers,
         website,
         turnstile_token: turnstileToken,
+        tourism_affidavit: affidavitAccepted,
       };
       const res = await fetch("/api/invitation-letter", {
         method: "POST",
@@ -226,8 +228,27 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
             PKR {pricePkr.toLocaleString()} <span className="text-[13px] font-medium text-[var(--text-tertiary)]">(≈ USD {priceUsd})</span>
           </span>
         </div>
-        <p className="text-[13px] text-[var(--text-tertiary)]">Non-refundable. Letter delivered to your email within 1 business day of payment.</p>
+        <p className="text-[13px] text-[var(--text-tertiary)]">
+          Payable only after we review and approve your request. Once approved, the letter is
+          delivered to your email within 1 business day of payment. All payments are non-refundable.
+        </p>
       </div>
+
+      <label className="flex items-start gap-3 p-4 rounded-[var(--radius-md)] border border-[var(--border-default)] cursor-pointer hover:border-[var(--primary)]">
+        <input
+          type="checkbox"
+          required
+          checked={affidavitAccepted}
+          onChange={(e) => setAffidavitAccepted(e.target.checked)}
+          className="mt-1 h-4 w-4 accent-[var(--primary)]"
+        />
+        <span className="text-[13px] text-[var(--text-secondary)] leading-relaxed">
+          I confirm that I am applying for a tourism visit only. If this invitation letter is used
+          for any activity other than tourism during my stay in Pakistan, I accept full legal
+          responsibility.
+          <span className="text-[var(--error)] ml-0.5">*</span>
+        </span>
+      </label>
 
       {/* Honeypot — hidden from real users, offered to bots that fill every field. */}
       <div aria-hidden="true" className="absolute left-[-9999px] w-px h-px overflow-hidden" style={{ position: "absolute" }}>
@@ -250,7 +271,13 @@ export function InvitationLetterForm({ priceUsd, pricePkr }: Props) {
         <div className="p-3 rounded-[var(--radius-sm)] bg-[var(--error)]/10 text-[var(--error)] text-[14px]">{error}</div>
       )}
 
-      <Button type="submit" variant="primary" size="lg" disabled={submitting} className="w-full sm:w-auto">
+      <Button
+        type="submit"
+        variant="primary"
+        size="lg"
+        disabled={submitting || !affidavitAccepted}
+        className="w-full sm:w-auto"
+      >
         {submitting ? "Creating request…" : "Submit request"}
       </Button>
     </form>

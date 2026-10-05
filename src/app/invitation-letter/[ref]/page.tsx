@@ -23,13 +23,15 @@ type Row = {
   paid_at: string | null;
   issued_at: string | null;
   created_at: string;
+  admin_approved_for_payment: boolean | null;
+  admin_approved_at: string | null;
 };
 
 async function fetchRow(ref: string): Promise<Row | null> {
   const supabase = getSupabaseAdmin();
   const { data } = await supabase
     .from("invitation_requests" as never)
-    .select("ref, status, contact_name, contact_email, contact_phone, embassy_country, embassy_city, arrival_date, departure_date, destinations, amount_pkr, amount_paid, paid_at, issued_at, created_at")
+    .select("ref, status, contact_name, contact_email, contact_phone, embassy_country, embassy_city, arrival_date, departure_date, destinations, amount_pkr, amount_paid, paid_at, issued_at, created_at, admin_approved_for_payment, admin_approved_at")
     .eq("ref", ref)
     .maybeSingle();
   return (data as unknown as Row | null) ?? null;
@@ -131,7 +133,50 @@ export default async function InvitationLetterStatusPage({ params }: { params: P
           </div>
 
           {showPayButton && (
-            <div className="mt-6 flex flex-col items-center gap-2">
+            <div className="mt-6 flex flex-col items-center gap-3">
+              {row.admin_approved_for_payment ? (
+                <div
+                  className="w-full p-3 rounded-[var(--radius-md)] text-center"
+                  style={{
+                    background: "color-mix(in srgb, var(--success) 12%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--success) 30%, transparent)",
+                  }}
+                >
+                  <span
+                    className="inline-flex items-center px-3 py-1 rounded-full text-[12px] font-semibold uppercase tracking-wider"
+                    style={{
+                      background: "color-mix(in srgb, var(--success) 20%, transparent)",
+                      color: "var(--success)",
+                    }}
+                  >
+                    Approved
+                  </span>
+                </div>
+              ) : (
+                <div
+                  className="w-full p-4 rounded-[var(--radius-md)] text-left"
+                  style={{
+                    background: "color-mix(in srgb, var(--warning) 10%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--warning) 28%, transparent)",
+                  }}
+                >
+                  <span
+                    className="inline-flex items-center px-3 py-1 rounded-full text-[12px] font-semibold uppercase tracking-wider"
+                    style={{
+                      background: "color-mix(in srgb, var(--warning) 18%, transparent)",
+                      color: "var(--warning)",
+                    }}
+                  >
+                    Pending review
+                  </span>
+                  <p className="mt-3 text-[13px] text-[var(--text-secondary)] leading-relaxed">
+                    Please allow us to review your request before you proceed with payment. In rare
+                    cases a request may still be declined after payment is made, and in such cases
+                    the fee cannot be refunded. Once approved, the letter is delivered to your
+                    email within 1 business day of payment. All payments are non-refundable.
+                  </p>
+                </div>
+              )}
               <InvitationLetterPayButton bookingRef={row.ref} amountPkr={row.amount_pkr} />
               <p className="text-[13px] text-[var(--text-tertiary)]">Secure payment via Alfa Hosted Checkout.</p>
             </div>
