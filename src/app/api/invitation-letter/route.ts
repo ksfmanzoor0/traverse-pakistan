@@ -38,6 +38,9 @@ const Schema = z.object({
   // Honeypot: real browsers never fill this. If present + non-empty, it's a bot.
   website: z.string().max(200).optional(),
   turnstile_token: z.string().max(4096).optional(),
+  // Tourism-only affidavit: applicant must tick a checkbox confirming the
+  // letter is for tourism and accepting responsibility if used otherwise.
+  tourism_affidavit: z.boolean(),
 }).refine(
   (v) => !v.arrival_date || !v.departure_date || v.departure_date >= v.arrival_date,
   { message: "Departure date must be on or after arrival date", path: ["departure_date"] },
@@ -69,6 +72,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Verification failed. Please refresh and try again." }, { status: 400 });
     }
 
+    if (!parsed.data.tourism_affidavit) {
+      return NextResponse.json(
+        { error: "You must accept the tourism affidavit before submitting." },
+        { status: 400 },
+      );
+    }
+
     const supabase = getSupabaseAdmin();
     const ref = generateInvitationRef();
     const input = parsed.data;
@@ -89,6 +99,7 @@ export async function POST(req: NextRequest) {
         destinations: input.destinations,
         travelers: input.travelers,
         amount_pkr: pricePkr,
+        tourism_affidavit_accepted: true,
       } as never);
 
     if (error) {

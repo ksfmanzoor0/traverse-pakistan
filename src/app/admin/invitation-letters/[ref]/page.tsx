@@ -9,12 +9,14 @@ import { InvitationLetterEditor } from "@/components/admin/InvitationLetterEdito
 import { DeleteInvitationButton } from "@/components/admin/DeleteInvitationButton";
 import { InvitationShareLink } from "@/components/admin/InvitationShareLink";
 import { InvitationAdminPaymentStatus } from "@/components/admin/InvitationAdminPaymentStatus";
+import { InvitationApprovalToggle } from "@/components/admin/InvitationApprovalToggle";
 import { InvitationLetterSignaturePicker } from "@/components/admin/InvitationLetterSignaturePicker";
 import {
   saveInvitationLetterData,
   sendInvitationLetter,
   deleteInvitationRequest,
   setInvitationAdminPaymentStatus,
+  setInvitationApprovedForPayment,
   setLetterSignatureSlot,
 } from "../actions";
 
@@ -79,6 +81,17 @@ export default async function AdminInvitationLetterDetail({ params }: { params: 
       </div>
 
       <InvitationShareLink href={`${siteUrl()}/invitation-letter/${row.ref}`} />
+
+      <InvitationApprovalToggle
+        bookingRef={row.ref}
+        initialApproved={Boolean(
+          (row as unknown as { admin_approved_for_payment?: boolean }).admin_approved_for_payment,
+        )}
+        initialApprovedAt={
+          (row as unknown as { admin_approved_at?: string | null }).admin_approved_at ?? null
+        }
+        saveAction={setInvitationApprovedForPayment}
+      />
 
       <InvitationAdminPaymentStatus
         bookingRef={row.ref}
