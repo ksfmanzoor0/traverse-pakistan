@@ -8,7 +8,7 @@ export const siteConfig = {
   email: "info@traversepakistan.com",
   whatsapp: "923216650670",
   address:
-    "Office #6, Plot No. 1, near Grand Islamabad Hotel, MPCHS E-11/1, Islamabad",
+    "Shop 01, Tower 10, MPCHS, E-11/1, Islamabad",
   social: {
     instagram: "https://instagram.com/traversepakistan",
     facebook: "https://facebook.com/traversepakistan",

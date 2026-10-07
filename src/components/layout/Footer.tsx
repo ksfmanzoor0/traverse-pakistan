@@ -128,7 +128,7 @@ export function Footer() {
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
                   <circle cx="12" cy="10" r="3" />
                 </svg>
-                Office #6, Plot No. 1, MPCHS E-11/1, Islamabad
+                Shop 01, Tower 10, MPCHS, E-11/1, Islamabad
               </li>
               <li>
                 <a href="tel:+923216650670" className="flex items-center gap-2 hover:text-[var(--on-dark)] transition-colors">
