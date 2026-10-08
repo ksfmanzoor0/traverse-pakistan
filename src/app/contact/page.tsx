@@ -40,7 +40,7 @@ export default function ContactPage() {
                   </svg>
                   <div>
                     <p className="font-semibold text-[var(--text-primary)]">Office Address</p>
-                    <p className="text-[var(--text-secondary)]">Office #6, Plot No. 1, near Grand Islamabad Hotel, MPCHS E-11/1, Islamabad</p>
+                    <p className="text-[var(--text-secondary)]">Shop 01, Tower 10, MPCHS, E-11/1, Islamabad</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">

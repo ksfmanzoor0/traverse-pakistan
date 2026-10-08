@@ -41,7 +41,7 @@ export const SITE = {
   addressLocality: "Islamabad",
   addressRegion: "Islamabad Capital Territory",
   postalCode: "44000",
-  streetAddress: "Office #6, Plot No. 1, MPCHS E-11/1",
+  streetAddress: "Shop 01, Tower 10, MPCHS, E-11/1",
   geo: {
     latitude: 33.6938,
     longitude: 72.9715,
