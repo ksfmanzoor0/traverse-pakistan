@@ -120,7 +120,12 @@ export function HotelBookingEditor({ id, initial, hotels, saveAction }: Props) {
               type="number"
               min={1}
               value={form.adults}
-              onChange={(e) => set("adults", Number(e.target.value))}
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                if (!Number.isFinite(n)) return;
+                e.target.value = String(n);
+                set("adults", n);
+              }}
               className={inputCls}
             />
           </div>
@@ -130,7 +135,12 @@ export function HotelBookingEditor({ id, initial, hotels, saveAction }: Props) {
               type="number"
               min={0}
               value={form.children}
-              onChange={(e) => set("children", Number(e.target.value))}
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                if (!Number.isFinite(n)) return;
+                e.target.value = String(n);
+                set("children", n);
+              }}
               className={inputCls}
             />
           </div>
@@ -185,7 +195,12 @@ export function HotelBookingEditor({ id, initial, hotels, saveAction }: Props) {
               min={0}
               step={100}
               value={form.total_amount}
-              onChange={(e) => set("total_amount", Number(e.target.value))}
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                if (!Number.isFinite(n)) return;
+                e.target.value = String(n);
+                set("total_amount", n);
+              }}
               className={inputCls}
             />
           </div>
