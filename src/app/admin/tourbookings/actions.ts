@@ -41,6 +41,8 @@ export async function updateBookingStatus(
   revalidatePath("/admin/tourbookings");
   revalidatePath(`/admin/tourbookings/${id}`);
   revalidatePath("/admin");
+  revalidatePath("/bookings/[ref]", "page");
+  revalidatePath("/mybookings");
   return { ok: true };
 }
 
@@ -99,6 +101,8 @@ export async function updateTourBookingDetails(
   if (error) return { ok: false, error: error.message };
   revalidatePath("/admin/tourbookings");
   revalidatePath(`/admin/tourbookings/${id}`);
+  revalidatePath("/bookings/[ref]", "page");
+  revalidatePath("/mybookings");
   return { ok: true };
 }
 

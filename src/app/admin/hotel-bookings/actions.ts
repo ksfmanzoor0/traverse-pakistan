@@ -24,6 +24,8 @@ export async function updateHotelBookingStatus(
   if (error) return { ok: false, error: error.message };
   revalidatePath("/admin/hotel-bookings");
   revalidatePath("/admin");
+  revalidatePath("/bookings/[ref]", "page");
+  revalidatePath("/mybookings");
   return { ok: true };
 }
 
@@ -51,6 +53,8 @@ export async function updateHotelPaymentStatus(
   revalidatePath("/admin/hotel-bookings");
   revalidatePath(`/admin/hotel-bookings/${id}`);
   revalidatePath("/admin");
+  revalidatePath("/bookings/[ref]", "page");
+  revalidatePath("/mybookings");
   return { ok: true };
 }
 
@@ -153,6 +157,8 @@ export async function updateHotelBookingDetails(
   if (error) return { ok: false, error: error.message };
   revalidatePath("/admin/hotel-bookings");
   revalidatePath(`/admin/hotel-bookings/${id}`);
+  revalidatePath("/bookings/[ref]", "page");
+  revalidatePath("/mybookings");
   return { ok: true };
 }
 

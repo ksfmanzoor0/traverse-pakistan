@@ -30,6 +30,8 @@ export async function updatePackageBookingStatus(
   if (error) return { ok: false, error: error.message };
   revalidatePath("/admin/package-bookings");
   revalidatePath("/admin");
+  revalidatePath("/bookings/[ref]", "page");
+  revalidatePath("/mybookings");
   return { ok: true };
 }
 
@@ -56,6 +58,8 @@ export async function updatePackagePaymentStatus(
   revalidatePath("/admin/package-bookings");
   revalidatePath(`/admin/package-bookings/${id}`);
   revalidatePath("/admin");
+  revalidatePath("/bookings/[ref]", "page");
+  revalidatePath("/mybookings");
   return { ok: true };
 }
 
@@ -122,6 +126,8 @@ export async function updatePackageBookingDetails(
   if (error) return { ok: false, error: error.message };
   revalidatePath("/admin/package-bookings");
   revalidatePath(`/admin/package-bookings/${id}`);
+  revalidatePath("/bookings/[ref]", "page");
+  revalidatePath("/mybookings");
   return { ok: true };
 }
 
