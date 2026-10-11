@@ -237,7 +237,7 @@ export function PackageBookingEditor({ id, initial, packages, saveAction }: Prop
               type="number"
               min={0}
               step={100}
-              value={form.total_amount}
+              value={form.total_amount || ""}
               onChange={(e) => {
                 const n = Number(e.target.value);
                 if (!Number.isFinite(n)) return;
@@ -253,7 +253,7 @@ export function PackageBookingEditor({ id, initial, packages, saveAction }: Prop
               type="number"
               min={0}
               step={100}
-              value={form.amount_paid}
+              value={form.amount_paid || ""}
               onChange={(e) => {
                 const n = Number(e.target.value);
                 if (!Number.isFinite(n)) return;

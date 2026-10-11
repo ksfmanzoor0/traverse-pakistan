@@ -194,7 +194,7 @@ export function HotelBookingEditor({ id, initial, hotels, saveAction }: Props) {
               type="number"
               min={0}
               step={100}
-              value={form.total_amount}
+              value={form.total_amount || ""}
               onChange={(e) => {
                 const n = Number(e.target.value);
                 if (!Number.isFinite(n)) return;
