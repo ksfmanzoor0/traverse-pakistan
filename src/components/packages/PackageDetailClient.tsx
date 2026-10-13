@@ -314,11 +314,11 @@ export function PackageDetailClient({ pkg, itinerary, hotelsMap, relatedPackages
               <span className="text-lg font-bold text-[var(--text-primary)]">
                 {formatPrice(
                   sheetValues.engineDriven
-                    ? sheetValues.total
-                    : (pkg.tiers[selectedTier][CITY_TO_HOME[departureCity] as "ISB" | "LHE" | "KHI"] ?? pkg.tiers[selectedTier].ISB ?? pkg.tiers[selectedTier].LHE ?? 0) * Math.max(1, sheetValues.adults)
+                    ? sheetValues.pricePerPerson
+                    : pkg.tiers[selectedTier][CITY_TO_HOME[departureCity] as "ISB" | "LHE" | "KHI"] ?? pkg.tiers[selectedTier].ISB ?? pkg.tiers[selectedTier].LHE ?? 0
                 )}
               </span>
-              <span className="text-[13px] text-[var(--text-tertiary)] ml-1">total</span>
+              <span className="text-[13px] text-[var(--text-tertiary)] ml-1">per person</span>
             </div>
             <div className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
               {sheetValues.adults} {sheetValues.adults === 1 ? "guest" : "guests"}
