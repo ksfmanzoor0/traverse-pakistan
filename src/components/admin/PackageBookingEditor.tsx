@@ -237,8 +237,13 @@ export function PackageBookingEditor({ id, initial, packages, saveAction }: Prop
               type="number"
               min={0}
               step={100}
-              value={form.total_amount}
-              onChange={(e) => set("total_amount", Number(e.target.value))}
+              value={form.total_amount || ""}
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                if (!Number.isFinite(n)) return;
+                e.target.value = String(n);
+                set("total_amount", n);
+              }}
               className={inputCls}
             />
           </div>
@@ -248,8 +253,13 @@ export function PackageBookingEditor({ id, initial, packages, saveAction }: Prop
               type="number"
               min={0}
               step={100}
-              value={form.amount_paid}
-              onChange={(e) => set("amount_paid", Number(e.target.value))}
+              value={form.amount_paid || ""}
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                if (!Number.isFinite(n)) return;
+                e.target.value = String(n);
+                set("amount_paid", n);
+              }}
               className={inputCls}
             />
           </div>
