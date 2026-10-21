@@ -5,8 +5,21 @@ import { redirect } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/admin/guard";
 import { putR2Marker } from "@/lib/r2";
+import { repricePackageBySlug } from "@/services/package-quote.service";
 import type { AddonType } from "@/types/tour-addon";
 import type { TourBlock } from "@/types/tour-block";
+
+const ENGINE_INPUT_KEYS: readonly string[] = [
+  "total_distance_km",
+  "meals_per_person",
+  "entries_per_person",
+  "fuel_price_per_litre",
+  "profit_percentage",
+  "guide_per_day",
+  "pricing",
+  "starting_cities",
+  "duration",
+];
 
 type PackageListItem = { text: string; cityOnly?: Array<"ISB" | "LHE" | "KHI" | "KDU"> };
 
@@ -46,6 +59,9 @@ export type PackagePatch = {
   total_distance_km?: number | null;
   meals_per_person?: number;
   entries_per_person?: number;
+  fuel_price_per_litre?: number | null;
+  profit_percentage?: number | null;
+  guide_per_day?: number | null;
   destination_rank?: Record<string, number>;
   child_discount_pct?: number | null;
   group_discount_tiers?: Array<{ minAdults: number; pct: number }> | null;
@@ -112,7 +128,18 @@ export async function updatePackage(
     .update({ ...patch, updated_at: new Date().toISOString() })
     .eq("slug", slug);
   if (error) return { ok: false, error: error.message };
+
+  // Reprice this package if any engine-input field changed. Keeps the pricing
+  // snapshot in sync with the override edit so listings + first-paint sidebar
+  // don't drift from what the wizard quotes.
+  const touchedEngineInput = Object.keys(patch).some((k) => ENGINE_INPUT_KEYS.includes(k));
+  if (touchedEngineInput) {
+    try { await repricePackageBySlug(slug); }
+    catch (err) { console.error(`[updatePackage] reprice ${slug} failed`, err); }
+  }
+
   revalidateTag("packages", {});
+  revalidateTag("package-quote", {});
   revalidatePath("/admin/packages");
   revalidatePath(`/admin/packages/${slug}`);
   revalidatePath(`/packages/${slug}`);

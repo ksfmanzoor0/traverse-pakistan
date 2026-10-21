@@ -252,6 +252,9 @@ function BasicsSection({
   const [totalDistanceKm, setTotalDistanceKm] = useState<number | null>(row.total_distance_km);
   const [mealsPerPerson, setMealsPerPerson] = useState(row.meals_per_person ?? 0);
   const [entriesPerPerson, setEntriesPerPerson] = useState(row.entries_per_person ?? 0);
+  const [fuelPriceOverride, setFuelPriceOverride] = useState<number | null>(row.fuel_price_per_litre ?? null);
+  const [profitPctOverride, setProfitPctOverride] = useState<number | null>(row.profit_percentage ?? null);
+  const [guidePerDayOverride, setGuidePerDayOverride] = useState<number | null>(row.guide_per_day ?? null);
   const [destinationRank, setDestinationRank] = useState<Record<string, number>>(() => {
     const src = row.destination_rank ?? {};
     const out: Record<string, number> = {};
@@ -419,6 +422,45 @@ function BasicsSection({
         </Field>
       </div>
 
+      <div className="grid grid-cols-3 gap-3">
+        <Field
+          label="Fuel / litre override (PKR)"
+          note="Leave blank to use the global default from /admin/engine-settings. Set only when this package needs a different fuel cost."
+        >
+          <input
+            type="number"
+            value={fuelPriceOverride ?? ""}
+            placeholder="global default"
+            onChange={(e) => setFuelPriceOverride(e.target.value === "" ? null : Number(e.target.value))}
+            className={inputCls}
+          />
+        </Field>
+        <Field
+          label="Profit % override"
+          note="Leave blank to use the global default. Overrides the engine's margin multiplier for this package only."
+        >
+          <input
+            type="number"
+            value={profitPctOverride ?? ""}
+            placeholder="global default"
+            onChange={(e) => setProfitPctOverride(e.target.value === "" ? null : Number(e.target.value))}
+            className={inputCls}
+          />
+        </Field>
+        <Field
+          label="Guide / day override (PKR)"
+          note="Leave blank to use the global default. Set for packages that need extra or reduced guide staffing."
+        >
+          <input
+            type="number"
+            value={guidePerDayOverride ?? ""}
+            placeholder="global default"
+            onChange={(e) => setGuidePerDayOverride(e.target.value === "" ? null : Number(e.target.value))}
+            className={inputCls}
+          />
+        </Field>
+      </div>
+
       <Field label="Languages">
         <StringList value={languages} onChange={setLanguages} placeholder="language" />
       </Field>
@@ -545,6 +587,9 @@ function BasicsSection({
             total_distance_km: totalDistanceKm,
             meals_per_person: mealsPerPerson,
             entries_per_person: entriesPerPerson,
+            fuel_price_per_litre: fuelPriceOverride,
+            profit_percentage: profitPctOverride,
+            guide_per_day: guidePerDayOverride,
             destination_rank: destinationRank,
             child_discount_pct: childPctNum,
             group_discount_tiers: sortedTiers,
