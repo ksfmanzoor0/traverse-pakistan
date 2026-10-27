@@ -168,13 +168,29 @@ export function PackageCoverEditor({
           accept={ACCEPTED}
           onChange={handlePick}
           disabled={pending}
-          className="text-[12px] text-[var(--text-secondary)]"
+          className="sr-only"
+          id={`cover-file-${slug}`}
         />
+        <label
+          htmlFor={`cover-file-${slug}`}
+          className="h-10 px-4 inline-flex items-center justify-center rounded-[var(--radius-sm)] text-[13px] font-semibold cursor-pointer"
+          style={{
+            background: "var(--bg-primary)",
+            color: "var(--text-primary)",
+            border: "1px solid var(--border-default)",
+            opacity: pending ? 0.5 : 1,
+          }}
+        >
+          {file ? "Choose a different file" : "Choose file"}
+        </label>
+        <span className="text-[12px] text-[var(--text-tertiary)] max-w-[260px] truncate">
+          {file ? file.name : "No file selected"}
+        </span>
         <button
           type="button"
           onClick={handleUpload}
           disabled={!file || pending}
-          className="h-10 px-4 rounded-[var(--radius-sm)] text-[13px] font-semibold disabled:opacity-50"
+          className="h-10 px-4 rounded-[var(--radius-sm)] text-[13px] font-semibold disabled:opacity-50 ml-auto"
           style={{
             background: "var(--primary)",
             color: "var(--on-primary, white)",
