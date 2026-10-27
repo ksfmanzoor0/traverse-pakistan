@@ -13,7 +13,11 @@ export default function imageKitLoader({
   const q = quality ?? 70;
 
   if (src.startsWith(R2_ORIGIN)) {
-    const path = src.slice(R2_ORIGIN.length);
+    // Strip any pre-existing query string before appending the ImageKit
+    // transform. Without this, URLs like "cover.jpg?v=TS" produced two "?"
+    // when combined with ?tr=w-X,q-Y,f-auto and ImageKit returned 500.
+    const rest = src.slice(R2_ORIGIN.length);
+    const path = rest.split("?")[0];
     return `${IMAGEKIT_URL}${path}?tr=w-${width},q-${q},f-auto`;
   }
 

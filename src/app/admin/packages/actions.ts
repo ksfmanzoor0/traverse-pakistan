@@ -299,13 +299,16 @@ export async function uploadPackageCover(
   if (bytes.length === 0) return { ok: false, error: "Empty file" };
   if (bytes.length > MAX_COVER_BYTES) return { ok: false, error: "File exceeds 8 MB" };
 
-  const key = `packages/${cleanSlug}/cover.${ext}`;
+  // Cache-bust by filename, not query string. A ?v=TS suffix collides with
+  // the ImageKit transform ?tr=... that the image loader appends, producing
+  // "cover.jpg?v=TS?tr=..." and a broken image. Each upload gets a unique
+  // filename so the CDN serves the new asset immediately; the old key stays
+  // in R2 (storage is cheap) until a manual cleanup.
+  const key = `packages/${cleanSlug}/cover-${Date.now()}.${ext}`;
   const putRes = await putR2Object(key, bytes, contentType);
   if (!putRes.ok || !putRes.url) return { ok: false, error: putRes.error ?? "Upload failed" };
 
-  // Cache-bust by appending the uploaded-at timestamp. Downstream renderers
-  // use the URL as-is, so the query string reaches the browser.
-  const bustedUrl = `${putRes.url}?v=${Date.now()}`;
+  const bustedUrl = putRes.url;
 
   const supabase = getSupabaseAdmin();
   const { data: current } = await supabase
