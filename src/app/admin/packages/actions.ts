@@ -4,7 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/admin/guard";
-import { putR2Marker } from "@/lib/r2";
+import { putR2Marker, putR2Object } from "@/lib/r2";
 import type { AddonType } from "@/types/tour-addon";
 import type { TourBlock } from "@/types/tour-block";
 
@@ -270,6 +270,70 @@ export async function saveItinerary(
   revalidatePath(`/admin/packages/${packageSlug}/itinerary`);
   revalidatePath(`/packages/${packageSlug}`);
   return { ok: true };
+}
+
+const MIME_EXT: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/avif": "avif",
+};
+
+const MAX_COVER_BYTES = 8 * 1024 * 1024;
+
+export async function uploadPackageCover(
+  slug: string,
+  base64: string,
+  contentType: string,
+  altText?: string,
+): Promise<{ ok: boolean; url?: string; error?: string }> {
+  await requireAdmin();
+  const cleanSlug = slug.trim();
+  if (!cleanSlug) return { ok: false, error: "Slug required" };
+
+  const ext = MIME_EXT[contentType.toLowerCase()];
+  if (!ext) return { ok: false, error: "Only JPG, PNG, WEBP, or AVIF allowed" };
+
+  const bytes = Uint8Array.from(Buffer.from(base64, "base64"));
+  if (bytes.length === 0) return { ok: false, error: "Empty file" };
+  if (bytes.length > MAX_COVER_BYTES) return { ok: false, error: "File exceeds 8 MB" };
+
+  const key = `packages/${cleanSlug}/cover.${ext}`;
+  const putRes = await putR2Object(key, bytes, contentType);
+  if (!putRes.ok || !putRes.url) return { ok: false, error: putRes.error ?? "Upload failed" };
+
+  // Cache-bust by appending the uploaded-at timestamp. Downstream renderers
+  // use the URL as-is, so the query string reaches the browser.
+  const bustedUrl = `${putRes.url}?v=${Date.now()}`;
+
+  const supabase = getSupabaseAdmin();
+  const { data: current } = await supabase
+    .from("packages")
+    .select("images, name")
+    .eq("slug", cleanSlug)
+    .maybeSingle();
+  if (!current) return { ok: false, error: "Package not found" };
+
+  const existing = Array.isArray((current as { images?: unknown }).images)
+    ? ((current as { images: Array<{ url: string; alt: string }> }).images)
+    : [];
+  const name = (current as { name?: string }).name ?? cleanSlug;
+  const alt = altText?.trim() || existing[0]?.alt || `${name} — cover`;
+  const nextImages = [{ url: bustedUrl, alt }, ...existing.slice(1)];
+
+  const { error } = await supabase
+    .from("packages")
+    .update({ images: nextImages, updated_at: new Date().toISOString() })
+    .eq("slug", cleanSlug);
+  if (error) return { ok: false, error: error.message };
+
+  revalidateTag("packages", {});
+  revalidatePath("/admin/packages");
+  revalidatePath(`/admin/packages/${cleanSlug}`);
+  revalidatePath(`/packages/${cleanSlug}`);
+  revalidatePath("/packages");
+  return { ok: true, url: bustedUrl };
 }
 
 export async function provisionR2Folder(slug: string): Promise<{ ok: boolean; key?: string; error?: string }> {
