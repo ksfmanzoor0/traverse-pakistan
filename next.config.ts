@@ -13,6 +13,14 @@ const repoBasePath = process.env.GITHUB_PAGES_BASE_PATH ?? "/traverse-pakistan";
 
 const nextConfig: NextConfig = {
 
+  // Admin cover/image uploads post base64 payloads via server actions;
+  // the default 1 MB cap chokes on anything over ~700 KB of image.
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "12mb",
+    },
+  },
+
   ...(isGitHubPages && {
     output: "export",
     basePath: repoBasePath,
