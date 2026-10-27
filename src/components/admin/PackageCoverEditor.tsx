@@ -173,24 +173,24 @@ export function PackageCoverEditor({
         />
         <label
           htmlFor={`cover-file-${slug}`}
-          className="h-10 px-4 inline-flex items-center justify-center rounded-[var(--radius-sm)] text-[13px] font-semibold cursor-pointer"
+          className="h-12 px-6 inline-flex items-center justify-center rounded-[var(--radius-sm)] text-[14px] font-semibold cursor-pointer transition-opacity"
           style={{
-            background: "var(--bg-primary)",
-            color: "var(--text-primary)",
-            border: "1px solid var(--border-default)",
+            background: "color-mix(in srgb, var(--primary) 12%, transparent)",
+            color: "var(--primary)",
+            border: "2px dashed var(--primary)",
             opacity: pending ? 0.5 : 1,
           }}
         >
-          {file ? "Choose a different file" : "Choose file"}
+          {file ? "Choose a different image" : "Choose image"}
         </label>
-        <span className="text-[12px] text-[var(--text-tertiary)] max-w-[260px] truncate">
-          {file ? file.name : "No file selected"}
+        <span className="text-[13px] text-[var(--text-secondary)] max-w-[280px] truncate font-medium">
+          {file ? file.name : "No image selected"}
         </span>
         <button
           type="button"
           onClick={handleUpload}
           disabled={!file || pending}
-          className="h-10 px-4 rounded-[var(--radius-sm)] text-[13px] font-semibold disabled:opacity-50 ml-auto"
+          className="h-12 px-6 rounded-[var(--radius-sm)] text-[14px] font-semibold disabled:opacity-40 ml-auto"
           style={{
             background: "var(--primary)",
             color: "var(--on-primary, white)",
