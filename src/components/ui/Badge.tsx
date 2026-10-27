@@ -30,7 +30,12 @@ const badgeConfig: Record<
 
 export function Badge({ type, className }: BadgeProps) {
   if (!type) return null;
+  // An unknown badge value (e.g. legacy data from before the enum was
+  // narrowed) would otherwise crash SSR with "Cannot read properties of
+  // undefined (reading 'className')" and take down every page that
+  // renders this component. Soft-fail to null instead.
   const config = badgeConfig[type];
+  if (!config) return null;
 
   return (
     <span
