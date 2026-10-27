@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { PackageEditor } from "@/components/admin/PackageEditor";
+import { PackageCoverEditor } from "@/components/admin/PackageCoverEditor";
 import {
   updatePackage,
   deletePackage,
@@ -11,6 +12,7 @@ import {
   deletePackageAddon,
   saveItinerary,
   repricePackage,
+  uploadPackageCover,
 } from "../actions";
 import type { PackageRow, PackageItineraryDayRow, PackageAddonRow } from "@/lib/supabase/types";
 
@@ -69,6 +71,22 @@ export default async function AdminPackageEditPage({ params }: { params: Promise
         <Link href="/admin/packages" className="text-[12px] text-[var(--text-secondary)] hover:underline">
           ← All packages
         </Link>
+      </div>
+
+      <div className="mb-6">
+        <PackageCoverEditor
+          slug={data.row.slug}
+          packageName={data.row.name}
+          initialUrl={(() => {
+            const imgs = (data.row as unknown as { images?: Array<{ url?: string }> }).images;
+            return Array.isArray(imgs) && imgs[0]?.url ? imgs[0].url : null;
+          })()}
+          initialAlt={(() => {
+            const imgs = (data.row as unknown as { images?: Array<{ alt?: string }> }).images;
+            return Array.isArray(imgs) && imgs[0]?.alt ? imgs[0].alt : null;
+          })()}
+          uploadAction={uploadPackageCover}
+        />
       </div>
 
       <PackageEditor
