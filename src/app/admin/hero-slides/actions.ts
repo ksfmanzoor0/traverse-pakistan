@@ -160,12 +160,13 @@ export async function reorderHeroSlides(
   if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
     return { ok: false, error: "No ids provided" };
   }
-  for (let i = 0; i < orderedIds.length; i++) {
-    const { error } = await heroTable()
-      .update({ position: (i + 1) * 10, updated_at: new Date().toISOString() })
-      .eq("id", orderedIds[i]);
-    if (error) return { ok: false, error: `Reorder failed at #${i + 1}: ${error.message}` };
-  }
+  // Single atomic RPC — the previous per-row loop could leave the table
+  // partially reordered if any one UPDATE failed mid-way.
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const supabase = getSupabaseAdmin() as any;
+  const { error } = await supabase.rpc("reorder_hero_slides", { ids: orderedIds });
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+  if (error) return { ok: false, error: `Reorder failed: ${error.message}` };
   revalidateHome();
   return { ok: true };
 }
