@@ -9,9 +9,10 @@ const MEDIA = "https://media.traversepakistan.com";
 const FALLBACK_IMAGES = [1, 14, 9, 12, 15, 10].map((n) => ({
   url: `${MEDIA}/homepageslider/${n}.jpg`,
   alt: "Pakistan travel destination",
+  focalPoint: "center" as const,
 }));
 
-type HeroImage = { url: string; alt: string };
+type HeroImage = { url: string; alt: string; focalPoint?: "top" | "center" | "bottom" };
 
 export function HeroSection({
   destinations = [],
@@ -50,6 +51,7 @@ export function HeroSection({
                 sizes="(min-width: 1600px) 1600px, 100vw"
                 quality={i === 0 ? 75 : 55}
                 className="object-cover"
+                style={{ objectPosition: `center ${img.focalPoint ?? "center"}` }}
               />
             </div>
           );

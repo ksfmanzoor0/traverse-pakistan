@@ -10,7 +10,7 @@ const HeroSection = dynamic(
   { ssr: false }
 );
 
-type HeroSlide = { url: string; alt: string };
+type HeroSlide = { url: string; alt: string; focalPoint?: "top" | "center" | "bottom" };
 
 export function HeroSectionWrapper({
   destinations,

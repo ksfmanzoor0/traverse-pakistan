@@ -5,13 +5,20 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/admin/guard";
 import { putR2Object, deleteR2Object, r2KeyFromUrl } from "@/lib/r2";
 
+export type FocalPoint = "top" | "center" | "bottom";
+
 export type HeroSlideRow = {
   id: string;
   url: string;
   alt: string;
   position: number;
   published: boolean;
+  focalPoint: FocalPoint;
 };
+
+function normalizeFocal(v: unknown): FocalPoint {
+  return v === "top" || v === "bottom" ? v : "center";
+}
 
 const MIME_EXT: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -38,23 +45,40 @@ function revalidateHome() {
 }
 
 function normalize(row: unknown): HeroSlideRow {
-  const r = row as HeroSlideRow;
+  const r = row as Record<string, unknown>;
   return {
     id: String(r.id),
-    url: r.url,
-    alt: r.alt ?? "",
-    position: r.position ?? 0,
+    url: String(r.url),
+    alt: (r.alt as string) ?? "",
+    position: (r.position as number) ?? 0,
     published: !!r.published,
+    focalPoint: normalizeFocal(r.focal_point),
   };
 }
 
 export async function listHeroSlides(): Promise<{ ok: boolean; rows?: HeroSlideRow[]; error?: string }> {
   await requireAdmin();
   const { data, error } = await heroTable()
-    .select("id, url, alt, position, published")
+    .select("id, url, alt, position, published, focal_point")
     .order("position", { ascending: true });
   if (error) return { ok: false, error: error.message };
   return { ok: true, rows: (data as unknown[]).map(normalize) };
+}
+
+export async function setHeroSlideFocal(
+  id: string,
+  focalPoint: FocalPoint,
+): Promise<{ ok: boolean; error?: string }> {
+  await requireAdmin();
+  if (focalPoint !== "top" && focalPoint !== "center" && focalPoint !== "bottom") {
+    return { ok: false, error: "Invalid focal point" };
+  }
+  const { error } = await heroTable()
+    .update({ focal_point: focalPoint, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  revalidateHome();
+  return { ok: true };
 }
 
 export async function uploadHeroSlide(
@@ -88,8 +112,9 @@ export async function uploadHeroSlide(
       alt: altText.trim() || "Pakistan travel destination",
       position: maxPos + 10,
       published: true,
+      focal_point: "center",
     })
-    .select("id, url, alt, position, published")
+    .select("id, url, alt, position, published, focal_point")
     .single();
   if (error) return { ok: false, error: `DB insert failed: ${error.message}` };
 
