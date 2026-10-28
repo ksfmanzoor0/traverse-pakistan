@@ -8,7 +8,9 @@ import {
   setHeroSlidePublished,
   updateHeroSlideAlt,
   reorderHeroSlides,
+  setHeroSlideFocal,
   type HeroSlideRow,
+  type FocalPoint,
 } from "@/app/admin/hero-slides/actions";
 
 const ACCEPTED = "image/jpeg,image/png,image/webp,image/avif";
@@ -160,6 +162,22 @@ export function HeroSlidesManager({ initialRows }: { initialRows: HeroSlideRow[]
     });
   }
 
+  function handleFocal(row: HeroSlideRow, focal: FocalPoint) {
+    if (row.focalPoint === focal) return;
+    setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, focalPoint: focal } : r)));
+    startTransition(async () => {
+      const res = await setHeroSlideFocal(row.id, focal);
+      if (!res.ok) {
+        setRows((prev) =>
+          prev.map((r) => (r.id === row.id ? { ...r, focalPoint: row.focalPoint } : r)),
+        );
+        setStatus({ kind: "error", text: res.error ?? "Focal update failed" });
+      } else {
+        setStatus({ kind: "ok", text: `Focal set to ${focal}.` });
+      }
+    });
+  }
+
   function handleAltBlur(row: HeroSlideRow, nextAlt: string) {
     if (nextAlt.trim() === row.alt) return;
     startTransition(async () => {
@@ -195,7 +213,7 @@ export function HeroSlidesManager({ initialRows }: { initialRows: HeroSlideRow[]
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="space-y-6">
       {status && (
         <div
           className="rounded-[var(--radius-md)] border p-3 text-sm text-center"
@@ -315,117 +333,153 @@ export function HeroSlidesManager({ initialRows }: { initialRows: HeroSlideRow[]
       </section>
 
       <section className="space-y-3">
-        <div className="text-center">
+        <div className="flex items-baseline justify-between">
           <h2 className="text-base font-semibold text-[var(--text-primary)]">
             Current slides ({rows.length})
           </h2>
-          <p className="text-xs text-[var(--text-tertiary)] mt-1">
+          <span className="text-xs text-[var(--text-tertiary)]">
             Top of the list = first slide shown.
-          </p>
+          </span>
         </div>
 
         {rows.length === 0 && (
-          <p className="text-sm text-[var(--text-tertiary)] text-center">
-            No slides yet. Add one above.
-          </p>
+          <p className="text-sm text-[var(--text-tertiary)]">No slides yet. Add one above.</p>
         )}
 
-        <ul className="space-y-4">
+        <ul className="space-y-3">
           {rows.map((row, idx) => (
             <li
               key={row.id}
-              className="flex flex-col items-center gap-3 p-4 rounded-[var(--radius-md)] border"
+              className="grid grid-cols-[220px_1fr_auto] gap-4 items-center p-4 rounded-[var(--radius-md)] border"
               style={{
                 borderColor: "var(--border-default)",
                 background: row.published ? "var(--bg-primary)" : "var(--bg-subtle)",
                 opacity: row.published ? 1 : 0.72,
               }}
             >
-              <div className="relative w-full max-w-md aspect-[16/9] rounded-[var(--radius-sm)] overflow-hidden bg-[var(--bg-subtle)]">
+              <div className="relative aspect-[16/9] rounded-[var(--radius-sm)] overflow-hidden bg-[var(--bg-subtle)]">
                 <Image
                   src={row.url}
                   alt={row.alt || "Hero slide"}
                   fill
-                  sizes="(min-width: 768px) 448px, 100vw"
+                  sizes="220px"
                   className="object-cover"
+                  style={{ objectPosition: `center ${row.focalPoint}` }}
                   unoptimized
                 />
-              </div>
-
-              <div className="flex items-center justify-center gap-3 flex-wrap">
-                <span
-                  className="h-7 min-w-7 px-2 rounded-full text-[12px] font-bold flex items-center justify-center"
+                <div
+                  className="absolute top-2 left-2 h-6 min-w-6 px-2 rounded-full text-[11px] font-bold flex items-center justify-center"
                   style={{
-                    background: "var(--primary)",
-                    color: "var(--on-primary, white)",
+                    background: "rgba(0,0,0,0.6)",
+                    color: "white",
                   }}
                 >
                   {idx + 1}
-                </span>
-                <span
-                  className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                  style={{
-                    background: row.published
-                      ? "color-mix(in srgb, var(--success) 15%, transparent)"
-                      : "color-mix(in srgb, var(--text-tertiary) 18%, transparent)",
-                    color: row.published ? "var(--success)" : "var(--text-tertiary)",
-                  }}
-                >
-                  {row.published ? "Published" : "Hidden"}
-                </span>
-                <a
-                  href={row.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs text-[var(--text-tertiary)] max-w-[220px] truncate hover:underline"
-                  title={row.url}
-                >
-                  {row.url.split("/").pop()}
-                </a>
+                </div>
               </div>
 
-              <div className="w-full max-w-md">
-                <label className="block text-[10px] font-semibold text-[var(--text-tertiary)] mb-1 uppercase tracking-wider text-center">
-                  Alt text
-                </label>
-                <input
-                  type="text"
-                  defaultValue={row.alt}
-                  onBlur={(e) => handleAltBlur(row, e.currentTarget.value)}
-                  disabled={pending}
-                  className="w-full h-9 px-2 rounded-[var(--radius-sm)] border text-sm bg-[var(--bg-primary)] text-[var(--text-primary)] text-center"
-                  style={{ borderColor: "var(--border-default)" }}
-                />
+              <div className="space-y-2 min-w-0">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span
+                    className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                    style={{
+                      background: row.published
+                        ? "color-mix(in srgb, var(--success) 15%, transparent)"
+                        : "color-mix(in srgb, var(--text-tertiary) 18%, transparent)",
+                      color: row.published ? "var(--success)" : "var(--text-tertiary)",
+                    }}
+                  >
+                    {row.published ? "Published" : "Hidden"}
+                  </span>
+                  <a
+                    href={row.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-[var(--text-tertiary)] truncate hover:underline"
+                    title={row.url}
+                  >
+                    {row.url.split("/").pop()}
+                  </a>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-[var(--text-tertiary)] mb-1 uppercase tracking-wider">
+                    Alt text
+                  </label>
+                  <input
+                    type="text"
+                    defaultValue={row.alt}
+                    onBlur={(e) => handleAltBlur(row, e.currentTarget.value)}
+                    disabled={pending}
+                    className="w-full h-9 px-2 rounded-[var(--radius-sm)] border text-sm bg-[var(--bg-primary)] text-[var(--text-primary)]"
+                    style={{ borderColor: "var(--border-default)" }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-[var(--text-tertiary)] mb-1 uppercase tracking-wider">
+                    Focal point (which part shows when the image is cropped)
+                  </label>
+                  <div
+                    className="inline-flex rounded-[var(--radius-sm)] border overflow-hidden"
+                    style={{ borderColor: "var(--border-default)" }}
+                    role="group"
+                    aria-label="Focal point"
+                  >
+                    {(["top", "center", "bottom"] as const).map((f) => {
+                      const active = row.focalPoint === f;
+                      return (
+                        <button
+                          key={f}
+                          type="button"
+                          onClick={() => handleFocal(row, f)}
+                          disabled={pending}
+                          className="px-3 h-8 text-xs font-semibold capitalize"
+                          style={{
+                            background: active ? "var(--primary)" : "transparent",
+                            color: active ? "var(--on-primary, white)" : "var(--text-secondary)",
+                            borderLeft:
+                              f === "center"
+                                ? "1px solid var(--border-default)"
+                                : f === "bottom"
+                                  ? "1px solid var(--border-default)"
+                                  : "none",
+                          }}
+                        >
+                          {f}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
-              <div className="flex items-center justify-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => move(idx, -1)}
-                  disabled={pending || idx === 0}
-                  className="h-9 w-9 rounded-[var(--radius-sm)] border text-sm font-bold disabled:opacity-30"
-                  style={{ borderColor: "var(--border-default)", color: "var(--text-secondary)" }}
-                  title="Move up"
-                  aria-label="Move up"
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  onClick={() => move(idx, 1)}
-                  disabled={pending || idx === rows.length - 1}
-                  className="h-9 w-9 rounded-[var(--radius-sm)] border text-sm font-bold disabled:opacity-30"
-                  style={{ borderColor: "var(--border-default)", color: "var(--text-secondary)" }}
-                  title="Move down"
-                  aria-label="Move down"
-                >
-                  ↓
-                </button>
+              <div className="flex flex-col gap-2 items-stretch">
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => move(idx, -1)}
+                    disabled={pending || idx === 0}
+                    className="h-8 w-8 rounded-[var(--radius-sm)] border text-sm font-bold disabled:opacity-30"
+                    style={{ borderColor: "var(--border-default)", color: "var(--text-secondary)" }}
+                    title="Move up"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => move(idx, 1)}
+                    disabled={pending || idx === rows.length - 1}
+                    className="h-8 w-8 rounded-[var(--radius-sm)] border text-sm font-bold disabled:opacity-30"
+                    style={{ borderColor: "var(--border-default)", color: "var(--text-secondary)" }}
+                    title="Move down"
+                  >
+                    ↓
+                  </button>
+                </div>
                 <button
                   type="button"
                   onClick={() => handleTogglePublished(row)}
                   disabled={pending}
-                  className="h-9 px-3 rounded-[var(--radius-sm)] border text-xs font-semibold"
+                  className="h-8 px-3 rounded-[var(--radius-sm)] border text-xs font-semibold"
                   style={{
                     borderColor: "var(--border-default)",
                     color: "var(--text-secondary)",
@@ -437,7 +491,7 @@ export function HeroSlidesManager({ initialRows }: { initialRows: HeroSlideRow[]
                   type="button"
                   onClick={() => handleDelete(row)}
                   disabled={pending}
-                  className="h-9 px-3 rounded-[var(--radius-sm)] text-xs font-semibold"
+                  className="h-8 px-3 rounded-[var(--radius-sm)] text-xs font-semibold"
                   style={{
                     background: "color-mix(in srgb, var(--error) 10%, transparent)",
                     color: "var(--error)",
