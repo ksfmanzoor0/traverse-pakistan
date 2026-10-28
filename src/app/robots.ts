@@ -49,13 +49,14 @@ const SEARCH_ENGINES = ["Googlebot", "Googlebot-Image", "Bingbot", "DuckDuckBot"
 // in the "Indexed, though blocked by robots.txt" bucket (we had 17). Letting
 // Google crawl once so it can read the noindex is the cleaner signal.
 //
-// Same reasoning for /auth/*: pages export robots.index=false. Nofollow on
+// Same reasoning for /auth/*, /account/*, /booking/*, /bookings/*,
+// /payments/*: each exports robots.index=false via its layout. Nofollow on
 // internal links reduces discovery; noindex handles anything that leaks in.
+//
+// /_next/ must stay crawlable: it serves the JS + CSS Googlebot needs to
+// render pages. Blocking it degrades rendering and mobile-usability signals.
 const FUNNEL_DISALLOW = [
-  "/account/",
-  "/booking/",
   "/api/",
-  "/_next/",
 ];
 
 /**
