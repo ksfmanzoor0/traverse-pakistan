@@ -6,7 +6,7 @@ import { SearchWidget, type DestinationOption } from "./SearchWidget";
 
 const MEDIA = "https://media.traversepakistan.com";
 
-const heroImages = [1, 14, 9, 12, 15, 10].map((n) => ({
+const heroImages = [1, 14, 16, 9, 12, 15, 10].map((n) => ({
   url: `${MEDIA}/homepageslider/${n}.jpg`,
   alt: "Pakistan travel destination",
 }));
