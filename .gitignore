@@ -57,3 +57,6 @@ next-env.d.ts
 /*.csv
 /*.txt
 !CHANGELOG.txt
+
+# MCP config contains personal access tokens — do not commit
+.mcp.json

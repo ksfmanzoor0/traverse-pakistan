@@ -6,13 +6,23 @@ import { SearchWidget, type DestinationOption } from "./SearchWidget";
 
 const MEDIA = "https://media.traversepakistan.com";
 
-const heroImages = [1, 14, 9, 12, 15, 10].map((n) => ({
+const FALLBACK_IMAGES = [1, 14, 9, 12, 15, 10].map((n) => ({
   url: `${MEDIA}/homepageslider/${n}.jpg`,
   alt: "Pakistan travel destination",
+  focalPoint: "center" as const,
 }));
 
-export function HeroSection({ destinations = [] }: { destinations?: DestinationOption[] }) {
+type HeroImage = { url: string; alt: string; focalPoint?: "top" | "center" | "bottom" };
+
+export function HeroSection({
+  destinations = [],
+  slides,
+}: {
+  destinations?: DestinationOption[];
+  slides?: HeroImage[];
+}) {
   const [slidesReady, setSlidesReady] = useState(false);
+  const heroImages: HeroImage[] = slides && slides.length > 0 ? slides : FALLBACK_IMAGES;
 
   // Only render slides 1-5 after mount — avoids downloading 6 images on initial load.
   // Slide 0 has priority and loads immediately; the rest wait until hydration.
@@ -41,6 +51,7 @@ export function HeroSection({ destinations = [] }: { destinations?: DestinationO
                 sizes="(min-width: 1600px) 1600px, 100vw"
                 quality={i === 0 ? 75 : 55}
                 className="object-cover"
+                style={{ objectPosition: `center ${img.focalPoint ?? "center"}` }}
               />
             </div>
           );
