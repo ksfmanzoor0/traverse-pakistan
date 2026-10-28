@@ -3,6 +3,7 @@ import dynamic from "next/dynamic";
 
 import { HeroSectionWrapper } from "@/components/home/HeroSectionWrapper";
 import { getDestinationOptions } from "@/services/destination.service";
+import { getPublishedHeroSlides } from "@/services/hero-slides.service";
 import { StatsBar } from "@/components/home/StatsBar";
 import { PopularToursCarousel } from "@/components/home/PopularToursCarousel";
 import { TravelStylesGrid } from "@/components/home/TravelStylesGrid";
@@ -37,7 +38,10 @@ export const metadata: Metadata = buildMetadata({
 });
 
 export default async function Home() {
-  const destinations = await getDestinationOptions().catch(() => []);
+  const [destinations, heroSlides] = await Promise.all([
+    getDestinationOptions().catch(() => []),
+    getPublishedHeroSlides().catch(() => []),
+  ]);
 
   return (
     <>
@@ -55,7 +59,7 @@ export default async function Home() {
       */}
       <div className="hidden md:block" style={{ minHeight: "540px" }}>
         <DesktopOnly>
-          <HeroSectionWrapper destinations={destinations} />
+          <HeroSectionWrapper destinations={destinations} slides={heroSlides} />
         </DesktopOnly>
       </div>
       <DesktopOnly>

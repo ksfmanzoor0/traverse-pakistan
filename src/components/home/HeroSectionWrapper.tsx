@@ -10,6 +10,14 @@ const HeroSection = dynamic(
   { ssr: false }
 );
 
-export function HeroSectionWrapper({ destinations }: { destinations: DestinationOption[] }) {
-  return <HeroSection destinations={destinations} />;
+type HeroSlide = { url: string; alt: string };
+
+export function HeroSectionWrapper({
+  destinations,
+  slides,
+}: {
+  destinations: DestinationOption[];
+  slides?: HeroSlide[];
+}) {
+  return <HeroSection destinations={destinations} slides={slides} />;
 }
