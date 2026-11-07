@@ -1,11 +1,22 @@
 import { S3Client, ListObjectsV2Command } from "@aws-sdk/client-s3";
 
+import { config } from "dotenv";
+
+config({ path: ".env.local" });
+
+const { R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ENDPOINT } = process.env;
+
+if (!R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_ENDPOINT) {
+  console.error("Missing R2 credentials (R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ENDPOINT) in .env.local");
+  process.exit(1);
+}
+
 const r2 = new S3Client({
   region: "auto",
-  endpoint: "https://455676071213557fe34d7e16fec6f08e.r2.cloudflarestorage.com",
+  endpoint: R2_ENDPOINT,
   credentials: {
-    accessKeyId: "238fd8b9fed207929ccff9af089d1426",
-    secretAccessKey: "b63abea0e5b302147c04f1016409aeac61918d2421a945b4146c3a6dd1cef724",
+    accessKeyId: R2_ACCESS_KEY_ID,
+    secretAccessKey: R2_SECRET_ACCESS_KEY,
   },
 });
 
