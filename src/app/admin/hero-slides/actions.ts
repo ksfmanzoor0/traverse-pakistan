@@ -81,17 +81,23 @@ export async function setHeroSlideFocal(
   return { ok: true };
 }
 
+// Takes FormData (binary multipart) rather than a base64 string arg: React
+// 19.2's server-action reply decoder rejects very large string args with
+// "Maximum array nesting exceeded".
 export async function uploadHeroSlide(
-  base64: string,
-  contentType: string,
-  altText: string,
+  formData: FormData,
 ): Promise<{ ok: boolean; row?: HeroSlideRow; error?: string }> {
   await requireAdmin();
 
+  const file = formData.get("file");
+  const altText = String(formData.get("alt") ?? "");
+  if (!(file instanceof File)) return { ok: false, error: "No file received" };
+
+  const contentType = file.type;
   const ext = MIME_EXT[contentType.toLowerCase()];
   if (!ext) return { ok: false, error: "Only JPG, PNG, WEBP, or AVIF allowed" };
 
-  const bytes = Uint8Array.from(Buffer.from(base64, "base64"));
+  const bytes = new Uint8Array(await file.arrayBuffer());
   if (bytes.length === 0) return { ok: false, error: "Empty file" };
   if (bytes.length > MAX_BYTES) return { ok: false, error: "File exceeds 8 MB" };
 
