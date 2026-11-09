@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { NumberInput } from "./NumberInput";
 import type { PackageBookingDetailsPatch } from "@/app/admin/package-bookings/actions";
 
 type PackageOption = { slug: string; name: string };
@@ -140,53 +141,23 @@ export function PackageBookingEditor({ id, initial, packages, saveAction }: Prop
           </div>
           <div>
             <label className={labelCls}>Rooms</label>
-            <input
-              type="number"
-              min={1}
-              value={form.rooms}
-              onChange={(e) => set("rooms", Number(e.target.value))}
-              className={inputCls}
-            />
+            <NumberInput value={form.rooms} onChange={(n) => set("rooms", n ?? 0)} className={inputCls} />
           </div>
           <div>
             <label className={labelCls}>Adults</label>
-            <input
-              type="number"
-              min={1}
-              value={form.adults}
-              onChange={(e) => set("adults", Number(e.target.value))}
-              className={inputCls}
-            />
+            <NumberInput value={form.adults} onChange={(n) => set("adults", n ?? 0)} className={inputCls} />
           </div>
           <div>
             <label className={labelCls}>Children (5–12)</label>
-            <input
-              type="number"
-              min={0}
-              value={form.children_5_12}
-              onChange={(e) => set("children_5_12", Number(e.target.value))}
-              className={inputCls}
-            />
+            <NumberInput value={form.children_5_12} onChange={(n) => set("children_5_12", n ?? 0)} className={inputCls} />
           </div>
           <div>
             <label className={labelCls}>Children (2–5)</label>
-            <input
-              type="number"
-              min={0}
-              value={form.children_2_5}
-              onChange={(e) => set("children_2_5", Number(e.target.value))}
-              className={inputCls}
-            />
+            <NumberInput value={form.children_2_5} onChange={(n) => set("children_2_5", n ?? 0)} className={inputCls} />
           </div>
           <div>
             <label className={labelCls}>Infants</label>
-            <input
-              type="number"
-              min={0}
-              value={form.infants}
-              onChange={(e) => set("infants", Number(e.target.value))}
-              className={inputCls}
-            />
+            <NumberInput value={form.infants} onChange={(n) => set("infants", n ?? 0)} className={inputCls} />
           </div>
         </div>
       </div>
@@ -233,35 +204,11 @@ export function PackageBookingEditor({ id, initial, packages, saveAction }: Prop
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className={labelCls}>Total amount (PKR)</label>
-            <input
-              type="number"
-              min={0}
-              step={100}
-              value={form.total_amount || ""}
-              onChange={(e) => {
-                const n = Number(e.target.value);
-                if (!Number.isFinite(n)) return;
-                e.target.value = String(n);
-                set("total_amount", n);
-              }}
-              className={inputCls}
-            />
+            <NumberInput value={form.total_amount} onChange={(n) => set("total_amount", n ?? 0)} className={inputCls} />
           </div>
           <div>
             <label className={labelCls}>Amount paid (PKR) — split-pay running total</label>
-            <input
-              type="number"
-              min={0}
-              step={100}
-              value={form.amount_paid || ""}
-              onChange={(e) => {
-                const n = Number(e.target.value);
-                if (!Number.isFinite(n)) return;
-                e.target.value = String(n);
-                set("amount_paid", n);
-              }}
-              className={inputCls}
-            />
+            <NumberInput value={form.amount_paid} onChange={(n) => set("amount_paid", n ?? 0)} className={inputCls} />
           </div>
         </div>
       </div>

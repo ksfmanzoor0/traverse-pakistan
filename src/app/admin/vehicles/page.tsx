@@ -93,21 +93,21 @@ export default async function VehiclesAdminPage() {
               type="number"
               name="kmPerLitre"
               step="0.1"
-              defaultValue={v.kmPerLitre}
+              defaultValue={v.kmPerLitre || ""}
               className="w-full rounded px-2 py-1.5 text-sm"
               style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
             />
             <input
               type="number"
               name="maxPeople"
-              defaultValue={v.maxPeople}
+              defaultValue={v.maxPeople || ""}
               className="w-full rounded px-2 py-1.5 text-sm"
               style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
             />
             <input
               type="number"
               name="rentPerDay"
-              defaultValue={v.rentPerDay}
+              defaultValue={v.rentPerDay || ""}
               className="w-full rounded px-2 py-1.5 text-sm"
               style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
             />
@@ -143,8 +143,9 @@ function ConfigField({
         <span style={{ color: "var(--text-secondary)" }}>{label}</span>
         <input
           type="number"
+          step="any"
           name={name}
-          defaultValue={defaultValue}
+          defaultValue={defaultValue || ""}
           className="mt-1 w-full rounded px-2 py-2 text-sm"
           style={{
             background: "var(--bg-elevated)",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { NumberInput } from "./NumberInput";
 import type { HotelBookingDetailsPatch } from "@/app/admin/hotel-bookings/actions";
 
 type HotelOption = { slug: string; name: string };
@@ -116,33 +117,11 @@ export function HotelBookingEditor({ id, initial, hotels, saveAction }: Props) {
           </div>
           <div>
             <label className={labelCls}>Adults</label>
-            <input
-              type="number"
-              min={1}
-              value={form.adults}
-              onChange={(e) => {
-                const n = Number(e.target.value);
-                if (!Number.isFinite(n)) return;
-                e.target.value = String(n);
-                set("adults", n);
-              }}
-              className={inputCls}
-            />
+            <NumberInput value={form.adults} onChange={(n) => set("adults", n ?? 0)} className={inputCls} />
           </div>
           <div>
             <label className={labelCls}>Children</label>
-            <input
-              type="number"
-              min={0}
-              value={form.children}
-              onChange={(e) => {
-                const n = Number(e.target.value);
-                if (!Number.isFinite(n)) return;
-                e.target.value = String(n);
-                set("children", n);
-              }}
-              className={inputCls}
-            />
+            <NumberInput value={form.children} onChange={(n) => set("children", n ?? 0)} className={inputCls} />
           </div>
           <div className="md:col-span-2">
             <label className={labelCls}>Arrival window (free text — e.g. &quot;12:00 PM – 2:00 PM&quot;)</label>
@@ -190,19 +169,7 @@ export function HotelBookingEditor({ id, initial, hotels, saveAction }: Props) {
           </div>
           <div>
             <label className={labelCls}>Total amount (PKR)</label>
-            <input
-              type="number"
-              min={0}
-              step={100}
-              value={form.total_amount || ""}
-              onChange={(e) => {
-                const n = Number(e.target.value);
-                if (!Number.isFinite(n)) return;
-                e.target.value = String(n);
-                set("total_amount", n);
-              }}
-              className={inputCls}
-            />
+            <NumberInput value={form.total_amount} onChange={(n) => set("total_amount", n ?? 0)} className={inputCls} />
           </div>
         </div>
       </div>

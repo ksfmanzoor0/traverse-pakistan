@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { NumberInput } from "./NumberInput";
 import type { TourBookingDetailsPatch } from "@/app/admin/tourbookings/actions";
 
 type DepartureOption = {
@@ -95,23 +96,11 @@ export function TourBookingEditor({ id, initial, departures, saveAction }: Props
           </div>
           <div>
             <label className={labelCls}>Seats</label>
-            <input
-              type="number"
-              min={1}
-              value={form.seats}
-              onChange={(e) => set("seats", Number(e.target.value))}
-              className={inputCls}
-            />
+            <NumberInput value={form.seats} onChange={(n) => set("seats", n ?? 0)} className={inputCls} />
           </div>
           <div>
             <label className={labelCls}>Single rooms</label>
-            <input
-              type="number"
-              min={0}
-              value={form.single_rooms}
-              onChange={(e) => set("single_rooms", Number(e.target.value))}
-              className={inputCls}
-            />
+            <NumberInput value={form.single_rooms} onChange={(n) => set("single_rooms", n ?? 0)} className={inputCls} />
           </div>
           <div>
             <label className={labelCls}>Home city</label>
@@ -173,35 +162,11 @@ export function TourBookingEditor({ id, initial, departures, saveAction }: Props
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className={labelCls}>Total amount (PKR)</label>
-            <input
-              type="number"
-              min={0}
-              step={100}
-              value={form.total_amount || ""}
-              onChange={(e) => {
-                const n = Number(e.target.value);
-                if (!Number.isFinite(n)) return;
-                e.target.value = String(n);
-                set("total_amount", n);
-              }}
-              className={inputCls}
-            />
+            <NumberInput value={form.total_amount} onChange={(n) => set("total_amount", n ?? 0)} className={inputCls} />
           </div>
           <div>
             <label className={labelCls}>Amount paid (PKR) — split-pay running total</label>
-            <input
-              type="number"
-              min={0}
-              step={100}
-              value={form.amount_paid || ""}
-              onChange={(e) => {
-                const n = Number(e.target.value);
-                if (!Number.isFinite(n)) return;
-                e.target.value = String(n);
-                set("amount_paid", n);
-              }}
-              className={inputCls}
-            />
+            <NumberInput value={form.amount_paid} onChange={(n) => set("amount_paid", n ?? 0)} className={inputCls} />
           </div>
         </div>
       </div>

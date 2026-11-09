@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { JeepLibraryManager } from "./JeepLibraryManager";
+import { NumberInput } from "../NumberInput";
 
 // Mirrors LHE_EXTENSION_KM in src/services/package-quote.service.ts —
 // extra road km charged when home=LHE on an ISB-starting package.
@@ -818,13 +819,11 @@ export function CostCalculator({
             </label>
             <label className="block text-sm">
               <span style={{ color: "var(--text-secondary)" }}>People</span>
-              <input
-                type="number"
-                min={1}
+              <NumberInput
                 className="mt-1 w-full rounded px-2 py-2 text-sm"
                 style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
                 value={picker.people}
-                onChange={(e) => setPicker((p) => ({ ...p, people: Math.max(1, num(e.target.value)) }))}
+                onChange={(n) => setPicker((p) => ({ ...p, people: Math.max(1, n ?? 1) }))}
               />
             </label>
             <label className="block text-sm">
@@ -1075,22 +1074,20 @@ export function CostCalculator({
                     </label>
                     <label className="col-span-3 text-xs">
                       <span style={{ color: "var(--text-tertiary)" }}>Cost / jeep</span>
-                      <input
-                        type="number" min={0} step={500}
+                      <NumberInput
                         className="mt-1 w-full rounded px-2 py-2 text-sm"
                         style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
                         value={leg.costPerJeep}
-                        onChange={(e) => updateJeepLeg(i, { costPerJeep: Math.max(0, num(e.target.value)) })}
+                        onChange={(n) => updateJeepLeg(i, { costPerJeep: n ?? 0 })}
                       />
                     </label>
                     <label className="col-span-2 text-xs">
                       <span style={{ color: "var(--text-tertiary)" }}>Capacity</span>
-                      <input
-                        type="number" min={1}
+                      <NumberInput
                         className="mt-1 w-full rounded px-2 py-2 text-sm"
                         style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
                         value={leg.capacity}
-                        onChange={(e) => updateJeepLeg(i, { capacity: Math.max(1, num(e.target.value)) })}
+                        onChange={(n) => updateJeepLeg(i, { capacity: Math.max(1, n ?? 1) })}
                       />
                     </label>
                     <button
@@ -1592,13 +1589,13 @@ function EditableResultCard({
       </div>
       {editing ? (
         <div className="mt-1 flex items-center gap-2">
-          <input
-            type="number"
+          <NumberInput
+            decimal
             className="flex-1 rounded px-2 py-1.5 text-base font-semibold"
             style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
-            value={draft}
+            value={draft === "" ? null : Number(draft)}
             autoFocus
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(n) => setDraft(n === null ? "" : String(n))}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 const n = Number(draft);
@@ -1659,13 +1656,23 @@ function LabelledInput({
   return (
     <label className="block text-sm">
       <span style={{ color: "var(--text-secondary)" }}>{label}</span>
-      <input
-        type={type}
-        className="mt-1 w-full rounded px-2 py-2 text-sm"
-        style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
+      {type === "number" ? (
+        <NumberInput
+          decimal
+          className="mt-1 w-full rounded px-2 py-2 text-sm"
+          style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+          value={Number(value)}
+          onChange={(n) => onChange(n === null ? "" : String(n))}
+        />
+      ) : (
+        <input
+          type="text"
+          className="mt-1 w-full rounded px-2 py-2 text-sm"
+          style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      )}
     </label>
   );
 }

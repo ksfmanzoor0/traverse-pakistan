@@ -9,6 +9,7 @@ import { StringList } from "./tour-editor/StringList";
 import { CityAwareList } from "./tour-editor/CityAwareList";
 import { CityChips } from "./tour-editor/CityChips";
 import { AddonConfigForm } from "./tour-editor/AddonConfigForm";
+import { NumberInput } from "./NumberInput";
 import { GalleryEditor, type GalleryImage } from "./tour-editor/GalleryEditor";
 import { BlockEditor } from "./tour-editor/BlockEditor";
 import type { TourBlock } from "@/types/tour-block";
@@ -246,13 +247,13 @@ function BasicsSection({
           <input value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls} />
         </Field>
         <Field label="Duration (days)">
-          <input type="number" value={duration} onChange={(e) => setDuration(Number(e.target.value) || 0)} className={inputCls} />
+          <NumberInput value={duration} onChange={(n) => setDuration(n ?? 0)} className={inputCls} />
         </Field>
         <Field label="Max group size">
-          <input type="number" value={maxGroupSize} onChange={(e) => setMaxGroupSize(Number(e.target.value) || 0)} className={inputCls} />
+          <NumberInput value={maxGroupSize} onChange={(n) => setMaxGroupSize(n ?? 0)} className={inputCls} />
         </Field>
         <Field label="Min age (blank = any)">
-          <input type="number" value={minAge ?? ""} onChange={(e) => setMinAge(e.target.value ? Number(e.target.value) : null)} className={inputCls} />
+          <NumberInput value={minAge} onChange={setMinAge} className={inputCls} />
         </Field>
       </div>
       <Field label="Route (short description)">
@@ -293,12 +294,11 @@ function BasicsSection({
         </div>
 
         <Field label="Child discount % (ages 2–12) — blank = default 50%">
-          <input
-            type="number"
-            min={0}
-            max={100}
-            value={childPctInput}
-            onChange={(e) => setChildPctInput(e.target.value)}
+          <NumberInput
+            decimal
+            keepZero
+            value={childPctInput === "" ? null : Number(childPctInput)}
+            onChange={(n) => setChildPctInput(n === null ? "" : String(n))}
             placeholder="50"
             className={inputCls}
           />
@@ -322,27 +322,22 @@ function BasicsSection({
             {tiers.map((t, i) => (
               <div key={i} className="flex items-end gap-2">
                 <Field label="Min adults">
-                  <input
-                    type="number"
-                    min={1}
+                  <NumberInput
                     value={t.minAdults}
-                    onChange={(e) => {
+                    onChange={(n) => {
                       const next = [...tiers];
-                      next[i] = { ...next[i], minAdults: Number(e.target.value) || 0 };
+                      next[i] = { ...next[i], minAdults: n ?? 0 };
                       setTiers(next);
                     }}
                     className={inputCls}
                   />
                 </Field>
                 <Field label="% off adult fare">
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
+                  <NumberInput
                     value={Math.round(t.pct * 100)}
-                    onChange={(e) => {
+                    onChange={(n) => {
                       const next = [...tiers];
-                      next[i] = { ...next[i], pct: (Number(e.target.value) || 0) / 100 };
+                      next[i] = { ...next[i], pct: (n ?? 0) / 100 };
                       setTiers(next);
                     }}
                     className={inputCls}
@@ -607,17 +602,13 @@ function ItinerarySection({
             <div className="mt-3 space-y-3 border-t border-[var(--border-default)] pt-3">
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Day number">
-                  <input
-                    type="number"
-                    value={Number.isFinite(d.day_number) ? d.day_number : ""}
+                  <NumberInput
+                    keepZero
+                    negative
+                    value={d.day_number}
                     placeholder="e.g. 0"
-                    onChange={(e) => {
-                      const raw = e.target.value;
-                      // Empty string → NaN sentinel so the input stays blank
-                      // and Save refuses. Any parsable number (including 0
-                      // and negatives) round-trips.
-                      updateDay(i, { day_number: raw === "" ? Number.NaN : Number(raw) });
-                    }}
+                    // Empty → NaN sentinel so Save refuses; 0 and negatives round-trip.
+                    onChange={(n) => updateDay(i, { day_number: n ?? Number.NaN })}
                     className={inputCls}
                   />
                 </Field>
@@ -881,10 +872,10 @@ function AddonsSection({
                   <input value={a.group_key ?? ""} onChange={(e) => updateAddon(i, { group_key: e.target.value || null })} placeholder="e.g. hotel-pre-tour" className={inputCls} />
                 </Field>
                 <Field label="Priority">
-                  <input type="number" value={a.priority} onChange={(e) => updateAddon(i, { priority: Number(e.target.value) || 0 })} className={inputCls} />
+                  <NumberInput negative value={a.priority} onChange={(n) => updateAddon(i, { priority: n ?? 0 })} className={inputCls} />
                 </Field>
                 <Field label="Duration delta (days)">
-                  <input type="number" value={a.duration_delta} onChange={(e) => updateAddon(i, { duration_delta: Number(e.target.value) || 0 })} className={inputCls} />
+                  <NumberInput negative value={a.duration_delta} onChange={(n) => updateAddon(i, { duration_delta: n ?? 0 })} className={inputCls} />
                 </Field>
               </div>
               <div>
@@ -1058,26 +1049,24 @@ function DeparturesSection({
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="Base price / person (PKR) — group / triple / quad share">
-                    <input type="number" value={r.price} onChange={(e) => update(i, { price: Number(e.target.value) || 0 })} className={inputCls} />
+                    <NumberInput value={r.price} onChange={(n) => update(i, { price: n ?? 0 })} className={inputCls} />
                   </Field>
                   <Field label="Max seats">
-                    <input type="number" value={r.max_seats} onChange={(e) => update(i, { max_seats: Number(e.target.value) || 0 })} className={inputCls} />
+                    <NumberInput value={r.max_seats} onChange={(n) => update(i, { max_seats: n ?? 0 })} className={inputCls} />
                   </Field>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="Twin surcharge (PKR / person) — 2 friends alone in a room">
-                    <input
-                      type="number"
-                      value={r.twin_price ?? 0}
-                      onChange={(e) => update(i, { twin_price: Number(e.target.value) || 0 })}
+                    <NumberInput
+                      value={r.twin_price}
+                      onChange={(n) => update(i, { twin_price: n ?? 0 })}
                       className={inputCls}
                     />
                   </Field>
                   <Field label="Single surcharge (PKR / person) — 1 alone in a room">
-                    <input
-                      type="number"
-                      value={r.single_price ?? 0}
-                      onChange={(e) => update(i, { single_price: Number(e.target.value) || 0 })}
+                    <NumberInput
+                      value={r.single_price}
+                      onChange={(n) => update(i, { single_price: n ?? 0 })}
                       className={inputCls}
                     />
                   </Field>

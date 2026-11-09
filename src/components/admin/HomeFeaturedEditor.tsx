@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { NumberInput } from "./NumberInput";
 
 export type HomeEditorRow = {
   slug: string;
@@ -200,14 +201,9 @@ export function HomeFeaturedEditor({ initial, emptyMessage, showFeaturedToggle =
                   </div>
                 </td>
                 <td className="p-3">
-                  <input
-                    type="number"
-                    min={1}
-                    value={r.rank ?? ""}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      bump(r.slug, { rank: v === "" ? null : Math.max(1, Number(v)) });
-                    }}
+                  <NumberInput
+                    value={r.rank}
+                    onChange={(n) => bump(r.slug, { rank: n === null ? null : Math.max(1, n) })}
                     placeholder="—"
                     className="w-16 px-2 py-1 rounded border border-[var(--border-default)] bg-[var(--bg-primary)] text-[13px]"
                   />
