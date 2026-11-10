@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { EngineConfig } from "@/services/vehicle.service";
+import { NumberInput } from "../NumberInput";
 
 interface Props {
   initial: EngineConfig;
@@ -127,10 +128,10 @@ function Field({
   return (
     <label className="block">
       <span className="mb-1 block text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>{label}</span>
-      <input
-        type="number"
+      <NumberInput
+        decimal
         value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
+        onChange={(n) => onChange(n ?? 0)}
         className={inputCls}
         style={inputStyle}
       />

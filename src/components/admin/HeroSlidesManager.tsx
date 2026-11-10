@@ -17,26 +17,14 @@ const ACCEPTED = "image/jpeg,image/png,image/webp,image/avif";
 const MAX_INPUT_BYTES = 30 * 1024 * 1024;
 const MAX_DIMENSION = 2560;
 const JPEG_QUALITY = 0.85;
+// Vercel rejects request bodies over 4.5 MB before they reach the action.
+const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 
-async function fileToBase64(blob: Blob): Promise<string> {
-  const buf = await blob.arrayBuffer();
-  const bytes = new Uint8Array(buf);
-  let binary = "";
-  const CHUNK = 0x8000;
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
-  }
-  return btoa(binary);
-}
-
-async function downscaleIfNeeded(
+// Always re-encode through canvas: keeps uploads well under Vercel's body
+// limit and strips EXIF (phone photos carry GPS coordinates).
+async function prepareImage(
   file: File,
 ): Promise<{ blob: Blob; type: string; resized: boolean }> {
-  // Only JPEG/PNG/WEBP are decodable by canvas; AVIF decode is spotty in some
-  // browsers. If the file is already small, skip the resize round-trip.
-  if (file.size <= 2 * 1024 * 1024) {
-    return { blob: file, type: file.type, resized: false };
-  }
   try {
     const bitmap = await createImageBitmap(file);
     const { width, height } = bitmap;
@@ -61,7 +49,7 @@ async function downscaleIfNeeded(
     );
     return { blob, type: "image/jpeg", resized: true };
   } catch {
-    // Fallback to original if the browser can't decode (e.g. odd AVIF)
+    // Browser couldn't decode (e.g. some AVIF); send the original if it fits.
     return { blob: file, type: file.type, resized: false };
   }
 }
@@ -109,9 +97,18 @@ export function HeroSlidesManager({ initialRows }: { initialRows: HeroSlideRow[]
     const alt = newAlt.trim();
     startTransition(async () => {
       try {
-        const { blob, type, resized } = await downscaleIfNeeded(chosen);
-        const b64 = await fileToBase64(blob);
-        const res = await uploadHeroSlide(b64, type, alt);
+        const { blob, type, resized } = await prepareImage(chosen);
+        if (blob.size > MAX_UPLOAD_BYTES) {
+          setStatus({
+            kind: "error",
+            text: `This image couldn't be shrunk in the browser and is ${(blob.size / 1024 / 1024).toFixed(1)} MB. Export it as a JPEG under 4 MB and try again.`,
+          });
+          return;
+        }
+        const fd = new FormData();
+        fd.append("file", new File([blob], `slide.${type === "image/jpeg" ? "jpg" : type.split("/")[1]}`, { type }));
+        fd.append("alt", alt);
+        const res = await uploadHeroSlide(fd);
         if (!res.ok || !res.row) {
           setStatus({ kind: "error", text: res.error ?? "Upload failed" });
           return;
@@ -124,8 +121,8 @@ export function HeroSlidesManager({ initialRows }: { initialRows: HeroSlideRow[]
         setStatus({
           kind: "ok",
           text: resized
-            ? "Slide added. Image was downscaled to fit upload limits; homepage refreshes shortly."
-            : "Slide added. Homepage refreshes within a few seconds.",
+            ? "Slide added (resized and location data removed). Homepage refreshes shortly."
+            : "Slide added. Homepage refreshes shortly.",
         });
       } catch (err) {
         setStatus({ kind: "error", text: (err as Error).message || "Upload failed" });

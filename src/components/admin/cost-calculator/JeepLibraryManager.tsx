@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { NumberInput } from "../NumberInput";
 
 export interface KnownJeepLeg {
   id?: string;
@@ -97,12 +98,9 @@ export function JeepLibraryManager({ legs, onLibraryChange }: Props) {
             </label>
             <label className="col-span-3 text-xs">
               <span style={{ color: "var(--text-tertiary)" }}>Cost / jeep</span>
-              <input
-                type="number"
-                min={0}
-                step={500}
-                value={cost}
-                onChange={(e) => setCost(e.target.value === "" ? "" : Math.max(0, Number(e.target.value)))}
+              <NumberInput
+                value={cost === "" ? null : cost}
+                onChange={(n) => setCost(n === null ? "" : n)}
                 placeholder="0"
                 className="mt-1 w-full rounded px-2 py-2 text-sm"
                 style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
@@ -110,11 +108,9 @@ export function JeepLibraryManager({ legs, onLibraryChange }: Props) {
             </label>
             <label className="col-span-2 text-xs">
               <span style={{ color: "var(--text-tertiary)" }}>Capacity</span>
-              <input
-                type="number"
-                min={1}
+              <NumberInput
                 value={capacity}
-                onChange={(e) => setCapacity(Math.max(1, Number(e.target.value) || 1))}
+                onChange={(n) => setCapacity(Math.max(1, n ?? 1))}
                 className="mt-1 w-full rounded px-2 py-2 text-sm"
                 style={{ background: "var(--bg-primary)", border: "1px solid var(--border-default)", color: "var(--text-primary)" }}
               />
