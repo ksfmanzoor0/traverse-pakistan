@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, useMemo } from "react";
+import { NumberInput } from "./NumberInput";
 import type { NewPackageInput } from "@/app/admin/packages/actions";
 
 type Option = { slug: string; name: string };
@@ -124,11 +125,9 @@ export function NewPackageForm({ destinations, regions, createAction }: Props) {
         </div>
         <div>
           <label className={labelCls} style={labelStyle}>Duration (days) *</label>
-          <input
-            type="number"
-            min={1}
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
+          <NumberInput
+            value={duration === "" ? null : Number(duration)}
+            onChange={(n) => setDuration(n === null ? "" : String(n))}
             required
             className={inputCls}
             style={inputStyle}

@@ -21,6 +21,7 @@ import { GalleryEditor, type GalleryImage } from "./tour-editor/GalleryEditor";
 import { BlockEditor } from "./tour-editor/BlockEditor";
 import { AutoGrowTextarea } from "./tour-editor/AutoGrowTextarea";
 import { ItineraryEditor } from "./ItineraryEditor";
+import { NumberInput } from "./NumberInput";
 
 type Home = "ISB" | "LHE" | "KHI" | "KDU";
 type DestOption = { slug: string; name: string; region_slug: string | null };
@@ -307,10 +308,10 @@ function BasicsSection({
           <input value={badge} onChange={(e) => setBadge(e.target.value)} placeholder="new | popular | bestseller | editors-pick" className={inputCls} />
         </Field>
         <Field label="Duration (days)">
-          <input type="number" value={duration} onChange={(e) => setDuration(Number(e.target.value) || 1)} className={inputCls} />
+          <NumberInput value={duration} onChange={(n) => setDuration(n || 1)} className={inputCls} />
         </Field>
         <Field label="Max group size (blank = default)">
-          <input type="number" value={maxGroupSize ?? ""} onChange={(e) => setMaxGroupSize(e.target.value ? Number(e.target.value) : null)} className={inputCls} />
+          <NumberInput value={maxGroupSize} onChange={setMaxGroupSize} className={inputCls} />
         </Field>
         <Field label="Published">
           <label className="inline-flex items-center gap-2 h-9">
@@ -378,15 +379,14 @@ function BasicsSection({
             {rankSlugs.map((slug) => (
               <label key={slug} className="text-[12px] block">
                 <span className="text-[var(--text-secondary)]">{slug}</span>
-                <input
-                  type="number"
-                  value={destinationRank[slug] ?? ""}
-                  onChange={(e) => {
-                    const v = e.target.value;
+                <NumberInput
+                  keepZero
+                  value={destinationRank[slug]}
+                  onChange={(n) => {
                     setDestinationRank((prev) => {
                       const next = { ...prev };
-                      if (v === "") delete next[slug];
-                      else next[slug] = Number(v);
+                      if (n === null) delete next[slug];
+                      else next[slug] = n;
                       return next;
                     });
                   }}
@@ -403,19 +403,19 @@ function BasicsSection({
           label="Total distance (km)"
           note="Total road km one-way + return. Jeep portions excluded (handled by jeep_legs). Drives fuel + rent cost in the engine."
         >
-          <input type="number" value={totalDistanceKm ?? ""} onChange={(e) => setTotalDistanceKm(e.target.value ? Number(e.target.value) : null)} className={inputCls} />
+          <NumberInput decimal value={totalDistanceKm} onChange={setTotalDistanceKm} className={inputCls} />
         </Field>
         <Field
           label="Meals / person"
           note="PKR per person per day. Set 0 when hotels include all meals."
         >
-          <input type="number" value={mealsPerPerson} onChange={(e) => setMealsPerPerson(Number(e.target.value) || 0)} className={inputCls} />
+          <NumberInput value={mealsPerPerson} onChange={(n) => setMealsPerPerson(n ?? 0)} className={inputCls} />
         </Field>
         <Field
           label="Entries / person"
           note="PKR per person, total for the whole trip (sum of all entry tickets)."
         >
-          <input type="number" value={entriesPerPerson} onChange={(e) => setEntriesPerPerson(Number(e.target.value) || 0)} className={inputCls} />
+          <NumberInput value={entriesPerPerson} onChange={(n) => setEntriesPerPerson(n ?? 0)} className={inputCls} />
         </Field>
       </div>
 
@@ -445,13 +445,11 @@ function BasicsSection({
         </div>
 
         <Field label="Child discount % (ages 2–12) — blank = none">
-          <input
-            type="number"
-            min={0}
-            max={100}
-            value={childPctInput}
-            onChange={(e) => setChildPctInput(e.target.value)}
-            placeholder=""
+          <NumberInput
+            decimal
+            keepZero
+            value={childPctInput === "" ? null : Number(childPctInput)}
+            onChange={(n) => setChildPctInput(n === null ? "" : String(n))}
             className={inputCls}
           />
         </Field>
@@ -474,27 +472,22 @@ function BasicsSection({
             {tiers.map((t, i) => (
               <div key={i} className="flex items-end gap-2">
                 <Field label="Min adults">
-                  <input
-                    type="number"
-                    min={1}
+                  <NumberInput
                     value={t.minAdults}
-                    onChange={(e) => {
+                    onChange={(n) => {
                       const next = [...tiers];
-                      next[i] = { ...next[i], minAdults: Number(e.target.value) || 0 };
+                      next[i] = { ...next[i], minAdults: n ?? 0 };
                       setTiers(next);
                     }}
                     className={inputCls}
                   />
                 </Field>
                 <Field label="% off adult fare">
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
+                  <NumberInput
                     value={Math.round(t.pct * 100)}
-                    onChange={(e) => {
+                    onChange={(n) => {
                       const next = [...tiers];
-                      next[i] = { ...next[i], pct: (Number(e.target.value) || 0) / 100 };
+                      next[i] = { ...next[i], pct: (n ?? 0) / 100 };
                       setTiers(next);
                     }}
                     className={inputCls}
@@ -684,10 +677,9 @@ function PricingSection({ row, onSave, onReprice, pending }: { row: PackageRow; 
               <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-1">
                 {label}
               </span>
-              <input
-                type="number"
-                value={value[code] ?? ""}
-                onChange={(e) => onChange({ ...value, [code]: e.target.value ? Number(e.target.value) : null })}
+              <NumberInput
+                value={value[code]}
+                onChange={(n) => onChange({ ...value, [code]: n })}
                 className={inputCls}
                 placeholder={value[code] != null ? formatPrice(value[code]!) : "—"}
               />
@@ -886,13 +878,13 @@ function AddonsSection({
                   label="Priority"
                   note="Higher wins within the same group. Ties broken by insertion order."
                 >
-                  <input type="number" value={a.priority} onChange={(e) => updateAddon(i, { priority: Number(e.target.value) || 0 })} className={inputCls} />
+                  <NumberInput negative value={a.priority} onChange={(n) => updateAddon(i, { priority: n ?? 0 })} className={inputCls} />
                 </Field>
                 <Field
                   label="Duration delta (days)"
                   note="Extra days added to trip length when this addon applies (e.g. +2 for KHI travelers needing an ISB overnight each way)."
                 >
-                  <input type="number" value={a.duration_delta} onChange={(e) => updateAddon(i, { duration_delta: Number(e.target.value) || 0 })} className={inputCls} />
+                  <NumberInput negative value={a.duration_delta} onChange={(n) => updateAddon(i, { duration_delta: n ?? 0 })} className={inputCls} />
                 </Field>
               </div>
               <div>

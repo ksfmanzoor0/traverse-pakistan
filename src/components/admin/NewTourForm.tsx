@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { NumberInput } from "./NumberInput";
 import type { NewTourInput } from "@/app/admin/tours/actions";
 
 const CATEGORIES = [
@@ -87,11 +88,9 @@ export function NewTourForm({ createAction }: Props) {
           </select>
         </Field>
         <Field label="Duration (days)">
-          <input
-            type="number"
-            min={1}
+          <NumberInput
             value={duration}
-            onChange={(e) => setDuration(Number(e.target.value) || 1)}
+            onChange={(n) => setDuration(n || 1)}
             className={inputCls}
           />
         </Field>

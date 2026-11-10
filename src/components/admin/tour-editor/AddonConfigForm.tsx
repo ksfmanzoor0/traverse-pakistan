@@ -1,6 +1,7 @@
 "use client";
 
 import type { AddonType } from "@/types/tour-addon";
+import { NumberInput } from "../NumberInput";
 
 type LegRow = {
   from: string;
@@ -68,10 +69,9 @@ function NumberField({ label, value, onChange }: { label: string; value: number;
   return (
     <label className="block">
       <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-1">{label}</span>
-      <input
-        type="number"
+      <NumberInput
         value={value}
-        onChange={(e) => onChange(Number(e.target.value) || 0)}
+        onChange={(n) => onChange(n ?? 0)}
         className="w-full h-9 px-3 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[13px]"
       />
     </label>
@@ -147,12 +147,11 @@ function LegsEditor({ legs, onChange }: { legs: LegRow[]; onChange: (next: LegRo
                 <label className="block">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-1">Day</span>
                   <div className="flex items-center gap-1">
-                    <input
-                      type="number"
-                      min={0}
-                      value={dayIsLast ? "" : (leg.day as number)}
+                    <NumberInput
+                      keepZero
+                      value={dayIsLast ? null : (leg.day as number)}
                       disabled={dayIsLast}
-                      onChange={(e) => update(i, { day: Number(e.target.value) || 0 })}
+                      onChange={(n) => update(i, { day: n ?? 0 })}
                       className="flex-1 h-9 px-2 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[13px] disabled:opacity-50"
                     />
                     <label className="flex items-center gap-1 text-[11px]">
@@ -169,10 +168,9 @@ function LegsEditor({ legs, onChange }: { legs: LegRow[]; onChange: (next: LegRo
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 <label className="block">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)] block mb-1">Fare / person (optional)</span>
-                  <input
-                    type="number"
-                    value={leg.farePerPerson ?? ""}
-                    onChange={(e) => update(i, { farePerPerson: e.target.value ? Number(e.target.value) : undefined })}
+                  <NumberInput
+                    value={leg.farePerPerson}
+                    onChange={(n) => update(i, { farePerPerson: n ?? undefined })}
                     placeholder="Blank = resolved by scraper"
                     className="w-full h-9 px-3 border border-[var(--border-default)] rounded-[var(--radius-sm)] bg-[var(--bg-primary)] text-[13px]"
                   />
