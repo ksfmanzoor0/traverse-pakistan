@@ -15,6 +15,8 @@ export const metadata: Metadata = buildMetadata({
   description:
     "Browse 22 group tours across Pakistan: Hunza, Skardu, K2 Base Camp, Chitral, Kalash, Deosai. Dual-city departures, expert guides, 4.9★ from 1,300+ travelers.",
   path: "/grouptours",
+  image: "https://media.traversepakistan.com/destinations/skardu/cover.jpg",
+  imageAlt: "Skardu, Gilgit-Baltistan",
   tags: ["Pakistan group tours", "Hunza tour", "Skardu tour", "Karakoram tours"],
 });
 

@@ -18,6 +18,8 @@ export const metadata: Metadata = buildMetadata({
   description:
     "Explore every major destination in Pakistan: Hunza, Skardu, Chitral, Kalash Valley, Fairy Meadows, Naltar, Deosai. Curated guides, tours, and hotels.",
   path: "/destinations",
+  image: "https://media.traversepakistan.com/destinations/fairy-meadows/cover.jpg",
+  imageAlt: "Fairy Meadows and Nanga Parbat",
   tags: ["Pakistan destinations", "Hunza", "Skardu", "Chitral", "Kalash"],
 });
 
