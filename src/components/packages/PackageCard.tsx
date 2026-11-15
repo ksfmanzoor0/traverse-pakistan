@@ -16,17 +16,9 @@ interface PackageCardProps {
   priority?: boolean;
 }
 
-function pickImage(slug: string, images: Package["images"]) {
-  if (!images.length) return null;
-  const cover = images.find(img => /\/cover\./i.test(img.url));
-  if (cover) return cover;
-  let h = 0;
-  for (let i = 0; i < slug.length; i++) h = (h * 31 + slug.charCodeAt(i)) & 0xffff;
-  return images[h % images.length];
-}
-
 export function PackageCard({ pkg, variant = "carousel", className, priority = false }: PackageCardProps) {
-  const heroImage = pickImage(pkg.slug, pkg.images);
+  // First saved image is the cover (set in the admin gallery / cover card).
+  const heroImage = pkg.images[0] ?? null;
   return (
     <div
       className={cn(

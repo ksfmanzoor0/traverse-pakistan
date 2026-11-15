@@ -63,7 +63,10 @@ function toPackage(row: PackageRow): Package {
     languages: row.languages ?? [],
     freeCancellation: row.free_cancellation,
     reserveNowPayLater: row.reserve_now_pay_later,
-    images: shuffleGallery(row.slug, (row.images as unknown as Package["images"] | null) ?? []),
+    // Admin-curated order, cover first (the package gallery editor's contract).
+    images: ((row.images as unknown as (Package["images"][number] | string)[] | null) ?? []).map((img) =>
+      typeof img === "string" ? { url: img, alt: row.name } : img,
+    ),
     highlights: row.highlights ?? [],
     inclusions: (row.inclusions ?? []) as Package["inclusions"],
     exclusions: (row.exclusions ?? []) as Package["exclusions"],
@@ -125,20 +128,11 @@ export const getPackageBySlug = cache(async (slug: string): Promise<Package | nu
 
   if (error?.code === "PGRST116") return null;
   if (error) throw new Error(`getPackageBySlug: ${error.message}`);
-  const row = data as unknown as PackageRow;
-  const pkg = toPackage(row);
-  if (r2Urls.length) {
-    // Gallery comes from the R2 folder, but the cover is whatever the admin
-    // saved as images[0]. Replaced covers stay in R2, so drop every other
-    // cover file instead of letting the old cover.jpg win.
-    const dbCover = (row.images as unknown as Package["images"] | null)?.[0];
-    const r2Images = buildImagesFromR2(r2Urls, pkg.name);
-    pkg.images = shuffleGallery(
-      slug,
-      dbCover
-        ? [dbCover, ...r2Images.filter((img) => img.url !== dbCover.url && !COVER_FILE_RE.test(img.url))]
-        : r2Images,
-    );
+  const pkg = toPackage(data as unknown as PackageRow);
+  // The saved list (admin gallery editor) decides order, cover and alt text.
+  // The R2 folder is only a fallback for packages that have no saved list.
+  if (pkg.images.length === 0 && r2Urls.length) {
+    pkg.images = shuffleGallery(slug, buildImagesFromR2(r2Urls, pkg.name));
   }
   return pkg;
 });
