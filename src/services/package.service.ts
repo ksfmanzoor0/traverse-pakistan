@@ -6,9 +6,13 @@ import type { PackageRow, PackageItineraryDayRow } from "@/lib/supabase/types";
 import type { Package } from "@/types/package";
 import type { PackageItinerary, PackageItineraryDay } from "@/types/package";
 
+// Matches cover.jpg (optionally with a ?v= cache-buster) and the legacy
+// cover-<timestamp>.jpg files the old uploader created.
+const COVER_FILE_RE = /\/cover(-\d+)?\.(jpe?g|png|webp|avif)(\?.*)?$/i;
+
 function shuffleGallery(slug: string, images: Package["images"]): Package["images"] {
   if (images.length <= 1) return images;
-  const coverIdx = images.findIndex(img => /\/cover\./i.test(img.url));
+  const coverIdx = images.findIndex(img => COVER_FILE_RE.test(img.url));
   const result = coverIdx >= 0
     ? [images[coverIdx], ...images.filter((_, i) => i !== coverIdx)]
     : [...images];
@@ -121,9 +125,20 @@ export const getPackageBySlug = cache(async (slug: string): Promise<Package | nu
 
   if (error?.code === "PGRST116") return null;
   if (error) throw new Error(`getPackageBySlug: ${error.message}`);
-  const pkg = toPackage(data as unknown as PackageRow);
+  const row = data as unknown as PackageRow;
+  const pkg = toPackage(row);
   if (r2Urls.length) {
-    pkg.images = shuffleGallery(slug, buildImagesFromR2(r2Urls, pkg.name));
+    // Gallery comes from the R2 folder, but the cover is whatever the admin
+    // saved as images[0]. Replaced covers stay in R2, so drop every other
+    // cover file instead of letting the old cover.jpg win.
+    const dbCover = (row.images as unknown as Package["images"] | null)?.[0];
+    const r2Images = buildImagesFromR2(r2Urls, pkg.name);
+    pkg.images = shuffleGallery(
+      slug,
+      dbCover
+        ? [dbCover, ...r2Images.filter((img) => img.url !== dbCover.url && !COVER_FILE_RE.test(img.url))]
+        : r2Images,
+    );
   }
   return pkg;
 });

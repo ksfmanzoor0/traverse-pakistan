@@ -65,8 +65,9 @@ const IMAGEKIT_URL = "https://ik.imagekit.io/traversepakistan";
 function absoluteImage(img: string | null | undefined): string {
   if (!img) return SITE.ogImage;
   if (img.startsWith(R2_ORIGIN)) {
-    const path = img.slice(R2_ORIGIN.length).split("?")[0];
-    return `${IMAGEKIT_URL}${path}?tr=w-1200,h-630,fo-auto,q-80,f-jpg`;
+    const [path, query = ""] = img.slice(R2_ORIGIN.length).split("?");
+    const v = new URLSearchParams(query).get("v");
+    return `${IMAGEKIT_URL}${path}?tr=w-1200,h-630,fo-auto,q-80,f-jpg${v ? `&v=${encodeURIComponent(v)}` : ""}`;
   }
   if (img.startsWith("http")) return img;
   return absoluteUrl(img);

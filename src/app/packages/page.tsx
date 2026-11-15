@@ -10,15 +10,21 @@ import { getDestinationOptions } from "@/services/destination.service";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { breadcrumbSchema, itemListSchema, combineSchemas } from "@/lib/seo/schema";
 
-export const metadata: Metadata = buildMetadata({
-  title: "Pakistan Holiday Packages — Custom Dates, Deluxe & Luxury Tiers",
-  description:
-    "Custom-date holiday packages across Pakistan. Choose Deluxe or Luxury, travel with expert guides and hand-picked hotels in Hunza, Skardu, Chitral, and beyond.",
-  path: "/packages",
-  image: "https://media.traversepakistan.com/destinations/hunza/cover.jpg",
-  imageAlt: "Hunza Valley, Pakistan",
-  tags: ["Pakistan holiday package", "custom tour", "luxury Pakistan tour"],
-});
+// Share image follows the Hunza Valley Escape cover, so replacing that cover
+// in the admin updates this preview too.
+export async function generateMetadata(): Promise<Metadata> {
+  const cover = (await getAllPackages().catch(() => []))
+    .find((p) => p.slug === "hunza-valley-escape")?.images[0];
+  return buildMetadata({
+    title: "Pakistan Holiday Packages — Custom Dates, Deluxe & Luxury Tiers",
+    description:
+      "Custom-date holiday packages across Pakistan. Choose Deluxe or Luxury, travel with expert guides and hand-picked hotels in Hunza, Skardu, Chitral, and beyond.",
+    path: "/packages",
+    image: cover?.url,
+    imageAlt: cover ? "Experience Hunza Valley Escape" : undefined,
+    tags: ["Pakistan holiday package", "custom tour", "luxury Pakistan tour"],
+  });
+}
 
 export default async function PackagesPage() {
   const [packages, destinations] = await Promise.all([

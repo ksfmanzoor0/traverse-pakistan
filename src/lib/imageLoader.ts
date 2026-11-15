@@ -13,12 +13,12 @@ export default function imageKitLoader({
   const q = quality ?? 70;
 
   if (src.startsWith(R2_ORIGIN)) {
-    // Strip any pre-existing query string before appending the ImageKit
-    // transform. Without this, URLs like "cover.jpg?v=TS" produced two "?"
-    // when combined with ?tr=w-X,q-Y,f-auto and ImageKit returned 500.
-    const rest = src.slice(R2_ORIGIN.length);
-    const path = rest.split("?")[0];
-    return `${IMAGEKIT_URL}${path}?tr=w-${width},q-${q},f-auto`;
+    // Drop the source query string (a second "?" makes ImageKit return 500)
+    // but carry the ?v= cache-buster over as "&v=", so an overwritten file
+    // like cover.jpg?v=TS isn't served from year-long caches.
+    const [path, query = ""] = src.slice(R2_ORIGIN.length).split("?");
+    const v = new URLSearchParams(query).get("v");
+    return `${IMAGEKIT_URL}${path}?tr=w-${width},q-${q},f-auto${v ? `&v=${encodeURIComponent(v)}` : ""}`;
   }
 
   // Other origins (YouTube thumbnails, placehold.co, Google avatars, local)
