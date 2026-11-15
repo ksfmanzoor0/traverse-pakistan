@@ -4,7 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/admin/guard";
-import { putR2Marker, putR2Object } from "@/lib/r2";
+import { putR2Marker, putR2Object, listR2Images, r2KeyFromUrl, deleteR2Object } from "@/lib/r2";
 import type { AddonType } from "@/types/tour-addon";
 import type { TourBlock } from "@/types/tour-block";
 
@@ -282,33 +282,37 @@ const MIME_EXT: Record<string, string> = {
 
 const MAX_COVER_BYTES = 8 * 1024 * 1024;
 
+const COVER_KEY_RE = /\/cover(-\d+)?\.(jpe?g|png|webp|avif)$/i;
+
+// FormData (binary) rather than a base64 string arg: React 19.2's
+// server-action decoder rejects very large string args.
 export async function uploadPackageCover(
-  slug: string,
-  base64: string,
-  contentType: string,
-  altText?: string,
+  formData: FormData,
 ): Promise<{ ok: boolean; url?: string; error?: string }> {
   await requireAdmin();
-  const cleanSlug = slug.trim();
+  const cleanSlug = String(formData.get("slug") ?? "").trim();
+  const altText = String(formData.get("alt") ?? "");
+  const file = formData.get("file");
   if (!cleanSlug) return { ok: false, error: "Slug required" };
+  if (!(file instanceof File)) return { ok: false, error: "No file received" };
 
+  const contentType = file.type;
   const ext = MIME_EXT[contentType.toLowerCase()];
   if (!ext) return { ok: false, error: "Only JPG, PNG, WEBP, or AVIF allowed" };
 
-  const bytes = Uint8Array.from(Buffer.from(base64, "base64"));
+  const bytes = new Uint8Array(await file.arrayBuffer());
   if (bytes.length === 0) return { ok: false, error: "Empty file" };
   if (bytes.length > MAX_COVER_BYTES) return { ok: false, error: "File exceeds 8 MB" };
 
-  // Cache-bust by filename, not query string. A ?v=TS suffix collides with
-  // the ImageKit transform ?tr=... that the image loader appends, producing
-  // "cover.jpg?v=TS?tr=..." and a broken image. Each upload gets a unique
-  // filename so the CDN serves the new asset immediately; the old key stays
-  // in R2 (storage is cheap) until a manual cleanup.
-  const key = `packages/${cleanSlug}/cover-${Date.now()}.${ext}`;
+  // The folder always holds exactly one cover: packages/<slug>/cover.<ext>,
+  // overwritten in place. Cloudflare, ImageKit and browsers cache images for a
+  // year, so the saved URL carries ?v=<time>; the image loader passes it on as
+  // "&v=" and every cache fetches the new file immediately.
+  const key = `packages/${cleanSlug}/cover.${ext}`;
   const putRes = await putR2Object(key, bytes, contentType);
   if (!putRes.ok || !putRes.url) return { ok: false, error: putRes.error ?? "Upload failed" };
 
-  const bustedUrl = putRes.url;
+  const bustedUrl = `${putRes.url}?v=${Date.now()}`;
 
   const supabase = getSupabaseAdmin();
   const { data: current } = await supabase
@@ -322,8 +326,10 @@ export async function uploadPackageCover(
     ? ((current as { images: Array<{ url: string; alt: string }> }).images)
     : [];
   const name = (current as { name?: string }).name ?? cleanSlug;
-  const alt = altText?.trim() || existing[0]?.alt || `${name} — cover`;
-  const nextImages = [{ url: bustedUrl, alt }, ...existing.slice(1)];
+  const isCover = (url: string) => COVER_KEY_RE.test(url.split("?")[0]);
+  const oldCover = existing.find((img) => isCover(img.url));
+  const alt = altText.trim() || oldCover?.alt || `${name} — cover`;
+  const nextImages = [{ url: bustedUrl, alt }, ...existing.filter((img) => !isCover(img.url))];
 
   const { error } = await supabase
     .from("packages")
@@ -331,11 +337,26 @@ export async function uploadPackageCover(
     .eq("slug", cleanSlug);
   if (error) return { ok: false, error: error.message };
 
+  // Remove any other cover files (cover.jpeg, legacy cover-<ts>.jpg, …) so the
+  // folder holds a single cover. Non-fatal: the new cover is already live.
+  const stale = (await listR2Images(`packages/${cleanSlug}/`))
+    .map((u) => r2KeyFromUrl(u))
+    .filter((k): k is string => !!k && k !== key && COVER_KEY_RE.test(`/${k}`));
+  const failed: string[] = [];
+  for (const k of stale) {
+    const del = await deleteR2Object(k);
+    if (!del.ok) failed.push(k);
+  }
+
   revalidateTag("packages", {});
   revalidatePath("/admin/packages");
   revalidatePath(`/admin/packages/${cleanSlug}`);
   revalidatePath(`/packages/${cleanSlug}`);
   revalidatePath("/packages");
+  revalidatePath("/");
+  if (failed.length) {
+    return { ok: true, url: bustedUrl, error: `Cover updated, but couldn't delete old file(s): ${failed.join(", ")}` };
+  }
   return { ok: true, url: bustedUrl };
 }
 

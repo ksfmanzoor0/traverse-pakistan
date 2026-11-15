@@ -57,8 +57,18 @@ const OG_DEFAULTS = {
   alt: SITE.name,
 };
 
+const R2_ORIGIN = "https://media.traversepakistan.com";
+const IMAGEKIT_URL = "https://ik.imagekit.io/traversepakistan";
+
+// Share previews get an exact 1200x630 JPEG via ImageKit. Raw R2 originals can
+// be multi-MB, and WhatsApp silently drops preview images that are too large.
 function absoluteImage(img: string | null | undefined): string {
   if (!img) return SITE.ogImage;
+  if (img.startsWith(R2_ORIGIN)) {
+    const [path, query = ""] = img.slice(R2_ORIGIN.length).split("?");
+    const v = new URLSearchParams(query).get("v");
+    return `${IMAGEKIT_URL}${path}?tr=w-1200,h-630,fo-auto,q-80,f-jpg${v ? `&v=${encodeURIComponent(v)}` : ""}`;
+  }
   if (img.startsWith("http")) return img;
   return absoluteUrl(img);
 }
