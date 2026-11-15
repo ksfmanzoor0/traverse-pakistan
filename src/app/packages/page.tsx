@@ -15,8 +15,8 @@ export const metadata: Metadata = buildMetadata({
   description:
     "Custom-date holiday packages across Pakistan. Choose Deluxe or Luxury, travel with expert guides and hand-picked hotels in Hunza, Skardu, Chitral, and beyond.",
   path: "/packages",
-  image: "https://media.traversepakistan.com/destinations/hunza/cover.jpg",
-  imageAlt: "Hunza Valley, Pakistan",
+  image: "https://media.traversepakistan.com/packages/hunza-valley-escape/cover.jpg",
+  imageAlt: "Experience Hunza Valley Escape",
   tags: ["Pakistan holiday package", "custom tour", "luxury Pakistan tour"],
 });
 
