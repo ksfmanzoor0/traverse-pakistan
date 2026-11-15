@@ -30,8 +30,8 @@ export function GalleryEditor({
     if (!files || files.length === 0) return;
     setUploading(true);
     setError(null);
+    const uploaded: GalleryImage[] = [];
     try {
-      const uploaded: GalleryImage[] = [];
       for (const file of Array.from(files)) {
         const form = new FormData();
         form.append("file", file);
@@ -43,10 +43,15 @@ export function GalleryEditor({
         const { url } = (await res.json()) as { url: string };
         uploaded.push({ url, alt: file.name.replace(/\.[^.]+$/, "") });
       }
-      onChange([...images, ...uploaded]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");
     } finally {
+      // New photos go to the top of the gallery, just below the cover (the
+      // first image is the cover, so it must stay first). Files that uploaded
+      // before an error are kept: they're already in R2.
+      if (uploaded.length > 0) {
+        onChange(images.length > 0 ? [images[0], ...uploaded, ...images.slice(1)] : uploaded);
+      }
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
     }
@@ -99,7 +104,7 @@ export function GalleryEditor({
           onChange={(e) => onFile(e.target.files)}
         />
         <span className="text-[12px] text-[var(--text-tertiary)]">
-          JPEG, PNG, WEBP, or AVIF · max 10 MB each · first image is the cover
+          JPEG, PNG, WEBP, or AVIF · max 10 MB each · first image is the cover · new uploads go right after it
         </span>
       </div>
 
