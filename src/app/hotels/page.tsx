@@ -14,6 +14,8 @@ export const metadata: Metadata = buildMetadata({
   description:
     "Book verified mountain hotels, lakeside resorts, and heritage guesthouses across Pakistan. Hunza, Skardu, Naltar, Chitral. Trusted by 1,300+ travelers.",
   path: "/hotels",
+  image: "https://media.traversepakistan.com/hotels/serena-khaplu-palace/cover.jpg",
+  imageAlt: "Serena Khaplu Palace, Skardu",
   tags: ["Pakistan hotels", "Hunza hotel", "Skardu hotel", "mountain resort Pakistan"],
 });
 
