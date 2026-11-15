@@ -10,28 +10,35 @@ type Props = {
   packageName: string;
   initialUrl: string | null;
   initialAlt: string | null;
-  uploadAction: (
-    slug: string,
-    base64: string,
-    contentType: string,
-    altText?: string,
-  ) => Promise<UploadResult>;
+  uploadAction: (formData: FormData) => Promise<UploadResult>;
 };
 
 const ACCEPTED = "image/jpeg,image/png,image/webp,image/avif";
-const MAX_BYTES = 8 * 1024 * 1024;
+const MAX_INPUT_BYTES = 30 * 1024 * 1024;
+const MAX_DIMENSION = 2560;
+// Vercel rejects request bodies over 4.5 MB before they reach the action.
+const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 
-async function fileToBase64(file: File): Promise<string> {
-  const buf = await file.arrayBuffer();
-  const bytes = new Uint8Array(buf);
-  // Chunked encode to avoid the "Maximum call stack size exceeded" trap on big
-  // images when calling String.fromCharCode on the full byte array.
-  let binary = "";
-  const CHUNK = 0x8000;
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+// Re-encode through canvas: keeps the upload small and strips EXIF (phone GPS).
+async function prepareImage(file: File): Promise<File> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas unavailable");
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const blob: Blob = await new Promise((resolve, reject) =>
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob failed"))), "image/jpeg", 0.85),
+    );
+    return new File([blob], "cover.jpg", { type: "image/jpeg" });
+  } catch {
+    // Browser couldn't decode (e.g. some AVIF); send the original if it fits.
+    return file;
   }
-  return btoa(binary);
 }
 
 export function PackageCoverEditor({
@@ -57,8 +64,8 @@ export function PackageCoverEditor({
       setPreview(null);
       return;
     }
-    if (next.size > MAX_BYTES) {
-      setStatus({ kind: "error", text: "File exceeds 8 MB" });
+    if (next.size > MAX_INPUT_BYTES) {
+      setStatus({ kind: "error", text: "File exceeds 30 MB" });
       setFile(null);
       setPreview(null);
       e.target.value = "";
@@ -74,8 +81,19 @@ export function PackageCoverEditor({
     const altValue = alt.trim();
     startTransition(async () => {
       try {
-        const base64 = await fileToBase64(chosen);
-        const res = await uploadAction(slug, base64, chosen.type, altValue || undefined);
+        const prepared = await prepareImage(chosen);
+        if (prepared.size > MAX_UPLOAD_BYTES) {
+          setStatus({
+            kind: "error",
+            text: `This image couldn't be shrunk in the browser and is ${(prepared.size / 1024 / 1024).toFixed(1)} MB. Export it as a JPEG under 4 MB and try again.`,
+          });
+          return;
+        }
+        const fd = new FormData();
+        fd.append("slug", slug);
+        fd.append("file", prepared);
+        fd.append("alt", altValue);
+        const res = await uploadAction(fd);
         if (!res.ok || !res.url) {
           setStatus({ kind: "error", text: res.error ?? "Upload failed" });
           return;
@@ -84,7 +102,11 @@ export function PackageCoverEditor({
         setFile(null);
         setPreview(null);
         if (inputRef.current) inputRef.current.value = "";
-        setStatus({ kind: "ok", text: "Cover updated. Site refreshes within a few seconds." });
+        setStatus(
+          res.error
+            ? { kind: "error", text: res.error }
+            : { kind: "ok", text: "Cover updated. Site refreshes within a few seconds." },
+        );
       } catch (err) {
         setStatus({ kind: "error", text: (err as Error).message || "Upload failed" });
       }
@@ -97,7 +119,7 @@ export function PackageCoverEditor({
         <div>
           <h3 className="text-[14px] font-semibold text-[var(--text-primary)]">Cover image</h3>
           <p className="text-[12px] text-[var(--text-tertiary)]">
-            Shown as the first image on the package detail and listing cards. JPG, PNG, WEBP, or AVIF. Max 8 MB.
+            Shown as the first image on the package detail and listing cards. JPG, PNG, WEBP, or AVIF. Large photos are resized automatically.
           </p>
         </div>
       </div>

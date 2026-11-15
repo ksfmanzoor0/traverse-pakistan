@@ -6,8 +6,9 @@ import type { PackageRow, PackageItineraryDayRow } from "@/lib/supabase/types";
 import type { Package } from "@/types/package";
 import type { PackageItinerary, PackageItineraryDay } from "@/types/package";
 
-// Matches cover.jpg and the admin uploader's cover-<timestamp>.jpg.
-const COVER_FILE_RE = /\/cover(-\d+)?\.(jpe?g|png|webp|avif)$/i;
+// Matches cover.jpg (optionally with a ?v= cache-buster) and the legacy
+// cover-<timestamp>.jpg files the old uploader created.
+const COVER_FILE_RE = /\/cover(-\d+)?\.(jpe?g|png|webp|avif)(\?.*)?$/i;
 
 function shuffleGallery(slug: string, images: Package["images"]): Package["images"] {
   if (images.length <= 1) return images;
